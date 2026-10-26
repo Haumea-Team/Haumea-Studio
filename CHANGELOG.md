@@ -37,6 +37,12 @@
 - Older maps migrate when saved, keeping an exact backup of their previous Pawn. Paired saves
   retain the previous document if writing fails; externally edited Pawn keeps its runtime changes.
 
+### Multiplayer editing
+
+- Edit one map together: **File → Multiplayer...** hosts the open map, and others join it
+  with the address, port and session code. Changes to every element, removed GTA buildings
+  and the map's textdraws show up for everyone, with each person's camera and selection.
+
 ### TextDraw editing and previews
 
 - Artboards, layers, multiselection, locking, editable shapes, eight resize handles,

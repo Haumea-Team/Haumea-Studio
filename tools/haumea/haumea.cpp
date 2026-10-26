@@ -17,6 +17,7 @@
 #include "areas.h"
 #include "samp_loader.h"
 #include "agentbridge.h"
+#include "multiplayer.h"
 #include "modloader.h"
 #include "workspace.h"
 #include "rec.h"
@@ -3567,6 +3568,7 @@ Draw(void)
 		TheCamera.Process();
 	}
 	AgentBridgeUpdate();
+	MultiplayerUpdate();
 	TelemetryUpdate();
 	CrashReportsUpdate();
 	{

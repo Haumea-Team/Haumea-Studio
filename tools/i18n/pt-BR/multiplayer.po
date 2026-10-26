@@ -1,0 +1,168 @@
+#: tools/haumea/multiplayer.cpp
+msgid "%d selected"
+msgstr "%d selecionados"
+
+#: tools/haumea/multiplayer.cpp
+msgid "%s (you)"
+msgstr "%s (você)"
+
+#: tools/haumea/multiplayer.cpp
+msgid "%s joined the session"
+msgstr "%s entrou na sessão"
+
+#: tools/haumea/multiplayer.cpp
+msgid "%s left the session"
+msgstr "%s saiu da sessão"
+
+#: tools/haumea/multiplayer.cpp
+msgid "Address"
+msgstr "Endereço"
+
+#: tools/haumea/multiplayer.cpp
+msgid "Connecting to %s..."
+msgstr "Conectando a %s..."
+
+#: tools/haumea/multiplayer.cpp
+msgid "Could not connect to the host."
+msgstr "Não foi possível conectar ao anfitrião."
+
+#: tools/haumea/multiplayer.cpp
+msgid "Could not connect."
+msgstr "Não foi possível conectar."
+
+#: tools/haumea/multiplayer.cpp
+msgid "Could not find that address."
+msgstr "Não foi possível encontrar esse endereço."
+
+#: tools/haumea/multiplayer.cpp
+msgid "Could not open a network socket."
+msgstr "Não foi possível abrir um socket de rede."
+
+#: tools/haumea/multiplayer.cpp
+msgid "Edit one map together: one of you hosts the open map, the others join it."
+msgstr "Editem um mapa juntos: um de vocês hospeda o mapa aberto e os outros entram nele."
+
+#: tools/haumea/multiplayer.cpp
+msgid "Edit this map together with others: host it, or join someone's."
+msgstr "Edite este mapa junto com outras pessoas: hospede-o ou entre no de alguém."
+
+#: tools/haumea/multiplayer.cpp
+msgid "Everyone keeps the map as it is now."
+msgstr "Todos ficam com o mapa como está agora."
+
+#: tools/haumea/multiplayer.cpp
+msgid "Go to"
+msgstr "Ir até"
+
+#: tools/haumea/multiplayer.cpp
+msgid "Host"
+msgstr "Hospedar"
+
+#: tools/haumea/multiplayer.cpp
+msgid "Host this map"
+msgstr "Hospedar este mapa"
+
+#: tools/haumea/multiplayer.cpp
+msgid "Hosting on port %d"
+msgstr "Hospedando na porta %d"
+
+#: tools/haumea/multiplayer.cpp
+msgid "In %s's session"
+msgstr "Na sessão de %s"
+
+#: tools/haumea/multiplayer.cpp
+msgid "Join"
+msgstr "Entrar"
+
+#: tools/haumea/multiplayer.cpp
+msgid "Joined %s's session"
+msgstr "Entrou na sessão de %s"
+
+#: tools/haumea/multiplayer.cpp
+msgid "Joining replaces the open map: save it first to keep your changes."
+msgstr "Entrar substitui o mapa aberto: salve-o antes para manter suas alterações."
+
+#: tools/haumea/multiplayer.cpp
+msgid "Leave"
+msgstr "Sair"
+
+#: tools/haumea/multiplayer.cpp
+msgid "Left the multiplayer session"
+msgstr "Saiu da sessão multiplayer"
+
+#: tools/haumea/multiplayer.cpp
+msgid "Look from where they are looking."
+msgstr "Olhar de onde a pessoa está olhando."
+
+#: tools/haumea/multiplayer.cpp
+msgid "Lost the connection to the host."
+msgstr "A conexão com o anfitrião caiu."
+
+#: tools/haumea/multiplayer.cpp
+msgid "Multiplayer edits Pawn maps of San Andreas."
+msgstr "O multiplayer edita mapas Pawn do San Andreas."
+
+#: tools/haumea/multiplayer.cpp
+msgid "Multiplayer..."
+msgstr "Multiplayer..."
+
+#: tools/haumea/multiplayer.cpp
+msgid "Others join with this computer's address, the port and the session code.\nOver the internet the port must be forwarded to this computer, or use a VPN such as Tailscale."
+msgstr "Os outros entram com o endereço deste computador, a porta e o código da sessão.\nPela internet, a porta precisa ser redirecionada para este computador, ou use uma VPN como o Tailscale."
+
+#: tools/haumea/multiplayer.cpp
+msgid "People"
+msgstr "Pessoas"
+
+#: tools/haumea/multiplayer.cpp
+msgid "Port %d is in use or not allowed."
+msgstr "A porta %d está em uso ou não é permitida."
+
+#: tools/haumea/multiplayer.cpp
+msgid "Receiving the map..."
+msgstr "Recebendo o mapa..."
+
+#: tools/haumea/multiplayer.cpp
+msgid "Session code"
+msgstr "Código da sessão"
+
+#: tools/haumea/multiplayer.cpp
+msgid "Session code: %s"
+msgstr "Código da sessão: %s"
+
+#: tools/haumea/multiplayer.cpp
+msgid "Stop hosting"
+msgstr "Parar de hospedar"
+
+#: tools/haumea/multiplayer.cpp
+msgid "The host closed the connection."
+msgstr "O anfitrião fechou a conexão."
+
+#: tools/haumea/multiplayer.cpp
+msgid "The host didn't answer."
+msgstr "O anfitrião não respondeu."
+
+#: tools/haumea/multiplayer.cpp
+msgid "The host ended the session."
+msgstr "O anfitrião encerrou a sessão."
+
+#: tools/haumea/multiplayer.cpp
+msgid "The host refused: "
+msgstr "O anfitrião recusou: "
+
+#: tools/haumea/multiplayer.cpp
+msgid "This game doesn't have model %d, which the session uses"
+msgstr "Este jogo não tem o modelo %d, que a sessão usa"
+
+#: tools/haumea/multiplayer.cpp
+msgid "You keep the map as it is now; save it to keep a copy."
+msgstr "Você fica com o mapa como está agora; salve-o para manter uma cópia."
+
+#: tools/haumea/multiplayer.cpp
+msgid "Your name"
+msgstr "Seu nome"
+
+#: tools/haumea/multiplayer.cpp
+msgid "Too many wrong session codes: no one else can join until you host again"
+msgstr "Códigos de sessão errados demais: ninguém mais pode entrar até você hospedar de novo"
+

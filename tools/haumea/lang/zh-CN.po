@@ -10327,3 +10327,144 @@ msgstr "打开可移动的 4:3、16:9 和 21:9 预览。将它们停靠在画布
 
 msgid "Screen previews"
 msgstr "屏幕预览"
+
+#, c-format
+msgid "%d selected"
+msgstr "已选择 %d 个"
+
+#, c-format
+msgid "%s (you)"
+msgstr "%s（你）"
+
+#, c-format
+msgid "%s joined the session"
+msgstr "%s 加入了会话"
+
+#, c-format
+msgid "%s left the session"
+msgstr "%s 离开了会话"
+
+msgid "Address"
+msgstr "地址"
+
+#, c-format
+msgid "Connecting to %s..."
+msgstr "正在连接到 %s..."
+
+msgid "Could not connect to the host."
+msgstr "无法连接到主机。"
+
+msgid "Could not connect."
+msgstr "无法连接。"
+
+msgid "Could not find that address."
+msgstr "找不到该地址。"
+
+msgid "Could not open a network socket."
+msgstr "无法打开网络套接字。"
+
+msgid "Edit one map together: one of you hosts the open map, the others join it."
+msgstr "一起编辑一张地图：一人托管打开的地图，其他人加入。"
+
+msgid "Edit this map together with others: host it, or join someone's."
+msgstr "与他人一起编辑这张地图：托管它，或加入别人的会话。"
+
+msgid "Everyone keeps the map as it is now."
+msgstr "每个人都会保留地图的当前状态。"
+
+msgid "Go to"
+msgstr "前往"
+
+msgid "Host"
+msgstr "托管"
+
+msgid "Host this map"
+msgstr "托管这张地图"
+
+#, c-format
+msgid "Hosting on port %d"
+msgstr "正在端口 %d 上托管"
+
+#, c-format
+msgid "In %s's session"
+msgstr "在 %s 的会话中"
+
+msgid "Join"
+msgstr "加入"
+
+#, c-format
+msgid "Joined %s's session"
+msgstr "已加入 %s 的会话"
+
+msgid "Joining replaces the open map: save it first to keep your changes."
+msgstr "加入会替换打开的地图：请先保存以保留你的更改。"
+
+msgid "Leave"
+msgstr "离开"
+
+msgid "Left the multiplayer session"
+msgstr "已离开多人会话"
+
+msgid "Look from where they are looking."
+msgstr "从对方的视角查看。"
+
+msgid "Lost the connection to the host."
+msgstr "与主机的连接已断开。"
+
+msgid "Multiplayer edits Pawn maps of San Andreas."
+msgstr "多人编辑适用于 San Andreas 的 Pawn 地图。"
+
+msgid "Multiplayer..."
+msgstr "多人编辑..."
+
+msgid ""
+"Others join with this computer's address, the port and the session code.\n"
+"Over the internet the port must be forwarded to this computer, or use a VPN such as Tailscale."
+msgstr ""
+"其他人使用这台电脑的地址、端口和会话代码加入。\n"
+"通过互联网时，需要将端口转发到这台电脑，或使用 Tailscale 等 VPN。"
+
+msgid "People"
+msgstr "成员"
+
+#, c-format
+msgid "Port %d is in use or not allowed."
+msgstr "端口 %d 已被占用或不允许使用。"
+
+msgid "Receiving the map..."
+msgstr "正在接收地图..."
+
+msgid "Session code"
+msgstr "会话代码"
+
+#, c-format
+msgid "Session code: %s"
+msgstr "会话代码：%s"
+
+msgid "Stop hosting"
+msgstr "停止托管"
+
+msgid "The host closed the connection."
+msgstr "主机关闭了连接。"
+
+msgid "The host didn't answer."
+msgstr "主机没有响应。"
+
+msgid "The host ended the session."
+msgstr "主机结束了会话。"
+
+msgid "The host refused: "
+msgstr "主机拒绝了："
+
+#, c-format
+msgid "This game doesn't have model %d, which the session uses"
+msgstr "此游戏没有会话使用的模型 %d"
+
+msgid "You keep the map as it is now; save it to keep a copy."
+msgstr "你会保留地图的当前状态；保存即可留一份副本。"
+
+msgid "Your name"
+msgstr "你的名字"
+
+msgid "Too many wrong session codes: no one else can join until you host again"
+msgstr "错误的会话代码过多：在你重新托管之前，其他人无法加入"

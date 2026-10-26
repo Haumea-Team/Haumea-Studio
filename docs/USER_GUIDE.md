@@ -428,6 +428,29 @@ On 64-bit Linux, open.mp's server and compiler need the 32-bit C library: see
 
 ![Test in game with the server log](images/testserver.png)
 
+## Multiplayer editing
+
+Several people can edit one map at the same time. **File → Multiplayer...** opens the panel:
+
+- **Host this map**: shares the map that is open. The panel shows the port (7790 unless you change
+  it) and a six-letter **session code**.
+- **Join**: type the host's address, the port and the code. Joining replaces the map you have
+  open with the host's, so save yours first.
+
+Everyone sees each other's changes as they happen: objects, vehicles, every SA-MP element and
+its settings, materials, attachments, removed or moved GTA buildings and the map's own textdraws.
+Undo works on your own steps. Each person's camera shows as a coloured dot with their name, and
+what they have selected gets a box in their colour; **Go to** looks from where they are looking.
+
+Each person saves their own copy with **File → Save**. Opening or starting another map leaves a
+session you joined; when the host opens one, it replaces everyone's. **Stop hosting** or
+**Leave** keeps the map as it is. Radar art, alignment pins, 3D paths, the Nodes tool and
+textdraw files stay on each computer.
+
+Everyone needs the same Haumea version and the same game. On one network, join with the host's
+local address (for example `192.168.1.20`). Over the internet the host has to forward the port to
+their computer, or you can all use a VPN such as Tailscale. Only people with the code can join.
+
 ## Saving
 
 In **Map**, a map is a Pawn file. **File → Save** (`Ctrl+S`) writes it, and **Save As** picks a new file or

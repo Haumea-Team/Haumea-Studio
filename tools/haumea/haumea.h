@@ -1506,6 +1506,7 @@ const std::vector<std::string> &GetRecentMapPaths(void);	// File > Open Recent, 
 void SaveEditorSettings(void);
 bool PickPawnFile(char *dst, size_t size, bool save, const char *suggested);	// the native dialog
 int GetPawnMapFormat(void);	// PawnCodeFormat
+void SetPawnMapFormat(int format);	// what Save writes, e.g. the multiplayer host's
 bool PawnMapHasUnsavedChanges(void);
 
 

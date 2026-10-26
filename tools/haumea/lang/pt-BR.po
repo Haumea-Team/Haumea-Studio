@@ -316,6 +316,10 @@ msgid "%d points"
 msgstr "%d pontos"
 
 #, c-format
+msgid "%d selected"
+msgstr "%d selecionados"
+
+#, c-format
 msgid "%d selected world object(s) will be replaced in the map."
 msgstr "%d objeto(s) do mundo selecionado(s) serão substituídos no mapa."
 
@@ -504,6 +508,10 @@ msgid "%s (missing)"
 msgstr "%s (ausente)"
 
 #, c-format
+msgid "%s (you)"
+msgstr "%s (você)"
+
+#, c-format
 msgid "%s Browse · %s Map objects · %s Save · %s Shortcuts"
 msgstr "%s Navegar · %s Objetos do mapa · %s Salvar · %s Atalhos"
 
@@ -562,6 +570,14 @@ msgstr "%s está configurado para aparecer só dentro da área \"%s\", que não 
 #, c-format
 msgid "%s isn't next to the editor. It ships with every release, and is in the source at https://github.com/itsneufox/Haumea-Studio."
 msgstr "%s não está junto do editor. Ele vem com toda versão e está no código-fonte em https://github.com/itsneufox/Haumea-Studio."
+
+#, c-format
+msgid "%s joined the session"
+msgstr "%s entrou na sessão"
+
+#, c-format
+msgid "%s left the session"
+msgstr "%s saiu da sessão"
 
 #, c-format
 msgid "%s lists every keyboard shortcut; change them in Preferences."
@@ -1159,6 +1175,9 @@ msgstr "Somado à direção da linha, em graus: 90 os vira de lado."
 
 msgid "Additive Blend"
 msgstr "Mistura aditiva"
+
+msgid "Address"
+msgstr "Endereço"
 
 msgid ""
 "Adds the objects from another .pwn/.inc file, a Texture Studio .db,\n"
@@ -2334,6 +2353,10 @@ msgstr "Conectar um assistente de IA"
 msgid "Connected to Discord"
 msgstr "Conectado ao Discord"
 
+#, c-format
+msgid "Connecting to %s..."
+msgstr "Conectando a %s..."
+
 msgid "Constant machinery noise"
 msgstr "Ruído constante de máquina"
 
@@ -2504,9 +2527,18 @@ msgstr "Não foi possível anexar este objeto a esse alvo."
 msgid "Could not attach to the selected target."
 msgstr "Não foi possível anexar ao alvo selecionado."
 
+msgid "Could not connect to the host."
+msgstr "Não foi possível conectar ao anfitrião."
+
+msgid "Could not connect."
+msgstr "Não foi possível conectar."
+
 #, c-format
 msgid "Could not create %s"
 msgstr "Não foi possível criar %s"
+
+msgid "Could not find that address."
+msgstr "Não foi possível encontrar esse endereço."
 
 msgid "Could not generate Pawn code."
 msgstr "Não foi possível gerar o código Pawn."
@@ -2518,6 +2550,9 @@ msgstr "Não foi possível mover os textdraws: %s"
 #, c-format
 msgid "Could not open %s"
 msgstr "Não foi possível abrir %s"
+
+msgid "Could not open a network socket."
+msgstr "Não foi possível abrir um socket de rede."
 
 msgid "Could not open the script."
 msgstr "Não foi possível abrir o script."
@@ -3119,11 +3154,17 @@ msgstr "Editar na área de trabalho de anexos"
 msgid "Edit in view"
 msgstr "Editar na vista"
 
+msgid "Edit one map together: one of you hosts the open map, the others join it."
+msgstr "Editem um mapa juntos: um de vocês hospeda o mapa aberto e os outros entram nele."
+
 msgid "Edit the NODES*.DAT files already in that folder."
 msgstr "Edita os arquivos NODES*.DAT que já estão nessa pasta."
 
 msgid "Edit the parts on their own"
 msgstr "Editar as partes separadamente"
+
+msgid "Edit this map together with others: host it, or join someone's."
+msgstr "Edite este mapa junto com outras pessoas: hospede-o ou entre no de alguém."
 
 #, c-format
 msgid "Editing: %s"
@@ -3194,6 +3235,9 @@ msgstr "Cada comando e sua tecla (%s). Mude-os em Preferências > Atalhos."
 
 msgid "Every interior at once"
 msgstr "Todos os interiores de uma vez"
+
+msgid "Everyone keeps the map as it is now."
+msgstr "Todos ficam com o mapa como está agora."
 
 msgid "Everywhere"
 msgstr "Em todo lugar"
@@ -3827,6 +3871,9 @@ msgstr "Voltar para a Produção mais recente agora"
 msgid "Go there"
 msgstr "Ir até lá"
 
+msgid "Go to"
+msgstr "Ir até"
+
 msgid "Go to Coordinates"
 msgstr "Ir para coordenadas"
 
@@ -4118,6 +4165,16 @@ msgstr "Corrida de cavalos (0.3.7-R2)"
 msgid "Hospital"
 msgstr "Hospital"
 
+msgid "Host"
+msgstr "Hospedar"
+
+msgid "Host this map"
+msgstr "Hospedar este mapa"
+
+#, c-format
+msgid "Hosting on port %d"
+msgstr "Hospedando na porta %d"
+
 msgid "Hour"
 msgstr "Hora"
 
@@ -4267,6 +4324,10 @@ msgstr "%s (%d) importado com aviso: %s"
 
 msgid "Impound"
 msgstr "Pátio de apreensão"
+
+#, c-format
+msgid "In %s's session"
+msgstr "Na sessão de %s"
 
 #, c-format
 msgid ""
@@ -4433,6 +4494,16 @@ msgstr "Mandíbula"
 msgid "Jog"
 msgstr "Trotar"
 
+msgid "Join"
+msgstr "Entrar"
+
+#, c-format
+msgid "Joined %s's session"
+msgstr "Entrou na sessão de %s"
+
+msgid "Joining replaces the open map: save it first to keep your changes."
+msgstr "Entrar substitui o mapa aberto: salve-o antes para manter suas alterações."
+
 msgid "Jump the camera between this model's instances, including other interiors."
 msgstr "Leva a câmera entre as instâncias deste modelo, incluindo outros interiores."
 
@@ -4543,6 +4614,9 @@ msgstr "Camadas - %s"
 msgid "Layout"
 msgstr "Disposição"
 
+msgid "Leave"
+msgstr "Sair"
+
 msgid "Leave TextDraw mode first."
 msgstr "Saia do modo TextDraw primeiro."
 
@@ -4581,6 +4655,9 @@ msgstr "Mão esquerda"
 
 msgid "Left out because SA-MP has no equivalent:"
 msgstr "Deixado de fora porque o SA-MP não tem equivalente:"
+
+msgid "Left the multiplayer session"
+msgstr "Saiu da sessão multiplayer"
 
 msgid "Left thigh"
 msgstr "Coxa esquerda"
@@ -4793,6 +4870,9 @@ msgstr "Olhar em volta enquanto pinta"
 msgid "Look around with"
 msgstr "Olhar em volta com"
 
+msgid "Look from where they are looking."
+msgstr "Olhar de onde a pessoa está olhando."
+
 msgid "Looking for Python..."
 msgstr "Procurando o Python..."
 
@@ -4801,6 +4881,9 @@ msgstr "Repetir"
 
 msgid "Loose (data/Paths)"
 msgstr "Arquivos soltos (data/Paths)"
+
+msgid "Lost the connection to the host."
+msgstr "A conexão com o anfitrião caiu."
 
 msgid "Loud hit"
 msgstr "Pancada forte"
@@ -5242,6 +5325,12 @@ msgstr "Move-se ao ser atingido"
 
 msgid "Moving this object updates the offset; moving the parent carries it along."
 msgstr "Mover este objeto atualiza o deslocamento; mover o pai o leva junto."
+
+msgid "Multiplayer edits Pawn maps of San Andreas."
+msgstr "O multiplayer edita mapas Pawn do San Andreas."
+
+msgid "Multiplayer..."
+msgstr "Multiplayer..."
 
 msgid "My map"
 msgstr "Meu mapa"
@@ -6057,6 +6146,13 @@ msgstr "Origem"
 msgid "Original"
 msgstr "Original"
 
+msgid ""
+"Others join with this computer's address, the port and the session code.\n"
+"Over the internet the port must be forwarded to this computer, or use a VPN such as Tailscale."
+msgstr ""
+"Os outros entram com o endereço deste computador, a porta e o código da sessão.\n"
+"Pela internet, a porta precisa ser redirecionada para este computador, ou use uma VPN como o Tailscale."
+
 msgid "Outgoing"
 msgstr "Saída"
 
@@ -6269,6 +6365,9 @@ msgid ""
 msgstr ""
 "Os pedestres não passeiam até este nó.\n"
 "Impede que pedestres ociosos andem por aqui."
+
+msgid "People"
+msgstr "Pessoas"
 
 msgid "Per player"
 msgstr "Por jogador"
@@ -6550,6 +6649,10 @@ msgstr "Taco de sinuca"
 
 msgid "Port"
 msgstr "Porta"
+
+#, c-format
+msgid "Port %d is in use or not allowed."
+msgstr "A porta %d está em uso ou não é permitida."
 
 msgid "Position"
 msgstr "Posição"
@@ -6896,6 +6999,9 @@ msgstr "Pronto: %s"
 
 msgid "Rebuild objects"
 msgstr "Reconstruir objetos"
+
+msgid "Receiving the map..."
+msgstr "Recebendo o mapa..."
 
 msgid "Recent maps"
 msgstr "Mapas recentes"
@@ -7819,6 +7925,13 @@ msgstr "Pacote do servidor"
 msgid "Server: %s"
 msgstr "Servidor: %s"
 
+msgid "Session code"
+msgstr "Código da sessão"
+
+#, c-format
+msgid "Session code: %s"
+msgstr "Código da sessão: %s"
+
 msgid "Set X, Y and Z rotation to zero."
 msgstr "Define as rotações X, Y e Z como zero."
 
@@ -8313,6 +8426,9 @@ msgstr "Parar e devolver o elemento para onde estava"
 msgid "Stop brush"
 msgstr "Parar pincel"
 
+msgid "Stop hosting"
+msgstr "Parar de hospedar"
+
 msgid "Stop picking"
 msgstr "Parar de escolher"
 
@@ -8703,6 +8819,18 @@ msgstr "O grupo onde as zonas ficam."
 msgid "The heading it is placed at."
 msgstr "A direção em que é colocado."
 
+msgid "The host closed the connection."
+msgstr "O anfitrião fechou a conexão."
+
+msgid "The host didn't answer."
+msgstr "O anfitrião não respondeu."
+
+msgid "The host ended the session."
+msgstr "O anfitrião encerrou a sessão."
+
+msgid "The host refused: "
+msgstr "O anfitrião recusou: "
+
 #, c-format
 msgid "The installer stopped (exit code %d)."
 msgstr "O instalador parou (código de saída %d)."
@@ -8869,6 +8997,10 @@ msgid "This folder is inside the game folder, which Haumea never writes to."
 msgstr "Esta pasta está dentro da pasta do jogo, na qual o Haumea nunca grava."
 
 #, c-format
+msgid "This game doesn't have model %d, which the session uses"
+msgstr "Este jogo não tem o modelo %d, que a sessão usa"
+
+#, c-format
 msgid "This is %s, not an official release: it updates to the next official release."
 msgstr "Isto é %s, não uma versão oficial: atualiza para a próxima versão oficial."
 
@@ -8992,6 +9124,9 @@ msgstr "Alternar a seleção do objeto"
 
 msgid "Tolerance"
 msgstr "Tolerância"
+
+msgid "Too many wrong session codes: no one else can join until you host again"
+msgstr "Códigos de sessão errados demais: ninguém mais pode entrar até você hospedar de novo"
 
 msgid "Tools"
 msgstr "Ferramentas"
@@ -9697,6 +9832,9 @@ msgstr "Sim, enviar"
 msgid "You had changed %s: your copy is %s.local."
 msgstr "Você tinha alterado %s: a sua cópia é %s.local."
 
+msgid "You keep the map as it is now; save it to keep a copy."
+msgstr "Você fica com o mapa como está agora; salve-o para manter uma cópia."
+
 #, c-format
 msgid "You'll move to Production with the next production release newer than %s."
 msgstr "Você vai passar para a Produção na próxima versão de produção mais nova que %s."
@@ -9719,6 +9857,9 @@ msgstr "Seu gamemode o inclui e chama _CreateTextDraws e _ShowTextDraws(playerid
 
 msgid "Your maps"
 msgstr "Seus mapas"
+
+msgid "Your name"
+msgstr "Seu nome"
 
 msgid "Your textdraw changes are lost if you don't save them."
 msgstr "As alterações nos textdraws se perdem se você não salvá-las."

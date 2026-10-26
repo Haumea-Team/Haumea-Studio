@@ -10,6 +10,7 @@
 #include "trains.h"
 #include "textdraws.h"
 #include "namaka.h"
+#include "multiplayer.h"
 #include "samp_loader.h"
 #include "autocol.h"
 #include "modloader.h"
@@ -95,6 +96,7 @@ static bool showNodesWindow;
 static bool showTestServerWindow;
 static bool showInteriorsWindow;
 static bool showNamakaWindow;
+static bool showMultiplayerWindow;
 static bool gPanelSnap = true;
 static bool gResetPanelLayout;
 static bool gSaNodeJustSelected;
@@ -2989,6 +2991,9 @@ uiMainmenu(void)
 				showTestServerWindow = true;
 			}
 			ImGui::SetItemTooltip(_("Runs the map as it is now on a private open.mp test server.\nYour map file and your own server are not touched."));
+			if(ImGui::MenuItem(TI(ICON_FA_USER, "Multiplayer..."), nil, showMultiplayerWindow, isSA() && !InPawnIdeMode()))
+				showMultiplayerWindow ^= 1;
+			ImGui::SetItemTooltip(_("Edit this map together with others: host it, or join someone's."));
 			if(ImGui::MenuItem(TI(ICON_FA_GAMEPAD, "Launch game"), nil, false, isSA()))
 				TestServerLaunchGame();
 			ImGui::SetItemTooltip(_("Starts the game (open.mp's launcher, or SA-MP) and joins the test server.\n"
@@ -3712,11 +3717,25 @@ newPawnMap(void)
 	Toast(TOAST_SAVE, _("New map"));
 }
 
+// Someone else's multiplayer session: opening or starting a map leaves it,
+// rather than replacing everyone's map with this one. Joining starts a new
+// map itself while connecting.
+static void
+leaveJoinedSession(bool connecting)
+{
+	int session = GetMultiplayerState();
+	if(session == MP_JOINED || (connecting && session == MP_CONNECTING)){
+		MultiplayerLeave();
+		Toast(TOAST_SAVE, _("Left the multiplayer session"));
+	}
+}
+
 static void
 performMapAction(int action, const char *path)
 {
 	switch(action){
 	case MAP_ACTION_NEW:
+		leaveJoinedSession(true);
 		newPawnMap();
 		break;
 	case MAP_ACTION_OPEN: {
@@ -3726,6 +3745,7 @@ performMapAction(int action, const char *path)
 				return;
 			path = picked;
 		}
+		leaveJoinedSession(true);
 		if(openPawnMap(path))
 			OfferMoveMapTextDraws(path);
 		break;
@@ -13783,6 +13803,7 @@ gui(void)
 	BrowserDiscoveryHighlight(mapPanels && showBrowserWindow);
 	MapToolsLineOverlay(mapPanels);
 	CoordinatePinOverlay(mapPanels);
+	MultiplayerOverlay(mapPanels);
 	LayoutPathsOverlay(mapPanels);
 	SAPaths::UpdateNodesUndo();
 	DrawTextDrawsWindow();
@@ -13792,6 +13813,7 @@ gui(void)
 	if(mapPanels && showInteriorsWindow) InteriorsWindow(&showInteriorsWindow);
 	uiWorkspaceNewHints();
 	DrawNamakaWindow(&showNamakaWindow);	// also runs the updater's queued Namaka update
+	DrawMultiplayerWindow(&showMultiplayerWindow);
 
 
 
@@ -13959,12 +13981,15 @@ gui(void)
 bool
 OpenPawnMapFile(const char *path)
 {
+	if(path && path[0])
+		leaveJoinedSession(true);
 	return path && path[0] && openPawnMap(path);
 }
 
 void
 NewPawnMapDocument(void)
 {
+	leaveJoinedSession(false);
 	newPawnMap();
 }
 
@@ -14017,6 +14042,13 @@ int
 GetPawnMapFormat(void)
 {
 	return gPawnSaveFormat;
+}
+
+void
+SetPawnMapFormat(int format)
+{
+	if(format == PAWN_CODE_NATIVE || format == PAWN_CODE_STREAMER)
+		gPawnSaveFormat = format;
 }
 
 bool

@@ -322,6 +322,31 @@ precisam da biblioteca C de 32 bits: veja [Instalação](../README.pt-BR.md#inst
 
 ![Testar no jogo com o registro do servidor](images/testserver.png)
 
+## Edição multiplayer
+
+Várias pessoas podem editar um mapa ao mesmo tempo. **Arquivo → Multiplayer...** abre o painel:
+
+- **Hospedar este mapa**: compartilha o mapa que está aberto. O painel mostra a porta (7790, a
+  menos que você mude) e um **código da sessão** de seis letras.
+- **Entrar**: digite o endereço do anfitrião, a porta e o código. Entrar substitui o mapa que
+  você tem aberto pelo do anfitrião, então salve o seu antes.
+
+Todos veem as mudanças dos outros na hora: objetos, veículos, todos os elementos do SA-MP e as
+configurações deles, materiais, anexos, prédios do GTA removidos ou movidos e as textdraws do
+próprio mapa. Desfazer vale para os seus próprios passos. A câmera de cada pessoa aparece como um
+ponto colorido com o nome dela, e o que ela selecionou ganha uma caixa na cor dela; **Ir até**
+olha de onde ela está olhando.
+
+Cada pessoa salva a própria cópia com **Arquivo → Salvar**. Abrir ou começar outro mapa sai de
+uma sessão em que você entrou; quando o anfitrião abre um, ele substitui o de todos. **Parar de
+hospedar** ou **Sair** mantém o mapa como está. Arte do radar, pinos de alinhamento, caminhos 3D,
+a ferramenta Nodes e os arquivos de textdraws ficam em cada computador.
+
+Todos precisam da mesma versão do Haumea e do mesmo jogo. Na mesma rede, entre com o endereço
+local do anfitrião (por exemplo `192.168.1.20`). Pela internet, o anfitrião precisa redirecionar a
+porta para o computador dele, ou vocês podem usar uma VPN como o Tailscale. Só entra quem tem o
+código.
+
 ## Salvando
 
 Em **Mapa**, o mapa é um arquivo Pawn. **Arquivo → Salvar** (`Ctrl+S`) o grava, e **Salvar como** escolhe um

@@ -8,6 +8,7 @@
 #include "editoricons.h"
 #include "trains.h"
 #include "agentbridge.h"
+#include "multiplayer.h"
 #include "areas.h"
 #include "categories.h"
 #include "objfilters.h"
@@ -4988,6 +4989,41 @@ handleRequest(const std::vector<std::string> &lines)
 	}
 	if(command == "map_status"){
 		writeResponse(requestId, true, agentMapStatusJson());
+		return;
+	}
+	// Multiplayer editing: host [port [name]], join address port code [name],
+	// leave, status.
+	if(command == "multiplayer_host" || command == "multiplayer_join"){
+		bool host = command == "multiplayer_host";
+		int port = MP_DEFAULT_PORT;
+		size_t portField = host ? 2 : 3;
+		if(lines.size() > portField && !lines[portField].empty() && !parseInt(lines[portField], &port)){
+			writeError(requestId, "invalid port");
+			return;
+		}
+		if(!host && (lines.size() < 5 || lines[2].empty() || lines[4].empty())){
+			writeError(requestId, "multiplayer_join requires address, port and session code");
+			return;
+		}
+		size_t nameField = host ? 3 : 5;
+		const char *name = lines.size() > nameField ? lines[nameField].c_str() : "Namaka";
+		std::string error;
+		bool ok = host ? MultiplayerHost(port, name, &error) :
+			MultiplayerJoin(lines[2].c_str(), port, lines[4].c_str(), name, &error);
+		if(!ok){
+			writeError(requestId, error.c_str());
+			return;
+		}
+		writeResponse(requestId, true, MultiplayerStatusJson());
+		return;
+	}
+	if(command == "multiplayer_leave"){
+		MultiplayerLeave();
+		writeResponse(requestId, true, MultiplayerStatusJson());
+		return;
+	}
+	if(command == "multiplayer_status"){
+		writeResponse(requestId, true, MultiplayerStatusJson());
 		return;
 	}
 	if(command == "map_new" || command == "map_open"){
