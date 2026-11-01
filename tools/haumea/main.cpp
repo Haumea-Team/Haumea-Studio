@@ -43,6 +43,10 @@ static char gImGuiIniPath[1024];
 // Windows restarts pass it (the new process waits for the old one); a
 // restart elsewhere never forwards it.
 static const char *RESTART_PARENT_PID_ARG = "--haumea-restart-parent-pid";
+// Given to haumea-d3d9.exe by haumea.exe when OpenGL didn't start.
+static const char *GL_FAILED_ARG = "--haumea-gl-failed";
+// A start in the other renderer's exe's place: its haumea.log goes on, not anew.
+static const char *HANDOVER_ARG = "--haumea-renderer-handover";
 
 static bool
 ResolveEditorExecutablePath(char *path, size_t size)
@@ -127,6 +131,8 @@ forwardedArgs(void)
 			i++;
 			continue;
 		}
+		if(strcmp(sk::args.argv[i], GL_FAILED_ARG) == 0 || strcmp(sk::args.argv[i], HANDOVER_ARG) == 0)
+			continue;
 		args.push_back(sk::args.argv[i]);
 	}
 	return args;
@@ -241,6 +247,80 @@ ExecHaumeaInPlace(void)
 		argv.push_back(&a[0]);
 	argv.push_back(nil);
 	execv(exePath, argv.data());
+#endif
+}
+
+static bool
+hasArg(const char *arg)
+{
+	for(int i = 1; i < sk::args.argc; i++)
+		if(strcmp(sk::args.argv[i], arg) == 0)
+			return true;
+	return false;
+}
+
+#ifdef _WIN32
+// The other renderer's exe, in this one's folder.
+#ifdef RW_D3D9
+static const char *SIBLING_EXE = "haumea.exe";
+#else
+static const char *SIBLING_EXE = "haumea-d3d9.exe";
+#endif
+
+static bool
+siblingExePath(std::string *out)
+{
+	char self[1024];
+	if(!GetEditorExecutablePath(self, sizeof(self)))
+		return false;
+	std::string path = self;
+	size_t slash = path.find_last_of("\\/");
+	if(slash == std::string::npos)
+		return false;
+	std::string sibling = path.substr(0, slash + 1) + SIBLING_EXE;
+	// A build renamed to the other's name must not start itself.
+	if(_stricmp(sibling.c_str(), self) == 0 || GetFileAttributesA(sibling.c_str()) == INVALID_FILE_ATTRIBUTES)
+		return false;
+	if(out)
+		*out = sibling;
+	return true;
+}
+
+// Starts the other renderer's exe with this run's arguments, in this one's
+// place: it waits for this process to end (and save) before it loads anything.
+static bool
+handOverToSibling(bool glFailed)
+{
+	std::string exe;
+	if(!siblingExePath(&exe))
+		return false;
+	std::string commandLine = "\"" + exe + "\" " + RESTART_PARENT_PID_ARG + " " +
+		std::to_string((unsigned long)GetCurrentProcessId()) + " " + HANDOVER_ARG;
+	if(glFailed)
+		commandLine += std::string(" ") + GL_FAILED_ARG;
+	for(const std::string &a : forwardedArgs())
+		appendQuotedArg(commandLine, a);
+	STARTUPINFOA startupInfo = {};
+	PROCESS_INFORMATION processInfo = {};
+	startupInfo.cb = sizeof(startupInfo);
+	if(!CreateProcessA(exe.c_str(), &commandLine[0], nil, nil, FALSE, 0, nil, nil,
+	                   &startupInfo, &processInfo))
+		return false;
+	CloseHandle(processInfo.hThread);
+	CloseHandle(processInfo.hProcess);
+	log("Renderer: handed over to %s\n", SIBLING_EXE);
+	return true;
+}
+#endif
+
+bool
+RendererChoiceAvailable(void)
+{
+#ifdef _WIN32
+	static const bool available = siblingExePath(nil);
+	return available;
+#else
+	return false;
 #endif
 }
 
@@ -766,11 +846,28 @@ Init(void)
 	// From here a crash is reported at the next start.
 	CrashReportsInstall();
 	// haumea.log, from here on: a start that fails before the first frame still leaves one.
-	OpenLogFile();
+	OpenLogFile(hasArg(HANDOVER_ARG));
 	log("Haumea Studio %s %s starting\n", HaumeaVersionDisplay(), HAUMEA_CHANNEL);
 	// A downloaded update installs now, before any window, and starts in this
 	// one's place.
 	UpdaterInstallStaged();
+	// The renderer the settings ask for, when it's the other exe: that one
+	// starts in this one's place. haumea.exe's shortcuts stay the way in.
+	LoadInitialRendererSettings();
+#ifdef _WIN32
+	if(hasArg(GL_FAILED_ARG)){
+		log("Renderer: OpenGL didn't start, so this is Direct3D 9\n");
+		gRendererGlFailed = true;
+	}else if(!SettingsAreReadOnly()){
+#ifdef RW_D3D9
+		bool wantOther = gRendererChoice == RENDERER_OPENGL || (gRendererChoice == RENDERER_AUTO && !gRendererGlFailed);
+#else
+		bool wantOther = gRendererChoice == RENDERER_D3D9 || (gRendererChoice == RENDERER_AUTO && gRendererGlFailed);
+#endif
+		if(wantOther && handOverToSibling(false))
+			exit(0);
+	}
+#endif
 
 	static char windowTitle[256];
 	static bool saveHookRegistered;
@@ -943,8 +1040,19 @@ InitRW(void)
 #endif
 	// The last line of haumea.log when the renderer is what fails.
 	log("Starting the graphics\n");
-	if(!sk::InitRW()){
+#if defined(_WIN32) && !defined(RW_D3D9)
+	// The tests' way to see the hand-over: Wine's OpenGL always starts.
+	bool testFailGl = getenv("HAUMEA_TEST_FAIL_GL") != nil;
+#else
+	bool testFailGl = false;
+#endif
+	if(testFailGl || !sk::InitRW()){
 		log("error: the graphics didn't start\n");
+#if defined(_WIN32) && !defined(RW_D3D9)
+		// Direct3D 9 works on PCs whose OpenGL driver doesn't (Windows' basic driver, say).
+		if(!hasArg(GL_FAILED_ARG) && handOverToSibling(true))
+			exit(0);
+#endif
 #ifdef _WIN32
 		// Otherwise it just closes: no window yet, and the reason went to haumea.stderr.log.
 		std::string text = std::string(_("Haumea Studio couldn't start its graphics. Update your graphics "

@@ -1596,6 +1596,9 @@ msgstr "COL gerado automaticamente a partir da geometria do DFF (%d -> %d triân
 msgid "Automatic"
 msgstr "Automáticas"
 
+msgid "Automatic uses OpenGL, and Direct3D 9 when OpenGL doesn't start on this PC."
+msgstr "Automático usa OpenGL, e Direct3D 9 quando o OpenGL não inicia neste PC."
+
 msgid "Automatic: smooth through the neighbours. Aligned: opposite each other, each with its own length. Free: independent. Corner: straight at the neighbours."
 msgstr "Automáticas: suaves entre os vizinhos. Alinhadas: opostas, cada uma com seu comprimento. Livres: independentes. Canto: retas para os vizinhos."
 
@@ -6147,6 +6150,9 @@ msgstr "Abrir o log"
 msgid "Open workspace"
 msgstr "Abrir workspace"
 
+msgid "OpenGL didn't start on this PC, so Automatic uses Direct3D 9."
+msgstr "O OpenGL não iniciou neste PC, então Automático usa Direct3D 9."
+
 #, c-format
 msgid "Opened %s"
 msgstr "%s aberto"
@@ -7220,6 +7226,9 @@ msgstr "Renomear variável"
 msgid "Rename..."
 msgstr "Renomear..."
 
+msgid "Renderer"
+msgstr "Renderizador"
+
 msgid "Reopen last map on startup"
 msgstr "Reabrir o último mapa ao iniciar"
 
@@ -7314,6 +7323,9 @@ msgstr "Reiniciar o Haumea Studio"
 
 msgid "Restart Haumea to apply the new anti-aliasing level."
 msgstr "Reinicie o Haumea para aplicar o novo nível de antisserrilhamento."
+
+msgid "Restart Haumea to switch renderers."
+msgstr "Reinicie o Haumea para trocar de renderizador."
 
 msgid "Restart and Discard Changes"
 msgstr "Reiniciar e descartar alterações"
@@ -7512,6 +7524,10 @@ msgstr "Em execução"
 #, c-format
 msgid "Running on 127.0.0.1:%d"
 msgstr "Rodando em 127.0.0.1:%d"
+
+#, c-format
+msgid "Running: %s"
+msgstr "Em uso: %s"
 
 msgid ""
 "Runs the map as it is now on a private open.mp test server.\n"

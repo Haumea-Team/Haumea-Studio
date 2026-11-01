@@ -6,3 +6,24 @@ msgstr ""
 #: tools/haumea/main.cpp:950
 msgid "Haumea Studio couldn't start its graphics. Update your graphics card's driver (Haumea needs OpenGL 3.3 or Direct3D 9; Windows' basic display driver, Remote Desktop and some virtual machines can't). The details are in haumea.log and haumea.stderr.log in:"
 msgstr "O Haumea Studio não conseguiu iniciar os gráficos. Atualize o driver da sua placa de vídeo (o Haumea precisa de OpenGL 3.3 ou Direct3D 9; o driver de vídeo básico do Windows, a Área de Trabalho Remota e algumas máquinas virtuais não oferecem isso). Os detalhes estão em haumea.log e haumea.stderr.log em:"
+
+#: tools/haumea/gui.cpp:8335
+msgid "Renderer"
+msgstr "Renderizador"
+
+#: tools/haumea/gui.cpp:8345
+msgid "Automatic uses OpenGL, and Direct3D 9 when OpenGL doesn't start on this PC."
+msgstr "Automático usa OpenGL, e Direct3D 9 quando o OpenGL não inicia neste PC."
+
+#: tools/haumea/gui.cpp:8351
+#, c-format
+msgid "Running: %s"
+msgstr "Em uso: %s"
+
+#: tools/haumea/gui.cpp:8353
+msgid "OpenGL didn't start on this PC, so Automatic uses Direct3D 9."
+msgstr "O OpenGL não iniciou neste PC, então Automático usa Direct3D 9."
+
+#: tools/haumea/gui.cpp:8355
+msgid "Restart Haumea to switch renderers."
+msgstr "Reinicie o Haumea para trocar de renderizador."

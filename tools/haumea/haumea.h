@@ -120,9 +120,16 @@ FILE *fopenHaumeaDataWrite(const char *name);
 void setHotReloadTracePath(const char *path);
 void hotReloadTrace(const char *fmt, ...);
 void addToLogWindow(const char *fmt, va_list args);
-void OpenLogFile(void);
+void OpenLogFile(bool append);	// append: a renderer hand-over's second process
 void LoadInitialEditorWindowState(int *width, int *height);
 void LoadInitialAntialiasingSettings(void);
+// Windows ships haumea.exe (OpenGL) and haumea-d3d9.exe (Direct3D 9); the
+// setting says which one runs, and a start where OpenGL failed goes to Direct3D 9.
+enum { RENDERER_AUTO, RENDERER_OPENGL, RENDERER_D3D9 };
+extern int gRendererChoice;
+extern bool gRendererGlFailed;	// OpenGL didn't start on this PC: Automatic uses Direct3D 9
+void LoadInitialRendererSettings(void);
+bool RendererChoiceAvailable(void);	// both exes are there
 void ApplyInitialEditorWindowState(void);
 // Startup splash window and its growth into the editor window (GLFW builds).
 #define HAUMEA_SPLASH_WIDTH 880

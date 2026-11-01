@@ -227,6 +227,7 @@ static const char *currentMapName(void);
 static void countMapContents(int *objects, int *removed);
 static void uiMapObjectsList(void);
 static bool splitSettingLine(const char *line, char *key, size_t keySize, const char **value);
+static bool parseBoolSetting(const char *value, bool *out);
 static bool parseIntSetting(const char *value, int *out);
 static bool savePawnMap(void);
 static void uiRunShortcut(int action);
@@ -338,6 +339,43 @@ LoadInitialAntialiasingSettings(void)
 		}
 	}
 
+	fclose(f);
+}
+
+int gRendererChoice = RENDERER_AUTO;
+bool gRendererGlFailed;
+
+static const char *rendererNames[] = { "auto", "opengl", "d3d9" };
+
+static void
+parseRendererSetting(const char *key, const char *value)
+{
+	bool boolValue;
+	char name[16];
+	if(strcmp(key, "renderer") == 0){
+		if(sscanf(value, "%15s", name) == 1)
+			for(int i = 0; i < IM_ARRAYSIZE(rendererNames); i++)
+				if(strcmp(name, rendererNames[i]) == 0)
+					gRendererChoice = i;
+	}else if(strcmp(key, "renderer_gl_failed") == 0){
+		// Only ever set here: a start told it OpenGL failed keeps that.
+		if(parseBoolSetting(value, &boolValue) && boolValue)
+			gRendererGlFailed = true;
+	}
+}
+
+// Before any window: main.cpp picks the exe from these.
+void
+LoadInitialRendererSettings(void)
+{
+	FILE *f = fopenHaumeaDataRead("savesettings.txt", "savesettings.txt");
+	if(f == nil)
+		return;
+	char line[1024], key[128];
+	const char *value;
+	while(fgets(line, sizeof(line), f))
+		if(splitSettingLine(line, key, sizeof(key), &value))
+			parseRendererSetting(key, value);
 	fclose(f);
 }
 
@@ -1434,7 +1472,7 @@ addToLogWindow(const char *fmt, va_list args)
 // start that fails before the first frame still leaves one; what was logged
 // before goes in first. Command-line runs keep none.
 void
-OpenLogFile(void)
+OpenLogFile(bool append)
 {
 	if(gLogFileTried)
 		return;
@@ -1445,10 +1483,12 @@ OpenLogFile(void)
 	if(!BuildPath(path, sizeof(path), GetConfigDir(), "haumea.log") ||
 	   !BuildPath(previous, sizeof(previous), GetConfigDir(), "haumea.previous.log"))
 		return;
-	remove(previous);
-	rename(path, previous);
+	if(!append){
+		remove(previous);
+		rename(path, previous);
+	}
 	std::lock_guard<std::mutex> lock(gLogMutex);
-	gLogFile = fopen(path, "w");
+	gLogFile = fopen(path, append ? "a" : "w");
 	if(gLogFile == nil)
 		return;
 	gLogFilePath = path;
@@ -6783,6 +6823,8 @@ loadSaveSettings(void)
 		}else if(strcmp(key, "aa_samples") == 0){
 			if(parseIntSetting(value, &intValue))
 				gRequestedAASamples = sanitizeAASamples((uint32)max(intValue, 1));
+		}else if(strcmp(key, "renderer") == 0 || strcmp(key, "renderer_gl_failed") == 0){
+			parseRendererSetting(key, value);
 		}else if(strcmp(key, "use_blur_ambient") == 0){
 			if(parseBoolSetting(value, &boolValue)) gUseBlurAmb = boolValue;
 		}else if(strcmp(key, "override_blur_ambient") == 0){
@@ -7125,6 +7167,10 @@ saveSaveSettings(void)
 	fprintf(f, "render_all_areas %d\n", gNoAreaCull ? 1 : 0);
 	fprintf(f, "render_postfx %d\n", gRenderPostFX ? 1 : 0);
 	fprintf(f, "aa_samples %u\n", (unsigned)gRequestedAASamples);
+#ifdef _WIN32
+	fprintf(f, "renderer %s\n", rendererNames[gRendererChoice]);
+	fprintf(f, "renderer_gl_failed %d\n", gRendererGlFailed ? 1 : 0);
+#endif
 	fprintf(f, "use_blur_ambient %d\n", gUseBlurAmb ? 1 : 0);
 	fprintf(f, "override_blur_ambient %d\n", gOverrideBlurAmb ? 1 : 0);
 	fprintf(f, "colour_filter %d\n", gColourFilter);
@@ -8279,6 +8325,41 @@ uiPerformancePreferences(void)
 		ImGui::TextDisabled(_("MSAA is not reported by the current renderer/device."));
 	else if(activeAASamples != gRequestedAASamples)
 		ImGui::TextDisabled(_("Restart Haumea to apply the new anti-aliasing level."));
+	if(RendererChoiceAvailable()){
+		// The renderers' own names aren't translated.
+		auto label = [](int i){ return i == RENDERER_AUTO ? _("Automatic") : i == RENDERER_OPENGL ? "OpenGL 3.3" : "Direct3D 9"; };
+#ifdef RW_D3D9
+		const int running = RENDERER_D3D9;
+#else
+		const int running = RENDERER_OPENGL;
+#endif
+		ImGui::SetNextItemWidth(ImGui::GetFontSize() * 10.0f);
+		if(ImGui::BeginCombo(_("Renderer"), label(gRendererChoice))){
+			for(int i = RENDERER_AUTO; i <= RENDERER_D3D9; i++){
+				bool selected = gRendererChoice == i;
+				if(ImGui::Selectable(label(i), selected) && !selected){
+					gRendererChoice = i;
+					gRendererGlFailed = false;	// a choice tries OpenGL again
+					SaveEditorSettingsNow();
+				}
+				if(selected)
+					ImGui::SetItemDefaultFocus();
+			}
+			ImGui::EndCombo();
+		}
+		ImGui::SetItemTooltip(_("Automatic uses OpenGL, and Direct3D 9 when OpenGL doesn't start on this PC."));
+		int wanted = gRendererChoice != RENDERER_AUTO ? gRendererChoice :
+			gRendererGlFailed ? RENDERER_D3D9 : RENDERER_OPENGL;
+		ImGui::TextDisabled(_("Running: %s"), label(running));
+		if(gRendererGlFailed && gRendererChoice == RENDERER_AUTO)
+			ImGui::TextDisabled(_("OpenGL didn't start on this PC, so Automatic uses Direct3D 9."));
+		if(wanted != running){
+			ImGui::TextDisabled(_("Restart Haumea to switch renderers."));
+			ImGui::SameLine();
+			if(ImGui::SmallButton(_("Restart now")))
+				restartHaumeaFromUi();
+		}
+	}
 	ImGui::Checkbox(_("Post effects"), &gRenderPostFX);
 	if(params.timecycle == GAME_SA){
 		ImGui::SameLine();

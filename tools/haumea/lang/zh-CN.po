@@ -10565,3 +10565,19 @@ msgid ""
 msgstr ""
 "可无缝重复的贴图，适用于地面、墙面和长表面，\n"
 "根据边缘判断；只是估计，请检查实际效果。"
+
+msgid "Renderer"
+msgstr "渲染器"
+
+msgid "Automatic uses OpenGL, and Direct3D 9 when OpenGL doesn't start on this PC."
+msgstr "自动：使用 OpenGL；如果 OpenGL 无法在此电脑上启动，则使用 Direct3D 9。"
+
+#, c-format
+msgid "Running: %s"
+msgstr "正在使用：%s"
+
+msgid "OpenGL didn't start on this PC, so Automatic uses Direct3D 9."
+msgstr "OpenGL 无法在此电脑上启动，因此自动模式使用 Direct3D 9。"
+
+msgid "Restart Haumea to switch renderers."
+msgstr "重新启动 Haumea 以切换渲染器。"

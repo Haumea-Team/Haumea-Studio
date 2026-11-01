@@ -37,7 +37,7 @@ with tarfile.open(fileobj=raw, mode='w', format=tarfile.USTAR_FORMAT) as tar:
     add('MANIFEST', manifest.encode())
     for f in files:
         add(f.relative_to(folder).as_posix(), f.read_bytes(),
-            executable=f.name in ('haumea', 'haumea.exe') or (f.stat().st_mode & 0o111) != 0)
+            executable=f.name in ('haumea', 'haumea.exe', 'haumea-d3d9.exe') or (f.stat().st_mode & 0o111) != 0)
 with open(output, 'wb') as out:
     with gzip.GzipFile(fileobj=out, mode='wb', mtime=0, filename='') as gz:
         gz.write(raw.getvalue())
