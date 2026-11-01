@@ -765,6 +765,9 @@ Init(void)
 	InitWorkspace();
 	// From here a crash is reported at the next start.
 	CrashReportsInstall();
+	// haumea.log, from here on: a start that fails before the first frame still leaves one.
+	OpenLogFile();
+	log("Haumea Studio %s %s starting\n", HaumeaVersionDisplay(), HAUMEA_CHANNEL);
 	// A downloaded update installs now, before any window, and starts in this
 	// one's place.
 	UpdaterInstallStaged();
@@ -938,8 +941,22 @@ InitRW(void)
 #endif
 	}
 #endif
-	if(!sk::InitRW())
+	// The last line of haumea.log when the renderer is what fails.
+	log("Starting the graphics\n");
+	if(!sk::InitRW()){
+		log("error: the graphics didn't start\n");
+#ifdef _WIN32
+		// Otherwise it just closes: no window yet, and the reason went to haumea.stderr.log.
+		std::string text = std::string(_("Haumea Studio couldn't start its graphics. Update your graphics "
+			"card's driver (Haumea needs OpenGL 3.3 or Direct3D 9; Windows' basic display driver, Remote "
+			"Desktop and some virtual machines can't). The details are in haumea.log and haumea.stderr.log in:")) +
+			"\n\n" + GetConfigDir();
+		std::wstring wide(MultiByteToWideChar(CP_UTF8, 0, text.c_str(), -1, nil, 0), L'\0');
+		MultiByteToWideChar(CP_UTF8, 0, text.c_str(), -1, &wide[0], (int)wide.size());
+		MessageBoxW(nil, wide.c_str(), L"Haumea Studio", MB_OK | MB_ICONERROR);
+#endif
 		return false;
+	}
 #ifdef LIBRW_GLFW
 	glfwDefaultWindowHints();
 	setWindowIcon();

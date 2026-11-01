@@ -4053,6 +4053,9 @@ msgstr "O Haumea Studio fechou inesperadamente ou teve um erro. Um relatório po
 msgid "Haumea Studio closed unexpectedly or hit errors. Reports can help fix them."
 msgstr "O Haumea Studio fechou inesperadamente ou teve erros. Os relatórios podem ajudar a corrigir."
 
+msgid "Haumea Studio couldn't start its graphics. Update your graphics card's driver (Haumea needs OpenGL 3.3 or Direct3D 9; Windows' basic display driver, Remote Desktop and some virtual machines can't). The details are in haumea.log and haumea.stderr.log in:"
+msgstr "O Haumea Studio não conseguiu iniciar os gráficos. Atualize o driver da sua placa de vídeo (o Haumea precisa de OpenGL 3.3 ou Direct3D 9; o driver de vídeo básico do Windows, a Área de Trabalho Remota e algumas máquinas virtuais não oferecem isso). Os detalhes estão em haumea.log e haumea.stderr.log em:"
+
 msgid "Haumea Studio is free software under the GNU General Public License, version 2 or any later version. It includes components under their own licenses."
 msgstr "Haumea Studio é software livre sob a Licença Pública Geral GNU, versão 2 ou qualquer versão posterior. Ele inclui componentes sob as próprias licenças."
 

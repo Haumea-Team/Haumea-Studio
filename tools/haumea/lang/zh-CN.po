@@ -3856,6 +3856,9 @@ msgstr "Haumea Studio 意外关闭或遇到错误。提交报告有助于修复�
 msgid "Haumea Studio closed unexpectedly or hit errors. Reports can help fix them."
 msgstr "Haumea Studio 意外关闭或遇到多个错误。提交报告有助于修复问题。"
 
+msgid "Haumea Studio couldn't start its graphics. Update your graphics card's driver (Haumea needs OpenGL 3.3 or Direct3D 9; Windows' basic display driver, Remote Desktop and some virtual machines can't). The details are in haumea.log and haumea.stderr.log in:"
+msgstr "Haumea Studio 无法启动图形。请更新显卡驱动程序（Haumea 需要 OpenGL 3.3 或 Direct3D 9；Windows 基本显示驱动程序、远程桌面和部分虚拟机无法满足）。详细信息位于以下文件夹中的 haumea.log 和 haumea.stderr.log："
+
 msgid "Haumea Studio is free software under the GNU General Public License, version 2 or any later version. It includes components under their own licenses."
 msgstr "Haumea Studio 是依据 GNU 通用公共许可证第 2 版或任何更高版本发布的自由软件。它包含遵循其自身许可证的组件。"
 

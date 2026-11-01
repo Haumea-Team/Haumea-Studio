@@ -1430,10 +1430,11 @@ addToLogWindow(const char *fmt, va_list args)
 	}
 }
 
-// The log file opens once the editor is up (the settings folder is known by
-// then); what was logged before goes in first. Command-line runs keep none.
-static void
-openLogFile(void)
+// The log file opens at start, as soon as the settings folder is known, so a
+// start that fails before the first frame still leaves one; what was logged
+// before goes in first. Command-line runs keep none.
+void
+OpenLogFile(void)
 {
 	if(gLogFileTried)
 		return;
@@ -1453,6 +1454,16 @@ openLogFile(void)
 	gLogFilePath = path;
 	for(const LogLine &l : gLogLines)
 		writeLogLine(l);
+#ifdef _WIN32
+	// Started without a console, stderr goes nowhere, and librw prints its
+	// errors (a renderer that won't start, say) there: into haumea.stderr.log.
+	HANDLE err = GetStdHandle(STD_ERROR_HANDLE);
+	char errPath[1024];
+	if((err == nil || err == INVALID_HANDLE_VALUE) &&
+	   BuildPath(errPath, sizeof(errPath), GetConfigDir(), "haumea.stderr.log") &&
+	   freopen(errPath, "w", stderr))
+		setvbuf(stderr, nil, _IONBF, 0);
+#endif
 }
 
 static void
@@ -13924,7 +13935,6 @@ gui(void)
 
 		if(showHelpWindow) uiHelpWindow();
 		if(showShortcutsWindow) uiKeyboardShortcutsWindow();
-	openLogFile();
 	if(showLogWindow) drawLogWindow(&showLogWindow);
 
 	// Place mode overlay

@@ -120,6 +120,7 @@ FILE *fopenHaumeaDataWrite(const char *name);
 void setHotReloadTracePath(const char *path);
 void hotReloadTrace(const char *fmt, ...);
 void addToLogWindow(const char *fmt, va_list args);
+void OpenLogFile(void);
 void LoadInitialEditorWindowState(int *width, int *height);
 void LoadInitialAntialiasingSettings(void);
 void ApplyInitialEditorWindowState(void);
