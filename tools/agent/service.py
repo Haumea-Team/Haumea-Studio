@@ -113,6 +113,7 @@ class HaumeaService:
 		self.discovery_dir = Path(discovery_dir)
 		self.state_dir = Path(state_dir)
 		self._stable_keys_by_instance: dict[int, str] = {}
+		self.is_worker = False	# a background Namaka (namaka_team.py)
 
 	@property
 	def vibe(self):
@@ -526,6 +527,29 @@ class HaumeaService:
 		self._close_session_for_document(discard_changes)
 		return self.engine("map_open", [str(resolved), int(bool(discard_changes))])
 
+	def multiplayer(self, action: str, *, address: str | None = None, port: int = 7790,
+	                password: str | None = None, name: str = "Namaka", discard_changes: bool = False) -> dict:
+		"""Multiplayer editing (File > Multiplayer): join a session, host the open map, leave, or status."""
+		if action == "status":
+			return self.engine("multiplayer_status")
+		if action == "leave":
+			return self.engine("multiplayer_leave")
+		if action not in ("join", "host"):
+			raise ValueError("action is join, host, leave or status")
+		if action == "join" and not (address and password):
+			raise ValueError("join needs the address and the host's code or the server's password")
+		# Joining replaces the open map, and hosting starts from it: both end the edit session.
+		self._close_session_for_document(discard_changes)
+		if action == "host":
+			return self.engine("multiplayer_host", [int(port), name])
+		self.engine("multiplayer_join", [address, int(port), password, name])
+		deadline = time.time() + 60
+		while True:
+			status = self.engine("multiplayer_status")
+			if status.get("state") in ("joined", "off") or time.time() > deadline:
+				return status
+			time.sleep(0.25)
+
 	def _close_session_for_document(self, discard_changes: bool) -> None:
 		"""Opening or starting a map ends the edit session: discard drops its edits."""
 		if not self.client.command("session_status").get("active"):
@@ -665,6 +689,10 @@ class HaumeaService:
 		committed = None
 		if self.client.command("session_status").get("active"):
 			committed = self.client.command("session_commit").get("committed_session")
+		if self.is_worker:
+			# Its edits are already in the session; the map's file is the user's.
+			return {"committed_session": committed, "saved": False,
+			        "note": "edits kept in the session: call save_map without namaka to write the map's file"}
 		result = self.engine("save", [target, format or "", text_encoding or ""])
 		if committed:
 			result["committed_session"] = committed

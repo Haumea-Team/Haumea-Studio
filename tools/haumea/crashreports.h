@@ -16,7 +16,7 @@
 // install ID only while the daily ping is on. Never sent from tests, UI
 // scripts, command-line modes, agent sessions or CI, nor with HAUMEA_NO_REPORTS;
 // HAUMEA_REPORTS_URL points it at a test server (loopback may be http).
-// The schema is tools/server/haumea_server.py's validate_report.
+// The schema is tools/telemetry/haumea_telemetry.py's validate_report.
 
 // At start, once the config folder is known: the handlers.
 void CrashReportsInstall(void);

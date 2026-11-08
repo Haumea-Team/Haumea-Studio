@@ -240,6 +240,7 @@ struct AnimatedInstance
 	float time;
 	// What the pose was built for; rebuilt when the instance's clump changes.
 	rw::Clump *clump;
+	uint32 serial;	// the instance's m_rwObjectSerial when the pose was built
 	rw::Atomic *atomic;
 	rw::Geometry *baseGeometry;	// the model's (upright) geometry
 	rw::Geometry *posed;		// this instance's copy
@@ -264,6 +265,15 @@ skinnedAtomic(rw::Clump *clump)
 	return nil;
 }
 
+// The pose's clump is still the instance's: the parts it points at are alive.
+// Its address alone can't tell (a new clump can take a freed one's place).
+bool
+poseIsLive(const ObjectInst *inst, const AnimatedInstance &a)
+{
+	return inst && a.clump && (rw::Clump*)inst->m_rwObject == a.clump && inst->m_rwObjectSerial == a.serial;
+}
+
+// restoreGeometry writes into the clump: only when poseIsLive.
 void
 releasePose(AnimatedInstance &a, bool restoreGeometry)
 {
@@ -334,6 +344,7 @@ buildPose(ObjectInst *inst, AnimatedInstance &a)
 	if(posed == nil)
 		return false;
 	a.clump = clump;
+	a.serial = inst->m_rwObjectSerial;
 	a.atomic = atomic;
 	a.baseGeometry = atomic->geometry;
 	a.posed = posed;
@@ -576,13 +587,14 @@ SetInstanceAnimation(ObjectInst *inst, const char *lib, const char *name,
 	if(obj == nil || !obj->m_isPed)
 		return false;
 	AnimatedInstance &a = gAnimated[inst->m_id];
-	bool same = a.posed && a.lib == l && a.clip == c;
+	bool live = poseIsLive(inst, a);
+	bool same = a.posed && live && a.lib == l && a.clip == c;
 	if(!same){
-		releasePose(a, true);
+		releasePose(a, live);
 		a.time = 0.0f;
 	}
 	if(a.rest){
-		releasePose(a, true);
+		releasePose(a, poseIsLive(inst, a));
 		a.rest = false;
 		a.time = 0.0f;
 		same = false;
@@ -610,7 +622,7 @@ ClearInstanceAnimation(ObjectInst *inst)
 	std::map<int32, AnimatedInstance>::iterator it = gAnimated.find(inst->m_id);
 	if(it == gAnimated.end())
 		return;
-	releasePose(it->second, (rw::Clump*)inst->m_rwObject == it->second.clump);
+	releasePose(it->second, poseIsLive(inst, it->second));
 	gAnimated.erase(it);
 }
 
@@ -656,7 +668,7 @@ AnimUpdate(float timeStep)
 			it = gAnimated.erase(it);
 			continue;
 		}
-		if(a.clump != (rw::Clump*)inst->m_rwObject){
+		if(!poseIsLive(inst, a)){
 			// The model changed or was reloaded; the old clump is gone.
 			if(a.posed)
 				a.posed->destroy();

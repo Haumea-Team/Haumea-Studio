@@ -62,6 +62,47 @@
 - Older maps migrate when saved, keeping an exact backup of their previous Pawn. Paired saves
   retain the previous document if writing fails; externally edited Pawn keeps its runtime changes.
 
+### Multiplayer editing
+
+- Edit one map together: **File → Multiplayer...** hosts the open map, and others join it
+  with the address, port and session code. Changes to every element, removed GTA buildings
+  and the map's textdraws show up for everyone, with each person's camera and selection.
+- `haumea-server` keeps a session on a machine that stays up (the SA-MP server's, say), with a
+  password, and in a state file across restarts; the first editor in sends its map. Hosting from
+  the editor asks the router to forward the port (UPnP) and shows a public IPv6 address when there
+  is one; the server listens on IPv6 and IPv4 and journals every change, so a crash loses nothing.
+  Connections are encrypted (Monocypher).
+- Area removals, radar art, the TextDraw editor's file, alignment pins, 3D paths, the Nodes tool's
+  NPC nodes and 0.3.DL custom models (their files included) travel too. Undo skips steps on what someone else changed since.
+- Several agents build in one session, in one editor or several: each has its own edit session,
+  and rolling back or undoing only takes back its own edits (Namaka's `multiplayer_session`).
+- Others' markers move smoothly and show where they look (a view cone), selections have thick
+  outlines, and an arrow at the edge of the view points to who is out of it.
+- Chat in the Multiplayer panel: @name mentions, a toast for new messages, and double-click a
+  message to look from where it was written. haumea-server keeps the last 200 messages.
+- AI agents carry an **AI** tag everywhere: their marker, the People list and their messages
+  (the server puts it there, so it can't be left off).
+- The Join panel remembers the servers you joined; star favourites, optionally with their password.
+- haumea-server keeps the map as Pawn (`--maps-dir`, with dated copies, and `--map-out`, for your
+  game server's folder) whenever someone saves, and autosaves it (`--autosave`, every 10 minutes it
+  changed). **Load a map for everyone** replaces the session's map; `--admin-password` limits who may.
+- Servers with accounts, invites, roles (owner, admin, builder, viewer) and rooms: sign in from the
+  Join panel, pick a room from the lobby, manage people from the People list and the Admin section.
+  haumea-server is now its own project (github.com/itsneufox/haumea-server).
+- The server proves who it is: Haumea remembers its fingerprint and refuses another one later.
+- Everyone's ping shows beside their name; an AI agent shows whose it is ("via ...").
+- Namaka joins the session your editor is in by itself (with a token from your account on a server
+  with accounts), instead of asking you for the address and password.
+- Fixed: the camera could roll over upside down when looking past straight up or down.
+- Fixed: crashes when someone else changed an animated actor or NPC.
+- Namaka works off your screen by default: its first look at the scene starts a hidden editor that
+  joins your map as a person of its own, so your camera and selection stay yours. `namaka_team` starts
+  several, and any tool takes `namaka` to work as one of them, or `namaka="editor"` to work where you
+  watch. If you're in no session, one opens for this computer only.
+- A terminal panel (**Windows → Terminal**, Ctrl+\`): your own shell inside Haumea, with colours, full-screen
+  programs and scrollback, so any AI assistant's command-line tool runs there, or a server or anything else.
+- New Namaka tools: `redo_edit`, `select_elements`, `add_path_node`, `path_nodes_status`.
+
 ### TextDraw editing and previews
 
 - Artboards, layers, multiselection, locking, editable shapes, eight resize handles,
@@ -96,6 +137,8 @@ shortcut. The new build fixes subsequent restarts.
 
 ### Fixes and polish
 
+- Typing a GTA building's own coordinate back into Object Info, as it is shown, no longer counts
+  as an edit (the game's 13.6484375 is written 13.648438).
 - Windows code generation uses the user's temporary folder, fixing Pawn and TextDraw
   generation failures that required running the editor as administrator.
 - Linux self-updates launch the newly installed executable rather than the old rollback copy.

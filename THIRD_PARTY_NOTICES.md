@@ -13,7 +13,9 @@ reads everything else from your own game folder.
 | librwgta and its map viewer euryopa, which Haumea Studio grew from | GPL (the author: "consider my code in this repo dual-licenced as GPL") | aap | https://github.com/aap/librwgta |
 | librw | MIT | Copyright (c) 2014 aap | https://github.com/aap/librw |
 | miniLZO | GPL-2.0-or-later | Copyright (C) 1996-2017 Markus Franz Xaver Johannes Oberhumer | https://www.oberhumer.com/opensource/lzo/ |
+| Monocypher 4.0.3 (multiplayer encryption, `tools/haumea/monocypher`; also in haumea-server) | BSD-2-Clause or CC0-1.0, at your choice | Copyright (c) 2017-2023 Loup Vaillant; Copyright (c) 2017-2019 Michael Savage; Copyright (c) 2017-2023 Fabio Scotoni | https://monocypher.org |
 | Dear ImGui (docking branch, v1.92.2b) | MIT | Copyright (c) 2014-2025 Omar Cornut | https://github.com/ocornut/imgui |
+| libvterm 0.3.3 (the terminal panel, `vendor/libvterm`) | MIT | Copyright (c) 2008 Paul Evans | https://github.com/neovim/libvterm |
 | ImGuiColorTextEdit (native Pawn editor, `vendor/imgui-texteditor`) | MIT | Copyright (c) 2024-2026 Johan A. Goossens | https://github.com/goossens/ImGuiColorTextEdit |
 | Pawn syntax categories and keyword lists (`pawnsyntax.cpp`), adapted from vscode-pawn | MIT | Copyright (c) 2013-2014 Eldar Abusalimov; Pawn modifications Sergei Marochkin, 2016; Copyright (c) 2019 IndianOceanRoleplay | https://github.com/openmultiplayer/vscode-pawn |
 | stb_truetype, stb_rect_pack, stb_textedit (inside Dear ImGui) | MIT or public domain (Unlicense), at your choice | Copyright (c) 2017 Sean Barrett | https://github.com/nothings/stb |
@@ -526,6 +528,65 @@ All brand icons are trademarks of their respective owners. The use of these
 trademarks does not indicate endorsement of the trademark holder by Font
 Awesome, nor vice versa. **Please do not use brand logos for any purpose except
 to represent the company, product, or service to which they refer.**
+```
+
+### libvterm (MIT)
+
+```text
+The MIT License
+
+Copyright (c) 2008 Paul Evans <leonerd@leonerd.org.uk>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+```
+
+### Monocypher (BSD-2-Clause, the fallback to its CC0-1.0)
+
+```text
+Copyright (c) 2017-2023, Loup Vaillant
+Copyright (c) 2017-2019, Michael Savage
+Copyright (c) 2017-2023, Fabio Scotoni
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+1. Redistributions of source code must retain the above copyright
+   notice, this list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright
+   notice, this list of conditions and the following disclaimer in the
+   documentation and/or other materials provided with the
+   distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ```
 
 ### miniLZO and librwgta: GNU General Public License

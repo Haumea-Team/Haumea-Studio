@@ -1,4 +1,5 @@
 #include "haumea.h"
+#include "multiplayer.h"
 #include "discordpresence.h"
 #include "i18n.h"
 #include "crashreports.h"
@@ -79,7 +80,7 @@ ResolveEditorExecutablePath(char *path, size_t size)
 // Keep the launch location before the updater moves the running executable.
 // On Linux /proc/self/exe follows that move into .haumea-previous/files;
 // resolving it again would relaunch the old version from the backup folder.
-static bool
+bool
 GetEditorExecutablePath(char *path, size_t size)
 {
 	static const std::string launchPath = []{
@@ -1278,6 +1279,7 @@ AppEventHandler(sk::Event e, void *param)
 			ApplyInitialEditorWindowState();
 		return EVENTPROCESSED;
 	case RWTERMINATE:
+		MultiplayerLeave();	// tells the others, takes the router's forward away
 		DiscordPresenceShutdown();
 #if defined(_WIN32) && defined(RW_D3D9)
 		ImGui_ImplRW_Shutdown();

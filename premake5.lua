@@ -302,6 +302,8 @@ project "haumea"
 	cppdialect "C++17"
 	files { "vendor/imgui-texteditor/TextEditor.cpp", "vendor/imgui-texteditor/TextEditor.h" }
 	includedirs { "vendor/imgui-texteditor", path.join(Librw, "skeleton/imgui") }
+	files { "vendor/libvterm/src/*.c" }
+	includedirs { "vendor/libvterm/include" }
 	kind "WindowedApp"
 	targetname "haumea"
 	characterset ("MBCS")
@@ -337,7 +339,7 @@ project "haumea"
 		symbols "On"
 	filter {}
 	includedirs { "tools/haumea" }
-	files { "tools/haumea/minilzo/minilzo.c" }
+	files { "tools/haumea/minilzo/minilzo.c", "tools/haumea/monocypher/monocypher.c" }
 	-- The build number and commit, as open.mp does it (tools/release/gen_buildinfo.py):
 	-- remade every build, rewritten only when they change, so only versionutil follows.
 	-- These lines come before the configs set OBJDIR, so a rule on

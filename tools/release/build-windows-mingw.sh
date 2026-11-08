@@ -159,8 +159,8 @@ python3 "$ROOT/tools/release/gen_buildinfo.py" --header "$ROOT/tools/haumea/haum
 # compile() follows sources, not headers: a new build number rebuilds versionutil.
 [ "$ROOT/tools/haumea/haumea_buildinfo.h" -nt "$OUT/obj/haumea/haumea_versionutil.o" ] &&
 	rm -f "$OUT/obj/haumea/haumea_versionutil.o"
-compile "$OUT/obj/haumea" "$COMMON -I$LIBRW -I$ROOT/src -I$LIBRW/skeleton -I$ROOT -I$ROOT/tools/haumea -I$ROOT/vendor/imgui-texteditor -I$LIBRW/skeleton/imgui -DHAUMEA_CHANNEL=\"$CHANNEL\" -D_MBCS $HAUMEA_DEFINES" \
-	$HAUMEA_SOURCES "$ROOT/tools/haumea/minilzo/minilzo.c"
+compile "$OUT/obj/haumea" "$COMMON -I$LIBRW -I$ROOT/src -I$LIBRW/skeleton -I$ROOT -I$ROOT/tools/haumea -I$ROOT/vendor/imgui-texteditor -I$ROOT/vendor/libvterm/include -I$LIBRW/skeleton/imgui -DHAUMEA_CHANNEL=\"$CHANNEL\" -D_MBCS $HAUMEA_DEFINES" \
+	$HAUMEA_SOURCES "$ROOT/tools/haumea/minilzo/minilzo.c" "$ROOT/tools/haumea/monocypher/monocypher.c"
 # The manifest (UTF-8 code page) goes in as a resource, as MSVC embeds it
 # itself, and the version info (haumea.rc).
 WINDRES=${WINDRES:-x86_64-w64-mingw32-windres}
@@ -173,3 +173,4 @@ $CXX -o "$OUT/haumea.exe" "$OUT"/obj/haumea/*.o "$OUT/haumea_res.o" "$OUT/librwg
 	$GFXLIBS -lwinhttp -lws2_32 -lgdi32 -lcomdlg32 -lshell32 -lole32 -luuid -lpsapi -ldwmapi -lshlwapi \
 	-static -static-libgcc -static-libstdc++ -mwindows -Wl,--stack,8388608
 echo "built $OUT/haumea.exe"
+

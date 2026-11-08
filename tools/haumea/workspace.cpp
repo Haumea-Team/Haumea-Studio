@@ -236,6 +236,19 @@ GetConfigDir(void)
 }
 
 bool
+IsBackgroundWorker(void)
+{
+	static int known = -1;
+	if(known < 0){
+		known = 0;
+		for(int i = 1; i < sk::args.argc; i++)
+			if(strcmp(sk::args.argv[i], "--background") == 0)
+				known = 1;
+	}
+	return known == 1;
+}
+
+bool
 SettingsAreReadOnly(void)
 {
 	for(int i = 1; i < sk::args.argc; i++)
@@ -248,7 +261,8 @@ SettingsAreReadOnly(void)
 		   strcmp(sk::args.argv[i], "--dump-categories") == 0 ||
 		   strcmp(sk::args.argv[i], "--dump-model-meta") == 0 ||
 		   strcmp(sk::args.argv[i], "--profile") == 0 ||
-		   strcmp(sk::args.argv[i], "--no-save-settings") == 0)
+		   strcmp(sk::args.argv[i], "--no-save-settings") == 0 ||
+		   strcmp(sk::args.argv[i], "--background") == 0)
 			return true;
 	return false;
 }

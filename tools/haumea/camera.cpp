@@ -278,41 +278,53 @@ CCamera::getHeading(void)
 	return m_localup.z < 0.0f ? a-PI : a;
 }
 
+// The view turned by yaw around the world's up, then raised by pitch, but
+// never past straight up or down: beyond that the picture would turn upside
+// down. Returns the new view direction (as long as dir) and sets the up vectors.
+static const float MAX_ELEVATION = 89.0f * 3.14159265f / 180.0f;
+
+static V3d
+turnedView(V3d dir, float yaw, float pitch, V3d *localup, V3d *up)
+{
+	float length = rw::length(dir);
+	if(length < 1e-6f)
+		return dir;
+	V3d zaxis = { 0.0f, 0.0f, 1.0f };
+	dir = rotate(dir, Quat::rotation(yaw, zaxis));
+	V3d flat = { dir.x, dir.y, 0.0f };
+	float flatLength = rw::length(flat);
+	if(flatLength < 1e-5f){
+		// Looking exactly down or up: the heading comes from the up vector.
+		flat = { localup->x, localup->y, 0.0f };
+		flat = rotate(flat, Quat::rotation(yaw, zaxis));
+		if(dir.z > 0.0f)
+			flat = scale(flat, -1.0f);
+		flatLength = rw::length(flat);
+		if(flatLength < 1e-5f)
+			flat = { 1.0f, 0.0f, 0.0f }, flatLength = 1.0f;
+	}
+	V3d heading = scale(flat, 1.0f / flatLength);
+	float elevation = atan2f(dir.z, rw::length(V3d{ dir.x, dir.y, 0.0f }));
+	elevation += pitch;
+	if(elevation > MAX_ELEVATION) elevation = MAX_ELEVATION;
+	if(elevation < -MAX_ELEVATION) elevation = -MAX_ELEVATION;
+	float c = cosf(elevation), s = sinf(elevation);
+	*localup = add(scale(heading, -s), scale(zaxis, c));
+	*up = zaxis;
+	return scale(add(scale(heading, c), scale(zaxis, s)), length);
+}
+
 void
 CCamera::turn(float yaw, float pitch)
 {
-	V3d dir = sub(m_target, m_position);
-	V3d zaxis = { 0.0f, 0.0f, 1.0f };
-	Quat r = Quat::rotation(yaw, zaxis);
-	dir = rotate(dir, r);
-	m_localup = rotate(m_localup, r);
-
-	V3d right = normalize(cross(dir, m_localup));
-	r = Quat::rotation(pitch, right);
-	dir = rotate(dir, r);
-	m_localup = normalize(cross(right, dir));
-	if(m_localup.z >= 0.0) m_up.z = 1.0;
-	else m_up.z = -1.0f;
-
+	V3d dir = turnedView(sub(m_target, m_position), yaw, pitch, &m_localup, &m_up);
 	m_target = add(m_position, dir);
 }
 
 void
 CCamera::orbit(float yaw, float pitch)
 {
-	V3d dir = sub(m_target, m_position);
-	V3d zaxis = { 0.0f, 0.0f, 1.0f };
-	Quat r = Quat::rotation(yaw, zaxis);
-	dir = rotate(dir, r);
-	m_localup = rotate(m_localup, r);
-
-	V3d right = normalize(cross(dir, m_localup));
-	r = Quat::rotation(-pitch, right);
-	dir = rotate(dir, r);
-	m_localup = normalize(cross(right, dir));
-	if(m_localup.z >= 0.0) m_up.z = 1.0;
-	else m_up.z = -1.0f;
-
+	V3d dir = turnedView(sub(m_target, m_position), yaw, -pitch, &m_localup, &m_up);
 	m_position = sub(m_target, dir);
 }
 

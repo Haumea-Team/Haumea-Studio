@@ -3,7 +3,7 @@
 Each case runs the editor on the synthetic game with its own config folder
 and a short UI script. A crash is made with --crash-test (only with
 HAUMEA_CRASH_TEST=1); the next start turns it into reports/pending/<id>.json,
-which must pass the receiving server's own checks (tools/server/haumea_server.py
+which must pass the receiving server's own checks (haumea-telemetry's haumea_telemetry.py
 validate_report and signature_of) and leave out the user's folders and map
 names. Sending goes to HAUMEA_REPORTS_URL: a counting server, and once the real
 receiving server with a private database.
@@ -26,9 +26,20 @@ import unittest
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[2]
 sys.path.insert(0, str(HERE))
-sys.path.insert(0, str(ROOT / 'tools' / 'server'))
+# The receiving server is its own repo (haumea-telemetry): HAUMEA_TELEMETRY_DIR, or beside this checkout.
+def _telemetry_dir():
+    places = [Path(os.environ['HAUMEA_TELEMETRY_DIR'])] if os.environ.get('HAUMEA_TELEMETRY_DIR') else []
+    places += [ROOT.parent / 'haumea-telemetry', ROOT.parent.parent / 'haumea-telemetry']
+    return next((p for p in places if (p / 'haumea_telemetry.py').exists()), None)
+
+
+TELEMETRY_DIR = _telemetry_dir()
 from haumea_test_env import editor_env  # noqa: E402
-import haumea_server  # noqa: E402
+if TELEMETRY_DIR:
+    sys.path.insert(0, str(TELEMETRY_DIR))
+    import haumea_telemetry  # noqa: E402
+else:
+    haumea_telemetry = None
 
 BINARY = os.environ.get('HAUMEA_BINARY') or next(iter(sorted(
     glob.glob(str(ROOT / 'bin' / '*' / 'Release' / 'haumea')))), None)
@@ -59,7 +70,8 @@ class CountingServer:
         self.httpd.server_close()
 
 
-@unittest.skipUnless(BINARY and XVFB and sys.platform.startswith('linux'), 'needs the editor and xvfb-run on Linux')
+@unittest.skipUnless(BINARY and XVFB and haumea_telemetry and sys.platform.startswith('linux'),
+                     'needs the editor, xvfb-run on Linux and haumea-telemetry (its own repo) beside this checkout')
 class CrashReportTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -111,8 +123,8 @@ class CrashReportTests(unittest.TestCase):
         text = path.read_text()
         self.assertLess(len(text), 256 * 1024)
         data = json.loads(text)
-        r = haumea_server.validate_report(data)	# raises on anything the server refuses
-        self.assertEqual(haumea_server.signature_of(r), r['signature'])
+        r = haumea_telemetry.validate_report(data)	# raises on anything the server refuses
+        self.assertEqual(haumea_telemetry.signature_of(r), r['signature'])
         self.assertEqual(r['kind'], kind)
         self.assertEqual(r['os'], 'linux')
         self.assertTrue(any(f['module'] == 'haumea' for f in r['frames']), r['frames'])
@@ -179,7 +191,7 @@ class CrashReportTests(unittest.TestCase):
         self.reports.joinpath('settings.txt').write_text('send always\n')
         self.run_editor(url=server.url, script='wait 60\n')
         self.assertEqual(len(server.bodies), 1)
-        haumea_server.validate_report(server.bodies[0])
+        haumea_telemetry.validate_report(server.bodies[0])
         self.assertEqual(self.pending(), [])
 
     def test_ask_banner_send(self):
@@ -245,7 +257,7 @@ class CrashReportTests(unittest.TestCase):
         db = self.work / 'server.db'
         env = dict(os.environ, HAUMEA_LISTEN='127.0.0.1:%d' % port, HAUMEA_DB=str(db), HAUMEA_FETCH_SYMBOLS='0',
                    HAUMEA_TRUST_PROXY='0', HAUMEA_SYMBOLS_DIR=str(self.work / 'symbols'))
-        server = subprocess.Popen([sys.executable, str(ROOT / 'tools' / 'server' / 'haumea_server.py'),
+        server = subprocess.Popen([sys.executable, str(TELEMETRY_DIR / 'haumea_telemetry.py'),
                                    '--config', os.devnull], env=env, stdout=subprocess.DEVNULL,
                                   stderr=subprocess.DEVNULL)
         self.addCleanup(server.wait)

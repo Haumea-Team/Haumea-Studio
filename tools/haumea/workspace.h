@@ -55,6 +55,8 @@ void SetOpenLastWorkspace(bool open);
 // read the settings but never write them (settings, recent maps, window
 // state, autosaves, the workspace).
 bool SettingsAreReadOnly(void);
+// --background: a hidden editor that an agent drives (agentbridge.cpp).
+bool IsBackgroundWorker(void);
 // Test runs and command-line modes (SettingsAreReadOnly, --ui-script, or any
 // editor a test starts with HAUMEA_TEST_XVFB=1): no update check, telemetry,
 // Namaka listening or start screen, whatever else the environment says.

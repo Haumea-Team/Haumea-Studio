@@ -11,6 +11,7 @@
 #include <ctype.h>
 #include <assert.h>
 #include <string>
+#include <map>
 
 #include <rwgta.h>
 #define PS2
@@ -58,6 +59,11 @@ void SetupCustomModelCollision(struct ObjectDef *obj, rw::Clump *clump);
 void OpenAddCustomModelDialog(const char *droppedPath);	// nil, or a dropped DFF/TXD
 void DrawAddCustomModelDialog(void);
 const char *GetCustomModelsMapPath(void);
+// Multiplayer: the custom models as artconfig.txt lines naming files by
+// their own names, sorted, with those files (name -> path)...
+std::string CustomModelsSessionList(std::map<std::string, std::string> &files);
+// ...and a session's, its files in dir: the ones not here yet are added.
+int AddSessionCustomModels(const std::string &dir, const std::string &artconfig);
 // Models a map uses that were old modloader/Haumea imports, moved into the
 // server's models folder as custom models on request.
 int FindLegacyImports(const std::vector<int> &unknownIds, std::vector<int> &legacyIds);
@@ -75,6 +81,8 @@ int GetVehiclePaintjobCount(int vehicleModel);	// 0-3
 void ApplyEditorVehiclePlate(rw::Clump *clump, const char *plateText);
 void AddEditorVehicleComponents(rw::Clump *clump, const uint16 *mods);
 void ApplyEditorVehiclePaintjob(rw::Clump *clump, int vehicleModel, int paintjob);
+
+uint32 NextRwObjectSerial(void);	// objectinst.cpp
 
 struct ObjectInst;
 
@@ -862,6 +870,8 @@ void Redo(void);
 void UndoBeginGroup(void);
 void UndoEndGroup(void);
 void ResetUndoHistory(void);
+void UndoForgetInstance(ObjectInst *inst);	// someone else changed it (multiplayer)
+void UndoForgetKind(int type);	// someone else replaced that list (UNDO_RADAR_ART...)
 
 rw::V3d GetObjectRotationDegrees(const rw::Quat &rotation);
 // An instance's rotation in degrees: the map file's own numbers while the
@@ -1422,6 +1432,10 @@ struct ObjectInst
 	int m_area;
 
 	void *m_rwObject;
+	// Changes with every m_rwObject made or destroyed, never repeating: what
+	// holds on to parts of the model (anim.cpp) checks it, as a new model can
+	// sit where a freed one was and look the same by its address.
+	uint32 m_rwObjectSerial = 0;
 	bool m_isBigBuilding;
 	uint16 m_scanCode;
 
@@ -1532,6 +1546,7 @@ int ResetPawnMap(void);
 // exported the same way, not as one removal per building.
 struct PawnAreaRemoval { float x, y, z, radius; };
 const std::vector<PawnAreaRemoval> &GetPawnAreaRemovals(void);
+void SetPawnAreaRemovals(const std::vector<PawnAreaRemoval> &removals);	// multiplayer
 // Whether a world building's original position is inside one of them.
 bool InsidePawnAreaRemoval(const ObjectInst *inst);
 void RemoveInstFromSectors(ObjectInst *inst);
@@ -1554,11 +1569,13 @@ bool OpenPawnMapFile(const char *path);
 int MergeMapFile(const char *path, int *skipped);
 void NewPawnMapDocument(void);
 bool SavePawnMapTo(const char *path, int format);
+bool ExportOpenPawnMap(const char *path);	// a copy to path; the map keeps its own path
 const char *GetPawnMapPath(void);	// empty while untitled
 const std::vector<std::string> &GetRecentMapPaths(void);	// File > Open Recent, newest first
 void SaveEditorSettings(void);
 bool PickPawnFile(char *dst, size_t size, bool save, const char *suggested);	// the native dialog
 int GetPawnMapFormat(void);	// PawnCodeFormat
+void SetPawnMapFormat(int format);	// what Save writes, e.g. the multiplayer host's
 bool PawnMapHasUnsavedChanges(void);
 
 
@@ -1941,6 +1958,7 @@ void RenderDebugLines(void);
 void SplashProgress(float progress, const char *status);
 void SplashKeepAlive(void);
 extern ImFont *gCodeFont;
+extern ImFont *gTerminalFont;	// the same face, with what terminals print beyond Latin
 extern ImFont *gTitleFont;
 void RenderLinesNow(const rw::V3d *points, int numPoints, rw::RGBA col);
 // Selected objects that move (MoveObject): a line to where they go, a ghost

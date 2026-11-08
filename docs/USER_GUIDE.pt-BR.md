@@ -322,6 +322,120 @@ precisam da biblioteca C de 32 bits: veja [Instalação](../README.pt-BR.md#inst
 
 ![Testar no jogo com o registro do servidor](images/testserver.png)
 
+## Edição multiplayer
+
+Várias pessoas podem editar um mapa ao mesmo tempo. **Arquivo → Multiplayer...** abre o painel:
+
+- **Hospedar este mapa**: compartilha o mapa que está aberto. O painel mostra a porta (7790, a
+  menos que você mude) e um **código da sessão** de seis letras. Com **Abrir a porta no meu
+  roteador** (ligado por padrão) o Haumea pede ao seu roteador para redirecionar a porta (UPnP) e
+  mostra o endereço pelo qual as pessoas entram pela internet.
+- **Entrar**: digite o endereço, a porta e o código do anfitrião (ou a senha do servidor, abaixo).
+  Entrar substitui o mapa e o arquivo de textdraws que você tem abertos pelos da sessão, então
+  salve os seus antes.
+
+Todos veem as mudanças dos outros na hora: objetos, veículos, todos os elementos do SA-MP e as
+configurações deles, grupos e travas, materiais, anexos, prédios do GTA removidos ou movidos,
+remoções por área, arte do radar, as textdraws do mapa, o arquivo do editor de TextDraws, pinos de
+alinhamento, caminhos 3D, os nodes de NPC da ferramenta Nodes e modelos customizados do 0.3.DL (os arquivos DFF e TXD vão para quem não
+os tem). Desfazer vale para os seus próprios passos; um passo em algo que outra pessoa mudou depois é
+pulado, então nunca joga fora a mudança dela. A câmera de cada pessoa aparece como um ponto colorido
+com o nome dela, e o que ela selecionou ganha uma caixa na cor dela; **Ir até** olha de onde ela
+está olhando.
+
+Cada pessoa salva a própria cópia com **Arquivo → Salvar**. Abrir ou começar outro mapa sai de
+uma sessão em que você entrou; quando o anfitrião abre um, ele substitui o de todos. **Parar de
+hospedar** ou **Sair** mantém o mapa como está. Cada pessoa salva os arquivos da ferramenta Nodes com o
+**Salvar** dela.
+
+Todos precisam da mesma versão do Haumea e do mesmo jogo. Na mesma rede, entre com o endereço
+local do anfitrião (por exemplo `192.168.1.20`). Pela internet, o roteador precisa redirecionar a
+porta: o Haumea pede isso a ele, e quando o seu roteador não faz UPnP, redirecione a porta à mão,
+use uma VPN como o Tailscale ou rode o haumea-server (abaixo). Quando o seu computador tem um
+endereço IPv6 público (comum mesmo atrás de CGNAT), o painel o mostra também: os outros entram por ele
+quando o roteador deixa. A conexão é criptografada, e só entra quem tem o código.
+
+### Um servidor sempre ligado: haumea-server
+
+O [haumea-server](https://github.com/itsneufox/haumea-server) (um projeto próprio) mantém sessões em uma
+máquina sempre ligada, como a que roda seu servidor SA-MP ou open.mp, para ninguém precisar deixar o
+Haumea aberto hospedando. Não precisa do jogo nem de tela, e tem:
+
+- **Contas.** O dono cria convites (`haumea-server invite`, ou **Administração → Criar um código de
+  convite** no painel). Na primeira vez, escolha **Código de convite** em Entrar, cole-o e escolha um
+  nome e uma senha; depois, escolha **Conta** e entre com eles.
+- **Papéis.** Dono, administrador, construtor e observador, no servidor todo ou por sala. Um observador
+  olha e conversa; as edições dele são desfeitas. Administradores convidam, mudam papéis, removem pessoas
+  (botão direito em alguém em Pessoas) e trancam salas com senha.
+- **Salas.** Um servidor, vários mapas. Deixe **Sala** vazia para ver a lista ao entrar; um administrador
+  cria uma sala dando um nome novo, e o mapa aberto dele vira o dela.
+- **Identidade.** O servidor assina cada conexão. O painel mostra a impressão digital dele; o Haumea a
+  lembra e não entra se outro servidor responder naquele endereço depois. Tudo é criptografado.
+- **Ping** de todos, ao lado do nome.
+- **Um log** como o do open.mp: `log.txt`, com quem entra, o chat e cada ação de administração.
+
+Tudo o que ele guarda sobrevive a reinícios e travamentos. Hospedar pelo Haumea (**Hospedar este mapa**)
+continua como antes: uma sessão com um código de seis letras.
+
+### Chat
+
+O painel Multijogador tem um chat para todos na sessão. Digite `@nome` para mencionar alguém; novas
+mensagens também aparecem como aviso. Clique duas vezes em uma mensagem para ver de onde quem a escreveu
+estava.
+
+O Namaka pode receber pedidos ali: peça para ele "ouvir o chat" e escreva para ele com `@namaka` (ou um
+com nome, `@Ana`). As mensagens dele, o marcador e o nome na lista de Pessoas têm a etiqueta **AI**, para
+todos saberem quem é agente e quem é pessoa.
+
+### Servidores em que você entrou
+
+O painel Entrar lista as sessões em que você entrou. Clique em uma para preencher o endereço e a porta; ★
+a guarda como favorita no topo, e **Lembrar a senha dos favoritos** guarda a senha neste computador.
+
+### O que o haumea-server guarda
+
+Além da própria sessão (`--state`), o haumea-server pode guardar o mapa em Pawn:
+
+```sh
+haumea-server --state-dir state --maps-dir maps --map-out /caminho/do/servidor/gamemodes/map.pwn --map-out-room main
+```
+
+Sempre que alguém na sessão salva, o servidor grava o mapa em `maps/<nome>.pwn`, uma cópia datada em
+`maps/history` e o mesmo arquivo em `--map-out`, e avisa no chat. A cada 10 minutos em que o mapa mudou,
+ele pede o mapa a um editor da sessão, então `--map-out` fica atualizado mesmo sem ninguém salvar
+(`--autosave 0` desliga isso).
+
+**Carregar um mapa para todos...** (no painel, dentro de uma sessão) abre um arquivo de mapa e o torna o
+da sessão: todos o recebem, e o servidor guarda uma cópia da sessão como estava ao lado do arquivo de
+estado. Com `--admin-password` só quem dá essa senha pode; `--no-replace` desliga isso.
+
+### Um terminal dentro do Haumea
+
+**Janelas → Terminal** (Ctrl+\`) abre seu próprio shell em um painel, começando ao lado do mapa aberto. Tudo
+o que roda em um terminal roda ali: a ferramenta de linha de comando de qualquer assistente de IA, seu
+servidor, um editor. As teclas vão para o programa enquanto o painel tem o foco, então os atalhos do editor
+não atrapalham.
+
+Copiar e colar são **Ctrl+Shift+C** e **Ctrl+Shift+V**, ou o menu do botão direito; arraste para selecionar.
+Role para trás com a roda do mouse ou Shift+PageUp, e segure Shift para selecionar em um programa que usa o
+mouse. O shell continua rodando com o painel fechado e termina com o Haumea. No Windows ele inicia o `cmd`, e
+requer o Windows 10 versão 1809 ou posterior.
+
+### Namaka fora da sua tela
+
+O Namaka trabalha em um Haumea oculto próprio, que entra no seu mapa como uma pessoa: você vê as edições
+chegarem e o marcador dele voar até onde trabalha, enquanto sua câmera e sua seleção continuam suas. Ele
+inicia na primeira vez que o Namaka olha a cena, o que leva alguns segundos. Peça ao Namaka para dividir
+um trabalho e ele pode rodar até oito ao mesmo tempo (`namaka_team`), ou peça para trabalhar onde você
+possa ver.
+
+Se você não estiver em uma sessão, abre-se uma só para este computador: ninguém mais pode entrar e nada é
+pedido ao roteador. Como o Namaka é outra pessoa ali, **Desfazer** no seu editor desfaz os seus próprios
+passos, não as edições dele: peça a ele para desfazê-las. Cada um usa cerca de 450 MB de memória com o jogo
+carregado. Eles fecham quando o Namaka os encerra, quando a sessão termina ou após uma hora sem nada a
+fazer, e o que construíram fica. Na versão Direct3D 9 o Namaka trabalha no seu editor, pois ainda não
+consegue ocultar uma janela ali.
+
 ## Salvando
 
 Em **Mapa**, o mapa é um arquivo Pawn. **Arquivo → Salvar** (`Ctrl+S`) o grava, e **Salvar como** escolhe um

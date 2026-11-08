@@ -17,6 +17,7 @@
 #include "areas.h"
 #include "samp_loader.h"
 #include "agentbridge.h"
+#include "multiplayer.h"
 #include "modloader.h"
 #include "workspace.h"
 #include "rec.h"
@@ -3649,6 +3650,10 @@ Draw(void)
 		TheCamera.Process();
 	}
 	AgentBridgeUpdate();
+	MultiplayerUpdate();
+	// A background worker with nothing to do draws nothing: nobody sees it.
+	if(AgentBridgeWorkerResting())
+		return;
 	TelemetryUpdate();
 	CrashReportsUpdate();
 	{

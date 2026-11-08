@@ -41,10 +41,15 @@ click_item '*' 'Find instances'
 wait 5
 click_item 'Object Browser' 'Select all'
 wait 5
-assert selected == 1
-assert selected_world == 1
+# Every instance in the world: one in the test game, more in the real one.
+assert selected >= 1
+assert selected_world >= 1
 assert selected.model == 3555
-# The context action also converts the selection without moving it.
+# The context action also converts the selection without moving it: just
+# the clicked one here, so the counts below hold for any game.
+click_world 2063.132813 -1731.781250 15.273438
+wait 5
+assert selected == 1
 click_world 2063.132813 -1731.781250 15.273438 right
 click_item '*' 'Convert to map object'
 wait 5

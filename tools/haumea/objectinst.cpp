@@ -903,6 +903,13 @@ releaseObjectMaterialOverrides(ObjectInst *inst)
 	inst->m_materialOverrides = nil;
 }
 
+uint32
+NextRwObjectSerial(void)
+{
+	static uint32 serial;
+	return ++serial;
+}
+
 ObjectInst::~ObjectInst()
 {
 	releaseObjectMaterialOverrides(this);
@@ -2935,6 +2942,7 @@ ObjectInst::CreateRwObject(void)
 		atomic->setFrame(f);
 		f->transform(&m_matrix, rw::COMBINEREPLACE);
 		m_rwObject = atomic;
+		m_rwObjectSerial = NextRwObjectSerial();
 	}else if(obj->m_type == ObjectDef::CLUMP){
 		if(obj->m_clump == nil)
 			return nil;
@@ -2943,6 +2951,7 @@ ObjectInst::CreateRwObject(void)
 		f->transform(&m_matrix, rw::COMBINEREPLACE);
 		SetupAnimatedClump(this, clump);
 		m_rwObject = clump;
+		m_rwObjectSerial = NextRwObjectSerial();
 		if(m_isVehicle){
 			SAPaths::PrepareEditorVehicleVisuals(clump);
 			AddEditorVehicleComponents(clump, m_vehicleMods);
@@ -2992,6 +3001,7 @@ ObjectInst::RefreshVehicleUpgrades(void)
 		return;
 	((rw::Clump*)m_rwObject)->destroy();
 	m_rwObject = nil;
+	m_rwObjectSerial = NextRwObjectSerial();
 	CreateRwObject();
 }
 
@@ -3270,6 +3280,13 @@ insideRemovalSphere(const ObjectInst *inst, float x, float y, float z, float rad
 	float dy = inst->m_origTranslation.y - y;
 	float dz = inst->m_origTranslation.z - z;
 	return dx*dx + dy*dy + dz*dz <= radius*radius;
+}
+
+void
+SetPawnAreaRemovals(const std::vector<PawnAreaRemoval> &removals)
+{
+	gAreaRemovals = removals;
+	BumpChangeSeq();
 }
 
 bool
@@ -3557,6 +3574,7 @@ destroyInstanceRwObject(ObjectInst *inst, ObjectDef *obj)
 	}else
 		((rw::Clump*)inst->m_rwObject)->destroy();
 	inst->m_rwObject = nil;
+	inst->m_rwObjectSerial = NextRwObjectSerial();
 }
 
 ObjectInst*
@@ -6440,6 +6458,74 @@ pushUndo(UndoAction *a)
 	undoPos = undoCount;
 	if(undoCoalesceStart > undoCount - 1)
 		undoCoalesceStart = undoCount - 1;
+}
+
+// Takes out the steps forget() empties (it may also trim them), keeping the
+// rest in order.
+template <typename Forget> static void
+forgetUndoSteps(Forget forget)
+{
+	int kept = 0, keptBeforePos = 0;
+	for(int i = 0; i < undoCount; i++){
+		if(forget(undoStack[i]))
+			continue;
+		if(i < undoPos)
+			keptBeforePos++;
+		if(kept != i)
+			undoStack[kept] = std::move(undoStack[i]);
+		kept++;
+	}
+	for(int i = kept; i < undoCount; i++)
+		undoStack[i] = UndoAction();
+	undoCount = kept;
+	undoPos = keptBeforePos;
+	undoCoalesceWidget = 0;	// its indices may have moved
+}
+
+// Someone else changed inst (multiplayer): a step that would put it back
+// would throw their change away, so the steps lose it, and a step left with
+// nothing to do goes.
+void
+UndoForgetInstance(ObjectInst *inst)
+{
+	auto drop = [inst](std::vector<ObjectInst*> &list) {
+		list.erase(std::remove(list.begin(), list.end(), inst), list.end());
+		return (int)list.size();
+	};
+	forgetUndoSteps([&](UndoAction &a) {
+		switch(a.type){
+		case UNDO_MOVE:
+			if(a.lodInst == inst)
+				a.lodInst = nil;
+			return a.inst == inst;
+		case UNDO_ROTATE:
+		case UNDO_MATERIAL:
+		case UNDO_PROPERTIES:
+		case UNDO_VEHICLE:
+		case UNDO_MODEL_ID:
+			return a.inst == inst;
+		case UNDO_DELETE:
+			return (a.numDeleted = drop(a.deletedInsts)) == 0;
+		case UNDO_PASTE:
+			return (a.numPasted = drop(a.pastedInsts)) == 0;
+		case UNDO_WORLD_CONVERSION:
+			return drop(a.convertedWorldObjects) == 0;
+		case UNDO_TRANSFORM_BATCH:
+			a.transforms.erase(std::remove_if(a.transforms.begin(), a.transforms.end(),
+				[inst](const UndoTransform &t) { return t.inst == inst; }), a.transforms.end());
+			a.numTransforms = (int)a.transforms.size();
+			return a.numTransforms == 0;
+		}
+		return false;
+	});
+}
+
+// Someone else replaced a whole list (radar art, 3D paths): its steps are
+// snapshots of it, which would throw their change away.
+void
+UndoForgetKind(int type)
+{
+	forgetUndoSteps([type](UndoAction &a) { return a.type == type; });
 }
 
 void

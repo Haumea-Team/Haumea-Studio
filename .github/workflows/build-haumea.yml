@@ -520,7 +520,7 @@ jobs:
     runs-on: ubuntu-24.04
     env:
       # Bump this when MCP tools are added or removed on purpose.
-      AGENT_MCP_TOOLS: 83
+      AGENT_MCP_TOOLS: 90
       BUNDLE: Haumea-Namaka-linux-x86_64
 
     steps:
@@ -694,7 +694,7 @@ jobs:
     needs: build-macos
     runs-on: macos-latest
     env:
-      AGENT_MCP_TOOLS: 83
+      AGENT_MCP_TOOLS: 90
       BUNDLE: Haumea-Namaka-macos-arm64
     steps:
       - uses: actions/checkout@v4
@@ -964,7 +964,7 @@ jobs:
             --engine dist/macos/haumea \
             --namaka dist/namaka/haumea-namaka-macos-arm64/Haumea-Namaka-macos-arm64.zip \
             --stage dist/macos-bundle --output dist/release
-          # The symbols for crash reports (tools/server/symbols.py reads this zip);
+          # The symbols for crash reports (tools/telemetry/symbols.py reads this zip);
           # not part of any bundle.
           python3 haumea/tools/release/make_symbols.py \
             "dist/release/haumea-symbols-${{ needs.build-windows.outputs.version }}.zip" \

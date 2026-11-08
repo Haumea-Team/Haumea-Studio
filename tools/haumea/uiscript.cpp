@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #include "haumea.h"
+#include "terminal.h"
+#include "multiplayer.h"
 #include "particles.h"
 #include "documentxml.h"
 #include "coordinatepin.h"
@@ -76,6 +78,7 @@
 //   drag_item 'Window' 'Label' DX DY [N]
 //   drag_item_to 'Window' 'Label' 'Window' 'Label'   drops one item on another
 //   type "text"
+//   clipboard "text"            what a paste will get
 //   open <map.pwn>              opens a map as File > Open would
 //   $NAME / ${NAME} in arguments: environment variables, and $UI_CONFIG_DIR (the config folder)
 //   grab <file.png>
@@ -1124,7 +1127,7 @@ uiAssert(const std::vector<std::string> &a, size_t first, std::string &why)
 	if(what == "hidden" || what == "player_view_hidden" || what == "fov" || what == "ui_scale" ||
 	   what == "camera_moved" || what == "camera_target.x" || what == "camera_target.y" ||
 	   what == "camera_target.z" || what == "camera_position.x" || what == "camera_position.y" ||
-	   what == "camera_position.z"){
+	   what == "camera_position.z" || what == "camera_up.z" || what == "camera_pitch"){
 		double v = 0;
 		if(what == "hidden"){
 			v = CountHiddenInstances();
@@ -1134,6 +1137,11 @@ uiAssert(const std::vector<std::string> &a, size_t first, std::string &why)
 					v++;
 		}else if(what == "fov") v = TheCamera.m_fov;
 		else if(what == "ui_scale") v = GetUiScale();
+		else if(what == "camera_up.z") v = TheCamera.m_localup.z;	// the picture's up: below 0 is upside down
+		else if(what == "camera_pitch"){
+			rw::V3d d = rw::sub(TheCamera.m_target, TheCamera.m_position);
+			v = atan2(d.z, sqrt(d.x * d.x + d.y * d.y)) * 180.0 / 3.14159265358979;
+		}
 		else if(what == "camera_target.x") v = TheCamera.m_target.x;
 		else if(what == "camera_target.y") v = TheCamera.m_target.y;
 		else if(what == "camera_target.z") v = TheCamera.m_target.z;
@@ -1244,6 +1252,21 @@ uiAssert(const std::vector<std::string> &a, size_t first, std::string &why)
 		bool found = text.find(arg(1)) != std::string::npos;
 		why = found ? "found" : "not found";
 		return what == "pawn_contains" || what == "xml_contains" ? found : !found;
+	}
+	if(what == "multiplayer_lobby"){	// signed in to a server with rooms, picking one
+		why = "multiplayer state " + std::to_string(GetMultiplayerState());
+		return GetMultiplayerState() == MP_LOBBY;
+	}
+	if(what == "multiplayer_ready"){	// in a session, with someone else in it
+		why = "multiplayer state " + std::to_string(GetMultiplayerState()) + ", " +
+			std::to_string(GetMultiplayerPeerCount()) + " others";
+		return (GetMultiplayerState() == MP_JOINED || GetMultiplayerState() == MP_HOSTING) && GetMultiplayerPeerCount() > 0;
+	}
+	if(what == "terminal_contains" || what == "terminal_lacks"){
+		std::string text = TerminalScreenText();
+		bool found = text.find(arg(1)) != std::string::npos;
+		why = "the terminal shows:\n" + text;
+		return what == "terminal_contains" ? found : !found;
 	}
 	if(what == "toast_contains"){
 		why = "last toast: " + gLastToast;
@@ -1698,6 +1721,10 @@ nextCommand(void)
 			TheCamera.m_position = { (float)atof(a[1].c_str()), (float)atof(a[2].c_str()), (float)atof(a[3].c_str()) };
 			TheCamera.m_target = { (float)atof(a[4].c_str()), (float)atof(a[5].c_str()), (float)atof(a[6].c_str()) };
 			gWaitFrames = 3;
+			return;
+		}else if(cmd == "clipboard" && a.size() >= 2){
+			ImGui::SetClipboardText(a[1].c_str());
+			addStep(Step::NOP);
 			return;
 		}else if(cmd == "type" && a.size() >= 2){
 			for(unsigned char c : a[1])

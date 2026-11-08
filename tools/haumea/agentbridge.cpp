@@ -8,6 +8,11 @@
 #include "editoricons.h"
 #include "trains.h"
 #include "agentbridge.h"
+#include "multiplayer.h"
+bool GetEditorExecutablePath(char *path, size_t size);	// main.cpp
+bool GetHaumeaDataDirectory(char *path, size_t size);	// main.cpp
+#include <thread>
+#include "sapaths.h"
 #include "areas.h"
 #include "categories.h"
 #include "objfilters.h"
@@ -185,12 +190,6 @@ struct AgentSceneSnapshot
 	uint16 vehicleMods[VEHICLE_MOD_SLOTS];
 };
 static bool gAgentSessionActive;
-
-bool
-AgentBridgeSessionActive(void)
-{
-	return gAgentSessionActive;
-}
 static std::string gAgentSessionId;
 static std::vector<AgentSceneSnapshot> gAgentSessionSnapshot;
 static std::vector<TextDraw> gAgentTextDrawSnapshot;	// rollback restores the textdraws too
@@ -199,6 +198,77 @@ static unsigned int gAgentTextDrawSeq;	// their change count then: untouched, ro
 // They are tracked separately so rollback never treats unrelated world objects
 // as agent-created scene content.
 static std::vector<AgentSceneSnapshot> gAgentScopedWorldSnapshot;
+
+// Several agents in one editor: a request names its agent after an '@' in
+// its request id (older editors just echo it back), and each agent has its
+// own scratch session, swapped into the globals above while its requests
+// run. What an agent's requests change is noted as its, so rolling back or
+// undoing leaves what another agent changed since alone.
+namespace {
+struct AgentSession
+{
+	bool active = false;
+	std::string id;
+	std::vector<AgentSceneSnapshot> snapshot, scopedWorld;
+	std::vector<TextDraw> textDraws;
+	unsigned int textDrawSeq = 0;
+};
+}
+static std::map<std::string, AgentSession> gOtherAgentSessions;	// by agent, all but the loaded one
+static std::string gLoadedAgent;	// whose session the globals hold
+static std::unordered_map<int32, std::string> gLastAgentEdit;	// instance -> the agent that changed it last
+static std::string gLastTextDrawAgent;	// the agent that changed the textdraw file last
+
+bool
+AgentBridgeSessionActive(void)
+{
+	if(gAgentSessionActive)
+		return true;
+	for(const auto &other : gOtherAgentSessions)
+		if(other.second.active)
+			return true;
+	return false;
+}
+
+static void
+loadAgentSession(const std::string &agent)
+{
+	if(agent == gLoadedAgent)
+		return;
+	AgentSession &stored = gOtherAgentSessions[gLoadedAgent];
+	stored.active = gAgentSessionActive;
+	stored.id = std::move(gAgentSessionId);
+	stored.snapshot = std::move(gAgentSessionSnapshot);
+	stored.scopedWorld = std::move(gAgentScopedWorldSnapshot);
+	stored.textDraws = std::move(gAgentTextDrawSnapshot);
+	stored.textDrawSeq = gAgentTextDrawSeq;
+	AgentSession next = std::move(gOtherAgentSessions[agent]);
+	gOtherAgentSessions.erase(agent);
+	gAgentSessionActive = next.active;
+	gAgentSessionId = std::move(next.id);
+	gAgentSessionSnapshot = std::move(next.snapshot);
+	gAgentScopedWorldSnapshot = std::move(next.scopedWorld);
+	gAgentTextDrawSnapshot = std::move(next.textDraws);
+	gAgentTextDrawSeq = next.textDrawSeq;
+	gLoadedAgent = agent;
+}
+
+// Another agent changed it after this one: it stays as they left it.
+static bool
+changedByAnotherAgent(const ObjectInst *inst)
+{
+	auto it = gLastAgentEdit.find(inst->m_id);
+	return it != gLastAgentEdit.end() && it->second != gLoadedAgent;
+}
+
+static bool
+otherAgentEditing(void)
+{
+	for(const auto &other : gOtherAgentSessions)
+		if(other.second.active)
+			return true;
+	return false;
+}
 
 static std::string
 jsonEscape(const char *text)
@@ -1266,9 +1336,11 @@ rollbackAgentSession(void)
 	for(size_t i = 0; i < gAgentSessionSnapshot.size(); i++)
 		snapshots[gAgentSessionSnapshot[i].id] = gAgentSessionSnapshot[i];
 
+	// In a multiplayer session, what someone else changed last stays theirs:
+	// only this editor's own edits are rolled back.
 	for(CPtrNode *p = instances.first; p; p = p->next){
 		ObjectInst *inst = (ObjectInst*)p->item;
-		if(!isAgentSceneInstance(inst))
+		if(!isAgentSceneInstance(inst) || MultiplayerChangedByOthers(inst) || changedByAnotherAgent(inst))
 			continue;
 		auto found = snapshots.find(inst->m_id);
 		if(found == snapshots.end()){
@@ -1289,7 +1361,7 @@ rollbackAgentSession(void)
 	for(size_t i = 0; i < gAgentScopedWorldSnapshot.size(); i++){
 		const AgentSceneSnapshot &snapshot = gAgentScopedWorldSnapshot[i];
 		ObjectInst *inst = GetInstanceByID(snapshot.id);
-		if(inst == nil)
+		if(inst == nil || MultiplayerChangedByOthers(inst) || changedByAnotherAgent(inst))
 			continue;
 		if(agentMapMode() && inst->m_isDeleted != snapshot.deleted){
 			// Removed through the Pawn map's normal delete.
@@ -1307,7 +1379,7 @@ rollbackAgentSession(void)
 	}
 	// Edited or saved during the session: back to the snapshot, which then
 	// differs from what is on disk.
-	if(TextDrawsChangeSeq() != gAgentTextDrawSeq){
+	if(TextDrawsChangeSeq() != gAgentTextDrawSeq && (gLastTextDrawAgent.empty() || gLastTextDrawAgent == gLoadedAgent)){
 		GetTextDraws() = gAgentTextDrawSnapshot;
 		TextDrawsChanged();
 	}
@@ -4993,6 +5065,8 @@ handleRequest(const std::vector<std::string> &lines)
 			rw::V3d{ 0.0f, 1.0f, 0.0f } : rw::V3d{ 0.0f, 0.0f, 1.0f };
 		pose.fov = values[6];
 		applyCameraPose(pose);
+		if(IsBackgroundWorker())
+			MultiplayerSetPresencePose(pose.position, pose.target);
 		gAgentCameraRevision++;
 		writeResponse(requestId, true, std::string("\"result\":\"camera_set\",\"camera_revision\":") +
 			std::to_string(gAgentCameraRevision));
@@ -5051,6 +5125,8 @@ handleRequest(const std::vector<std::string> &lines)
 		gAgentCaptureRestorePose = currentCameraPose();
 		gAgentCaptureRestore = true;
 		applyCameraPose(requested);
+		if(IsBackgroundWorker())
+			MultiplayerSetPresencePose(requested.position, requested.target);
 		gAgentCameraRevision++;
 		gAgentCapturePose = currentCameraPose();
 		gAgentCaptureCameraRevision = gAgentCameraRevision;
@@ -5060,6 +5136,184 @@ handleRequest(const std::vector<std::string> &lines)
 	}
 	if(command == "map_status"){
 		writeResponse(requestId, true, agentMapStatusJson());
+		return;
+	}
+	// Multiplayer editing: host [port [name [upnp]]], join address port code
+	// [name], leave, status.
+	if(command == "multiplayer_host" || command == "multiplayer_join"){
+		bool host = command == "multiplayer_host";
+		int port = MP_DEFAULT_PORT;
+		size_t portField = host ? 2 : 3;
+		if(lines.size() > portField && !lines[portField].empty() && !parseInt(lines[portField], &port)){
+			writeError(requestId, "invalid port");
+			return;
+		}
+		if(!host && (lines.size() < 5 || lines[2].empty() || lines[4].empty())){
+			writeError(requestId, "multiplayer_join requires address, port and session code");
+			return;
+		}
+		size_t nameField = host ? 3 : 5;
+		const char *name = lines.size() > nameField ? lines[nameField].c_str() : "Namaka";
+		std::string error;
+		bool upnp = !(host && lines.size() > 4 && lines[4] == "0");
+		bool thisComputerOnly = host && lines.size() > 5 && lines[5] == "local";
+		// multiplayer_join address port password name [code|account|invite|agent] [account] [room]
+		// [room password] [new name] [new password]
+		auto field = [&](size_t i){ return lines.size() > i ? lines[i] : std::string(); };
+		static const char *kinds[] = { "code", "account", "invite", "agent" };
+		int kind = 0;
+		for(int k = 0; k < 4; k++)
+			if(field(6) == kinds[k])
+				kind = k;
+		bool ok;
+		if(host)
+			ok = MultiplayerHost(port, name, &error, upnp, thisComputerOnly);
+		else if(kind == 0 && field(8).empty() && field(12).empty())
+			ok = MultiplayerJoin(lines[2].c_str(), port, lines[4].c_str(), name, &error);
+		else{
+			MultiplayerJoinRequest join;
+			join.address = lines[2];
+			join.port = port;
+			join.password = lines[4];
+			join.name = name;
+			join.kind = kind;
+			join.account = field(7);
+			join.room = field(8);
+			join.roomPassword = field(9);
+			join.newName = field(10);
+			join.newPassword = field(11);
+			join.owner = field(12);
+			ok = MultiplayerJoinWith(join, &error);
+		}
+		if(!ok){
+			writeError(requestId, error.c_str());
+			return;
+		}
+		writeResponse(requestId, true, MultiplayerStatusJson());
+		return;
+	}
+	// The Nodes tool (open.mp NPC nodes): nodes_add x y z [vehicle], and
+	// nodes_status: a fingerprint of every area, and the edited ones.
+	if(command == "nodes_add"){
+		rw::V3d pos;
+		int vehicle = 1;
+		if(lines.size() < 5 || !parseFloat(lines[2], &pos.x) || !parseFloat(lines[3], &pos.y) ||
+		   !parseFloat(lines[4], &pos.z) || (lines.size() > 5 && !parseInt(lines[5], &vehicle))){
+			writeError(requestId, "nodes_add requires x y z [vehicle 0/1]");
+			return;
+		}
+		SAPaths::EnsureLoaded();
+		const char *reason = nil;
+		SAPaths::Node *node = SAPaths::NodesLoaded() ? SAPaths::AddNode(pos, vehicle != 0, nil, &reason) : nil;
+		int area = -1, point = -1;
+		bool isVehicle = false;
+		rw::V3d at;
+		if(node == nil || !SAPaths::GetNodeInfo(node, &area, &point, &isVehicle, &at)){
+			writeError(requestId, reason ? reason : "the node files aren't loaded");
+			return;
+		}
+		char body[128];
+		snprintf(body, sizeof(body), "\"area\":%d,\"point\":%d,\"vehicle\":%s", area, point,
+			isVehicle ? "true" : "false");
+		writeResponse(requestId, true, body);
+		return;
+	}
+	if(command == "nodes_status"){
+		SAPaths::EnsureLoaded();
+		char body[160];
+		snprintf(body, sizeof(body), "\"loaded\":%s,\"fingerprint\":\"%016llx\",\"edited_areas\":%d",
+			SAPaths::NodesLoaded() ? "true" : "false", (unsigned long long)SAPaths::NodesFingerprint(),
+			SAPaths::GetDirtyAreaCount());
+		writeResponse(requestId, true, body);
+		return;
+	}
+	// What starting a background worker needs: this editor's program and game.
+	if(command == "editor_info"){
+		char executable[1024] = "";
+		GetEditorExecutablePath(executable, sizeof(executable));
+		char dataDir[1024] = "";
+		GetHaumeaDataDirectory(dataDir, sizeof(dataDir));
+		std::string body = "\"executable\":\"" + jsonEscape(executable) + "\",\"game\":\"" + jsonEscape(GetGameDir()) +
+			"\",\"data_dir\":\"" + jsonEscape(dataDir) + "\",\"background\":" + (IsBackgroundWorker() ? "true" : "false") +
+#ifdef LIBRW_GLFW
+			",\"can_hide_window\":true";
+#else
+			",\"can_hide_window\":false";	// the Direct3D 9 build's window always shows
+#endif
+		writeResponse(requestId, true, body);
+		return;
+	}
+	// The session's chat: multiplayer_chat <text> says it; multiplayer_chat_read
+	// [since] lists the messages after that one (and "last", to read on from).
+	if(command == "multiplayer_chat"){
+		std::string text;
+		for(size_t i = 2; i < lines.size(); i++)
+			text += (i > 2 ? " " : "") + lines[i];
+		if(!MultiplayerSay(text.c_str())){
+			writeError(requestId, GetMultiplayerState() == MP_JOINED || GetMultiplayerState() == MP_HOSTING ?
+				"nothing to say" : "not in a multiplayer session");
+			return;
+		}
+		writeResponse(requestId, true, "\"said\":true");
+		return;
+	}
+	// Tests only (no Namaka tool: an agent mustn't swap everyone's map):
+	// multiplayer_load_for_everyone <path> [admin password].
+	if(command == "multiplayer_load_for_everyone"){
+		std::string error;
+		if(lines.size() < 3 || !MultiplayerLoadForEveryone(lines[2].c_str(), lines.size() > 3 ? lines[3].c_str() : "", &error)){
+			writeError(requestId, error.empty() ? "multiplayer_load_for_everyone requires a path" : error.c_str());
+			return;
+		}
+		writeResponse(requestId, true, MultiplayerStatusJson());
+		return;
+	}
+	// multiplayer_enter <room> [room password]: from the lobby.
+	if(command == "multiplayer_enter"){
+		if(lines.size() < 3 || !MultiplayerEnterRoom(lines[2].c_str(), lines.size() > 3 ? lines[3].c_str() : "")){
+			writeError(requestId, "not in a server's lobby, or no room given");
+			return;
+		}
+		writeResponse(requestId, true, MultiplayerStatusJson());
+		return;
+	}
+	// multiplayer_admin <op number> [a] [b] [c]: the reply shows in multiplayer_status's admin_reply.
+	if(command == "multiplayer_admin"){
+		int op = 0;
+		if(lines.size() < 3 || !parseInt(lines[2], &op) ||
+		   !MultiplayerAdmin(op, lines.size() > 3 ? lines[3].c_str() : "", lines.size() > 4 ? lines[4].c_str() : "",
+			lines.size() > 5 ? lines[5].c_str() : "")){
+			writeError(requestId, "not on a server, or no action given");
+			return;
+		}
+		writeResponse(requestId, true, "\"sent\":true");
+		return;
+	}
+	// A token our agents join with ("" while it's being asked for: ask again).
+	if(command == "multiplayer_join_info"){
+		writeResponse(requestId, true, MultiplayerJoinInfoJson());
+		return;
+	}
+	if(command == "multiplayer_agent_token"){
+		writeResponse(requestId, true, "\"token\":\"" + jsonEscape(MultiplayerAgentToken().c_str()) + "\"");
+		return;
+	}
+	if(command == "multiplayer_chat_read"){
+		int since = 0;
+		if(lines.size() > 2 && !lines[2].empty() && !parseInt(lines[2], &since)){
+			writeError(requestId, "invalid since");
+			return;
+		}
+		writeResponse(requestId, true, MultiplayerChatJson((unsigned int)std::max(since, 0)));
+		return;
+	}
+	if(command == "multiplayer_leave"){
+		MultiplayerLeave();
+		writeResponse(requestId, true, MultiplayerStatusJson());
+		return;
+	}
+	if(command == "multiplayer_status"){
+		writeResponse(requestId, true, MultiplayerStatusJson());
 		return;
 	}
 	if(command == "map_new" || command == "map_open"){
@@ -5178,6 +5432,12 @@ handleRequest(const std::vector<std::string> &lines)
 	if(command == "undo" || command == "redo"){
 		// undo [steps]: the editor's own undo history, so the user's edits count too.
 		if(!requireAgentSession(requestId)) return;
+		if(otherAgentEditing()){
+			// One history for everyone: its last step may be another agent's.
+			writeError(requestId, "another agent is editing this map too: finish_edit_session(commit=False) "
+				"takes back only your edits");
+			return;
+		}
 		int steps = 1;
 		if(lines.size() > 2 && (!parseInt(lines[2], &steps) || steps < 1 || steps > 100)){
 			writeError(requestId, "steps must be 1-100");
@@ -5214,6 +5474,8 @@ updateCameraFly(void)
 		rw::V3d d = rw::normalize(rw::sub(pose.target, pose.position));
 		pose.up = fabsf(d.z) > 0.995f ? rw::V3d{ 0.0f, 1.0f, 0.0f } : rw::V3d{ 0.0f, 0.0f, 1.0f };
 		applyCameraPose(pose);
+		if(IsBackgroundWorker())
+			MultiplayerSetPresencePose(pose.position, pose.target);
 		if(t < 1.0f)
 			return;
 	}
@@ -5348,11 +5610,54 @@ agentcastNote(const std::vector<std::string> &lines)
 	KeycastAgentAction(text, key);
 }
 
+// A background worker (--background): a hidden editor that an agent drives.
+// No one sees it, so it renders slowly and goes away by itself: when the
+// session it joined ends, or when no agent has asked anything for a while
+// (its MCP server died without stopping it).
+static const double WORKER_IDLE_QUIT = 60 * 60.0;
+static const double WORKER_BUSY_TIME = 2.0;
+static double gWorkerLastRequest;
+static bool gWorkerWasInSession;
+
+static double
+workerNow(void)
+{
+	using namespace std::chrono;
+	return duration<double>(steady_clock::now().time_since_epoch()).count();
+}
+
+static void
+backgroundWorkerTick(void)
+{
+	if(!IsBackgroundWorker())
+		return;
+	double now = workerNow();
+	if(gWorkerLastRequest == 0.0 || gAgentCapturePending || gAgentCameraFlyPending)
+		gWorkerLastRequest = now;
+	int state = GetMultiplayerState();
+	if(state != MP_OFF)
+		gWorkerWasInSession = true;
+	if((gWorkerWasInSession && state == MP_OFF) || now - gWorkerLastRequest > WORKER_IDLE_QUIT){
+		log("Background worker: nothing left to do, quitting\n");
+		sk::globals.quit = 1;
+		return;
+	}
+	std::this_thread::sleep_for(std::chrono::milliseconds(now - gWorkerLastRequest < WORKER_BUSY_TIME ? 30 : 100));
+}
+
+bool
+AgentBridgeWorkerResting(void)
+{
+	return IsBackgroundWorker() && !gAgentCapturePending && !gAgentCameraFlyPending &&
+		workerNow() - gWorkerLastRequest > WORKER_BUSY_TIME;
+}
+
 void
 AgentBridgeUpdate(void)
 {
 	if(!gAgentBridgeInitialized)
 		initializeBridge();
+	backgroundWorkerTick();
 	trackLiveCamera();
 	if(gAgentCameraFlyPending)
 		updateCameraFly();
@@ -5361,7 +5666,25 @@ AgentBridgeUpdate(void)
 	std::vector<std::string> lines;
 	if(readRequest(lines)){
 		gRequestFailed = false;
+		size_t at = lines.size() >= 2 ? lines[0].find('@') : std::string::npos;
+		std::string agent = at == std::string::npos ? "" : lines[0].substr(at + 1);
+		loadAgentSession(agent);
+		uint32 before = GetLatestChangeSeq();
+		unsigned int textDrawsBefore = TextDrawsChangeSeq();
+		gWorkerLastRequest = workerNow();
 		handleRequest(lines);
+		if(GetLatestChangeSeq() != before)
+			for(CPtrNode *p = instances.first; p; p = p->next){
+				ObjectInst *inst = (ObjectInst*)p->item;
+				if(inst->m_changeSeq > before){
+					gLastAgentEdit[inst->m_id] = agent;
+					// Its marker goes to what it just changed, looking down at it.
+					if(IsBackgroundWorker() && !inst->m_isDeleted)
+						MultiplayerSetPresencePose(rw::add(inst->m_translation, rw::V3d{ -8.0f, -8.0f, 6.0f }), inst->m_translation);
+				}
+			}
+		if(TextDrawsChangeSeq() != textDrawsBefore)
+			gLastTextDrawAgent = agent;
 		if(!gRequestFailed && lines.size() >= 2)
 			agentcastNote(lines);
 	}

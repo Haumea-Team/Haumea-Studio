@@ -12,7 +12,7 @@
 // UI scripts, command-line modes, agent sessions or CI, nor with
 // HAUMEA_NO_TELEMETRY; HAUMEA_TELEMETRY_URL points it at a test server
 // (loopback may be http) and lets an automated run send.
-// What it sends and keeps: tools/server/privacy.html, docs/USER_GUIDE.md.
+// What it sends and keeps: tools/telemetry/privacy.html, docs/USER_GUIDE.md.
 
 enum TelemetryConsent
 {

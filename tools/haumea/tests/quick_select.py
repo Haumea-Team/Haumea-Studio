@@ -91,6 +91,11 @@ SOURCES = {
 	'shortcuts.cpp': ['shortcuts', 'preferences_rebind', 'ctrl_keys'],
 	'vehiclemods.cpp': ['el_vehicle'],
 	'agentbridge.cpp': [],	# the agent tests don't need the real game
+	'multiplayer.cpp': [],	# test_multiplayer runs on the synthetic game
+	'multiplayer.h': [],
+	'mprelay.cpp': [],	# test_multiplayer, with haumea-server
+	'mprelay.h': [],
+	'mpprotocol.h': [],
 	'telemetry.cpp': [],
 	'crashreports.cpp': [],
 	'updater.cpp': [],

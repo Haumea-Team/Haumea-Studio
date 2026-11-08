@@ -428,6 +428,117 @@ On 64-bit Linux, open.mp's server and compiler need the 32-bit C library: see
 
 ![Test in game with the server log](images/testserver.png)
 
+## Multiplayer editing
+
+Several people can edit one map at the same time. **File → Multiplayer...** opens the panel:
+
+- **Host this map**: shares the map that is open. The panel shows the port (7790 unless you change
+  it) and a six-letter **session code**. With **Open the port on my router** (on by default) Haumea
+  asks your router to forward the port (UPnP) and shows the address people join at over the
+  internet.
+- **Join**: type the address, the port and the host's code (or the server's password, below).
+  Joining replaces the map and the TextDraw file you have open with the session's, so save yours
+  first.
+
+Everyone sees each other's changes as they happen: objects, vehicles, every SA-MP element and
+its settings, groups and locks, materials, attachments, removed or moved GTA buildings, area
+removals, radar art, the map's textdraws, the TextDraw editor's file, alignment pins, 3D paths, the
+Nodes tool's NPC nodes and 0.3.DL custom models (their DFF and TXD files go to everyone who doesn't have them). Undo works on
+your own steps; a step on something someone else changed since is skipped, so it never throws their
+change away. Each person's camera shows as a coloured dot with their name, and what they have
+selected gets a box in their colour; **Go to** looks from where they are looking.
+
+Each person saves their own copy with **File → Save**. Opening or starting another map leaves a
+session you joined; when the host opens one, it replaces everyone's. **Stop hosting** or
+**Leave** keeps the map as it is. Each person saves the Nodes tool's files with its own **Save**.
+
+Everyone needs the same Haumea version and the same game. On one network, join with the host's
+local address (for example `192.168.1.20`). Over the internet, the router has to forward the port:
+Haumea asks it to, and when your router doesn't do UPnP, forward the port by hand, use a VPN such as
+Tailscale, or run haumea-server (below). When your computer has a public IPv6 address (common even
+behind carrier-grade NAT), the panel shows it too: others join at it when the router lets them in.
+The connection is encrypted, and only people with the code can join.
+
+### A server that stays up: haumea-server
+
+[haumea-server](https://github.com/itsneufox/haumea-server) (its own project) keeps sessions on a
+machine that is always on, such as the one that runs your SA-MP or open.mp server, so nobody has to
+keep Haumea open to host. It needs no game and no screen, and has:
+
+- **Accounts.** Its owner makes invites (`haumea-server invite`, or **Admin → Make an invite code** in
+  the panel). The first time, choose **Invite code** under Join, paste it, and pick a name and a
+  password; after that, choose **Account** and sign in with them.
+- **Roles.** Owner, admin, builder and viewer, on the whole server or per room. A viewer looks around
+  and chats; their edits come back undone. Admins invite people, set roles and remove people
+  (right-click someone under People), and lock rooms with a password.
+- **Rooms.** One server, several maps. Leave **Room** empty to see the list after signing in; an admin
+  makes a room by giving a new name, and their open map becomes it.
+- **Its identity.** The server signs every handshake. The panel shows its fingerprint, Haumea
+  remembers it, and won't join if another server answers at that address later: something would be
+  in the middle. Everything is encrypted (X25519 and XChaCha20-Poly1305, from Monocypher).
+- **Ping**, for everyone, beside their name.
+- **A log** as open.mp's: `log.txt`, with who signs in, the chat and every admin action.
+
+Everything it keeps survives restarts and crashes. Hosting from Haumea (**Host this map**) still
+works as before: one session behind a six-letter code.
+
+### Chat
+
+The Multiplayer panel has a chat for everyone in the session. Type `@name` to mention someone; new
+messages also show as a toast. Double-click a message to look from where its writer was.
+
+Namaka can take requests there: ask it to "listen to the chat" and then write to it with `@namaka`
+(or a named one, `@Ana`). Its messages, its marker and its name in the People list carry an **AI**
+tag, so everyone can tell agents from people.
+
+### Servers you joined
+
+The Join panel lists the sessions you joined. Click one to fill in its address and port; ★ keeps it
+as a favourite at the top, and **Remember the password for favourites** keeps its password on this
+computer.
+
+### What haumea-server keeps
+
+Besides the session itself (`--state`), haumea-server can keep the map as Pawn:
+
+```sh
+haumea-server --state-dir state --maps-dir maps --map-out /path/to/server/gamemodes/map.pwn --map-out-room main
+```
+
+Whenever someone in a room saves, the server writes the map to `maps/<room>/<name>.pwn`, a dated copy
+to `maps/history`, and the same file to `--map-out`, and says so in the chat. Every 10 minutes the map
+changed, it asks an editor in the session for it, so `--map-out` stays current even when nobody saves
+(`--autosave 0` turns that off).
+
+**Load a map for everyone...** (in the panel while joined) opens a map file and makes it the
+session's: everyone gets it, and the server keeps a copy of the session as it was beside its state
+file. With `--admin-password` only who gives that password may; `--no-replace` turns it off.
+
+### A terminal inside Haumea
+
+**Windows → Terminal** (Ctrl+\`) opens your own shell in a panel, starting beside the open map. Anything
+that runs in a terminal runs there: any AI assistant's command-line tool, your server, an editor. Keys go
+to the program while the panel has focus, so the editor's shortcuts stay out of the way.
+
+Copy and paste are **Ctrl+Shift+C** and **Ctrl+Shift+V**, or the right-click menu; drag to select. Scroll
+back with the wheel or Shift+PageUp, and hold Shift to select in a program that uses the mouse. The shell
+keeps running while the panel is closed and ends with Haumea. On Windows it starts `cmd`, and needs
+Windows 10 version 1809 or later.
+
+### Namaka off your screen
+
+Namaka works in a hidden Haumea of its own, which joins your map as a person: you see its edits
+arrive and its marker fly to where it works, while your camera and selection stay yours. It starts
+the first time Namaka looks at the scene, which takes a few seconds. Ask Namaka to split a job and it
+can run up to eight at once (`namaka_team`), or ask it to work where you can watch.
+
+If you aren't in a session, one opens for this computer only: nobody else can join it and the router
+isn't asked for anything. Because Namaka is another person there, **Undo** in your editor takes back
+your own steps, not its edits: ask it to undo them. Each one takes about 450 MB of memory with the game
+loaded. They close when Namaka stops them, when the session ends, or after an hour with nothing to do,
+and what they built stays. On the Direct3D 9 build Namaka works in your editor, as it can't hide
+a window there yet.
+
 ## Saving
 
 In **Map**, a map is a Pawn file. **File → Save** (`Ctrl+S`) writes it, and **Save As** picks a new file or

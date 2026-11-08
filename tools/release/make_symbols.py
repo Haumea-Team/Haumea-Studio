@@ -6,7 +6,7 @@
                     [--windows <haumea.exe> <haumea.pdb>] [--macos <haumea> <haumea.dSYM>]
     make_symbols.py --build-id <binary>
 
-The zip holds what tools/server/symbols.py looks for:
+The zip holds what tools/telemetry/symbols.py looks for:
 
     linux-amd64/haumea.debug
     windows-gl3/haumea.pdb
