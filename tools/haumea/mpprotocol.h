@@ -363,7 +363,7 @@ MpRandom(uint8_t *out, size_t size)
 	SystemFunction036(out, (ULONG)size);
 #else
 	for(size_t at = 0; at < size; at += 256)
-		if(getentropy(out + at, std::min(size - at, (size_t)256)) != 0)
+		if(getentropy(out + at, (std::min)(size - at, (size_t)256)) != 0)
 			abort();	// no randomness: no keys worth having
 #endif
 }
@@ -469,7 +469,7 @@ MpFlush(MpConnection &c)
 {
 	size_t sent = 0;
 	while(sent < c.out.size()){
-		int size = (int)std::min(c.out.size() - sent, (size_t)1 << 20);
+		int size = (int)(std::min)(c.out.size() - sent, (size_t)1 << 20);
 		int n = (int)send(c.socket, c.out.data() + sent, size, MSG_NOSIGNAL);
 		if(n > 0){
 			sent += n;

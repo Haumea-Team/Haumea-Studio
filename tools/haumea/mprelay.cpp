@@ -225,7 +225,7 @@ static void
 countElement(uint32_t element)
 {
 	uint32_t &highest = gRoom->counters[element >> MP_PEER_SHIFT];
-	highest = std::max(highest, element & MP_ELEMENT_MASK);
+	highest = (std::max)(highest, element & MP_ELEMENT_MASK);
 }
 
 // Keeps the element; false to drop it. A GTA building two editors gave an
@@ -787,7 +787,7 @@ sendRooms(Client &c)
 		MpPut(payload, (uint32_t)roomPeople(room));
 		int role = roleIn(c.account, room->name);
 		if(c.agent)
-			role = std::min(role, settings.agentRole);
+			role = (std::min)(role, settings.agentRole);
 		payload += (char)role;
 		std::string names;
 		for(const Client &other : gClients)
@@ -814,7 +814,7 @@ enterRoom(Client &c, const std::string &name, const std::string &roomPassword, s
 		MpRoomSettings settings = gAccounts.room(name);
 		int role = roleIn(c.account, name);
 		if(c.agent)
-			role = std::min(role, settings.agentRole);
+			role = (std::min)(role, settings.agentRole);
 		if(role == MP_ROLE_NONE){
 			*why = c.agent ? "agents aren't allowed in that room" : "you have no role in that room";
 			return false;
@@ -1515,7 +1515,7 @@ admin(Client &c, const std::string &payload)
 		adminReply(c, false, "only an admin can do that");
 		return;
 	}
-	int actor = std::max(here, mine);
+	int actor = (std::max)(here, mine);
 	switch(op){
 	case MP_ADMIN_INVITE: {
 		int role = MpParseRole(a);
@@ -1538,7 +1538,7 @@ admin(Client &c, const std::string &payload)
 		}
 		std::string where = d;
 		int targetRole = where.empty() ? target->role : roleIn(target->name, where);
-		if(!mayChange(actor, std::max(targetRole, target->role), to) || target->name == c.account){
+		if(!mayChange(actor, (std::max)(targetRole, target->role), to) || target->name == c.account){
 			adminReply(c, false, "you can't change that one's role");
 			return;
 		}
@@ -1561,7 +1561,7 @@ admin(Client &c, const std::string &payload)
 			if(other.account == target->name && other.room && !other.closing){
 				int now = roleIn(other.account, other.room->name);
 				if(other.agent)
-					now = std::min(now, gAccounts.room(other.room->name).agentRole);
+					now = (std::min)(now, gAccounts.room(other.room->name).agentRole);
 				other.role = now;
 				Room *saved = gRoom;
 				gRoom = other.room;
@@ -1579,7 +1579,7 @@ admin(Client &c, const std::string &payload)
 		uint32_t peer = (uint32_t)atoi(a.c_str());
 		for(Client &other : gClients)
 			if(other.peer == peer && other.room == gRoom && !other.closing){
-				int theirs = std::max(other.role, roleIn(other.account, room));
+				int theirs = (std::max)(other.role, roleIn(other.account, room));
 				if(theirs >= actor && actor < MP_ROLE_OWNER){
 					adminReply(c, false, "you can't remove someone with your role or above");
 					return;
@@ -2013,7 +2013,7 @@ MpRelayWait(double seconds)
 		FD_SET(c.socket, &readable);
 		if(!c.out.empty())
 			FD_SET(c.socket, &writable);
-		highest = std::max(highest, c.socket);
+		highest = (std::max)(highest, c.socket);
 	}
 	timeval timeout;
 	timeout.tv_sec = (long)seconds;

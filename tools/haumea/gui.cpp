@@ -10773,13 +10773,15 @@ uiAttachmentWorkspaceWindow(void)
 			gBrowserDiscoveryFocusPending = true;
 			// Docked browser panels stay below floating windows. Move this
 			// window out of the browser's way before handing input to it.
+			// A browser not open yet will dock in the right-hand column.
 			ImGuiWindow *browser = ImGui::FindWindowByName(LI(ICON_FA_MAGNIFYING_GLASS, "Object Browser"));
+			bool browserShown = browser && browser->WasActive;
 			ImRect area = uiPanelWorkArea();
-			float browserLeft = browser ? browser->Pos.x : area.Min.x;
-			float browserRight = browser ? browser->Pos.x + browser->Size.x : area.Min.x + area.GetWidth() * 0.25f;
+			float browserLeft = browserShown ? browser->Pos.x : area.Max.x - area.GetWidth() * 0.3f;
+			float browserRight = browserShown ? browser->Pos.x + browser->Size.x : area.Max.x;
 			ImVec2 pos = ImGui::GetWindowPos(), size = ImGui::GetWindowSize();
 			if(pos.x < browserRight && pos.x + size.x > browserLeft){
-				pos.x = browserRight < area.GetCenter().x ? area.Max.x - size.x - uiPanelGap() : area.Min.x + uiPanelGap();
+				pos.x = (browserLeft + browserRight)*0.5f < area.GetCenter().x ? area.Max.x - size.x - uiPanelGap() : area.Min.x + uiPanelGap();
 				ImGui::SetWindowPos(pos);
 			}
 		}

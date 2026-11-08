@@ -60,7 +60,9 @@ waitFor(MpSocket s, bool write, double seconds)
 	fd_set set;
 	FD_ZERO(&set);
 	FD_SET(s, &set);
-	timeval timeout = { (long)seconds, (long)((seconds - (long)seconds) * 1e6) };
+	timeval timeout;
+	timeout.tv_sec = (long)seconds;
+	timeout.tv_usec = (long)((seconds - (long)seconds) * 1e6);
 	return select((int)s + 1, write ? nil : &set, write ? &set : nil, nil, &timeout) > 0;
 }
 
