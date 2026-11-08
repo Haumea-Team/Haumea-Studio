@@ -1,5 +1,6 @@
 #include "haumea.h"
 #include "categories.h"
+#include "i18n.h"	// N_() in CATEGORY_LIST
 
 #include <string.h>
 #include <ctype.h>

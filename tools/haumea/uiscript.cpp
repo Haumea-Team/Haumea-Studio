@@ -948,17 +948,36 @@ uiAssert(const std::vector<std::string> &a, size_t first, std::string &why)
 		return compare(gEnableFog ? 1 : 0, arg(1), atof(arg(2).c_str()));
 	}
 	if(what == "missing_catalog_glyphs"){
+		// Baked at start-up, not just loadable: the renderer can't add glyphs
+		// later, so one ImGui loads on demand would still draw blank. A glyph
+		// counts when a source of the UI font both covers it in the ranges it
+		// was baked with and has it.
 		std::vector<unsigned int> codepoints;
 		I18nCatalogCodepoints(codepoints);
-		ImFont *font = ImGui::GetIO().Fonts->Fonts[0];
+		ImFontAtlas *atlas = ImGui::GetIO().Fonts;
+		ImFont *font = atlas->Fonts[0];
 #if IMGUI_VERSION_NUM >= 19200
 		ImFontBaked *baked = font->GetFontBaked(font->LegacySize);
+		const ImVector<ImFontConfig*> &sources = font->Sources;
 #else
 		ImFont *baked = font;
+		ImVector<ImFontConfig*> sources;
+		for(int i = 0; i < font->SourcesCount; i++) sources.push_back((ImFontConfig*)&font->Sources[i]);
 #endif
+		auto inRanges = [&](unsigned int cp){
+			for(ImFontConfig *src : sources){
+				const ImWchar *r = src->GlyphRanges ? src->GlyphRanges : atlas->GetGlyphRangesDefault();
+				for(; r[0]; r += 2)
+					if(cp >= r[0] && cp <= r[1])
+						return true;
+			}
+			return false;
+		};
 		int count = 0;
 		for(unsigned int cp : codepoints){
-			if(cp >= 0x20 && baked->FindGlyphNoFallback((ImWchar)cp) == nil){
+			if(cp < 0x20)
+				continue;
+			if(!inRanges(cp) || baked->FindGlyphNoFallback((ImWchar)cp) == nil){
 				say("  missing catalog glyph U+%04X", cp);
 				count++;
 			}

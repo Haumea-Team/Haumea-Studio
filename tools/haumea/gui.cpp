@@ -11145,7 +11145,7 @@ buildCategoryLabel(int idx, char *buf, int bufsize)
 	}
 	char prefix[16] = "";
 	for(int d = 0; d < depth; d++) strcat(prefix, "  ");
-	snprintf(buf, bufsize, "%s%s", prefix, objCategories[idx].name);
+	snprintf(buf, bufsize, "%s%s", prefix, _(objCategories[idx].name));
 }
 
 static void
@@ -11830,13 +11830,14 @@ uiBrowserStartSuggestions(void)
 		if(cat < 0)
 			continue;
 		// Wrap the buttons like words in a sentence.
-		float width = ImGui::CalcTextSize(suggestions[i]).x + ImGui::GetStyle().FramePadding.x * 2.0f;
+		const char *label = _(suggestions[i]);
+		float width = ImGui::CalcTextSize(label).x + ImGui::GetStyle().FramePadding.x * 2.0f;
 		if(shown++ > 0){
 			ImGui::SameLine();
 			if(ImGui::GetItemRectMax().x + ImGui::GetStyle().ItemSpacing.x + width > right)
 				ImGui::NewLine();
 		}
-		if(ImGui::Button(suggestions[i]))
+		if(ImGui::Button(label))
 			gBrowserSelectedCategory = cat;
 	}
 }
@@ -12172,7 +12173,7 @@ uiBrowserWindow(void)
 				gBrowserKind == BROWSER_KIND_VEHICLES ? _("Vehicles") : _("All objects");
 			char catLabel[128];
 			if(gBrowserSelectedCategory >= 0 && gBrowserSelectedCategory < NUM_OBJ_CATEGORIES)
-				snprintf(catLabel, sizeof(catLabel), "%s", objCategories[gBrowserSelectedCategory].name);
+				snprintf(catLabel, sizeof(catLabel), "%s", _(objCategories[gBrowserSelectedCategory].name));
 			else if(gBrowserSelectedCategory == BROWSER_CATEGORY_RECENT)
 				snprintf(catLabel, sizeof(catLabel), TI(ICON_FA_CLOCK_ROTATE_LEFT, "Recently placed"));
 			else
@@ -12191,7 +12192,7 @@ uiBrowserWindow(void)
 					if(!separated){ ImGui::Separator(); separated = true; }
 					buildCategoryLabel(c, lb, sizeof(lb));
 					if(gBrowserKind == BROWSER_KIND_VEHICLES)	// one level, under Vehicles
-						snprintf(lb, sizeof(lb), "%s", objCategories[c].name);
+						snprintf(lb, sizeof(lb), "%s", _(objCategories[c].name));
 					bool isSel = (c == gBrowserSelectedCategory);
 					if(ImGui::Selectable(lb, isSel)){
 						gBrowserSelectedCategory = c;
