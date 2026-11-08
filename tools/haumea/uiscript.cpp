@@ -1952,8 +1952,8 @@ UiScriptTick(void)
 				ImGuiContext &g = *GImGui;
 				for(int i = 0; i < g.Windows.Size; i++){
 					ImGuiWindow *w = g.Windows[i];
-					if(w->WasActive && !(w->Flags & ImGuiWindowFlags_ChildWindow) &&
-					   nameMatches(w->Name, next.window, true))
+					// Docked panels count as child windows in ImGui: match by name only.
+					if(w->WasActive && nameMatches(w->Name, next.window, true))
 						ImGui::SetScrollY(w, std::min(w->Scroll.y + 80.0f, w->ScrollMax.y));
 				}
 			}

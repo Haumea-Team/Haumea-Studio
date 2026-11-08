@@ -10638,13 +10638,13 @@ uiAttachmentWorkspaceWindow(void)
 	bool open = true;
 	ImRect workArea = uiPanelWorkArea();
 #ifdef IMGUI_HAS_DOCK
-	// Over the 3D view, at its right edge: the docked panels (the model
-	// browser among them) stay reachable beside it.
+	// Over the 3D view, at its left edge: the panels dock on the right, so
+	// the model browser stays reachable even when it opens after this.
 	if(ImGuiDockNode *central = ImGui::DockBuilderGetCentralNode(ImHashStr("HaumeaDockSpace")))
 		workArea = ImRect(central->Pos, ImVec2(central->Pos.x + central->Size.x, central->Pos.y + central->Size.y));
 #endif
-	ImGui::SetNextWindowPos(ImVec2(workArea.Max.x - uiPanelGap(), workArea.Min.y + uiPanelGap()),
-		ImGuiCond_FirstUseEver, ImVec2(1.0f, 0.0f));
+	ImGui::SetNextWindowPos(ImVec2(workArea.Min.x + uiPanelGap(), workArea.Min.y + uiPanelGap()),
+		ImGuiCond_FirstUseEver, ImVec2(0.0f, 0.0f));
 	ImGui::SetNextWindowSize(ImVec2(ImGui::GetFontSize() * 30.0f, 0.0f), ImGuiCond_FirstUseEver);
 	ImGui::SetNextWindowSizeConstraints(ImVec2(ImGui::GetFontSize() * 24.0f, 0.0f),
 		ImVec2(ImGui::GetIO().DisplaySize.x, ImGui::GetIO().DisplaySize.y - 48.0f));
