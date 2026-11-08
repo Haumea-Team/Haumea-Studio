@@ -14003,18 +14003,33 @@ uiWorkspaceNavigation(void)
 		if(i == 1 || i == 2){
 			// The button's top-right corner: where its "new" dot sits.
 			ImVec2 anchor(ImGui::GetItemRectMax().x, ImGui::GetItemRectMin().y);
+			// Right-click hides the "new" dot without opening the editor.
+			bool &dot = i == 1 ? gShowTextDrawsHint : gShowCodeHint;
+			if(dot && ImGui::IsItemClicked(ImGuiMouseButton_Right)){
+				dot = false;
+				hintChanged = true;
+			}
+			const char *dotTip = dot ? _("Right-click to hide the new dot.") : "";
 			if(i == 1){
 				gTextDrawsHintAnchor = anchor;
-				ImGui::SetItemTooltip(_("TextDraw mode: edit the textdraw file on a canvas instead of the world."));
+				ImGui::SetItemTooltip("%s%s%s", _("TextDraw mode: edit the textdraw file on a canvas instead of the world."),
+					dot ? "\n" : "", dotTip);
 			}else{
 				gCodeHintAnchor = anchor;
-				ImGui::SetItemTooltip("%s", ShortcutLabel(SC_WINDOW_PAWN_CODE));
+				ImGui::SetItemTooltip("%s%s%s", ShortcutLabel(SC_WINDOW_PAWN_CODE), dot ? "\n" : "", dotTip);
 			}
 		}
 	}
 	if(hintChanged) saveSaveSettings();
 }
 
+
+// For UI scripts: whether TextDraws (0) or Code (1) still shows its dot.
+bool
+WorkspaceNewDotShown(int which)
+{
+	return which == 0 ? gShowTextDrawsHint : gShowCodeHint;
+}
 
 // A new editor (TextDraws, Code) gets a small yellow dot on its button's
 // corner until it is first opened: a badge, so it never covers the bars.

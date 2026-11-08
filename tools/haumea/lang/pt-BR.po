@@ -7865,6 +7865,9 @@ msgstr "Braço direito"
 msgid "Right-click object row"
 msgstr "Clique direito na linha do objeto"
 
+msgid "Right-click to hide the new dot."
+msgstr "Clique com o botão direito para esconder o ponto de novidade."
+
 msgid "Ringing bell (continuous)"
 msgstr "Sino tocando (contínuo)"
 

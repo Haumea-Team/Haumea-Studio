@@ -10775,3 +10775,6 @@ msgstr "Rază:"
 
 msgid "Spacing:"
 msgstr "Spațiere:"
+
+msgid "Right-click to hide the new dot."
+msgstr "Clic dreapta pentru a ascunde punctul de noutate."

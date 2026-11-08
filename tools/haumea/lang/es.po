@@ -10775,3 +10775,6 @@ msgstr "Radio:"
 
 msgid "Spacing:"
 msgstr "Espaciado:"
+
+msgid "Right-click to hide the new dot."
+msgstr "Clic derecho para ocultar el punto de novedad."

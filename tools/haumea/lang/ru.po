@@ -10775,3 +10775,6 @@ msgstr "Радиус:"
 
 msgid "Spacing:"
 msgstr "Интервал:"
+
+msgid "Right-click to hide the new dot."
+msgstr "Щёлкните правой кнопкой, чтобы скрыть отметку «новое»."

@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
-"""The workspace discovery balloon stays dismissed across restarts."""
+"""The workspace "new" dots stay dismissed across restarts."""
 from pathlib import Path
 import subprocess
 import sys
@@ -33,24 +33,27 @@ class WorkspaceHintTests(unittest.TestCase):
                 self.assertEqual(result.returncode, 0, result.stdout)
 
             try:
-                play('''assert window 'TextDrawsNew'
-assert window 'CodeNew'
+                # Right-click hides a dot without opening its editor.
+                play('''assert new_dot textdraws == 1
+assert new_dot code == 1
 assert work_area_top < 90
-click_item 'TextDrawsNew' 'DismissTextDrawsHint'
+click_item '*' 'TextDraws' right
 wait 3
-assert no_window 'TextDrawsNew'
+assert new_dot textdraws == 0
+assert new_dot code == 1
 ''')
-                play('''assert no_window 'TextDrawsNew'
-assert window 'CodeNew'
+                # Opening an editor hides its dot too.
+                play('''assert new_dot textdraws == 0
+assert new_dot code == 1
 assert item_count 'TextDraws' == 1
 click_item '*' 'Code'
 wait 3
 click_item '*' 'Map'
 wait 3
-assert no_window 'TextDrawsNew'
-assert no_window 'CodeNew'
+assert new_dot textdraws == 0
+assert new_dot code == 0
 ''')
-                play("assert no_window 'TextDrawsNew'\nassert no_window 'CodeNew'\n")
+                play("assert new_dot textdraws == 0\nassert new_dot code == 0\n")
             finally:
                 xvfb.terminate()
                 xvfb.wait(10)

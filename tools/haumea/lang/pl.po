@@ -10775,3 +10775,6 @@ msgstr "Promień:"
 
 msgid "Spacing:"
 msgstr "Odstęp:"
+
+msgid "Right-click to hide the new dot."
+msgstr "Kliknij prawym, aby ukryć kropkę nowości."

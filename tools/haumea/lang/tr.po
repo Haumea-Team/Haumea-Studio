@@ -10775,3 +10775,6 @@ msgstr "Yarıçap:"
 
 msgid "Spacing:"
 msgstr "Aralık:"
+
+msgid "Right-click to hide the new dot."
+msgstr "Yeni noktasını gizlemek için sağ tıklayın."

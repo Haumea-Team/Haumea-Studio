@@ -56,6 +56,7 @@
 //   assert rendered.map_model 3555 == 1  visible map instances of a model
 //   assert rendered.lod_overlaps == 0    visible LODs covering visible children
 //   assert render_far_clip < 1000        current weather/editor far clip
+//   assert new_dot textdraws == 1         the TextDraws (or code) button's "new" dot
 //   wait N                      frames
 //   wait_until <assert>         up to 600 frames
 //   key Ctrl+Shift+H            press and release a chord
@@ -946,6 +947,12 @@ uiAssert(const std::vector<std::string> &a, size_t first, std::string &why)
 	if(what == "fog_enabled"){
 		why = gEnableFog ? "fog enabled" : "fog disabled";
 		return compare(gEnableFog ? 1 : 0, arg(1), atof(arg(2).c_str()));
+	}
+	if(what == "new_dot"){
+		// new_dot textdraws|code <op> <n>: 1 while that editor's "new" dot shows.
+		int shown = WorkspaceNewDotShown(arg(1) == "code" ? 1 : 0) ? 1 : 0;
+		why = "new_dot " + arg(1) + " is " + std::to_string(shown);
+		return compare(shown, arg(2), atof(arg(3).c_str()));
 	}
 	if(what == "missing_catalog_glyphs"){
 		// Baked at start-up, not just loadable: the renderer can't add glyphs

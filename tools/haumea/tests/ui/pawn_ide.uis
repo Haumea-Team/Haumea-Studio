@@ -3,8 +3,9 @@ open "$UI_FIXTURES/ui_map.pwn"
 wait 5
 # The menu and command rows leave one entry for each workspace.
 assert work_area_top < 90
-assert window 'TextDrawsNew'
-assert window 'CodeNew'
+# TextDraws and Code show a "new" dot until first opened.
+assert new_dot textdraws == 1
+assert new_dot code == 1
 assert item_count 'Map' == 1
 assert item_count 'TextDraws' == 1
 assert item_count 'Code' == 1
@@ -17,7 +18,7 @@ wait 3
 click_item '*' 'Code'
 wait 8
 assert window 'PawnIDE'
-assert no_window 'CodeNew'
+assert new_dot code == 0
 assert file_contains "$XDG_CONFIG_HOME/haumea/savesettings.txt" 'show_code_hint 0'
 assert ide_contains 'CreateObject('
 assert ide_dirty == 0
@@ -49,7 +50,7 @@ assert no_window 'PawnIDE'
 click_item '*' 'TextDraws'
 wait 5
 assert window 'TextDraws'
-assert no_window 'TextDrawsNew'
+assert new_dot textdraws == 0
 assert file_contains "$XDG_CONFIG_HOME/haumea/savesettings.txt" 'show_textdraws_hint 0'
 click_item '*' 'Code'
 wait 5

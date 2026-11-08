@@ -11277,3 +11277,6 @@ msgstr "半径："
 
 msgid "Spacing:"
 msgstr "间距："
+
+msgid "Right-click to hide the new dot."
+msgstr "右键点击可隐藏“新”标记。"

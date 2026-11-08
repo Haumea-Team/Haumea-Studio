@@ -10775,3 +10775,6 @@ msgstr "Radius:"
 
 msgid "Spacing:"
 msgstr "Jarak antar:"
+
+msgid "Right-click to hide the new dot."
+msgstr "Klik kanan untuk menyembunyikan titik baru."

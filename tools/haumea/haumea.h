@@ -1141,6 +1141,7 @@ void ToastFor(ToastCategory cat, float duration, const char *fmt, ...);
 void UiBadge(const char *text, const char *tooltip = nil);
 // After Begin: fields leave their labels room at any panel width, text wraps.
 void UiFitItemsToPanel(void);
+bool WorkspaceNewDotShown(int which);	// 0 TextDraws, 1 Code: the "new" dot
 // ImGui::Combo over a table of N_() names, drawn in the user's language.
 bool UiCombo(const char *label, int *current, const char *const *items, int count);
 // Right-click in the 3D view: Map Objects' menu for inst (selecting it first
