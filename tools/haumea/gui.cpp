@@ -14547,6 +14547,39 @@ uiRunShortcut(int action)
 	}
 }
 
+// Floating windows stay whole on the screen: one saved where a bigger window
+// had room, or grown past the edge (Terminal, Multiplayer), comes back inside,
+// and one larger than the screen shrinks to it. Not while it is being dragged.
+static void
+uiKeepWindowsOnScreen(void)
+{
+	ImGuiContext &g = *ImGui::GetCurrentContext();
+	ImGuiViewport *viewport = ImGui::GetMainViewport();
+	ImVec2 lo = viewport->WorkPos;
+	ImVec2 hi(lo.x + viewport->WorkSize.x, lo.y + viewport->WorkSize.y);
+	if(viewport->WorkSize.x < 64.0f || viewport->WorkSize.y < 64.0f)
+		return;	// minimised
+	for(ImGuiWindow *window : g.Windows){
+		if(!window->WasActive || window->Hidden || window == g.MovingWindow)
+			continue;
+		// Windows with a title bar only: overlays (the gizmo, toasts, bars) place themselves.
+		if(window->Flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_Tooltip |
+		   ImGuiWindowFlags_Popup | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar))
+			continue;
+#ifdef IMGUI_HAS_DOCK
+		if(window->DockIsActive || window->Viewport != viewport)
+			continue;
+#endif
+		ImVec2 size = window->Size;
+		ImVec2 fit(ImMin(size.x, hi.x - lo.x), ImMin(size.y, hi.y - lo.y));
+		ImVec2 pos(ImClamp(window->Pos.x, lo.x, hi.x - fit.x), ImClamp(window->Pos.y, lo.y, hi.y - fit.y));
+		if(fit.x != size.x || fit.y != size.y)
+			ImGui::SetWindowSize(window, fit);
+		if(pos.x != window->Pos.x || pos.y != window->Pos.y)
+			ImGui::SetWindowPos(window, pos);
+	}
+}
+
 void
 gui(void)
 {
@@ -15027,6 +15060,7 @@ gui(void)
 	KeycastFrame();
 	RadarFrame();
 	uiToasts();
+	uiKeepWindowsOnScreen();
 	gResetPanelLayout = false;
 
 	gSettingsAutosaveSeconds += ImGui::GetIO().DeltaTime;
