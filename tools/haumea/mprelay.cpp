@@ -1123,6 +1123,58 @@ dropClient(size_t index)
 	}
 }
 
+// Out of its room but still connected (to another room, or the lobby): the
+// others see it go, and a map it was sending goes to the next one waiting.
+static void
+leaveRoom(Client &c)
+{
+	if(c.room == nullptr)
+		return;
+	gRoom = c.room;
+	uint32_t peer = c.peer;
+	bool joined = inSession(c);
+	connectionLog("%s (peer %u) left room %s", c.name, peer, gRoom->name.c_str());
+	c.room = nullptr;
+	c.waiting = false;
+	c.presence.clear();
+	c.peer = 0;	// a new one in the next room
+	if(peer && joined){
+		std::string payload;
+		MpPut(payload, peer);
+		broadcast(MpMakeFrame(MSG_PEER_LEFT, payload), peer);
+	}
+	if(peer && peer == gRoom->seeder && !gRoom->seeded){
+		clearSession();
+		for(Client &other : gClients)
+			if(other.waiting && other.peer && other.room == gRoom){
+				other.waiting = false;
+				gRoom->seeder = other.peer;
+				welcome(other, true);
+				break;
+			}
+	}
+}
+
+// From a room: another one, or the lobby (no name).
+static void
+switchRoom(Client &c, const std::string &payload)
+{
+	MpReader r(payload);
+	std::string room, password;
+	getString(r, &room);
+	getString(r, &password);
+	if(!r.ok || !gAccounts.isOpen() || (c.room && room == c.room->name))
+		return;
+	leaveRoom(c);
+	c.inLobby = true;
+	std::string why;
+	if(room.empty() || !enterRoom(c, room, password, &why)){
+		if(!why.empty())
+			sendTo(c, MSG_NOTICE, why);
+		sendRooms(c);
+	}
+}
+
 /*
  * Chat
  */
@@ -1640,6 +1692,10 @@ receiveFrame(Client &c, const MpFrame &frame)
 	}
 	if(frame.type == MSG_PING){
 		sendTo(c, MSG_PONG, frame.payload.substr(0, 16));
+		return;
+	}
+	if(frame.type == MSG_ENTER){
+		switchRoom(c, frame.payload);
 		return;
 	}
 	switch(frame.type){

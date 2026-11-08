@@ -11012,9 +11012,6 @@ msgstr "你在这里是观察者：可以四处查看和聊天。"
 msgid "Your account's name on this server: 2-31 letters, digits, _ - or ."
 msgstr "你在此服务器上的账号名：2-31 个字母、数字、_ - 或 ."
 
-msgid "Your open map becomes the new room's."
-msgstr "你打开的地图将成为新房间的地图。"
-
 msgid "admin"
 msgstr "管理员"
 
@@ -11054,3 +11051,62 @@ msgstr "此会话的服务器或主机比你的 Haumea 旧：需要更新。"
 
 msgid "This session is newer than your Haumea: update Haumea."
 msgstr "此会话比你的 Haumea 新：请更新 Haumea。"
+
+#, c-format
+msgid "%d in"
+msgstr "%d 人在内"
+
+msgid "Accounts"
+msgstr "账号"
+
+msgid "Back to the list of rooms, still signed in."
+msgstr "返回房间列表，仍保持登录。"
+
+#, c-format
+msgid "Delete room %s? The server keeps its files aside."
+msgstr "删除房间 %s？服务器会把它的文件另存一旁。"
+
+msgid "Everyone here gets an empty map."
+msgstr "这里的所有人都会得到一张空地图。"
+
+msgid "Everyone here gets an empty map; the server keeps a copy of this one."
+msgstr "这里的所有人都会得到一张空地图；服务器会保留当前地图的副本。"
+
+msgid "Go to another room: its map replaces yours here."
+msgstr "前往另一个房间：它的地图会替换你在这里的地图。"
+
+msgid "Invite someone"
+msgstr "邀请某人"
+
+msgid "Lobby"
+msgstr "大厅"
+
+msgid "New empty map for everyone"
+msgstr "为所有人新建空地图"
+
+msgid "New room..."
+msgstr "新房间..."
+
+msgid "Off: your open map becomes the new room's."
+msgstr "关闭时：你打开的地图将成为新房间的地图。"
+
+msgid "Only an empty room can be deleted."
+msgstr "只能删除空房间。"
+
+msgid "Rooms, accounts and roles come with haumea-server; hosting from here is one map, one code."
+msgstr "房间、账号和角色由 haumea-server 提供；从这里托管只有一张地图和一个代码。"
+
+msgid "Show accounts"
+msgstr "显示账号"
+
+msgid "Start with an empty map"
+msgstr "从空地图开始"
+
+msgid "Their role on the whole server (right-click someone under People for this room only)."
+msgstr "其在整个服务器上的角色（仅针对此房间请在“人员”中右键点击某人）。"
+
+msgid "This room"
+msgstr "此房间"
+
+msgid "Yes"
+msgstr "是"

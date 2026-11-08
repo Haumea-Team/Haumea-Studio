@@ -10416,9 +10416,6 @@ msgstr "Seus mapas"
 msgid "Your name"
 msgstr "Seu nome"
 
-msgid "Your open map becomes the new room's."
-msgstr "Seu mapa aberto vira o da nova sala."
-
 msgid "Your own shell, inside Haumea: run any AI assistant, a server or anything else."
 msgstr "Seu próprio shell, dentro do Haumea: execute qualquer assistente de IA, um servidor ou qualquer outra coisa."
 
@@ -11070,3 +11067,62 @@ msgstr "|  Modelos personalizados: %d"
 
 msgid "~n~ new line, ~r~ ~g~ ~b~ ~y~ ~p~ ~w~ ~l~ colours, ~h~ lighter, _ blank"
 msgstr "~n~ nova linha, ~r~ ~g~ ~b~ ~y~ ~p~ ~w~ ~l~ cores, ~h~ mais claro, _ espaço"
+
+#, c-format
+msgid "%d in"
+msgstr "%d dentro"
+
+msgid "Accounts"
+msgstr "Contas"
+
+msgid "Back to the list of rooms, still signed in."
+msgstr "De volta à lista de salas, ainda conectado."
+
+#, c-format
+msgid "Delete room %s? The server keeps its files aside."
+msgstr "Excluir a sala %s? O servidor guarda os arquivos à parte."
+
+msgid "Everyone here gets an empty map."
+msgstr "Todos aqui recebem um mapa vazio."
+
+msgid "Everyone here gets an empty map; the server keeps a copy of this one."
+msgstr "Todos aqui recebem um mapa vazio; o servidor guarda uma cópia deste."
+
+msgid "Go to another room: its map replaces yours here."
+msgstr "Ir para outra sala: o mapa dela substitui o seu aqui."
+
+msgid "Invite someone"
+msgstr "Convidar alguém"
+
+msgid "Lobby"
+msgstr "Saguão"
+
+msgid "New empty map for everyone"
+msgstr "Novo mapa vazio para todos"
+
+msgid "New room..."
+msgstr "Nova sala..."
+
+msgid "Off: your open map becomes the new room's."
+msgstr "Desligado: seu mapa aberto vira o da nova sala."
+
+msgid "Only an empty room can be deleted."
+msgstr "Só uma sala vazia pode ser excluída."
+
+msgid "Rooms, accounts and roles come with haumea-server; hosting from here is one map, one code."
+msgstr "Salas, contas e papéis vêm com o haumea-server; hospedar daqui é um mapa, um código."
+
+msgid "Show accounts"
+msgstr "Mostrar contas"
+
+msgid "Start with an empty map"
+msgstr "Começar com um mapa vazio"
+
+msgid "Their role on the whole server (right-click someone under People for this room only)."
+msgstr "O papel no servidor todo (clique com o botão direito em alguém em Pessoas para só esta sala)."
+
+msgid "This room"
+msgstr "Esta sala"
+
+msgid "Yes"
+msgstr "Sim"
