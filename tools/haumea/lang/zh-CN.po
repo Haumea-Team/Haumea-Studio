@@ -11113,3 +11113,159 @@ msgstr "是"
 
 msgid "Multiplayer"
 msgstr "多人编辑"
+
+msgid "Airports and helipads"
+msgstr "机场和直升机坪"
+
+msgid "Barrels and containers"
+msgstr "桶和集装箱"
+
+msgid "Bicycles"
+msgstr "自行车"
+
+msgid "Boats"
+msgstr "船只"
+
+msgid "Bridges"
+msgstr "桥梁"
+
+msgid "Buildings"
+msgstr "建筑"
+
+msgid "Buildings and land"
+msgstr "建筑和地形"
+
+msgid "Car parks"
+msgstr "停车场"
+
+msgid "Cars"
+msgstr "汽车"
+
+msgid "Countryside"
+msgstr "乡村"
+
+msgid "Doors and windows"
+msgstr "门窗"
+
+msgid "Effects and particles"
+msgstr "特效和粒子"
+
+msgid "Food and drink"
+msgstr "食品和饮料"
+
+msgid "Grass"
+msgstr "草"
+
+msgid "Ground and seabed"
+msgstr "地面和海床"
+
+msgid "Helicopters"
+msgstr "直升机"
+
+msgid "Industry and construction"
+msgstr "工业和建筑工地"
+
+msgid "Kitchens and bathrooms"
+msgstr "厨房和浴室"
+
+msgid "Las Venturas"
+msgstr "Las Venturas"
+
+msgid "Los Santos"
+msgstr "Los Santos"
+
+msgid "Markers and boundaries"
+msgstr "标记和边界"
+
+msgid "Motorbikes and quads"
+msgstr "摩托车和四轮摩托"
+
+msgid "Nature"
+msgstr "自然"
+
+msgid "Night-time objects"
+msgstr "夜间物体"
+
+msgid "Not sorted yet"
+msgstr "尚未分类"
+
+msgid "Other SA-MP objects"
+msgstr "其他 SA-MP 物体"
+
+msgid "Other props"
+msgstr "其他道具"
+
+msgid "Planes"
+msgstr "飞机"
+
+msgid "Police, ambulance and fire"
+msgstr "警车、救护车和消防车"
+
+msgid "Props"
+msgstr "道具"
+
+msgid "Railways"
+msgstr "铁路"
+
+msgid "Remote control"
+msgstr "遥控"
+
+msgid "Roads and railways"
+msgstr "道路和铁路"
+
+msgid "Roads, railways and airports"
+msgstr "道路、铁路和机场"
+
+msgid "Rooms and other interior objects"
+msgstr "房间和其他室内物体"
+
+msgid "SA-MP objects"
+msgstr "SA-MP 物体"
+
+msgid "San Fierro"
+msgstr "San Fierro"
+
+msgid "Sheds, barns and warehouses"
+msgstr "棚屋、谷仓和仓库"
+
+msgid "Shop, bar and casino fittings"
+msgstr "商店、酒吧和赌场陈设"
+
+msgid "Shops, offices and public buildings"
+msgstr "商店、办公室和公共建筑"
+
+msgid "Sports and play"
+msgstr "运动和娱乐"
+
+msgid "Street objects"
+msgstr "街道物体"
+
+msgid "Text and materials"
+msgstr "文字和材质"
+
+msgid "Towers"
+msgstr "塔楼"
+
+msgid "Trailers"
+msgstr "拖车"
+
+msgid "Trains and trams"
+msgstr "火车和有轨电车"
+
+msgid "Tunnels"
+msgstr "隧道"
+
+msgid "Vans, trucks and work vehicles"
+msgstr "厢式车、卡车和工作车辆"
+
+msgid "Vehicle parts"
+msgstr "车辆零件"
+
+msgid "Water and coast"
+msgstr "水域和海岸"
+
+msgid "Weapons"
+msgstr "武器"
+
+msgid "Wearable items"
+msgstr "可穿戴物品"

@@ -1427,7 +1427,7 @@ msgid "Attachment"
 msgstr "Załącznik"
 
 msgid "Attachment Workspace"
-msgstr "Attachment Workspace"
+msgstr "Obszar roboczy załączników"
 
 msgid "Attachment target selection cancelled."
 msgstr "Anulowano wybór celu załącznika."
@@ -10607,3 +10607,159 @@ msgstr "|  Modele niestandardowe: %d"
 
 msgid "~n~ new line, ~r~ ~g~ ~b~ ~y~ ~p~ ~w~ ~l~ colours, ~h~ lighter, _ blank"
 msgstr "~n~ nowa linia, ~r~ ~g~ ~b~ ~y~ ~p~ ~w~ ~l~ kolory, ~h~ jaśniejszy, _ pusty"
+
+msgid "Airports and helipads"
+msgstr "Lotniska i lądowiska"
+
+msgid "Barrels and containers"
+msgstr "Beczki i kontenery"
+
+msgid "Bicycles"
+msgstr "Rowery"
+
+msgid "Boats"
+msgstr "Łodzie"
+
+msgid "Bridges"
+msgstr "Mosty"
+
+msgid "Buildings"
+msgstr "Budynki"
+
+msgid "Buildings and land"
+msgstr "Budynki i teren"
+
+msgid "Car parks"
+msgstr "Parkingi"
+
+msgid "Cars"
+msgstr "Samochody"
+
+msgid "Countryside"
+msgstr "Wieś"
+
+msgid "Doors and windows"
+msgstr "Drzwi i okna"
+
+msgid "Effects and particles"
+msgstr "Efekty i cząsteczki"
+
+msgid "Food and drink"
+msgstr "Jedzenie i napoje"
+
+msgid "Grass"
+msgstr "Trawa"
+
+msgid "Ground and seabed"
+msgstr "Grunt i dno morskie"
+
+msgid "Helicopters"
+msgstr "Helikoptery"
+
+msgid "Industry and construction"
+msgstr "Przemysł i budowa"
+
+msgid "Kitchens and bathrooms"
+msgstr "Kuchnie i łazienki"
+
+msgid "Las Venturas"
+msgstr "Las Venturas"
+
+msgid "Los Santos"
+msgstr "Los Santos"
+
+msgid "Markers and boundaries"
+msgstr "Znaczniki i granice"
+
+msgid "Motorbikes and quads"
+msgstr "Motocykle i quady"
+
+msgid "Nature"
+msgstr "Natura"
+
+msgid "Night-time objects"
+msgstr "Obiekty nocne"
+
+msgid "Not sorted yet"
+msgstr "Jeszcze nieposortowane"
+
+msgid "Other SA-MP objects"
+msgstr "Inne obiekty SA-MP"
+
+msgid "Other props"
+msgstr "Inne rekwizyty"
+
+msgid "Planes"
+msgstr "Samoloty"
+
+msgid "Police, ambulance and fire"
+msgstr "Policja, karetki i straż"
+
+msgid "Props"
+msgstr "Rekwizyty"
+
+msgid "Railways"
+msgstr "Kolej"
+
+msgid "Remote control"
+msgstr "Zdalnie sterowane"
+
+msgid "Roads and railways"
+msgstr "Drogi i kolej"
+
+msgid "Roads, railways and airports"
+msgstr "Drogi, kolej i lotniska"
+
+msgid "Rooms and other interior objects"
+msgstr "Pomieszczenia i inne obiekty wnętrz"
+
+msgid "SA-MP objects"
+msgstr "Obiekty SA-MP"
+
+msgid "San Fierro"
+msgstr "San Fierro"
+
+msgid "Sheds, barns and warehouses"
+msgstr "Szopy, stodoły i magazyny"
+
+msgid "Shop, bar and casino fittings"
+msgstr "Wyposażenie sklepów, barów i kasyn"
+
+msgid "Shops, offices and public buildings"
+msgstr "Sklepy, biura i budynki publiczne"
+
+msgid "Sports and play"
+msgstr "Sport i zabawa"
+
+msgid "Street objects"
+msgstr "Obiekty uliczne"
+
+msgid "Text and materials"
+msgstr "Tekst i materiały"
+
+msgid "Towers"
+msgstr "Wieże"
+
+msgid "Trailers"
+msgstr "Przyczepy"
+
+msgid "Trains and trams"
+msgstr "Pociągi i tramwaje"
+
+msgid "Tunnels"
+msgstr "Tunele"
+
+msgid "Vans, trucks and work vehicles"
+msgstr "Furgonetki, ciężarówki i pojazdy robocze"
+
+msgid "Vehicle parts"
+msgstr "Części pojazdów"
+
+msgid "Water and coast"
+msgstr "Woda i wybrzeże"
+
+msgid "Weapons"
+msgstr "Broń"
+
+msgid "Wearable items"
+msgstr "Przedmioty do noszenia"

@@ -1427,7 +1427,7 @@ msgid "Attachment"
 msgstr "Attachment"
 
 msgid "Attachment Workspace"
-msgstr "Attachment Workspace"
+msgstr "Ruang kerja attachment"
 
 msgid "Attachment target selection cancelled."
 msgstr "Pemilihan target attachment dibatalkan."
@@ -2932,16 +2932,16 @@ msgid "Dragging"
 msgstr "Menyeret"
 
 msgid "Draw Distance"
-msgstr "Draw Distance"
+msgstr "Jarak gambar"
 
 msgid "Draw Last"
 msgstr "Draw Last"
 
 msgid "Draw dist:"
-msgstr "Draw dist:"
+msgstr "Jarak gambar:"
 
 msgid "Draw distance"
-msgstr "Draw distance"
+msgstr "Jarak gambar"
 
 msgid "Draw distance %.0f"
 msgstr "Draw distance %.0f"
@@ -2950,7 +2950,7 @@ msgid "Draw distance %.0f  ·  LOD %s"
 msgstr "Draw distance %.0f  ·  LOD %s"
 
 msgid "Draw distance (m)"
-msgstr "Draw distance (m)"
+msgstr "Jarak gambar (m)"
 
 msgid "Drawn earlier, so under the others."
 msgstr "Digambar lebih awal, jadi di bawah yang lain."
@@ -3536,7 +3536,7 @@ msgid "Footprint"
 msgstr "Footprint"
 
 msgid "Footprint (m²)"
-msgstr "Footprint (m²)"
+msgstr "Luas tapak (m²)"
 
 msgid "For a locked room (admins don't need it)."
 msgstr "Untuk ruang terkunci (admin tidak memerlukannya)."
@@ -3570,7 +3570,7 @@ msgid "Frame path"
 msgstr "Bingkai jalur"
 
 msgid "Frame rate"
-msgstr "Frame rate"
+msgstr "Laju bingkai"
 
 msgid "Free"
 msgstr "Bebas"
@@ -3701,7 +3701,7 @@ msgid "Gap"
 msgstr "Celah"
 
 msgid "Garage Door"
-msgstr "Garage Door"
+msgstr "Pintu garasi"
 
 msgid "Garage door opening"
 msgstr "Pintu garasi terbuka"
@@ -4690,7 +4690,7 @@ msgid "Link"
 msgstr "Hubungkan"
 
 msgid "Link Length"
-msgstr "Link Length"
+msgstr "Panjang link"
 
 msgid "Link each new node to the previous one"
 msgstr "Hubungkan setiap node baru ke node sebelumnya"
@@ -5096,7 +5096,7 @@ msgid "Mission passed theme (0.3.7-R2)"
 msgstr "Tema misi berhasil (0.3.7-R2)"
 
 msgid "Mod garage"
-msgstr "Mod garage"
+msgstr "Garasi modifikasi"
 
 msgid "Mode"
 msgstr "Mode"
@@ -5524,7 +5524,7 @@ msgid "Night"
 msgstr "Malam"
 
 msgid "Night vision"
-msgstr "Night vision"
+msgstr "Penglihatan malam"
 
 msgid "Night-time"
 msgstr "Malam hari"
@@ -5860,10 +5860,10 @@ msgid "Object bounds"
 msgstr "Batas objek"
 
 msgid "Object snap"
-msgstr "Object snap"
+msgstr "Snap ke objek"
 
 msgid "Object snap (%s) uses this distance."
-msgstr "Object snap (%s) memakai jarak ini."
+msgstr "Snap ke objek (%s) memakai jarak ini."
 
 msgid "Object snap mode disabled"
 msgstr "Mode object snap dinonaktifkan"
@@ -5872,7 +5872,7 @@ msgid "Object snap mode enabled"
 msgstr "Mode object snap diaktifkan"
 
 msgid "Object snap on / off"
-msgstr "Object snap aktif / nonaktif"
+msgstr "Snap ke objek aktif / nonaktif"
 
 msgid "Objects"
 msgstr "Objek"
@@ -6278,7 +6278,7 @@ msgid "Pasted %d instance(s)"
 msgstr "%d instans ditempel"
 
 msgid "Pasted %d instance(s) at original position"
-msgstr "%d instance ditempel di posisi asli"
+msgstr "%d instans ditempel di posisi asli"
 
 msgid "Path"
 msgstr "Path"
@@ -6407,7 +6407,7 @@ msgid ""
 "Pick this area in an object's World & streaming, under \"Only inside area\".\n"
 "Items name the area by its variable (Name above)."
 msgstr ""
-"Pilih area ini di World & streaming milik objek, di bawah \"Hanya di dalam area\".\n"
+"Pilih area ini di Dunia & streaming milik objek, di bawah \"Hanya di dalam area\".\n"
 "Item menamai area dengan variabelnya (Nama di atas)."
 
 msgid "Pick two different points for the ruler."
@@ -6678,10 +6678,10 @@ msgid "Prefab is for a different game"
 msgstr "Prefab untuk game yang berbeda"
 
 msgid "Prefab too large (%d instances, max %d)"
-msgstr "Prefab terlalu besar (%d instance, maks %d)"
+msgstr "Prefab terlalu besar (%d instans, maks %d)"
 
 msgid "Prefab truncated at 256 instances (selection too large)"
-msgstr "Prefab dipotong pada 256 instance (pilihan terlalu besar)"
+msgstr "Prefab dipotong pada 256 instans (pilihan terlalu besar)"
 
 msgid "Prefab..."
 msgstr "Prefab..."
@@ -7818,7 +7818,7 @@ msgid "Select all"
 msgstr "Pilih semua"
 
 msgid "Select all instances of this model in the current scope."
-msgstr "Pilih semua instance model ini dalam cakupan saat ini."
+msgstr "Pilih semua instans model ini dalam cakupan saat ini."
 
 msgid "Select an object in the Browser first"
 msgstr "Pilih objek di Browser dahulu"
@@ -8256,7 +8256,7 @@ msgid "Snap rotations"
 msgstr "Snap rotasi"
 
 msgid "Snap skipped some linked instances at the %d object cap"
-msgstr "Snap melewati beberapa instance terhubung pada batas %d objek"
+msgstr "Snap melewati beberapa instans terhubung pada batas %d objek"
 
 msgid "Snap to object points"
 msgstr "Snap ke titik objek"
@@ -9390,7 +9390,7 @@ msgid "Undo limited to first %d of %d imported objects"
 msgstr "Urungkan dibatasi pada %d pertama dari %d objek yang diimpor"
 
 msgid "Undo limited to first 64 of %d instances"
-msgstr "Urungkan dibatasi pada 64 pertama dari %d instance"
+msgstr "Urungkan dibatasi pada 64 pertama dari %d instans"
 
 msgid "Ungroup"
 msgstr "Pisahkan grup"
@@ -9610,7 +9610,7 @@ msgid "Viewport"
 msgstr "Viewport"
 
 msgid "Virtual world"
-msgstr "Virtual world"
+msgstr "Dunia virtual"
 
 msgid "Volume"
 msgstr "Volume"
@@ -9850,7 +9850,7 @@ msgid "World"
 msgstr "Dunia"
 
 msgid "World & streaming"
-msgstr "World & streaming"
+msgstr "Dunia & streaming"
 
 msgid "World object: it stays unchanged and is omitted from Pawn export. If you move, rotate, delete, or edit its materials, export removes the original per player and creates the scripted replacement."
 msgstr "Objek dunia: tetap tidak berubah dan dihilangkan dari ekspor Pawn. Jika Anda memindahkan, memutar, menghapus, atau mengedit materialnya, ekspor menghapus aslinya per pemain dan membuat penggantinya lewat skrip."
@@ -10607,3 +10607,159 @@ msgstr "|  Model kustom: %d"
 
 msgid "~n~ new line, ~r~ ~g~ ~b~ ~y~ ~p~ ~w~ ~l~ colours, ~h~ lighter, _ blank"
 msgstr "~n~ baris baru, ~r~ ~g~ ~b~ ~y~ ~p~ ~w~ ~l~ warna, ~h~ lebih terang, _ kosong"
+
+msgid "Airports and helipads"
+msgstr "Bandara dan helipad"
+
+msgid "Barrels and containers"
+msgstr "Tong dan kontainer"
+
+msgid "Bicycles"
+msgstr "Sepeda"
+
+msgid "Boats"
+msgstr "Perahu"
+
+msgid "Bridges"
+msgstr "Jembatan"
+
+msgid "Buildings"
+msgstr "Bangunan"
+
+msgid "Buildings and land"
+msgstr "Bangunan dan lahan"
+
+msgid "Car parks"
+msgstr "Tempat parkir"
+
+msgid "Cars"
+msgstr "Mobil"
+
+msgid "Countryside"
+msgstr "Pedesaan"
+
+msgid "Doors and windows"
+msgstr "Pintu dan jendela"
+
+msgid "Effects and particles"
+msgstr "Efek dan partikel"
+
+msgid "Food and drink"
+msgstr "Makanan dan minuman"
+
+msgid "Grass"
+msgstr "Rumput"
+
+msgid "Ground and seabed"
+msgstr "Tanah dan dasar laut"
+
+msgid "Helicopters"
+msgstr "Helikopter"
+
+msgid "Industry and construction"
+msgstr "Industri dan konstruksi"
+
+msgid "Kitchens and bathrooms"
+msgstr "Dapur dan kamar mandi"
+
+msgid "Las Venturas"
+msgstr "Las Venturas"
+
+msgid "Los Santos"
+msgstr "Los Santos"
+
+msgid "Markers and boundaries"
+msgstr "Penanda dan batas"
+
+msgid "Motorbikes and quads"
+msgstr "Motor dan ATV"
+
+msgid "Nature"
+msgstr "Alam"
+
+msgid "Night-time objects"
+msgstr "Objek malam hari"
+
+msgid "Not sorted yet"
+msgstr "Belum diurutkan"
+
+msgid "Other SA-MP objects"
+msgstr "Objek SA-MP lainnya"
+
+msgid "Other props"
+msgstr "Properti lainnya"
+
+msgid "Planes"
+msgstr "Pesawat"
+
+msgid "Police, ambulance and fire"
+msgstr "Polisi, ambulans, dan pemadam"
+
+msgid "Props"
+msgstr "Properti"
+
+msgid "Railways"
+msgstr "Rel kereta"
+
+msgid "Remote control"
+msgstr "Kendali jarak jauh"
+
+msgid "Roads and railways"
+msgstr "Jalan dan rel kereta"
+
+msgid "Roads, railways and airports"
+msgstr "Jalan, rel kereta, dan bandara"
+
+msgid "Rooms and other interior objects"
+msgstr "Ruangan dan objek interior lainnya"
+
+msgid "SA-MP objects"
+msgstr "Objek SA-MP"
+
+msgid "San Fierro"
+msgstr "San Fierro"
+
+msgid "Sheds, barns and warehouses"
+msgstr "Gudang, lumbung, dan bangsal"
+
+msgid "Shop, bar and casino fittings"
+msgstr "Perlengkapan toko, bar, dan kasino"
+
+msgid "Shops, offices and public buildings"
+msgstr "Toko, kantor, dan bangunan umum"
+
+msgid "Sports and play"
+msgstr "Olahraga dan bermain"
+
+msgid "Street objects"
+msgstr "Objek jalanan"
+
+msgid "Text and materials"
+msgstr "Teks dan material"
+
+msgid "Towers"
+msgstr "Menara"
+
+msgid "Trailers"
+msgstr "Trailer"
+
+msgid "Trains and trams"
+msgstr "Kereta dan trem"
+
+msgid "Tunnels"
+msgstr "Terowongan"
+
+msgid "Vans, trucks and work vehicles"
+msgstr "Van, truk, dan kendaraan kerja"
+
+msgid "Vehicle parts"
+msgstr "Suku cadang kendaraan"
+
+msgid "Water and coast"
+msgstr "Air dan pantai"
+
+msgid "Weapons"
+msgstr "Senjata"
+
+msgid "Wearable items"
+msgstr "Barang yang dipakai"

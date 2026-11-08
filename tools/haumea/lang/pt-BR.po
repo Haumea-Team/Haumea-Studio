@@ -1295,6 +1295,9 @@ msgstr "Buzina a ar (longa)"
 msgid "Airport"
 msgstr "Aeroporto"
 
+msgid "Airports and helipads"
+msgstr "Aeroportos e helipontos"
+
 msgid "Airyard"
 msgstr "Airyard"
 
@@ -1746,6 +1749,9 @@ msgstr "Barbeiro"
 msgid "Barber's electric razor"
 msgstr "Máquina de barbear do barbeiro"
 
+msgid "Barrels and containers"
+msgstr "Barris e contêineres"
+
 msgid "Base model"
 msgstr "Modelo base"
 
@@ -1769,6 +1775,9 @@ msgstr "Beta"
 
 msgid "Beta or Production"
 msgstr "Beta ou Produção"
+
+msgid "Bicycles"
+msgstr "Bicicletas"
 
 msgid "Big Smoke"
 msgstr "Big Smoke"
@@ -1805,6 +1814,9 @@ msgstr "Bloqueado: os nós ainda não podem cruzar os limites das áreas de stre
 
 msgid "Board"
 msgstr "Prancheta"
+
+msgid "Boats"
+msgstr "Barcos"
 
 msgid "Boatyard"
 msgstr "Boatyard"
@@ -1889,6 +1901,9 @@ msgstr ""
 "Os veículos a leem (ShouldCarStopForBridge) e param\n"
 "se a flag passar de desligada para ligada no próximo navi."
 
+msgid "Bridges"
+msgstr "Pontes"
+
 msgid "Briefcase"
 msgstr "Maleta"
 
@@ -1949,6 +1964,12 @@ msgstr "Blocos de construção"
 
 msgid "Building the world"
 msgstr "Montando o mundo"
+
+msgid "Buildings"
+msgstr "Construções"
+
+msgid "Buildings and land"
+msgstr "Construções e terreno"
 
 #, c-format
 msgid "Bundled: Namaka %s"
@@ -2033,8 +2054,14 @@ msgstr "Tela"
 msgid "Car horn"
 msgstr "Buzina de carro"
 
+msgid "Car parks"
+msgstr "Estacionamentos"
+
 msgid "Carl Johnson"
 msgstr "Carl Johnson"
+
+msgid "Cars"
+msgstr "Carros"
 
 msgid "Cash"
 msgstr "Dinheiro"
@@ -2778,6 +2805,9 @@ msgstr "Quantidade / clique"
 msgid "Country rifle"
 msgstr "Rifle de caça"
 
+msgid "Countryside"
+msgstr "Interior do estado"
+
 msgid "Crash"
 msgstr "Batida"
 
@@ -3098,6 +3128,9 @@ msgstr "Porta"
 msgid "Door buzzer"
 msgstr "Campainha da porta"
 
+msgid "Doors and windows"
+msgstr "Portas e janelas"
+
 msgid "Dot size"
 msgstr "Tamanho dos pontos"
 
@@ -3348,6 +3381,9 @@ msgstr "Lista do editor"
 
 msgid "Editor panels"
 msgstr "Painéis do editor"
+
+msgid "Effects and particles"
+msgstr "Efeitos e partículas"
 
 msgid "Electricity"
 msgstr "Eletricidade"
@@ -3809,6 +3845,9 @@ msgstr ""
 "Fontes para texto de material: as do próprio SA-MP e as substitutas livres ficam\n"
 "lá; adicione outros arquivos .ttf a ela."
 
+msgid "Food and drink"
+msgstr "Comida e bebida"
+
 msgid "Footprint"
 msgstr "Área ocupada"
 
@@ -4092,6 +4131,9 @@ msgstr "Degradê"
 msgid "Graphics"
 msgstr "Gráficos"
 
+msgid "Grass"
+msgstr "Grama"
+
 msgid "Grenade"
 msgstr "Granada"
 
@@ -4100,6 +4142,9 @@ msgstr "Grade"
 
 msgid "Grid spacing, in canvas units (640 x 448)"
 msgstr "Espaçamento da grade, em unidades da tela (640 x 448)"
+
+msgid "Ground and seabed"
+msgstr "Chão e fundo do mar"
 
 #, c-format
 msgid "Ground snap limited to first %d selected instance(s)"
@@ -4263,6 +4308,9 @@ msgstr "Sombreamento por altura"
 
 msgid "Held by"
 msgstr "Ponto de apoio"
+
+msgid "Helicopters"
+msgstr "Helicópteros"
 
 msgid "Help"
 msgstr "Ajuda"
@@ -4594,6 +4642,9 @@ msgstr "Indexando texturas... %d de %d TXDs"
 msgid "Individual origins"
 msgstr "Origens individuais"
 
+msgid "Industry and construction"
+msgstr "Indústria e construção"
+
 msgid "Info"
 msgstr "Info"
 
@@ -4810,6 +4861,9 @@ msgstr "Tipo"
 msgid "Kinds"
 msgstr "Tipos"
 
+msgid "Kitchens and bathrooms"
+msgstr "Cozinhas e banheiros"
+
 msgid "Knife"
 msgstr "Faca"
 
@@ -4844,6 +4898,9 @@ msgstr "Voltas"
 
 msgid "Large (10-50 m)"
 msgstr "Grande (10-50 m)"
+
+msgid "Las Venturas"
+msgstr "Las Venturas"
 
 msgid "Last point first (reversed)"
 msgstr "Último ponto primeiro (invertido)"
@@ -5148,6 +5205,9 @@ msgstr "Repetir"
 msgid "Loose (data/Paths)"
 msgstr "Arquivos soltos (data/Paths)"
 
+msgid "Los Santos"
+msgstr "Los Santos"
+
 msgid "Lost the connection to the session."
 msgstr "A conexão com a sessão caiu."
 
@@ -5289,6 +5349,9 @@ msgstr "Marcador (cor)"
 
 msgid "Markers"
 msgstr "Marcadores"
+
+msgid "Markers and boundaries"
+msgstr "Marcadores e limites"
 
 msgid ""
 "Marks this node as a highway node.\n"
@@ -5534,6 +5597,9 @@ msgstr "Mais opções de exibição e ajuste"
 msgid "Motor, stopping"
 msgstr "Motor parando"
 
+msgid "Motorbikes and quads"
+msgstr "Motos e quadriciclos"
+
 msgid "Mouse"
 msgstr "Mouse"
 
@@ -5769,6 +5835,9 @@ msgstr ""
 "por vez (SetPlayerCheckpoint / SetPlayerRaceCheckpoint). Salve o mapa\n"
 "como código streamer para mantê-los."
 
+msgid "Nature"
+msgstr "Natureza"
+
 msgid "Navi Direction"
 msgstr "Direção do navi"
 
@@ -5885,6 +5954,9 @@ msgstr "Visão noturna"
 
 msgid "Night-time"
 msgstr "Noturno"
+
+msgid "Night-time objects"
+msgstr "Objetos noturnos"
 
 msgid "Nightstick"
 msgstr "Cassetete"
@@ -6105,6 +6177,9 @@ msgstr "Não salvo: este mapa é código nativo."
 #, c-format
 msgid "Not sent from this run (%s)."
 msgstr "Não enviado nesta execução (%s)."
+
+msgid "Not sorted yet"
+msgstr "Ainda não classificados"
 
 msgid "Note"
 msgstr "Observação"
@@ -6498,6 +6573,12 @@ msgstr "Origem"
 
 msgid "Original"
 msgstr "Original"
+
+msgid "Other SA-MP objects"
+msgstr "Outros objetos do SA-MP"
+
+msgid "Other props"
+msgstr "Outros adereços"
 
 msgid ""
 "Others join with this computer's address, the port and the session code.\n"
@@ -6904,6 +6985,9 @@ msgstr "Plano"
 msgid "Plane interior hum (0.3.7-R2)"
 msgstr "Zumbido dentro do avião (0.3.7-R2)"
 
+msgid "Planes"
+msgstr "Aviões"
+
 msgid "Play"
 msgstr "Tocar"
 
@@ -7014,6 +7098,9 @@ msgstr "Pontos que você clica no mundo, ou os pontos de um caminho de NPC em or
 
 msgid "Police"
 msgstr "Polícia"
+
+msgid "Police, ambulance and fire"
+msgstr "Polícia, ambulância e bombeiros"
 
 msgid "Polygon"
 msgstr "Polígono"
@@ -7203,6 +7290,9 @@ msgstr "ProportionalWeaponIcon"
 msgid "Proportions"
 msgstr "Proporções"
 
+msgid "Props"
+msgstr "Adereços"
+
 msgid "Punch A"
 msgstr "Soco A"
 
@@ -7351,6 +7441,9 @@ msgstr "Raio"
 
 msgid "Radius (m)"
 msgstr "Raio (m)"
+
+msgid "Railways"
+msgstr "Ferrovias"
 
 msgid "Rain (0.3.7-R2)"
 msgstr "Chuva (0.3.7-R2)"
@@ -7513,6 +7606,9 @@ msgstr "Recarregar mapa"
 
 msgid "Remember the password for favourites"
 msgstr "Lembrar a senha dos favoritos"
+
+msgid "Remote control"
+msgstr "Controle remoto"
 
 msgid "Remove"
 msgstr "Remover"
@@ -7776,6 +7872,12 @@ msgstr ""
 msgid "Roads"
 msgstr "Estradas"
 
+msgid "Roads and railways"
+msgstr "Ruas e ferrovias"
+
+msgid "Roads, railways and airports"
+msgstr "Ruas, ferrovias e aeroportos"
+
 msgid "Rocket launcher"
 msgstr "Lança-foguetes"
 
@@ -7804,6 +7906,9 @@ msgstr "Senha da sala"
 
 msgid "Rooms"
 msgstr "Salas"
+
+msgid "Rooms and other interior objects"
+msgstr "Cômodos e outros objetos de interior"
 
 msgid "Rooms, accounts and roles come with haumea-server; hosting from here is one map, one code."
 msgstr "Salas, contas e papéis vêm com o haumea-server; hospedar daqui é um mapa, um código."
@@ -7948,6 +8053,9 @@ msgstr "Cliente SA-MP não encontrado"
 msgid "SA-MP ignores material text calls with empty text."
 msgstr "O SA-MP ignora chamadas de texto de material com texto vazio."
 
+msgid "SA-MP objects"
+msgstr "Objetos do SA-MP"
+
 msgid "SA-MP rejects font names of 32 characters or more."
 msgstr "O SA-MP rejeita nomes de fonte com 32 caracteres ou mais."
 
@@ -7981,6 +8089,9 @@ msgstr "Mesma altura do principal"
 
 msgid "Same width as the key one"
 msgstr "Mesma largura do principal"
+
+msgid "San Fierro"
+msgstr "San Fierro"
 
 msgid "Santa Maria Pier"
 msgstr "Píer de Santa Maria"
@@ -8439,6 +8550,9 @@ msgstr "Cor da sombra/contorno"
 msgid "Shape"
 msgstr "Forma"
 
+msgid "Sheds, barns and warehouses"
+msgstr "Galpões, celeiros e armazéns"
+
 msgid ""
 "Shift along Z after ground snap.\n"
 "Negative sinks the object into the ground (useful for trees on slopes).\n"
@@ -8462,6 +8576,12 @@ msgstr "Shift+clique no objeto"
 
 msgid "Shift: straight X/Y/Z. Ctrl: angle steps. Shift+Ctrl: angle steps on a horizontal plane. Alt: free placement."
 msgstr "Shift: reta em X/Y/Z. Ctrl: passos de ângulo. Shift+Ctrl: passos de ângulo no plano horizontal. Alt: posicionamento livre."
+
+msgid "Shop, bar and casino fittings"
+msgstr "Mobiliário de loja, bar e cassino"
+
+msgid "Shops, offices and public buildings"
+msgstr "Lojas, escritórios e prédios públicos"
 
 msgid "Shortcut"
 msgstr "Atalho"
@@ -8822,6 +8942,9 @@ msgstr "Coluna"
 msgid "Splash"
 msgstr "Respingo"
 
+msgid "Sports and play"
+msgstr "Esportes e lazer"
+
 msgid "Spray can"
 msgstr "Lata de spray"
 
@@ -8999,6 +9122,9 @@ msgstr ""
 msgid "Street lamp and building light coronas, as the client draws them."
 msgstr "Coronas de postes e de luzes de prédios, como o cliente as desenha."
 
+msgid "Street objects"
+msgstr "Objetos de rua"
+
 msgid "Strip club (0.3.7-R2)"
 msgstr "Clube de striptease (0.3.7-R2)"
 
@@ -9137,6 +9263,9 @@ msgstr "Texto"
 
 msgid "Text & audio"
 msgstr "Texto e áudio"
+
+msgid "Text and materials"
+msgstr "Texto e materiais"
 
 msgid "Text color"
 msgstr "Cor do texto"
@@ -9731,6 +9860,9 @@ msgstr ""
 "Largura total da via neste ponto navi.\n"
 "Afeta a posição das faixas e o deslocamento lateral dos veículos."
 
+msgid "Towers"
+msgstr "Torres"
+
 msgid "Traffic Light Direction"
 msgstr "Direção do semáforo"
 
@@ -9749,8 +9881,14 @@ msgstr ""
 "0 = muito raro (~6%% de chance), 15 = spawn garantido.\n"
 "Vale o menor valor dos dois nós ligados."
 
+msgid "Trailers"
+msgstr "Reboques"
+
 msgid "Trains"
 msgstr "Trens"
+
+msgid "Trains and trams"
+msgstr "Trens e bondes"
 
 msgid "Trains need Static vehicle: open.mp's CreateVehicle refuses them."
 msgstr "Trens precisam de Veículo estático: o CreateVehicle do open.mp os recusa."
@@ -9788,6 +9926,9 @@ msgstr "Tentar de novo"
 
 msgid "Tuning parts"
 msgstr "Peças de tuning"
+
+msgid "Tunnels"
+msgstr "Túneis"
 
 msgid "Turn"
 msgstr "Giro"
@@ -10029,6 +10170,9 @@ msgstr "Valor"
 msgid "Values"
 msgstr "Valores"
 
+msgid "Vans, trucks and work vehicles"
+msgstr "Vans, caminhões e veículos de trabalho"
+
 msgid "Variable"
 msgstr "Variável"
 
@@ -10063,6 +10207,9 @@ msgstr "Os nós de veículo aparecem como caixas vermelhas, os de pedestre como 
 
 msgid "Vehicle nodes link to vehicle nodes, ped to ped."
 msgstr "Nós de veículo ligam-se a nós de veículo, de pedestre a de pedestre."
+
+msgid "Vehicle parts"
+msgstr "Peças de veículos"
 
 msgid "Vehicle upgrade part"
 msgstr "Peça de tunagem"
@@ -10150,6 +10297,9 @@ msgstr "Água (0.3.7-R2)"
 msgid "Water Node"
 msgstr "Nó de água"
 
+msgid "Water and coast"
+msgstr "Água e litoral"
+
 msgid "Waypoint"
 msgstr "Waypoint"
 
@@ -10165,6 +10315,12 @@ msgstr "Arma"
 #, c-format
 msgid "Weapon %d"
 msgstr "Arma %d"
+
+msgid "Weapons"
+msgstr "Armas"
+
+msgid "Wearable items"
+msgstr "Itens vestíveis"
 
 msgid "Weather"
 msgstr "Clima"

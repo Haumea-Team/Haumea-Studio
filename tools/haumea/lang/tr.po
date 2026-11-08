@@ -524,7 +524,7 @@ msgid "%s uses a player bone attachment, but its target isn't a player or NPC."
 msgstr "%s bir oyuncu kemik attachment'ı kullanıyor, ama hedefi bir oyuncu veya NPC değil."
 
 msgid "%s walks node file %d, which isn't in the workspace (%s). open.mp downloads it on first use; offline servers need it copied there."
-msgstr "%s, workspace'te olmayan %d düğüm dosyasında (%s) yürüyor. open.mp ilk kullanımda indirir; çevrimdışı sunucularda oraya kopyalanması gerekir."
+msgstr "%s, workspace'te olmayan %d node dosyasında (%s) yürüyor. open.mp ilk kullanımda indirir; çevrimdışı sunucularda oraya kopyalanması gerekir."
 
 msgid "%s won't be offered again."
 msgstr "%s bir daha sunulmayacak."
@@ -789,7 +789,7 @@ msgid ""
 "Quantized to 0.125 units."
 msgstr ""
 "Bu navi waypoint'in 2D konumu (X, Y).\n"
-"Genellikle iki yol düğümü arasındaki orta noktaya yerleştirilir.\n"
+"Genellikle iki yol node'u arasındaki orta noktaya yerleştirilir.\n"
 "0.125 birime yuvarlanır."
 
 msgid "3  Air normal"
@@ -1062,7 +1062,7 @@ msgid "Added %d to the server: Object Browser > Custom models"
 msgstr "Sunucuya %d eklendi: Nesne tarayıcısı > Özel modeller"
 
 msgid "Added the node, but couldn't link it: %s"
-msgstr "Düğüm eklendi, ancak bağlanamadı: %s"
+msgstr "Node eklendi, ancak bağlanamadı: %s"
 
 msgid "Added to the line's direction, in degrees: 90 turns them sideways."
 msgstr "Çizginin yönüne eklenir, derece cinsinden: 90 onları yana çevirir."
@@ -1233,7 +1233,7 @@ msgid ""
 "open.mp then reports a node change."
 msgstr ""
 "Bu bağlantıya ulaşan bir NPC NODES%d.DAT dosyasından çıkar;\n"
-"open.mp bunun üzerine bir düğüm değişikliği bildirir."
+"open.mp bunun üzerine bir node değişikliği bildirir."
 
 msgid "An agent edit session is open."
 msgstr "Bir ajan düzenleme oturumu açık."
@@ -1427,7 +1427,7 @@ msgid "Attachment"
 msgstr "Attachment"
 
 msgid "Attachment Workspace"
-msgstr "Attachment Workspace"
+msgstr "Attachment çalışma alanı"
 
 msgid "Attachment target selection cancelled."
 msgstr "Attachment hedef seçimi iptal edildi."
@@ -1458,7 +1458,7 @@ msgstr ""
 "Bir dil, editörün yanındaki lang/<code>.po dosyasıdır."
 
 msgid "Auto-compute direction vector pointing from this navi toward its attached node."
-msgstr "Bu navi'den bağlı düğümüne doğru yön vektörünü otomatik hesapla."
+msgstr "Bu navi'den bağlı node'una doğru yön vektörünü otomatik hesapla."
 
 msgid "Auto-generated COL did not attach to model name %s."
 msgstr "Otomatik oluşturulan COL %s model adına bağlanmadı."
@@ -1596,10 +1596,10 @@ msgid "Blip C"
 msgstr "Blip C"
 
 msgid "Blocked: moving this car node would push attached navis into another streamed area."
-msgstr "Engellendi: bu araç düğümünü taşımak bağlı navi'leri başka bir stream edilen alana iter."
+msgstr "Engellendi: bu araç node'unu taşımak bağlı navi'leri başka bir stream edilen alana iter."
 
 msgid "Blocked: nodes cannot cross SA streamed area boundaries yet."
-msgstr "Engellendi: düğümler henüz SA stream alanı sınırlarını geçemez."
+msgstr "Engellendi: node'lar henüz SA stream alanı sınırlarını geçemez."
 
 msgid "Board"
 msgstr "Pano"
@@ -1800,7 +1800,7 @@ msgid "Camera target"
 msgstr "Kamera hedefi"
 
 msgid "Can't add a node: %s"
-msgstr "Düğüm eklenemiyor: %s"
+msgstr "Node eklenemiyor: %s"
 
 msgid "Can't be dragged or resized on the canvas. The fields here still change it."
 msgstr "Tuval üzerinde sürüklenemez veya yeniden boyutlandırılamaz. Buradaki alanlar yine de değiştirir."
@@ -2056,7 +2056,7 @@ msgid "Click a key to change it, then press the new key with any Ctrl, Shift or 
 msgstr "Değiştirmek için bir tuşa tıklayın, sonra yeni tuşa istediğiniz Ctrl, Shift veya Alt ile basın. Temizlemek için bir tuşa sağ tıklayın. Bir alana yazarken kısayollar asla çalışmaz."
 
 msgid "Click a node to link it"
-msgstr "Bağlamak için bir düğüme tıkla"
+msgstr "Bağlamak için bir node'a tıkla"
 
 msgid "Click a ped, NPC, vehicle, or object in the viewport. Esc or right-click cancels."
 msgstr "Görünüm alanında bir ped, NPC, araç veya nesneye tıklayın. Esc veya sağ tık iptal eder."
@@ -2108,7 +2108,7 @@ msgid "Click in the world. Esc stops."
 msgstr "Dünyaya tıklayın. Esc durdurur."
 
 msgid "Click nodes to select them; W moves the selected node."
-msgstr "Seçmek için düğümlere tıklayın; W seçili düğümü taşır."
+msgstr "Seçmek için node'lara tıklayın; W seçili node'u taşır."
 
 msgid "Click object"
 msgstr "Nesneye tıkla"
@@ -2120,8 +2120,8 @@ msgid ""
 "Click one node, then another, to link them.\n"
 "Clicking two linked nodes unlinks them. Right-click or Esc stops."
 msgstr ""
-"Bağlamak için önce bir düğüme, sonra başka bir düğüme tıklayın.\n"
-"Bağlı iki düğüme tıklamak bağlantıyı kaldırır. Sağ tık veya Esc durdurur."
+"Bağlamak için önce bir node'a, sonra başka bir node'a tıklayın.\n"
+"Bağlı iki node'a tıklamak bağlantıyı kaldırır. Sağ tık veya Esc durdurur."
 
 msgid "Click or drag to paint · %s stops."
 msgstr "Boyamak için tıklayın veya sürükleyin · %s durdurur."
@@ -2144,19 +2144,19 @@ msgid "Click something to edit it in Object Info (%s). %s stops placing."
 msgstr "Nesne bilgisinde (%s) düzenlemek için bir şeye tıklayın. %s yerleştirmeyi durdurur."
 
 msgid "Click the first node."
-msgstr "İlk düğüme tıklayın."
+msgstr "İlk node'a tıklayın."
 
 msgid "Click the ground to add ped nodes. Right-click or Esc stops."
-msgstr "Ped düğümleri eklemek için zemine tıklayın. Sağ tık veya Esc durdurur."
+msgstr "Ped node'ları eklemek için zemine tıklayın. Sağ tık veya Esc durdurur."
 
 msgid "Click the ground to add vehicle nodes. Right-click or Esc stops."
-msgstr "Araç düğümleri eklemek için zemine tıklayın. Sağ tık veya Esc durdurur."
+msgstr "Araç node'ları eklemek için zemine tıklayın. Sağ tık veya Esc durdurur."
 
 msgid "Click the measurement endpoint. Esc cancels."
 msgstr "Ölçüm uç noktasına tıklayın. Esc iptal eder."
 
 msgid "Click the node to link to."
-msgstr "Bağlanacak düğüme tıklayın."
+msgstr "Bağlanacak node'a tıklayın."
 
 msgid "Click through locked"
 msgstr "Kilitlilerin içinden tıkla"
@@ -2498,7 +2498,7 @@ msgid "Couldn't create %s"
 msgstr "%s oluşturulamadı"
 
 msgid "Couldn't load the nodes: %s"
-msgstr "Düğümler yüklenemedi: %s"
+msgstr "Node'lar yüklenemedi: %s"
 
 msgid "Couldn't move the models: %s"
 msgstr "Modeller taşınamadı: %s"
@@ -2516,7 +2516,7 @@ msgid "Couldn't roll back: %s"
 msgstr "Geri alınamadı: %s"
 
 msgid "Couldn't save the nodes: %s"
-msgstr "Düğümler kaydedilemedi: %s"
+msgstr "Node'lar kaydedilemedi: %s"
 
 msgid "Couldn't save the prefab"
 msgstr "Prefab kaydedilemedi"
@@ -2682,7 +2682,7 @@ msgid "Delete limited to first %d selected instance(s)"
 msgstr "Silme ilk %d seçili örnekle sınırlı"
 
 msgid "Delete node"
-msgstr "Düğümü sil"
+msgstr "Node'u sil"
 
 msgid "Delete path"
 msgstr "Yolu sil"
@@ -2784,7 +2784,7 @@ msgid "Discard and load"
 msgstr "Vazgeç ve yükle"
 
 msgid "Discard node changes?"
-msgstr "Düğüm değişikliklerinden vazgeçilsin mi?"
+msgstr "Node değişikliklerinden vazgeçilsin mi?"
 
 msgid "Disco, electro (0.3.7-R2)"
 msgstr "Disko, elektro (0.3.7-R2)"
@@ -3555,7 +3555,7 @@ msgid "For objects without a group."
 msgstr "Grubu olmayan nesneler için."
 
 msgid "For the game's roads, pick \"Walk the nodes\" (Windows > Nodes, %s)."
-msgstr "Oyunun yolları için \"Düğümler boyunca yürü\" seçeneğini seçin (Pencereler > Node'lar, %s)."
+msgstr "Oyunun yolları için \"Node'lar boyunca yürü\" seçeneğini seçin (Pencereler > Node'lar, %s)."
 
 msgid "For the layout and the presets: the board's guides go first."
 msgstr "Düzen ve ön ayarlar için: panonun kılavuzları önce gelir."
@@ -3658,7 +3658,7 @@ msgid "Game folder"
 msgstr "Oyun klasörü"
 
 msgid "Game nodes"
-msgstr "Oyun düğümleri"
+msgstr "Oyun node'ları"
 
 msgid "Game sound"
 msgstr "Oyun sesi"
@@ -3797,7 +3797,7 @@ msgid "Go to coordinates (pasted x, y, z)"
 msgstr "Koordinatlara git (yapıştırılan x, y, z)"
 
 msgid "Go to node"
-msgstr "Düğüme git"
+msgstr "Node'a git"
 
 msgid "Golf club"
 msgstr "Golf sopası"
@@ -4247,7 +4247,7 @@ msgid ""
 "nodes in that file renumbers the ones after it."
 msgstr ""
 "Pawn'da: NPC_OpenNode(%d), sonra NPC_PlayNode(npcid, %d, ...).\n"
-"Nokta ID'si düğümün dosyasındaki yeridir; o dosyaya düğüm eklemek veya\n"
+"Nokta ID'si node'un dosyasındaki yeridir; o dosyaya node eklemek veya\n"
 "silmek sonrasındakileri yeniden numaralandırır."
 
 msgid "In canvas units: 0 to 640 across, 0 to 448 down."
@@ -4606,7 +4606,7 @@ msgid "Left, right"
 msgstr "Sol, sağ"
 
 msgid "Left-click a node in the viewport to select it"
-msgstr "Seçmek için görünüm alanında bir düğüme sol tıklayın"
+msgstr "Seçmek için görünüm alanında bir node'a sol tıklayın"
 
 msgid ""
 "Left: the box's right edge. Centre: width and height are swapped (the second is the width).\n"
@@ -4693,17 +4693,17 @@ msgid "Link Length"
 msgstr "Bağlantı uzunluğu"
 
 msgid "Link each new node to the previous one"
-msgstr "Her yeni düğümü öncekine bağla"
+msgstr "Her yeni node'u öncekine bağla"
 
 msgid ""
 "Link lines match node color (red/magenta), white when selected,\n"
 "yellow = road crossings, green = vehicle lanes"
 msgstr ""
-"Bağlantı çizgileri düğüm rengiyle eşleşir (kırmızı/macenta), seçiliyken beyaz,\n"
+"Bağlantı çizgileri node rengiyle eşleşir (kırmızı/macenta), seçiliyken beyaz,\n"
 "sarı = yol kavşakları, yeşil = araç şeritleri"
 
 msgid "Linked the nodes"
-msgstr "Düğümler bağlandı"
+msgstr "Node'lar bağlandı"
 
 msgid "Links (%d)"
 msgstr "Bağlantılar (%d)"
@@ -4712,7 +4712,7 @@ msgid "Links: %d / 15"
 msgstr "Bağlantılar: %d / 15"
 
 msgid "Links: connections between nodes (each node can have up to 15)"
-msgstr "Bağlantılar: düğümler arasındaki bağlar (her düğümün en fazla 15 olabilir)"
+msgstr "Bağlantılar: node'lar arasındaki bağlar (her node'un en fazla 15 olabilir)"
 
 msgid "List"
 msgstr "Liste"
@@ -4733,7 +4733,7 @@ msgid "Load prefab in front of camera"
 msgstr "Prefab'ı kameranın önüne yükle"
 
 msgid "Loaded %d node files"
-msgstr "%d düğüm dosyası yüklendi"
+msgstr "%d node dosyası yüklendi"
 
 msgid "Loading SA-MP objects"
 msgstr "SA-MP nesneleri yükleniyor"
@@ -4961,7 +4961,7 @@ msgid ""
 "Present in vanilla path data but no confirmed gameplay\n"
 "effect found in the reversed SA source."
 msgstr ""
-"Bu düğümü otoyol düğümü olarak işaretler.\n"
+"Bu node'u otoyol node'u olarak işaretler.\n"
 "Vanilla yol verisinde var ama tersine mühendislik yapılmış SA kaynağında\n"
 "onaylanmış bir oynanış etkisi bulunmadı."
 
@@ -4970,7 +4970,7 @@ msgid ""
 "Present in vanilla path data but no confirmed gameplay\n"
 "effect found in the reversed SA source."
 msgstr ""
-"Bu düğümü açıkça otoyol olmayan olarak işaretler.\n"
+"Bu node'u açıkça otoyol olmayan olarak işaretler.\n"
 "Vanilla yol verisinde var ama tersine mühendislik yapılmış SA kaynağında\n"
 "onaylanmış bir oynanış etkisi bulunmadı."
 
@@ -5300,7 +5300,7 @@ msgid "NODES%d.DAT point %d"
 msgstr "NODES%d.DAT noktası %d"
 
 msgid "NODES%d.DAT: %d vehicle, %d ped nodes (points 0-%d are vehicle)"
-msgstr "NODES%d.DAT: %d araç, %d ped düğümü (0-%d noktaları araçtır)"
+msgstr "NODES%d.DAT: %d araç, %d ped node'u (0-%d noktaları araçtır)"
 
 msgid "NPC"
 msgstr "NPC"
@@ -5312,10 +5312,10 @@ msgid "NPC %s  skin %d"
 msgstr "NPC %s  skin %d"
 
 msgid "NPC node (NODES*.DAT)"
-msgstr "NPC düğümü (NODES*.DAT)"
+msgstr "NPC node'u (NODES*.DAT)"
 
 msgid "NPC nodes (NODES*.DAT)"
-msgstr "NPC düğümleri (NODES*.DAT)"
+msgstr "NPC node'ları (NODES*.DAT)"
 
 msgid "NPC path %s"
 msgstr "NPC yolu %s"
@@ -5417,10 +5417,10 @@ msgid "Navi Direction"
 msgstr "Navi yönü"
 
 msgid "Navi Node"
-msgstr "Navi düğümü"
+msgstr "Navi node'u"
 
 msgid "Navi Node  (%d:%d)"
-msgstr "Navi düğümü  (%d:%d)"
+msgstr "Navi node'u  (%d:%d)"
 
 msgid "Navi Pos"
 msgstr "Navi konumu"
@@ -5433,15 +5433,15 @@ msgid ""
 "They define road width, lane count, and traffic direction\n"
 "for the road segment between this node and the target."
 msgstr ""
-"Navi düğümleri, iki yol düğümü arasına yerleştirilen şerit waypoint'leridir.\n"
-"Bu düğüm ile hedef arasındaki yol parçası için yol genişliğini, şerit sayısını\n"
+"Navi node'ları, iki yol node'u arasına yerleştirilen şerit waypoint'leridir.\n"
+"Bu node ile hedef arasındaki yol parçası için yol genişliğini, şerit sayısını\n"
 "ve trafik yönünü tanımlarlar."
 
 msgid ""
 "Navi nodes: lane waypoints on vehicle links that define road width,\n"
 "lane count, and traffic direction between two nodes"
 msgstr ""
-"Navi düğümleri: araç bağlantılarındaki, iki düğüm arasındaki yol genişliğini,\n"
+"Navi node'ları: araç bağlantılarındaki, iki node arasındaki yol genişliğini,\n"
 "şerit sayısını ve trafik yönünü tanımlayan şerit waypoint'leri"
 
 msgid "Neck"
@@ -5608,7 +5608,7 @@ msgid "No models match."
 msgstr "Eşleşen model yok."
 
 msgid "No node selected. Click one in the viewport."
-msgstr "Düğüm seçilmedi. Görünüm alanında birine tıklayın."
+msgstr "Node seçilmedi. Görünüm alanında birine tıklayın."
 
 msgid "No object is in a group."
 msgstr "Hiçbir nesne bir grupta değil."
@@ -10607,3 +10607,159 @@ msgstr "|  Özel modeller: %d"
 
 msgid "~n~ new line, ~r~ ~g~ ~b~ ~y~ ~p~ ~w~ ~l~ colours, ~h~ lighter, _ blank"
 msgstr "~n~ yeni satır, ~r~ ~g~ ~b~ ~y~ ~p~ ~w~ ~l~ renkler, ~h~ daha açık, _ boşluk"
+
+msgid "Airports and helipads"
+msgstr "Havalimanları ve helipadler"
+
+msgid "Barrels and containers"
+msgstr "Variller ve konteynerler"
+
+msgid "Bicycles"
+msgstr "Bisikletler"
+
+msgid "Boats"
+msgstr "Tekneler"
+
+msgid "Bridges"
+msgstr "Köprüler"
+
+msgid "Buildings"
+msgstr "Binalar"
+
+msgid "Buildings and land"
+msgstr "Binalar ve arazi"
+
+msgid "Car parks"
+msgstr "Otoparklar"
+
+msgid "Cars"
+msgstr "Arabalar"
+
+msgid "Countryside"
+msgstr "Kırsal"
+
+msgid "Doors and windows"
+msgstr "Kapılar ve pencereler"
+
+msgid "Effects and particles"
+msgstr "Efektler ve parçacıklar"
+
+msgid "Food and drink"
+msgstr "Yiyecek ve içecek"
+
+msgid "Grass"
+msgstr "Çimen"
+
+msgid "Ground and seabed"
+msgstr "Zemin ve deniz tabanı"
+
+msgid "Helicopters"
+msgstr "Helikopterler"
+
+msgid "Industry and construction"
+msgstr "Sanayi ve inşaat"
+
+msgid "Kitchens and bathrooms"
+msgstr "Mutfaklar ve banyolar"
+
+msgid "Las Venturas"
+msgstr "Las Venturas"
+
+msgid "Los Santos"
+msgstr "Los Santos"
+
+msgid "Markers and boundaries"
+msgstr "İşaretler ve sınırlar"
+
+msgid "Motorbikes and quads"
+msgstr "Motosikletler ve ATV'ler"
+
+msgid "Nature"
+msgstr "Doğa"
+
+msgid "Night-time objects"
+msgstr "Gece nesneleri"
+
+msgid "Not sorted yet"
+msgstr "Henüz sınıflandırılmamış"
+
+msgid "Other SA-MP objects"
+msgstr "Diğer SA-MP nesneleri"
+
+msgid "Other props"
+msgstr "Diğer dekor nesneleri"
+
+msgid "Planes"
+msgstr "Uçaklar"
+
+msgid "Police, ambulance and fire"
+msgstr "Polis, ambulans ve itfaiye"
+
+msgid "Props"
+msgstr "Dekor nesneleri"
+
+msgid "Railways"
+msgstr "Demiryolları"
+
+msgid "Remote control"
+msgstr "Uzaktan kumandalı"
+
+msgid "Roads and railways"
+msgstr "Yollar ve demiryolları"
+
+msgid "Roads, railways and airports"
+msgstr "Yollar, demiryolları ve havalimanları"
+
+msgid "Rooms and other interior objects"
+msgstr "Odalar ve diğer iç mekân nesneleri"
+
+msgid "SA-MP objects"
+msgstr "SA-MP nesneleri"
+
+msgid "San Fierro"
+msgstr "San Fierro"
+
+msgid "Sheds, barns and warehouses"
+msgstr "Barakalar, ahırlar ve depolar"
+
+msgid "Shop, bar and casino fittings"
+msgstr "Mağaza, bar ve kumarhane donanımı"
+
+msgid "Shops, offices and public buildings"
+msgstr "Mağazalar, ofisler ve kamu binaları"
+
+msgid "Sports and play"
+msgstr "Spor ve oyun"
+
+msgid "Street objects"
+msgstr "Sokak nesneleri"
+
+msgid "Text and materials"
+msgstr "Metin ve malzemeler"
+
+msgid "Towers"
+msgstr "Kuleler"
+
+msgid "Trailers"
+msgstr "Römorklar"
+
+msgid "Trains and trams"
+msgstr "Trenler ve tramvaylar"
+
+msgid "Tunnels"
+msgstr "Tüneller"
+
+msgid "Vans, trucks and work vehicles"
+msgstr "Minibüsler, kamyonlar ve iş araçları"
+
+msgid "Vehicle parts"
+msgstr "Araç parçaları"
+
+msgid "Water and coast"
+msgstr "Su ve kıyı"
+
+msgid "Weapons"
+msgstr "Silahlar"
+
+msgid "Wearable items"
+msgstr "Giyilebilir eşyalar"

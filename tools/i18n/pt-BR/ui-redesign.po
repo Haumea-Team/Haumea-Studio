@@ -46,3 +46,159 @@ msgstr "As coordenadas são relativas a %.2f, %.2f, %.2f"
 
 msgid "Multiplayer"
 msgstr "Multiplayer"
+
+msgid "Airports and helipads"
+msgstr "Aeroportos e helipontos"
+
+msgid "Barrels and containers"
+msgstr "Barris e contêineres"
+
+msgid "Bicycles"
+msgstr "Bicicletas"
+
+msgid "Boats"
+msgstr "Barcos"
+
+msgid "Bridges"
+msgstr "Pontes"
+
+msgid "Buildings"
+msgstr "Construções"
+
+msgid "Buildings and land"
+msgstr "Construções e terreno"
+
+msgid "Car parks"
+msgstr "Estacionamentos"
+
+msgid "Cars"
+msgstr "Carros"
+
+msgid "Countryside"
+msgstr "Interior do estado"
+
+msgid "Doors and windows"
+msgstr "Portas e janelas"
+
+msgid "Effects and particles"
+msgstr "Efeitos e partículas"
+
+msgid "Food and drink"
+msgstr "Comida e bebida"
+
+msgid "Grass"
+msgstr "Grama"
+
+msgid "Ground and seabed"
+msgstr "Chão e fundo do mar"
+
+msgid "Helicopters"
+msgstr "Helicópteros"
+
+msgid "Industry and construction"
+msgstr "Indústria e construção"
+
+msgid "Kitchens and bathrooms"
+msgstr "Cozinhas e banheiros"
+
+msgid "Las Venturas"
+msgstr "Las Venturas"
+
+msgid "Los Santos"
+msgstr "Los Santos"
+
+msgid "Markers and boundaries"
+msgstr "Marcadores e limites"
+
+msgid "Motorbikes and quads"
+msgstr "Motos e quadriciclos"
+
+msgid "Nature"
+msgstr "Natureza"
+
+msgid "Night-time objects"
+msgstr "Objetos noturnos"
+
+msgid "Not sorted yet"
+msgstr "Ainda não classificados"
+
+msgid "Other SA-MP objects"
+msgstr "Outros objetos do SA-MP"
+
+msgid "Other props"
+msgstr "Outros adereços"
+
+msgid "Planes"
+msgstr "Aviões"
+
+msgid "Police, ambulance and fire"
+msgstr "Polícia, ambulância e bombeiros"
+
+msgid "Props"
+msgstr "Adereços"
+
+msgid "Railways"
+msgstr "Ferrovias"
+
+msgid "Remote control"
+msgstr "Controle remoto"
+
+msgid "Roads and railways"
+msgstr "Ruas e ferrovias"
+
+msgid "Roads, railways and airports"
+msgstr "Ruas, ferrovias e aeroportos"
+
+msgid "Rooms and other interior objects"
+msgstr "Cômodos e outros objetos de interior"
+
+msgid "SA-MP objects"
+msgstr "Objetos do SA-MP"
+
+msgid "San Fierro"
+msgstr "San Fierro"
+
+msgid "Sheds, barns and warehouses"
+msgstr "Galpões, celeiros e armazéns"
+
+msgid "Shop, bar and casino fittings"
+msgstr "Mobiliário de loja, bar e cassino"
+
+msgid "Shops, offices and public buildings"
+msgstr "Lojas, escritórios e prédios públicos"
+
+msgid "Sports and play"
+msgstr "Esportes e lazer"
+
+msgid "Street objects"
+msgstr "Objetos de rua"
+
+msgid "Text and materials"
+msgstr "Texto e materiais"
+
+msgid "Towers"
+msgstr "Torres"
+
+msgid "Trailers"
+msgstr "Reboques"
+
+msgid "Trains and trams"
+msgstr "Trens e bondes"
+
+msgid "Tunnels"
+msgstr "Túneis"
+
+msgid "Vans, trucks and work vehicles"
+msgstr "Vans, caminhões e veículos de trabalho"
+
+msgid "Vehicle parts"
+msgstr "Peças de veículos"
+
+msgid "Water and coast"
+msgstr "Água e litoral"
+
+msgid "Weapons"
+msgstr "Armas"
+
+msgid "Wearable items"
+msgstr "Itens vestíveis"

@@ -10607,3 +10607,159 @@ msgstr "|  Пользовательских моделей: %d"
 
 msgid "~n~ new line, ~r~ ~g~ ~b~ ~y~ ~p~ ~w~ ~l~ colours, ~h~ lighter, _ blank"
 msgstr "~n~ новая строка, ~r~ ~g~ ~b~ ~y~ ~p~ ~w~ ~l~ цвета, ~h~ светлее, _ пусто"
+
+msgid "Airports and helipads"
+msgstr "Аэропорты и вертолётные площадки"
+
+msgid "Barrels and containers"
+msgstr "Бочки и контейнеры"
+
+msgid "Bicycles"
+msgstr "Велосипеды"
+
+msgid "Boats"
+msgstr "Лодки"
+
+msgid "Bridges"
+msgstr "Мосты"
+
+msgid "Buildings"
+msgstr "Здания"
+
+msgid "Buildings and land"
+msgstr "Здания и местность"
+
+msgid "Car parks"
+msgstr "Парковки"
+
+msgid "Cars"
+msgstr "Легковые автомобили"
+
+msgid "Countryside"
+msgstr "Сельская местность"
+
+msgid "Doors and windows"
+msgstr "Двери и окна"
+
+msgid "Effects and particles"
+msgstr "Эффекты и частицы"
+
+msgid "Food and drink"
+msgstr "Еда и напитки"
+
+msgid "Grass"
+msgstr "Трава"
+
+msgid "Ground and seabed"
+msgstr "Земля и морское дно"
+
+msgid "Helicopters"
+msgstr "Вертолёты"
+
+msgid "Industry and construction"
+msgstr "Промышленность и стройка"
+
+msgid "Kitchens and bathrooms"
+msgstr "Кухни и ванные"
+
+msgid "Las Venturas"
+msgstr "Las Venturas"
+
+msgid "Los Santos"
+msgstr "Los Santos"
+
+msgid "Markers and boundaries"
+msgstr "Маркеры и границы"
+
+msgid "Motorbikes and quads"
+msgstr "Мотоциклы и квадроциклы"
+
+msgid "Nature"
+msgstr "Природа"
+
+msgid "Night-time objects"
+msgstr "Ночные объекты"
+
+msgid "Not sorted yet"
+msgstr "Ещё не разобраны"
+
+msgid "Other SA-MP objects"
+msgstr "Другие объекты SA-MP"
+
+msgid "Other props"
+msgstr "Прочие предметы"
+
+msgid "Planes"
+msgstr "Самолёты"
+
+msgid "Police, ambulance and fire"
+msgstr "Полиция, скорая и пожарные"
+
+msgid "Props"
+msgstr "Предметы"
+
+msgid "Railways"
+msgstr "Железные дороги"
+
+msgid "Remote control"
+msgstr "Радиоуправляемые"
+
+msgid "Roads and railways"
+msgstr "Дороги и железные дороги"
+
+msgid "Roads, railways and airports"
+msgstr "Дороги, железные дороги и аэропорты"
+
+msgid "Rooms and other interior objects"
+msgstr "Комнаты и другие объекты интерьеров"
+
+msgid "SA-MP objects"
+msgstr "Объекты SA-MP"
+
+msgid "San Fierro"
+msgstr "San Fierro"
+
+msgid "Sheds, barns and warehouses"
+msgstr "Сараи, амбары и склады"
+
+msgid "Shop, bar and casino fittings"
+msgstr "Оборудование магазинов, баров и казино"
+
+msgid "Shops, offices and public buildings"
+msgstr "Магазины, офисы и общественные здания"
+
+msgid "Sports and play"
+msgstr "Спорт и игры"
+
+msgid "Street objects"
+msgstr "Уличные объекты"
+
+msgid "Text and materials"
+msgstr "Текст и материалы"
+
+msgid "Towers"
+msgstr "Башни"
+
+msgid "Trailers"
+msgstr "Прицепы"
+
+msgid "Trains and trams"
+msgstr "Поезда и трамваи"
+
+msgid "Tunnels"
+msgstr "Тоннели"
+
+msgid "Vans, trucks and work vehicles"
+msgstr "Фургоны, грузовики и рабочая техника"
+
+msgid "Vehicle parts"
+msgstr "Детали транспорта"
+
+msgid "Water and coast"
+msgstr "Вода и побережье"
+
+msgid "Weapons"
+msgstr "Оружие"
+
+msgid "Wearable items"
+msgstr "Носимые предметы"

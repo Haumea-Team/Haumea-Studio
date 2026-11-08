@@ -135,7 +135,7 @@ msgid "%d corner(s)"
 msgstr "Colțuri: %d"
 
 msgid "%d days ago"
-msgstr "Zile în urmă: %d"
+msgstr "acum %d zile"
 
 msgid "%d duplicates in %d groups"
 msgstr "Dubluri: %d, grupuri: %d"
@@ -1427,7 +1427,7 @@ msgid "Attachment"
 msgstr "Atașament"
 
 msgid "Attachment Workspace"
-msgstr "Attachment Workspace"
+msgstr "Spațiu de atașamente"
 
 msgid "Attachment target selection cancelled."
 msgstr "Selecția țintei de atașare a fost anulată."
@@ -2298,7 +2298,7 @@ msgid "Convert to map object"
 msgstr "Convertește în obiect de hartă"
 
 msgid "Coordinate pin"
-msgstr "Coordinate pin"
+msgstr "Pin de coordonate"
 
 msgid "Coordinates are relative to %.2f, %.2f, %.2f"
 msgstr "Coordonatele sunt relative la %.2f, %.2f, %.2f"
@@ -3038,10 +3038,10 @@ msgid "Dusk"
 msgstr "Amurg"
 
 msgid "Dynamic area"
-msgstr "Dynamic area"
+msgstr "Zonă dinamică"
 
 msgid "Dynamic areas"
-msgstr "Dynamic areas"
+msgstr "Zone dinamice"
 
 msgid "Each 750x750 square is one NODES<id>.DAT file."
 msgstr "Fiecare pătrat de 750x750 este un fișier NODES<id>.DAT."
@@ -4537,7 +4537,7 @@ msgid "Launch game"
 msgstr "Lansează jocul"
 
 msgid "Launch game joins it. After changes, Reload map in the Test server window."
-msgstr "Lansează jocul se alătură. După modificări, Reîncarcă harta în fereastra Test server."
+msgstr "Lansează jocul se alătură. După modificări, Reîncarcă harta în fereastra Server de test."
 
 msgid "Launch game with"
 msgstr "Lansează jocul cu"
@@ -6702,7 +6702,7 @@ msgid "Preferences > Shortcuts"
 msgstr "Preferințe > Scurtături"
 
 msgid "Preferences > Test server picks the server package and port."
-msgstr "Preferințe > Test server alege pachetul serverului și portul."
+msgstr "Preferințe > Server de test alege pachetul serverului și portul."
 
 msgid "Preferences..."
 msgstr "Preferințe..."
@@ -8426,7 +8426,7 @@ msgid ""
 "Which one: Preferences > Test server."
 msgstr ""
 "Pornește jocul (launcher-ul open.mp sau SA-MP) și se alătură serverului de test.\n"
-"Care dintre ele: Preferințe > Test server."
+"Care dintre ele: Preferințe > Server de test."
 
 msgid "Static vehicle (AddStaticVehicleEx)"
 msgstr "Vehicul static (AddStaticVehicleEx)"
@@ -8465,7 +8465,7 @@ msgid "Stop"
 msgstr "Oprește"
 
 msgid "Stop Test in game first."
-msgstr "Oprește mai întâi Test in game."
+msgstr "Oprește mai întâi Testează în joc."
 
 msgid "Stop adding"
 msgstr "Nu mai adăuga"
@@ -8643,29 +8643,29 @@ msgid "Terminal"
 msgstr "Terminal"
 
 msgid "Test in game"
-msgstr "Test in game"
+msgstr "Testează în joc"
 
 msgid "Test in game (%s) runs the map on a private open.mp server."
-msgstr "Test in game (%s) rulează harta pe un server open.mp privat."
+msgstr "Testează în joc (%s) rulează harta pe un server open.mp privat."
 
 msgid ""
 "Test in game runs the map on a private open.mp server in Haumea's config\n"
 "folder. Its files come from this package, or from the workspace server when empty."
 msgstr ""
-"Test in game rulează harta pe un server open.mp privat în folderul de configurare\n"
+"Testează în joc rulează harta pe un server open.mp privat în folderul de configurare\n"
 "Haumea. Fișierele lui vin din acest pachet sau, dacă e gol, din serverul workspace-ului."
 
 msgid "Test in game: %s"
-msgstr "Test in game: %s"
+msgstr "Testează în joc: %s"
 
 msgid "Test server"
-msgstr "Test server"
+msgstr "Server de test"
 
 msgid "Test server started on port %d"
-msgstr "Test server pornit pe portul %d"
+msgstr "Server de test pornit pe portul %d"
 
 msgid "Test server: map reloaded"
-msgstr "Test server: harta a fost reîncărcată"
+msgstr "Server de test: harta a fost reîncărcată"
 
 msgid "Test the map in game"
 msgstr "Testează harta în joc"
@@ -8721,7 +8721,7 @@ msgid ""
 "Textdraws now have their own file, which Test in game includes.\n"
 "Left in the map they are read-only."
 msgstr ""
-"Textdraws au acum propriul fișier, pe care Test in game îl include.\n"
+"Textdraws au acum propriul fișier, pe care Testează în joc îl include.\n"
 "Rămase în hartă, sunt doar pentru citire."
 
 msgid "Texture"
@@ -9610,7 +9610,7 @@ msgid "Viewport"
 msgstr "Viewport"
 
 msgid "Virtual world"
-msgstr "World virtual"
+msgstr "Lume virtuală"
 
 msgid "Volume"
 msgstr "Volum"
@@ -10293,7 +10293,7 @@ msgid "no key"
 msgstr "nicio tastă"
 
 msgid "no open.mp launcher found; set where omp-launcher.exe is in Preferences > Test server"
-msgstr "nu s-a găsit niciun launcher open.mp; setează unde este omp-launcher.exe în Preferințe > Test server"
+msgstr "nu s-a găsit niciun launcher open.mp; setează unde este omp-launcher.exe în Preferințe > Server de test"
 
 msgid "no samp.exe in the game folder, and no open.mp launcher"
 msgstr "niciun samp.exe în folderul jocului și niciun launcher open.mp"
@@ -10320,7 +10320,7 @@ msgid "not allowed"
 msgstr "nepermis"
 
 msgid "nothing to run yet; use Test in game first"
-msgstr "nimic de rulat încă; folosește mai întâi Test in game"
+msgstr "nimic de rulat încă; folosește mai întâi Testează în joc"
 
 msgid "npcmodes/recordings folder"
 msgstr "folderul npcmodes/recordings"
@@ -10456,7 +10456,7 @@ msgid "selecting objects"
 msgstr "se selectează obiecte"
 
 msgid "set an open.mp server package (folder, .tar.gz or .zip) in Preferences > Test server"
-msgstr "setează un pachet de server open.mp (folder, .tar.gz sau .zip) în Preferințe > Test server"
+msgstr "setează un pachet de server open.mp (folder, .tar.gz sau .zip) în Preferințe > Server de test"
 
 msgid "show"
 msgstr "arată"
@@ -10525,7 +10525,7 @@ msgid "the footprints are smaller than one cell; use smaller cells"
 msgstr "amprentele sunt mai mici decât o celulă; folosește celule mai mici"
 
 msgid "the game folder is not in a wine prefix; set one in Preferences > Test server"
-msgstr "folderul jocului nu este într-un prefix wine; setează unul în Preferințe > Test server"
+msgstr "folderul jocului nu este într-un prefix wine; setează unul în Preferințe > Server de test"
 
 msgid "the game's node files aren't loaded"
 msgstr "fișierele de noduri ale jocului nu sunt încărcate"
@@ -10607,3 +10607,159 @@ msgstr "|  Modele personalizate: %d"
 
 msgid "~n~ new line, ~r~ ~g~ ~b~ ~y~ ~p~ ~w~ ~l~ colours, ~h~ lighter, _ blank"
 msgstr "~n~ linie nouă, ~r~ ~g~ ~b~ ~y~ ~p~ ~w~ ~l~ culori, ~h~ mai deschis, _ gol"
+
+msgid "Airports and helipads"
+msgstr "Aeroporturi și heliporturi"
+
+msgid "Barrels and containers"
+msgstr "Butoaie și containere"
+
+msgid "Bicycles"
+msgstr "Biciclete"
+
+msgid "Boats"
+msgstr "Bărci"
+
+msgid "Bridges"
+msgstr "Poduri"
+
+msgid "Buildings"
+msgstr "Clădiri"
+
+msgid "Buildings and land"
+msgstr "Clădiri și teren"
+
+msgid "Car parks"
+msgstr "Parcări"
+
+msgid "Cars"
+msgstr "Mașini"
+
+msgid "Countryside"
+msgstr "Zona rurală"
+
+msgid "Doors and windows"
+msgstr "Uși și ferestre"
+
+msgid "Effects and particles"
+msgstr "Efecte și particule"
+
+msgid "Food and drink"
+msgstr "Mâncare și băutură"
+
+msgid "Grass"
+msgstr "Iarbă"
+
+msgid "Ground and seabed"
+msgstr "Sol și fundul mării"
+
+msgid "Helicopters"
+msgstr "Elicoptere"
+
+msgid "Industry and construction"
+msgstr "Industrie și construcții"
+
+msgid "Kitchens and bathrooms"
+msgstr "Bucătării și băi"
+
+msgid "Las Venturas"
+msgstr "Las Venturas"
+
+msgid "Los Santos"
+msgstr "Los Santos"
+
+msgid "Markers and boundaries"
+msgstr "Marcaje și limite"
+
+msgid "Motorbikes and quads"
+msgstr "Motociclete și ATV-uri"
+
+msgid "Nature"
+msgstr "Natură"
+
+msgid "Night-time objects"
+msgstr "Obiecte de noapte"
+
+msgid "Not sorted yet"
+msgstr "Încă nesortate"
+
+msgid "Other SA-MP objects"
+msgstr "Alte obiecte SA-MP"
+
+msgid "Other props"
+msgstr "Alte recuzite"
+
+msgid "Planes"
+msgstr "Avioane"
+
+msgid "Police, ambulance and fire"
+msgstr "Poliție, ambulanță și pompieri"
+
+msgid "Props"
+msgstr "Recuzită"
+
+msgid "Railways"
+msgstr "Căi ferate"
+
+msgid "Remote control"
+msgstr "Teleghidate"
+
+msgid "Roads and railways"
+msgstr "Drumuri și căi ferate"
+
+msgid "Roads, railways and airports"
+msgstr "Drumuri, căi ferate și aeroporturi"
+
+msgid "Rooms and other interior objects"
+msgstr "Camere și alte obiecte de interior"
+
+msgid "SA-MP objects"
+msgstr "Obiecte SA-MP"
+
+msgid "San Fierro"
+msgstr "San Fierro"
+
+msgid "Sheds, barns and warehouses"
+msgstr "Șoproane, hambare și depozite"
+
+msgid "Shop, bar and casino fittings"
+msgstr "Mobilier de magazin, bar și cazinou"
+
+msgid "Shops, offices and public buildings"
+msgstr "Magazine, birouri și clădiri publice"
+
+msgid "Sports and play"
+msgstr "Sport și joacă"
+
+msgid "Street objects"
+msgstr "Obiecte stradale"
+
+msgid "Text and materials"
+msgstr "Text și materiale"
+
+msgid "Towers"
+msgstr "Turnuri"
+
+msgid "Trailers"
+msgstr "Remorci"
+
+msgid "Trains and trams"
+msgstr "Trenuri și tramvaie"
+
+msgid "Tunnels"
+msgstr "Tuneluri"
+
+msgid "Vans, trucks and work vehicles"
+msgstr "Dube, camioane și vehicule de lucru"
+
+msgid "Vehicle parts"
+msgstr "Piese de vehicul"
+
+msgid "Water and coast"
+msgstr "Apă și coastă"
+
+msgid "Weapons"
+msgstr "Arme"
+
+msgid "Wearable items"
+msgstr "Obiecte purtabile"

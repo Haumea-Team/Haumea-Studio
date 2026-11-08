@@ -1427,7 +1427,7 @@ msgid "Attachment"
 msgstr "Adjunto"
 
 msgid "Attachment Workspace"
-msgstr "Attachment Workspace"
+msgstr "Espacio de adjuntos"
 
 msgid "Attachment target selection cancelled."
 msgstr "Selección de destino del adjunto cancelada."
@@ -2298,7 +2298,7 @@ msgid "Convert to map object"
 msgstr "Convertir en objeto del mapa"
 
 msgid "Coordinate pin"
-msgstr "Coordinate pin"
+msgstr "Pin de coordenadas"
 
 msgid "Coordinates are relative to %.2f, %.2f, %.2f"
 msgstr "Las coordenadas son relativas a %.2f, %.2f, %.2f"
@@ -3038,10 +3038,10 @@ msgid "Dusk"
 msgstr "Atardecer"
 
 msgid "Dynamic area"
-msgstr "Dynamic area"
+msgstr "Área dinámica"
 
 msgid "Dynamic areas"
-msgstr "Dynamic areas"
+msgstr "Áreas dinámicas"
 
 msgid "Each 750x750 square is one NODES<id>.DAT file."
 msgstr "Cada cuadrado de 750x750 es un archivo NODES<id>.DAT."
@@ -8465,7 +8465,7 @@ msgid "Stop"
 msgstr "Detener"
 
 msgid "Stop Test in game first."
-msgstr "Detén primero Test in game."
+msgstr "Detén primero Probar en el juego."
 
 msgid "Stop adding"
 msgstr "Dejar de añadir"
@@ -8643,20 +8643,20 @@ msgid "Terminal"
 msgstr "Terminal"
 
 msgid "Test in game"
-msgstr "Test in game"
+msgstr "Probar en el juego"
 
 msgid "Test in game (%s) runs the map on a private open.mp server."
-msgstr "Test in game (%s) ejecuta el mapa en un servidor open.mp privado."
+msgstr "Probar en el juego (%s) ejecuta el mapa en un servidor open.mp privado."
 
 msgid ""
 "Test in game runs the map on a private open.mp server in Haumea's config\n"
 "folder. Its files come from this package, or from the workspace server when empty."
 msgstr ""
-"Test in game ejecuta el mapa en un servidor open.mp privado en la carpeta de\n"
+"Probar en el juego ejecuta el mapa en un servidor open.mp privado en la carpeta de\n"
 "configuración de Haumea. Sus archivos vienen de este paquete, o del servidor del workspace si está vacío."
 
 msgid "Test in game: %s"
-msgstr "Test in game: %s"
+msgstr "Probar en el juego: %s"
 
 msgid "Test server"
 msgstr "Servidor de prueba"
@@ -8721,7 +8721,7 @@ msgid ""
 "Textdraws now have their own file, which Test in game includes.\n"
 "Left in the map they are read-only."
 msgstr ""
-"Los textdraws ahora tienen su propio archivo, que Test in game incluye.\n"
+"Los textdraws ahora tienen su propio archivo, que Probar en el juego incluye.\n"
 "Si se dejan en el mapa, son de solo lectura."
 
 msgid "Texture"
@@ -10320,7 +10320,7 @@ msgid "not allowed"
 msgstr "no permitido"
 
 msgid "nothing to run yet; use Test in game first"
-msgstr "aún no hay nada que ejecutar; usa primero Test in game"
+msgstr "aún no hay nada que ejecutar; usa primero Probar en el juego"
 
 msgid "npcmodes/recordings folder"
 msgstr "carpeta npcmodes/recordings"
@@ -10607,3 +10607,159 @@ msgstr "|  Modelos personalizados: %d"
 
 msgid "~n~ new line, ~r~ ~g~ ~b~ ~y~ ~p~ ~w~ ~l~ colours, ~h~ lighter, _ blank"
 msgstr "~n~ nueva línea, ~r~ ~g~ ~b~ ~y~ ~p~ ~w~ ~l~ colores, ~h~ más claro, _ vacío"
+
+msgid "Airports and helipads"
+msgstr "Aeropuertos y helipuertos"
+
+msgid "Barrels and containers"
+msgstr "Barriles y contenedores"
+
+msgid "Bicycles"
+msgstr "Bicicletas"
+
+msgid "Boats"
+msgstr "Barcos"
+
+msgid "Bridges"
+msgstr "Puentes"
+
+msgid "Buildings"
+msgstr "Edificios"
+
+msgid "Buildings and land"
+msgstr "Edificios y terreno"
+
+msgid "Car parks"
+msgstr "Aparcamientos"
+
+msgid "Cars"
+msgstr "Coches"
+
+msgid "Countryside"
+msgstr "Campo"
+
+msgid "Doors and windows"
+msgstr "Puertas y ventanas"
+
+msgid "Effects and particles"
+msgstr "Efectos y partículas"
+
+msgid "Food and drink"
+msgstr "Comida y bebida"
+
+msgid "Grass"
+msgstr "Hierba"
+
+msgid "Ground and seabed"
+msgstr "Suelo y fondo marino"
+
+msgid "Helicopters"
+msgstr "Helicópteros"
+
+msgid "Industry and construction"
+msgstr "Industria y construcción"
+
+msgid "Kitchens and bathrooms"
+msgstr "Cocinas y baños"
+
+msgid "Las Venturas"
+msgstr "Las Venturas"
+
+msgid "Los Santos"
+msgstr "Los Santos"
+
+msgid "Markers and boundaries"
+msgstr "Marcadores y límites"
+
+msgid "Motorbikes and quads"
+msgstr "Motos y quads"
+
+msgid "Nature"
+msgstr "Naturaleza"
+
+msgid "Night-time objects"
+msgstr "Objetos nocturnos"
+
+msgid "Not sorted yet"
+msgstr "Aún sin clasificar"
+
+msgid "Other SA-MP objects"
+msgstr "Otros objetos de SA-MP"
+
+msgid "Other props"
+msgstr "Otros accesorios"
+
+msgid "Planes"
+msgstr "Aviones"
+
+msgid "Police, ambulance and fire"
+msgstr "Policía, ambulancia y bomberos"
+
+msgid "Props"
+msgstr "Accesorios"
+
+msgid "Railways"
+msgstr "Vías férreas"
+
+msgid "Remote control"
+msgstr "Control remoto"
+
+msgid "Roads and railways"
+msgstr "Carreteras y vías férreas"
+
+msgid "Roads, railways and airports"
+msgstr "Carreteras, vías férreas y aeropuertos"
+
+msgid "Rooms and other interior objects"
+msgstr "Habitaciones y otros objetos de interior"
+
+msgid "SA-MP objects"
+msgstr "Objetos de SA-MP"
+
+msgid "San Fierro"
+msgstr "San Fierro"
+
+msgid "Sheds, barns and warehouses"
+msgstr "Cobertizos, graneros y almacenes"
+
+msgid "Shop, bar and casino fittings"
+msgstr "Mobiliario de tienda, bar y casino"
+
+msgid "Shops, offices and public buildings"
+msgstr "Tiendas, oficinas y edificios públicos"
+
+msgid "Sports and play"
+msgstr "Deportes y juegos"
+
+msgid "Street objects"
+msgstr "Objetos urbanos"
+
+msgid "Text and materials"
+msgstr "Texto y materiales"
+
+msgid "Towers"
+msgstr "Torres"
+
+msgid "Trailers"
+msgstr "Remolques"
+
+msgid "Trains and trams"
+msgstr "Trenes y tranvías"
+
+msgid "Tunnels"
+msgstr "Túneles"
+
+msgid "Vans, trucks and work vehicles"
+msgstr "Furgonetas, camiones y vehículos de trabajo"
+
+msgid "Vehicle parts"
+msgstr "Piezas de vehículos"
+
+msgid "Water and coast"
+msgstr "Agua y costa"
+
+msgid "Weapons"
+msgstr "Armas"
+
+msgid "Wearable items"
+msgstr "Objetos para llevar puestos"
