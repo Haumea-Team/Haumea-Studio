@@ -2746,13 +2746,14 @@ DrawMultiplayerWindow(bool *open)
 		ImGui::SetNextItemWidth(field);
 		ImGui::InputInt(_("Port##join"), &joinPort);
 		joinPort = clamp(joinPort, 1, 65535);
-		ImGui::RadioButton(_("Session code"), &gForm.kind, 0);
+		// "##join_kind": the Account and Invite code fields below have the same labels.
+		ImGui::RadioButton(_("Session code##join_kind"), &gForm.kind, 0);
 		ImGui::SetItemTooltip(_("Someone hosting from Haumea, or a server with one password for everyone."));
 		ImGui::SameLine();
-		ImGui::RadioButton(_("Account"), &gForm.kind, 1);
+		ImGui::RadioButton(_("Account##join_kind"), &gForm.kind, 1);
 		ImGui::SetItemTooltip(_("A server with accounts: your name and password there."));
 		ImGui::SameLine();
-		ImGui::RadioButton(_("Invite code"), &gForm.kind, 2);
+		ImGui::RadioButton(_("Invite code##join_kind"), &gForm.kind, 2);
 		ImGui::SetItemTooltip(_("The first time on a server with accounts: the code you were sent makes your account."));
 		ready = address[0] != '\0';
 		if(gForm.kind == 0){
