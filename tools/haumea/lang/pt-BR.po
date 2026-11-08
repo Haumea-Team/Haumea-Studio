@@ -9390,9 +9390,6 @@ msgstr "A sessão não respondeu."
 msgid "The session ended."
 msgstr "A sessão terminou."
 
-msgid "The session runs a different Haumea version: update both to the same one."
-msgstr "A sessão roda outra versão do Haumea: atualizem os dois para a mesma."
-
 msgid "The session sent something this version can't read."
 msgstr "A sessão enviou algo que esta versão não consegue ler."
 
@@ -9545,6 +9542,12 @@ msgstr "Este servidor não é o que você entrou antes (a impressão digital era
 
 msgid "This session doesn't let a map replace its own."
 msgstr "Esta sessão não deixa um mapa substituir o dela."
+
+msgid "This session is newer than your Haumea: update Haumea."
+msgstr "Esta sessão é mais nova que o seu Haumea: atualize o Haumea."
+
+msgid "This session's server or host is older than your Haumea: it needs updating."
+msgstr "O servidor ou anfitrião desta sessão é mais antigo que o seu Haumea: precisa ser atualizado."
 
 msgid "Throw a satchel"
 msgstr "Arremessar uma carga explosiva"
