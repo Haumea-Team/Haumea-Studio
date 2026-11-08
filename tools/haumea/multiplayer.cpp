@@ -1438,7 +1438,9 @@ challenged(const MpFrame &frame)
 			return;
 		}
 	if(protocol != MP_PROTOCOL){
-		lostRelay(_("The session runs a different Haumea version: update both to the same one."));
+		lostRelay(protocol < MP_PROTOCOL ?
+			_("This session's server or host is older than your Haumea: it needs updating.") :
+			_("This session is newer than your Haumea: update Haumea."));
 		return;
 	}
 	std::string password = gPassword;

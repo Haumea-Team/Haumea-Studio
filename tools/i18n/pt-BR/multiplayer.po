@@ -203,10 +203,6 @@ msgid "That isn't a Haumea session."
 msgstr "Isso não é uma sessão do Haumea."
 
 #: tools/haumea/multiplayer.cpp
-msgid "The session runs a different Haumea version: update both to the same one."
-msgstr "A sessão roda outra versão do Haumea: atualizem os dois para a mesma."
-
-#: tools/haumea/multiplayer.cpp
 msgid "Your router didn't open the port (%s)."
 msgstr "O seu roteador não abriu a porta (%s)."
 
@@ -473,3 +469,8 @@ msgstr "observador"
 msgid "viewers"
 msgstr "observadores"
 
+msgid "This session's server or host is older than your Haumea: it needs updating."
+msgstr "O servidor ou anfitrião desta sessão é mais antigo que o seu Haumea: precisa ser atualizado."
+
+msgid "This session is newer than your Haumea: update Haumea."
+msgstr "Esta sessão é mais nova que o seu Haumea: atualize o Haumea."

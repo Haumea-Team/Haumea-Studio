@@ -502,6 +502,21 @@ broadcast(const std::string &frame, uint32_t except)
 			MpQueue(c, frame);
 }
 
+static void reject(Client &c, const char *reason);
+
+// Its Haumea speaks another multiplayer protocol: say which side is behind,
+// and warn this server's owner when it's this server.
+static void
+wrongVersion(Client &c, uint32_t theirs)
+{
+	if(theirs > MP_PROTOCOL){
+		relayWarn("%s has a newer Haumea (multiplayer protocol %u; this speaks %u): update haumea-server", c.address,
+			theirs, MP_PROTOCOL);
+		reject(c, "this server is older than your Haumea: its owner needs to update it");
+	}else
+		reject(c, "your Haumea is older than this server: update Haumea");
+}
+
 static void
 reject(Client &c, const char *reason)
 {
@@ -887,7 +902,7 @@ hello(Client &c, const MpFrame &frame)
 		return;
 	}
 	if(protocol != MP_PROTOCOL){
-		reject(c, "a different Haumea version: update to the same one");
+		wrongVersion(c, protocol);
 		return;
 	}
 	name[MP_NAME_LEN - 1] = '\0';
@@ -993,7 +1008,7 @@ login(Client &c, const MpFrame &frame)
 		return;
 	}
 	if(protocol != MP_PROTOCOL){
-		reject(c, "a different Haumea version: update to the same one");
+		wrongVersion(c, protocol);
 		return;
 	}
 	c.loggedIn = true;

@@ -10489,9 +10489,6 @@ msgstr "通过互联网，其他人在 %s 加入"
 msgid "That isn't a Haumea session."
 msgstr "那不是 Haumea 会话。"
 
-msgid "The session runs a different Haumea version: update both to the same one."
-msgstr "该会话运行的是不同版本的 Haumea：请将双方更新到同一版本。"
-
 msgid "Your router didn't open the port (%s)."
 msgstr "你的路由器没有打开端口（%s）。"
 
@@ -11013,3 +11010,9 @@ msgstr "观察者"
 
 msgid "none"
 msgstr "无"
+
+msgid "This session's server or host is older than your Haumea: it needs updating."
+msgstr "此会话的服务器或主机比你的 Haumea 旧：需要更新。"
+
+msgid "This session is newer than your Haumea: update Haumea."
+msgstr "此会话比你的 Haumea 新：请更新 Haumea。"
