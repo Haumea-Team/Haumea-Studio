@@ -1339,7 +1339,14 @@ uiToasts(void)
 		float padX = 16.0f, padY = 8.0f;
 		float boxW = textSize.x + padX * 2;
 		float boxH = textSize.y + padY * 2;
-		float x = (screenW - boxW) * 0.5f;
+		// Centred under the world view, not the window: never behind a panel.
+		float left = 0.0f, width = screenW;
+		if(ImGuiDockNode *central = ImGui::DockBuilderGetCentralNode(ImHashStr("HaumeaDockSpace")))
+			if(central->IsVisible && central->Size.x > 0.0f){
+				left = central->Pos.x - ImGui::GetMainViewport()->Pos.x;
+				width = central->Size.x;
+			}
+		float x = max(left, left + (width - boxW) * 0.5f);
 		float y = yBase - (numToasts - 1 - i) * spacing + slideOffset;
 
 		KeepNextEditorOverlayOnMainWindow();
@@ -2909,9 +2916,9 @@ static void
 uiToolbar(void)
 {
 	char tip[256];
-	const char *toolName = !gGizmoEnabled ? TI(ICON_FA_ARROW_POINTER, "Select") :
+	const char *toolName = gBrushMode ? TI(ICON_FA_PAINTBRUSH, "Brush") : !gGizmoEnabled ? TI(ICON_FA_ARROW_POINTER, "Select") :
 		gGizmoMode == GIZMO_ROTATE ? TI(ICON_FA_ROTATE, "Rotate") : TI(ICON_FA_ARROWS_UP_DOWN_LEFT_RIGHT, "Move");
-	const char *toolKey = !gGizmoEnabled ? "" : gGizmoMode == GIZMO_ROTATE ? ShortcutLabel(SC_GIZMO_ROTATE) : ShortcutLabel(SC_GIZMO_MOVE);
+	const char *toolKey = gBrushMode || !gGizmoEnabled ? "" : gGizmoMode == GIZMO_ROTATE ? ShortcutLabel(SC_GIZMO_ROTATE) : ShortcutLabel(SC_GIZMO_MOVE);
 	// The current tool and its key.
 	ImGui::AlignTextToFramePadding();
 	ImGui::TextUnformatted(toolName);
@@ -2920,7 +2927,45 @@ uiToolbar(void)
 		ImGui::TextDisabled("%s", toolKey);
 	}
 
-	if(gGizmoEnabled){
+	if(gBrushMode){
+		// The brush's settings; the rest are in the Tools panel.
+		float field = ImGui::GetFontSize() * 3.6f;
+		uiBarDivider();
+		ImGui::AlignTextToFramePadding();
+		ImGui::TextUnformatted(_("Radius:"));
+		ImGui::SameLine();
+		ImGui::SetNextItemWidth(field);
+		if(ImGui::InputFloat("##brush_radius", &gBrushRadius, 0.0f, 0.0f, "%.1f m"))
+			gBrushRadius = clamp(gBrushRadius, 0.0f, 500.0f);
+		ImGui::SetItemTooltip(_("Brush disc size. 0 = single object under cursor."));
+		ImGui::SameLine();
+		ImGui::BeginDisabled(gBrushRadius <= 0.01f);
+		ImGui::TextUnformatted(_("Count:"));
+		ImGui::SameLine();
+		ImGui::SetNextItemWidth(field);
+		if(ImGui::InputInt("##brush_count", &gBrushCount, 0, 0))
+			gBrushCount = clamp(gBrushCount, 1, 128);
+		ImGui::SetItemTooltip(_("Number of objects scattered per click when Radius > 0."));
+		ImGui::EndDisabled();
+		ImGui::SameLine();
+		ImGui::TextUnformatted(_("Spacing:"));
+		ImGui::SameLine();
+		ImGui::SetNextItemWidth(field);
+		if(ImGui::InputFloat("##brush_spacing", &gBrushSpacing, 0.0f, 0.0f, "%.1f m"))
+			gBrushSpacing = max(gBrushSpacing, 0.0f);
+		ImGui::SameLine();
+		ImGui::Checkbox(_("Align to surface##brush_bar"), &gBrushAlignToSurface);
+		ImGui::SameLine();
+		if(uiToolbarButton(ICON_FA_GEAR "##brush_more", false, _("All brush settings")))
+			showToolsWindow = true;
+		ImGui::SameLine();
+		char exitLabel[64];
+		snprintf(exitLabel, sizeof(exitLabel), _("Exit Brush (%s)##exit_brush_bar"), uiKey(SC_CANCEL));
+		if(ImGui::Button(exitLabel))
+			ExitBrushMode();
+	}
+
+	if(gGizmoEnabled && !gBrushMode){
 		uiBarDivider();
 		bool world = gGizmoSpace == GIZMO_WORLD;
 		snprintf(tip, sizeof(tip), world ? _("Gizmo follows the map axes. Click or press %s for the object's own axes.") :
@@ -2951,20 +2996,58 @@ uiToolbar(void)
 			uiStepCombo("##move_step", &gGizmoSnapTranslate, intervals, IM_ARRAYSIZE(intervals), " m", _("Move step (hold Shift)"));
 	}
 
-	uiBarDivider();
-	if(isSA()){
-		ImGui::Checkbox(_("Object snap"), &gObjectSnapMode);
-		ImGui::SetItemTooltip(_("Line up edges and faces with nearby objects while moving."));
+	// The snapping switches and the selection's actions; in a "..." menu when
+	// the bar is too narrow for them, so nothing runs off its end.
+	const ImGuiStyle &style = ImGui::GetStyle();
+	float box = ImGui::GetFrameHeight() + style.ItemInnerSpacing.x + style.ItemSpacing.x;
+	float inlineNeed = 7.0f + style.ItemSpacing.x*2.0f + box + ImGui::CalcTextSize(_("Follow ground")).x +
+		(isSA() ? box + ImGui::CalcTextSize(_("Object snap")).x : 0.0f) +
+		(gBrushMode ? 0.0f : 7.0f + style.ItemSpacing.x*2.0f + (ImGui::GetFrameHeight() + style.ItemSpacing.x)*2.0f) +
+		ImGui::GetFrameHeight() + style.ItemSpacing.x;
+	ImGui::SameLine();
+	bool roomy = ImGui::GetContentRegionAvail().x >= inlineNeed;
+	static const int now[] = { SC_SNAP_TO_GROUND, SC_FOCUS_SELECTION };
+	bool selected = selection.first != nil;
+	if(roomy){
+		uiBarDivider();
+		if(isSA()){
+			ImGui::Checkbox(_("Object snap"), &gObjectSnapMode);
+			ImGui::SetItemTooltip(_("Line up edges and faces with nearby objects while moving."));
+			ImGui::SameLine();
+		}
+		ImGui::Checkbox(_("Follow ground"), &gDragFollowGround);
+		ImGui::SetItemTooltip(_("Keep dragged objects on the ground surface."));
+
+		// What to do with the selection now, as a creative suite's Move options do.
+		if(!gBrushMode){
+			uiBarDivider();
+			static const char *nowIcons[] = { ICON_FA_ARROW_DOWN "##bar_drop", ICON_FA_CROSSHAIRS "##bar_focus" };
+			for(int i = 0; i < IM_ARRAYSIZE(now); i++){
+				const char *key = ShortcutLabel(now[i]);
+				if(key[0]) snprintf(tip, sizeof(tip), "%s (%s)", _(GetShortcutInfo(now[i])->name), key);
+				else snprintf(tip, sizeof(tip), "%s", _(GetShortcutInfo(now[i])->name));
+				if(i) ImGui::SameLine();
+				if(uiToolbarButton(nowIcons[i], false, tip, selected))
+					uiRunShortcut(now[i]);
+			}
+		}
 		ImGui::SameLine();
 	}
-	ImGui::Checkbox(_("Follow ground"), &gDragFollowGround);
-	ImGui::SetItemTooltip(_("Keep dragged objects on the ground surface."));
 
-	ImGui::SameLine();
-	if(uiToolbarButton(ICON_FA_GEAR "##toolbar_options", false,
-	   _("More display and snapping options")))
+	if(uiToolbarButton(roomy ? ICON_FA_GEAR "##toolbar_options" : "...##toolbar_options", false,
+	   roomy ? _("More display and snapping options") : _("More options")))
 		ImGui::OpenPopup("##toolbar_options");
 	if(ImGui::BeginPopup("##toolbar_options")){
+		if(!roomy){
+			if(isSA())
+				ImGui::MenuItem(_("Object snap"), ShortcutLabel(SC_OBJECT_SNAP), &gObjectSnapMode);
+			ImGui::MenuItem(_("Follow ground"), nil, &gDragFollowGround);
+			if(!gBrushMode)
+				for(int action : now)
+					if(ImGui::MenuItem(_(GetShortcutInfo(action)->name), ShortcutLabel(action), false, selected))
+						uiRunShortcut(action);
+			ImGui::Separator();
+		}
 		ImGui::MenuItem(TI(ICON_FA_VECTOR_SQUARE, "Outline map objects"), ShortcutLabel(SC_OUTLINE_OBJECTS), &gOutlineMapObjects);
 		ImGui::SetItemTooltip(_("Show object edges, including invisible and see-through objects."));
 		ImGui::MenuItem(_("Outline selected and hovered objects"), nil, &gOutlineSelection);
@@ -2975,19 +3058,21 @@ uiToolbar(void)
 	if(isSA()){
 		float field = ImGui::GetFontSize() * 3.2f;
 		float need = ImGui::CalcTextSize(_("Virtual world")).x + ImGui::CalcTextSize(_("Interior")).x +
-			field*2.0f + ImGui::GetStyle().ItemSpacing.x*4.0f;
+			ImGui::CalcTextSize("::").x + field*2.0f + ImGui::GetStyle().ItemSpacing.x*4.0f;
 		float x = ImGui::GetWindowContentRegionMax().x - need;
 		ImGui::SameLine();
-		if(x > ImGui::GetCursorPosX())
-			ImGui::SetCursorPosX(x);
+		// No room: they go before anything overlaps (the View panel has them too).
+		if(x < ImGui::GetCursorPosX())
+			return;
+		ImGui::SetCursorPosX(x);
 		ImGui::AlignTextToFramePadding();
-		ImGui::TextDisabled(_("Virtual world"));
+		ImGui::TextDisabled("%s:", _("Virtual world"));
 		ImGui::SameLine();
 		ImGui::SetNextItemWidth(field);
 		if(ImGui::InputInt("##viewport_world", &gPlayerViewWorld, 0, 0))
 			gPlayerViewWorld = std::max(0, gPlayerViewWorld);
 		ImGui::SameLine();
-		ImGui::TextDisabled(_("Interior"));
+		ImGui::TextDisabled("%s:", _("Interior"));
 		ImGui::SameLine();
 		ImGui::SetNextItemWidth(field);
 		if(ImGui::InputInt("##viewport_interior", &currentArea, 0, 0))
@@ -2995,8 +3080,81 @@ uiToolbar(void)
 	}
 }
 
-// The tools down the left side: how a click in the world works, what
-// happens to the selection, and how the view draws it.
+// The tools down the left side, as in a creative suite: only tools (what a
+// click in the world does), in groups. A slot shows its group's current tool;
+// the triangle in its corner says the group has more, listed by a right-click
+// or by holding the button. One-off actions live on the options bar and in the
+// menus; the view modes sit at the foot, like a screen mode.
+struct ToolChoice
+{
+	const char *icon;	// with its ##id
+	const char *name;	// N_()
+	int shortcut;	// -1: none
+	const char *section;	// a Tools panel section (N_()), or nil
+};
+
+static void
+uiToolGroupTriangle(void)
+{
+	ImVec2 hi = ImGui::GetItemRectMax();
+	float s = floorf(ImGui::GetFontSize() * 0.28f);
+	ImGui::GetWindowDrawList()->AddTriangleFilled(ImVec2(hi.x - 2.0f, hi.y - 2.0f - s), ImVec2(hi.x - 2.0f, hi.y - 2.0f),
+		ImVec2(hi.x - 2.0f - s, hi.y - 2.0f), ImGui::GetColorU32(ImGuiCol_TextDisabled));
+}
+
+// The group's tools in a flyout beside the slot: the chosen one, or -1.
+static int
+uiToolFlyout(const char *id, const ToolChoice *tools, int n, int current)
+{
+	bool held = ImGui::IsItemActive() && ImGui::GetIO().MouseDownDuration[0] > 0.35f;
+	if(held || (ImGui::IsItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Right))){
+		ImGui::SetNextWindowPos(ImVec2(ImGui::GetItemRectMax().x + 4.0f, ImGui::GetItemRectMin().y));
+		ImGui::OpenPopup(id);
+	}
+	int chosen = -1;
+	if(ImGui::BeginPopup(id)){
+		for(int i = 0; i < n; i++){
+			const char *key = tools[i].shortcut >= 0 ? ShortcutLabel(tools[i].shortcut) : "";
+			char label[160];
+			const char *icon = tools[i].icon, *hash = strstr(icon, "##");
+			snprintf(label, sizeof(label), "%.*s  %s##%d", hash ? (int)(hash - icon) : (int)strlen(icon), icon, _(tools[i].name), i);
+			if(ImGui::MenuItem(label, key, i == current))
+				chosen = i;
+		}
+		ImGui::EndPopup();
+	}
+	return chosen;
+}
+
+static void
+uiStripDivider(float button)
+{
+	ImVec2 p = ImGui::GetCursorScreenPos();
+	ImGui::GetWindowDrawList()->AddLine(ImVec2(p.x + button*0.2f, p.y + 3.0f), ImVec2(p.x + button*0.8f, p.y + 3.0f),
+		ImGui::GetColorU32(ImGuiCol_Border));
+	ImGui::Dummy(ImVec2(button, 6.0f));
+}
+
+static void
+uiToolTip(char *tip, size_t size, const ToolChoice &tool, const char *help)
+{
+	const char *key = tool.shortcut >= 0 ? ShortcutLabel(tool.shortcut) : "";
+	if(key[0]) snprintf(tip, size, "%s (%s)\n%s", _(tool.name), key, help);
+	else snprintf(tip, size, "%s\n%s", _(tool.name), help);
+}
+
+static void
+uiStartBrush(void)
+{
+	int id = GetSpawnObjectId();
+	if(id >= 0)
+		EnterBrushMode(id);
+	else{
+		showBrowserWindow = true;
+		Toast(TOAST_SPAWN, _("Pick the object to paint in the Object Browser first."));
+	}
+}
+
 static void
 uiToolStrip(void)
 {
@@ -3008,64 +3166,99 @@ uiToolStrip(void)
 	ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(2.0f, 3.0f));
 	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0.0f, 0.0f));
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+	ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize, 3.0f);
 	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImGui::GetStyleColorVec4(ImGuiCol_TitleBg));
+	// Scrolls (by the wheel, a thin bar) when the window is too short for it.
 	ImGui::BeginViewportSideBar("##ToolStrip", ImGui::GetMainViewport(), ImGuiDir_Left, button + pad*2.0f,
-		ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoDocking |
-		ImGuiWindowFlags_NoScrollWithMouse);
+		ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoDocking);
 	ImVec2 size(button, button);
-	char tip[256];
-	bool selected = selection.first != nil;
+	char tip[512];
+	bool tool = !gBrushMode;
 
-	if(uiToolbarButton(ICON_FA_ARROW_POINTER "##tool_select", !gGizmoEnabled,
-	   _("Select\nClick objects to select them, drag them to move along the ground."), true, size))
+	// Select.
+	static const ToolChoice select = { ICON_FA_ARROW_POINTER "##tool_select", N_("Select"), -1, nil };
+	uiToolTip(tip, sizeof(tip), select, _("Click objects to select them, drag them to move along the ground."));
+	if(uiToolbarButton(select.icon, tool && !gGizmoEnabled, tip, true, size)){
+		if(gBrushMode) ExitBrushMode();
 		gGizmoEnabled = false;
-	snprintf(tip, sizeof(tip), _("Move (%s)\nDrag the arrows on the selected object."), ShortcutLabel(SC_GIZMO_MOVE));
-	if(uiToolbarButton(ICON_FA_ARROWS_UP_DOWN_LEFT_RIGHT "##tool_move", gGizmoEnabled && gGizmoMode == GIZMO_TRANSLATE, tip, true, size))
-		uiRunShortcut(SC_GIZMO_MOVE);
-	snprintf(tip, sizeof(tip), _("Rotate (%s)\nDrag the rings on the selected object."), ShortcutLabel(SC_GIZMO_ROTATE));
-	if(uiToolbarButton(ICON_FA_ROTATE "##tool_rotate", gGizmoEnabled && gGizmoMode == GIZMO_ROTATE, tip, true, size))
-		uiRunShortcut(SC_GIZMO_ROTATE);
-
-	struct StripAction { const char *icon; int action; const bool *on; bool needsSelection; };
-	const StripAction actions[] = {
-		{ nil, -1, nil, false },
-		{ ICON_FA_ARROW_DOWN "##tool_drop", SC_SNAP_TO_GROUND, nil, true },
-		{ ICON_FA_CROSSHAIRS "##tool_focus", SC_FOCUS_SELECTION, nil, true },
-		{ nil, -1, nil, false },
-		{ ICON_FA_USER "##tool_player_view", SC_PLAYER_VIEW, &gPlayerView, false },
-		{ ICON_FA_VECTOR_SQUARE "##tool_outline", SC_OUTLINE_OBJECTS, &gOutlineMapObjects, false },
-		{ ICON_FA_LOCATION_CROSSHAIRS "##tool_object_snap", SC_OBJECT_SNAP, &gObjectSnapMode, false },
-	};
-	for(const StripAction &a : actions){
-		if(a.icon == nil){
-			ImVec2 p = ImGui::GetCursorScreenPos();
-			ImGui::GetWindowDrawList()->AddLine(ImVec2(p.x + button*0.2f, p.y + 3.0f), ImVec2(p.x + button*0.8f, p.y + 3.0f),
-				ImGui::GetColorU32(ImGuiCol_Border));
-			ImGui::Dummy(ImVec2(button, 6.0f));
-			continue;
-		}
-		if(a.action == SC_OBJECT_SNAP && !isSA())
-			continue;
-		const char *key = ShortcutLabel(a.action);
-		if(key[0]) snprintf(tip, sizeof(tip), "%s (%s)", _(GetShortcutInfo(a.action)->name), key);
-		else snprintf(tip, sizeof(tip), "%s", _(GetShortcutInfo(a.action)->name));
-		if(uiToolbarButton(a.icon, a.on && *a.on, tip, !a.needsSelection || selected, size))
-			uiRunShortcut(a.action);
 	}
 
-	// Undo and redo at the foot of the strip.
-	float foot = button*2.0f + ImGui::GetStyle().ItemSpacing.y + ImGui::GetStyle().WindowPadding.y;
+	// Move and Rotate: the gizmo.
+	static const ToolChoice transform[] = {
+		{ ICON_FA_ARROWS_UP_DOWN_LEFT_RIGHT "##tool_move", N_("Move"), SC_GIZMO_MOVE, nil },
+		{ ICON_FA_ROTATE "##tool_rotate", N_("Rotate"), SC_GIZMO_ROTATE, nil },
+	};
+	static const char *transformHelp[] = { N_("Drag the arrows on the selected object."), N_("Drag the rings on the selected object.") };
+	int t = gGizmoMode == GIZMO_ROTATE ? 1 : 0;
+	uiToolTip(tip, sizeof(tip), transform[t], _(transformHelp[t]));
+	if(uiToolbarButton(transform[t].icon, tool && gGizmoEnabled, tip, true, size)){
+		if(gBrushMode) ExitBrushMode();
+		uiRunShortcut(transform[t].shortcut);
+	}
+	uiToolGroupTriangle();
+	int pick = uiToolFlyout("##transform_tools", transform, IM_ARRAYSIZE(transform), tool && gGizmoEnabled ? t : -1);
+	if(pick >= 0){
+		if(gBrushMode) ExitBrushMode();
+		uiRunShortcut(transform[pick].shortcut);
+	}
+	uiStripDivider(button);
+
+	// Brush: paints the Object Browser's object.
+	static const ToolChoice brush = { ICON_FA_PAINTBRUSH "##tool_brush", N_("Brush"), -1, nil };
+	uiToolTip(tip, sizeof(tip), brush, _("Paint copies of the Object Browser's object onto the world. Its settings are on the options bar."));
+	if(uiToolbarButton(brush.icon, gBrushMode, tip, true, size)){
+		if(gBrushMode) ExitBrushMode();
+		else uiStartBrush();
+	}
+
+	// The map tools: each opens its section of the Tools panel.
+	static const ToolChoice mapTools[] = {
+		{ ICON_FA_WRENCH "##tool_array", N_("Array"), -1, N_("Array") },
+		{ ICON_FA_WRENCH "##tool_mirror", N_("Mirror"), -1, N_("Mirror") },
+		{ ICON_FA_WRENCH "##tool_align", N_("Align & distribute"), -1, N_("Align & distribute") },
+		{ ICON_FA_WRENCH "##tool_line", N_("Along a line"), -1, N_("Along a line") },
+		{ ICON_FA_WRENCH "##tool_pin", N_("Coordinate pin"), -1, N_("Coordinate pin") },
+		{ ICON_FA_WRENCH "##tool_paths", N_("Paths & curves"), -1, N_("Paths & curves") },
+		{ ICON_FA_WRENCH "##tool_pivot", N_("Pivot"), -1, N_("Pivot") },
+	};
+	static int lastMapTool = 0;
+	static const ToolChoice mapToolsSlot = { ICON_FA_WRENCH "##tool_map_tools", N_("Map tools"), SC_WINDOW_TOOLS, nil };
+	char help[256];
+	snprintf(help, sizeof(help), _("Opens %s in the Tools panel. Right-click or hold for the others."), _(mapTools[lastMapTool].name));
+	uiToolTip(tip, sizeof(tip), mapToolsSlot, help);
+	auto openSection = [](int i){
+		showToolsWindow = true;
+		ImGui::SetWindowFocus(LI(ICON_FA_WRENCH, "Tools"));
+		MapToolsOpenSection(mapTools[i].section);
+		lastMapTool = i;
+	};
+	if(uiToolbarButton(mapToolsSlot.icon, showToolsWindow, tip, true, size))
+		openSection(lastMapTool);
+	uiToolGroupTriangle();
+	pick = uiToolFlyout("##map_tools", mapTools, IM_ARRAYSIZE(mapTools), -1);
+	if(pick >= 0)
+		openSection(pick);
+
+	// The view modes at the foot.
+	struct ViewMode { const char *icon; int action; const bool *on; };
+	const ViewMode modes[] = {
+		{ ICON_FA_USER "##tool_player_view", SC_PLAYER_VIEW, &gPlayerView },
+		{ ICON_FA_VECTOR_SQUARE "##tool_outline", SC_OUTLINE_OBJECTS, &gOutlineMapObjects },
+	};
+	float foot = (button + ImGui::GetStyle().ItemSpacing.y)*IM_ARRAYSIZE(modes) + 6.0f + ImGui::GetStyle().WindowPadding.y;
 	if(ImGui::GetWindowHeight() - foot > ImGui::GetCursorPosY())
 		ImGui::SetCursorPosY(ImGui::GetWindowHeight() - foot);
-	snprintf(tip, sizeof(tip), _("Undo (%s)"), ShortcutLabel(SC_UNDO));
-	if(uiToolbarButton(ICON_FA_ROTATE_LEFT "##tool_undo", false, tip, true, size))
-		uiUndo();
-	snprintf(tip, sizeof(tip), _("Redo (%s)"), ShortcutLabel(SC_REDO));
-	if(uiToolbarButton(ICON_FA_ROTATE_RIGHT "##tool_redo", false, tip, true, size))
-		uiRedo();
+	uiStripDivider(button);
+	for(const ViewMode &m : modes){
+		const char *key = ShortcutLabel(m.action);
+		if(key[0]) snprintf(tip, sizeof(tip), "%s (%s)", _(GetShortcutInfo(m.action)->name), key);
+		else snprintf(tip, sizeof(tip), "%s", _(GetShortcutInfo(m.action)->name));
+		if(uiToolbarButton(m.icon, *m.on, tip, true, size))
+			uiRunShortcut(m.action);
+	}
 	ImGui::End();
 	ImGui::PopStyleColor();
-	ImGui::PopStyleVar(4);
+	ImGui::PopStyleVar(5);
 }
 
 // Collapsed panels, as a column of icons on the right edge: a click opens
@@ -3247,7 +3440,7 @@ uiHistoryWindow(void)
 	if(uiToolbarButton(ICON_FA_ROTATE_RIGHT "##history_redo", false, tip)) uiRedo();
 	ImGui::EndDisabled();
 	ImGui::Separator();
-	ImGui::BeginChild("##history_steps");
+	ImGui::BeginChild("##history_steps", UiFillRest(UiListMinHeight()));
 	static int lastDone = -1;
 	for(int i = 0; i <= (int)steps.size(); i++){
 		// Row 0 is the map as it was before the first step.
@@ -7966,8 +8159,9 @@ uiResetPanelLayout(void)
 
 #ifdef IMGUI_HAS_DOCK
 // Default arrangement: one column on the right, like a creative suite's
-// panels: the browser on top, Object Info, Tools and Map Objects below.
-// Keep the world view dominant.
+// panels, in groups of two: the browser on top, then Object Info | Tools, then
+// Map Objects | History, which takes what height is left. Two tabs a group keep
+// their names whole in a narrow column. Keep the world view dominant.
 static void
 uiBuildDefaultDockLayout(ImGuiID dockspace)
 {
@@ -7983,10 +8177,12 @@ uiBuildDefaultDockLayout(ImGuiID dockspace)
 	// The browser has a group of its own: it takes focus when it opens, so a
 	// tab beside it would lose its place on every start.
 	ImGui::DockBuilderDockWindow(LI(ICON_FA_MAGNIFYING_GLASS, "Object Browser"), library);
+	ImGuiID layers;
+	properties = ImGui::DockBuilderSplitNode(properties, ImGuiDir_Up, 0.5f, nil, &layers);
 	ImGui::DockBuilderDockWindow(LI(ICON_FA_CIRCLE_INFO, "Object Info"), properties);
 	ImGui::DockBuilderDockWindow(LI(ICON_FA_WRENCH, "Tools"), properties);
-	ImGui::DockBuilderDockWindow(LI(ICON_FA_LAYER_GROUP, "Map Objects"), properties);
-	ImGui::DockBuilderDockWindow(LI(ICON_FA_CLOCK_ROTATE_LEFT, "History"), properties);
+	ImGui::DockBuilderDockWindow(LI(ICON_FA_LAYER_GROUP, "Map Objects"), layers);
+	ImGui::DockBuilderDockWindow(LI(ICON_FA_CLOCK_ROTATE_LEFT, "History"), layers);
 	ImGui::DockBuilderFinish(dockspace);
 }
 
@@ -8325,8 +8521,13 @@ uiToolsWindow(void)
 				ExitBrushMode();
 			ImGui::PopStyleColor();
 			ImGui::SameLine();
-			if(brushObj)
-				ImGui::TextColored(active, _("Painting: %s"), brushObj->m_name);
+			if(brushObj){
+				char painting[160];
+				snprintf(painting, sizeof(painting), _("Painting: %s"), brushObj->m_name);
+				ImGui::PushStyleColor(ImGuiCol_Text, active);
+				UiElidedText(painting, ImGui::GetContentRegionAvail().x);
+				ImGui::PopStyleColor();
+			}
 			else
 				ImGui::TextColored(active, _("No object selected"));
 		}else{
@@ -8335,8 +8536,13 @@ uiToolsWindow(void)
 				EnterBrushMode(brushObjId);
 			ImGui::EndDisabled();
 			ImGui::SameLine();
-			if(brushObj)
-				ImGui::TextDisabled(_("Ready: %s"), brushObj->m_name);
+			if(brushObj){
+				char ready[160];
+				snprintf(ready, sizeof(ready), _("Ready: %s"), brushObj->m_name);
+				ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+				UiElidedText(ready, ImGui::GetContentRegionAvail().x);
+				ImGui::PopStyleColor();
+			}
 			else
 				ImGui::TextDisabled(_("Select an object in the Browser first"));
 		}
@@ -8445,7 +8651,7 @@ uiMapCheckWindow(void)
 		ImGui::TextColored(UiSemanticColor(UI_COLOR_WARNING), "%s", summary.c_str());
 	ImGui::Separator();
 
-	ImGui::BeginChild("##map_check_items");
+	ImGui::BeginChild("##map_check_items", UiFillRest(UiListMinHeight()));
 	const char *lastCategory = nil;
 	for(size_t i = 0; i < gMapCheck.items.size(); i++){
 		const MapCheckItem &item = gMapCheck.items[i];
@@ -11184,11 +11390,47 @@ uiObjectFavouritePopup(int objectId)
 	}
 }
 
+ImVec2
+UiFillRest(float minHeight)
+{
+	return ImVec2(0, max(ImGui::GetContentRegionAvail().y, minHeight));
+}
+
+float
+UiListMinHeight(void)
+{
+	return ImGui::GetFrameHeightWithSpacing() * 4.0f;
+}
+
+void
+UiSameLineIfFits(float width)
+{
+	ImGui::SameLine();
+	if(ImGui::GetContentRegionAvail().x < width)
+		ImGui::NewLine();
+}
+
+void
+UiElidedText(const char *text, float maxWidth)
+{
+	ImVec2 size = ImGui::CalcTextSize(text);
+	maxWidth = max(maxWidth, ImGui::GetFontSize());
+	if(size.x <= maxWidth){
+		ImGui::TextUnformatted(text);
+		return;
+	}
+	ImVec2 pos = ImGui::GetCursorScreenPos();
+	ImVec2 end(pos.x + maxWidth, pos.y + size.y);
+	ImGui::Dummy(ImVec2(maxWidth, size.y));
+	ImGui::RenderTextEllipsis(ImGui::GetWindowDrawList(), pos, end, end.x, text, nil, &size);
+	ImGui::SetItemTooltip("%s", text);
+}
+
 // Shared object list renderer with clipper
 static void
 uiObjectList(int *filtered, int numFiltered, int selId)
 {
-	ImGui::BeginChild("##ObjList", ImVec2(0, 0), true);
+	ImGui::BeginChild("##ObjList", UiFillRest(UiListMinHeight()), true);
 
 	int scrollToRow = -1;
 	bool listFocused = ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows);
@@ -11328,7 +11570,7 @@ uiAssetTile(const TileGridLayout &layout, rw::Texture *thumb, const char *badge,
 static void
 uiObjectGrid(int *filtered, int numFiltered, int selId)
 {
-	ImGui::BeginChild("##ObjGrid", ImVec2(0, 0), false);
+	ImGui::BeginChild("##ObjGrid", UiFillRest(uiTileGridLayout().tileH), false);
 	TileGridLayout layout = uiTileGridLayout();
 	int rows = (numFiltered + layout.columns - 1) / layout.columns;
 
@@ -11541,7 +11783,7 @@ uiPrefabTooltip(const PrefabListing &prefab)
 static void
 uiPrefabList(int *filtered, int numFiltered)
 {
-	ImGui::BeginChild("##PrefabList", ImVec2(0, 0), true);
+	ImGui::BeginChild("##PrefabList", UiFillRest(UiListMinHeight()), true);
 	ImGuiListClipper clipper;
 	clipper.Begin(numFiltered);
 	while(clipper.Step()){
@@ -11565,7 +11807,7 @@ uiPrefabList(int *filtered, int numFiltered)
 static void
 uiPrefabGrid(int *filtered, int numFiltered)
 {
-	ImGui::BeginChild("##PrefabGrid", ImVec2(0, 0), false);
+	ImGui::BeginChild("##PrefabGrid", UiFillRest(uiTileGridLayout().tileH), false);
 	TileGridLayout layout = uiTileGridLayout();
 	int rows = (numFiltered + layout.columns - 1) / layout.columns;
 
@@ -11738,7 +11980,7 @@ uiBrowserSelectedObject(int selId)
 
 
 	ImGui::BeginGroup();
-	ImGui::TextUnformatted(sel->m_name);
+	UiElidedText(sel->m_name, ImGui::GetContentRegionAvail().x);
 	ImGui::TextDisabled(_("ID %d"), PawnModelId(sel->m_id));
 
 	// Place and Brush are mutually exclusive
@@ -11751,7 +11993,7 @@ uiBrowserSelectedObject(int selId)
 		gPlaceMode = true;
 	}
 	ImGui::SetItemTooltip(_("Choose Place, then click the world. Double-click a tile also works."));
-	ImGui::SameLine();
+	UiSameLineIfFits(ImGui::GetFrameHeight() + ImGui::GetStyle().ItemInnerSpacing.x + ImGui::CalcTextSize(_("Keep placing")).x);
 	ImGui::Checkbox(_("Keep placing"), &gPlaceRepeat);
 	ImGui::SetItemTooltip(_("Stay in placement after each click, as Shift+click does."));
 	float iconButtonsWidth = ImGui::GetFrameHeight()*2 + ImGui::GetStyle().ItemSpacing.x*2;
@@ -13348,7 +13590,7 @@ uiMapObjectsList(void)
 	static char renameFrom[PAWN_OBJECT_GROUP_LEN];
 	static char renameTo[PAWN_OBJECT_GROUP_LEN];
 	bool openRename = false;
-	ImGui::BeginChild("##map_objects_tree");
+	ImGui::BeginChild("##map_objects_tree", UiFillRest(UiListMinHeight()));
 	gOutliner.hovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows);
 	if(gOutliner.scrollToRenaming){
 		gOutliner.scrollToRenaming = false;
@@ -13645,7 +13887,7 @@ uiDiffWindow(void)
 				changed[j] = tmp;
 			}
 
-	ImGui::BeginChild("DiffList", ImVec2(0, 0), true);
+	ImGui::BeginChild("DiffList", UiFillRest(UiListMinHeight()), true);
 	for(int i = 0; i < numChanged; i++){
 		ObjectInst *inst = changed[i];
 		int flags = GetInstanceDiffFlags(inst);
@@ -13759,7 +14001,8 @@ uiWorkspaceNavigation(void)
 			}
 		}
 		if(i == 1 || i == 2){
-			ImVec2 anchor((ImGui::GetItemRectMin().x + ImGui::GetItemRectMax().x) * 0.5f, ImGui::GetItemRectMax().y);
+			// The button's top-right corner: where its "new" dot sits.
+			ImVec2 anchor(ImGui::GetItemRectMax().x, ImGui::GetItemRectMin().y);
 			if(i == 1){
 				gTextDrawsHintAnchor = anchor;
 				ImGui::SetItemTooltip(_("TextDraw mode: edit the textdraw file on a canvas instead of the world."));
@@ -13773,65 +14016,30 @@ uiWorkspaceNavigation(void)
 }
 
 
+// A new editor (TextDraws, Code) gets a small yellow dot on its button's
+// corner until it is first opened: a badge, so it never covers the bars.
 static void
-uiNewWorkspaceHint(const char *window, const char *dismiss, ImVec2 anchor, bool &visible, float offset)
+uiNewWorkspaceDot(ImVec2 corner)
 {
-	if(!visible) return;
 	static double appeared = -1.0;
 	if(appeared < 0.0) appeared = ImGui::GetTime();
-	const double age = ImGui::GetTime() - appeared;
-	// Five small jumps, then settle. The hint remains until used or dismissed.
-	float jump = age < 6.0 ? std::abs(std::sin(age * 3.141592653589793 / 1.2)) * 4.0f : 0.0f;
-	KeepNextEditorOverlayOnMainWindow();
-	ImGui::SetNextWindowPos(ImVec2(anchor.x + offset, anchor.y + 12.0f - jump),
-		ImGuiCond_Always, ImVec2(0.5f, 0.0f));
-	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(10.0f, 6.0f));
-	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 12.0f);
-	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
-	const ImU32 yellow = IM_COL32(255, 213, 79, 255);
-	ImGui::PushStyleColor(ImGuiCol_WindowBg, yellow);
-	ImGui::Begin(window, nil, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize |
-		ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav |
-		ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoDocking);
-	ImGui::TextColored(ImVec4(0.20f, 0.14f, 0.02f, 1.0f), "%s", _("New!"));
-	ImGui::SameLine(0.0f, 6.0f);
-	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0.0f, 0.0f));
-	ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.20f, 0.14f, 0.02f, 0.60f));
-	ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
-	ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.20f, 0.14f, 0.02f, 0.10f));
-	ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.20f, 0.14f, 0.02f, 0.18f));
-	if(ImGui::SmallButton(dismiss)){
-		visible = false;
-		saveSaveSettings();
-	}
-	ImGui::PopStyleColor(4);
-	ImGui::PopStyleVar();
-	ImGui::SetItemTooltip("%s", _("Dismiss"));
-	ImVec2 pos = ImGui::GetWindowPos(), size = ImGui::GetWindowSize();
-	ImDrawList *shadow = ImGui::GetBackgroundDrawList();
-	shadow->AddRectFilled(ImVec2(pos.x + 1, pos.y + 2), ImVec2(pos.x + size.x + 1, pos.y + size.y + 2),
-		IM_COL32(0, 0, 0, 45), 12.0f);
-	ImVec2 tip(anchor.x, anchor.y + 2.0f);
-	ImVec2 left(tip.x - 5.0f, pos.y + 3.0f), right(tip.x + 5.0f, pos.y + 3.0f);
-	ImGui::GetForegroundDrawList()->AddTriangleFilled(tip, right, left, yellow);
-	ImGui::End();
-	ImGui::PopStyleColor();
-	ImGui::PopStyleVar(3);
+	double age = ImGui::GetTime() - appeared;
+	// A few pulses, then it stays still.
+	float pulse = age < 6.0 ? 0.5f + 0.5f*(float)std::sin(age * 3.141592653589793 * 1.5) : 1.0f;
+	float r = ImGui::GetFontSize() * 0.22f;
+	ImVec2 c(corner.x - r - 1.0f, corner.y + r + 1.0f);
+	ImDrawList *draw = ImGui::GetForegroundDrawList();
+	draw->AddCircleFilled(c, r + 1.5f, ImGui::GetColorU32(ImGuiCol_MenuBarBg));
+	draw->AddCircleFilled(c, r, IM_COL32(255, 213, 79, (int)(155 + 100*pulse)));
 }
-
 
 static void
 uiWorkspaceNewHints(void)
 {
-	if((!gShowTextDrawsHint && !gShowCodeHint) || !isSA() || InTextDrawMode() || InPawnIdeMode() || StartScreenOpen() ||
-	   ImGui::GetIO().AppFocusLost || ImGui::IsPopupOpen((ImGuiID)0, ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel))
+	if((!gShowTextDrawsHint && !gShowCodeHint) || !isSA() || InTextDrawMode() || InPawnIdeMode() || StartScreenOpen())
 		return;
-	// Spread the balloons slightly when the buttons are close, keeping both
-	// tails anchored to their own workspace without overlapping the labels.
-	float width = ImGui::CalcTextSize(_("New!")).x + ImGui::CalcTextSize(ICON_FA_XMARK).x + 26.0f;
-	float offset = std::max(0.0f, (width + 12.0f - (gCodeHintAnchor.x - gTextDrawsHintAnchor.x)) * 0.5f);
-	uiNewWorkspaceHint("###TextDrawsNew", ICON_FA_XMARK "###DismissTextDrawsHint", gTextDrawsHintAnchor, gShowTextDrawsHint, -offset);
-	uiNewWorkspaceHint("###CodeNew", ICON_FA_XMARK "###DismissCodeHint", gCodeHintAnchor, gShowCodeHint, offset);
+	if(gShowTextDrawsHint) uiNewWorkspaceDot(gTextDrawsHintAnchor);
+	if(gShowCodeHint) uiNewWorkspaceDot(gCodeHintAnchor);
 }
 
 

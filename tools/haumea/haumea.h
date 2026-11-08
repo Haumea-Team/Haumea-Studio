@@ -117,6 +117,14 @@ bool UiThemeIsLight(void);	// dark text on a light background
 rw::RGBA UiThemePreviewBackground(void);	// behind model previews and thumbnails
 ImVec4 UiSemanticColor(int color);
 ImVec4 UiAccentFill(void);	// filled accent background for white text
+// The rest of the window's height for a list, never less than minHeight: in a
+// short panel the panel scrolls instead of squeezing the list to a sliver.
+ImVec2 UiFillRest(float minHeight);
+float UiListMinHeight(void);	// a few rows, the usual minHeight
+// Text cut to maxWidth with "...", the whole of it in a tooltip when cut.
+void UiElidedText(const char *text, float maxWidth);
+// SameLine, or a new line when the next item (width wide) wouldn't fit.
+void UiSameLineIfFits(float width);
 void SetupFonts(void);
 bool GetEditorRootDirectory(char *dir, size_t size);
 bool GetGameRootDirectory(char *dir, size_t size);

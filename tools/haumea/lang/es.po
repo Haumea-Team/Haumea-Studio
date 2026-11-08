@@ -5198,13 +5198,6 @@ msgstr "Rueda del ratón"
 msgid "Move"
 msgstr "Mover"
 
-msgid ""
-"Move (%s)\n"
-"Drag the arrows on the selected object."
-msgstr ""
-"Mover (%s)\n"
-"Arrastra las flechas del objeto seleccionado."
-
 msgid "Move by"
 msgstr "Mover"
 
@@ -5498,9 +5491,6 @@ msgstr "Nuevos textdraws"
 
 msgid "New workspace"
 msgstr "Nuevo workspace"
-
-msgid "New!"
-msgstr "¡Nuevo!"
 
 msgid ""
 "Newer builds draw text outlines as a soft ring that grows with the\n"
@@ -7055,9 +7045,6 @@ msgstr "Selección con rectángulo limitada a %d objeto(s)"
 msgid "Redo"
 msgstr "Rehacer"
 
-msgid "Redo (%s)"
-msgstr "Rehacer (%s)"
-
 msgid "Reference ID"
 msgstr "ID de referencia"
 
@@ -7390,13 +7377,6 @@ msgstr "Las salas, cuentas y roles vienen con haumea-server; alojar desde aquí 
 
 msgid "Rotate"
 msgstr "Rotar"
-
-msgid ""
-"Rotate (%s)\n"
-"Drag the rings on the selected object."
-msgstr ""
-"Rotar (%s)\n"
-"Arrastra los anillos del objeto seleccionado."
 
 msgid "Rotate gizmo"
 msgstr "Gizmo de rotación"
@@ -7788,13 +7768,6 @@ msgstr "Segmentos"
 
 msgid "Select"
 msgstr "Seleccionar"
-
-msgid ""
-"Select\n"
-"Click objects to select them, drag them to move along the ground."
-msgstr ""
-"Seleccionar\n"
-"Haz clic en los objetos para seleccionarlos y arrástralos para moverlos por el suelo."
 
 msgid "Select TXD..."
 msgstr "Seleccionar TXD..."
@@ -9380,9 +9353,6 @@ msgstr "Restaurar objeto"
 msgid "Undo"
 msgstr "Deshacer"
 
-msgid "Undo (%s)"
-msgstr "Deshacer (%s)"
-
 msgid "Undo / Redo"
 msgstr "Deshacer / Rehacer"
 
@@ -10763,3 +10733,45 @@ msgstr "Armas"
 
 msgid "Wearable items"
 msgstr "Objetos para llevar puestos"
+
+msgid "All brush settings"
+msgstr "Todos los ajustes del pincel"
+
+msgid "Brush disc size. 0 = single object under cursor."
+msgstr "Tamaño del disco del pincel. 0 = un solo objeto bajo el cursor."
+
+msgid "Click objects to select them, drag them to move along the ground."
+msgstr "Haz clic en objetos para seleccionarlos; arrástralos para moverlos por el suelo."
+
+msgid "Count:"
+msgstr "Cantidad:"
+
+msgid "Drag the arrows on the selected object."
+msgstr "Arrastra las flechas del objeto seleccionado."
+
+msgid "Drag the rings on the selected object."
+msgstr "Arrastra los anillos del objeto seleccionado."
+
+msgid "Map tools"
+msgstr "Herramientas del mapa"
+
+msgid "More options"
+msgstr "Más opciones"
+
+msgid "Number of objects scattered per click when Radius > 0."
+msgstr "Objetos esparcidos por clic cuando Radio > 0."
+
+msgid "Opens %s in the Tools panel. Right-click or hold for the others."
+msgstr "Abre %s en el panel Herramientas. Clic derecho o mantén pulsado para ver las demás."
+
+msgid "Paint copies of the Object Browser's object onto the world. Its settings are on the options bar."
+msgstr "Pinta copias del objeto del Explorador de objetos sobre el mundo. Sus ajustes están en la barra de opciones."
+
+msgid "Pick the object to paint in the Object Browser first."
+msgstr "Elige primero en el Explorador de objetos el objeto que quieres pintar."
+
+msgid "Radius:"
+msgstr "Radio:"
+
+msgid "Spacing:"
+msgstr "Espaciado:"

@@ -5198,13 +5198,6 @@ msgstr "Rotița mouse-ului"
 msgid "Move"
 msgstr "Mută"
 
-msgid ""
-"Move (%s)\n"
-"Drag the arrows on the selected object."
-msgstr ""
-"Mută (%s)\n"
-"Trage săgețile de pe obiectul selectat."
-
 msgid "Move by"
 msgstr "Mută cu"
 
@@ -5498,9 +5491,6 @@ msgstr "Textdraw-uri noi"
 
 msgid "New workspace"
 msgstr "Workspace nou"
-
-msgid "New!"
-msgstr "Nou!"
 
 msgid ""
 "Newer builds draw text outlines as a soft ring that grows with the\n"
@@ -7055,9 +7045,6 @@ msgstr "Selecția dreptunghiulară limitată la %d obiecte"
 msgid "Redo"
 msgstr "Refă"
 
-msgid "Redo (%s)"
-msgstr "Refă (%s)"
-
 msgid "Reference ID"
 msgstr "ID de referință"
 
@@ -7390,13 +7377,6 @@ msgstr "Camerele, conturile și rolurile vin cu haumea-server; găzduirea de aic
 
 msgid "Rotate"
 msgstr "Rotește"
-
-msgid ""
-"Rotate (%s)\n"
-"Drag the rings on the selected object."
-msgstr ""
-"Rotește (%s)\n"
-"Trage inelele de pe obiectul selectat."
 
 msgid "Rotate gizmo"
 msgstr "Gizmo de rotire"
@@ -7788,13 +7768,6 @@ msgstr "Segmente"
 
 msgid "Select"
 msgstr "Selectează"
-
-msgid ""
-"Select\n"
-"Click objects to select them, drag them to move along the ground."
-msgstr ""
-"Selectează\n"
-"Fă clic pe obiecte pentru a le selecta, trage-le pentru a le muta pe sol."
 
 msgid "Select TXD..."
 msgstr "Selectează TXD..."
@@ -9380,9 +9353,6 @@ msgstr "Restaurează obiectul"
 msgid "Undo"
 msgstr "Anulează acțiunea"
 
-msgid "Undo (%s)"
-msgstr "Anulează acțiunea (%s)"
-
 msgid "Undo / Redo"
 msgstr "Anulează / Refă"
 
@@ -10763,3 +10733,45 @@ msgstr "Arme"
 
 msgid "Wearable items"
 msgstr "Obiecte purtabile"
+
+msgid "All brush settings"
+msgstr "Toate setările pensulei"
+
+msgid "Brush disc size. 0 = single object under cursor."
+msgstr "Mărimea discului pensulei. 0 = un singur obiect sub cursor."
+
+msgid "Click objects to select them, drag them to move along the ground."
+msgstr "Dă clic pe obiecte pentru a le selecta; trage-le pentru a le muta pe sol."
+
+msgid "Count:"
+msgstr "Număr:"
+
+msgid "Drag the arrows on the selected object."
+msgstr "Trage săgețile de pe obiectul selectat."
+
+msgid "Drag the rings on the selected object."
+msgstr "Trage inelele de pe obiectul selectat."
+
+msgid "Map tools"
+msgstr "Unelte pentru hartă"
+
+msgid "More options"
+msgstr "Mai multe opțiuni"
+
+msgid "Number of objects scattered per click when Radius > 0."
+msgstr "Numărul de obiecte împrăștiate la fiecare clic când Rază > 0."
+
+msgid "Opens %s in the Tools panel. Right-click or hold for the others."
+msgstr "Deschide %s în panoul Unelte. Clic dreapta sau ține apăsat pentru celelalte."
+
+msgid "Paint copies of the Object Browser's object onto the world. Its settings are on the options bar."
+msgstr "Pictează copii ale obiectului din Exploratorul de obiecte în lume. Setările lui sunt pe bara de opțiuni."
+
+msgid "Pick the object to paint in the Object Browser first."
+msgstr "Alege mai întâi în Exploratorul de obiecte obiectul de pictat."
+
+msgid "Radius:"
+msgstr "Rază:"
+
+msgid "Spacing:"
+msgstr "Spațiere:"

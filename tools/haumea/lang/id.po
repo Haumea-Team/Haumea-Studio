@@ -5198,13 +5198,6 @@ msgstr "Roda mouse"
 msgid "Move"
 msgstr "Pindah"
 
-msgid ""
-"Move (%s)\n"
-"Drag the arrows on the selected object."
-msgstr ""
-"Pindah (%s)\n"
-"Seret panah pada objek terpilih."
-
 msgid "Move by"
 msgstr "Pindah sejauh"
 
@@ -5498,9 +5491,6 @@ msgstr "Textdraw baru"
 
 msgid "New workspace"
 msgstr "Workspace baru"
-
-msgid "New!"
-msgstr "Baru!"
 
 msgid ""
 "Newer builds draw text outlines as a soft ring that grows with the\n"
@@ -7055,9 +7045,6 @@ msgstr "Pilih persegi panjang dibatasi %d objek"
 msgid "Redo"
 msgstr "Ulangi"
 
-msgid "Redo (%s)"
-msgstr "Ulangi (%s)"
-
 msgid "Reference ID"
 msgstr "ID referensi"
 
@@ -7390,13 +7377,6 @@ msgstr "Room, akun, dan peran tersedia dengan haumea-server; hosting dari sini b
 
 msgid "Rotate"
 msgstr "Putar"
-
-msgid ""
-"Rotate (%s)\n"
-"Drag the rings on the selected object."
-msgstr ""
-"Putar (%s)\n"
-"Seret cincin pada objek terpilih."
 
 msgid "Rotate gizmo"
 msgstr "Gizmo putar"
@@ -7788,13 +7768,6 @@ msgstr "Segmen"
 
 msgid "Select"
 msgstr "Pilih"
-
-msgid ""
-"Select\n"
-"Click objects to select them, drag them to move along the ground."
-msgstr ""
-"Pilih\n"
-"Klik objek untuk memilihnya, seret untuk memindahkannya di sepanjang tanah."
 
 msgid "Select TXD..."
 msgstr "Pilih TXD..."
@@ -9380,9 +9353,6 @@ msgstr "Batal hapus objek"
 msgid "Undo"
 msgstr "Urungkan"
 
-msgid "Undo (%s)"
-msgstr "Urungkan (%s)"
-
 msgid "Undo / Redo"
 msgstr "Urungkan / Ulangi"
 
@@ -10763,3 +10733,45 @@ msgstr "Senjata"
 
 msgid "Wearable items"
 msgstr "Barang yang dipakai"
+
+msgid "All brush settings"
+msgstr "Semua pengaturan kuas"
+
+msgid "Brush disc size. 0 = single object under cursor."
+msgstr "Ukuran cakram kuas. 0 = satu objek di bawah kursor."
+
+msgid "Click objects to select them, drag them to move along the ground."
+msgstr "Klik objek untuk memilihnya, seret untuk memindahkannya di atas tanah."
+
+msgid "Count:"
+msgstr "Jumlah:"
+
+msgid "Drag the arrows on the selected object."
+msgstr "Seret panah pada objek yang dipilih."
+
+msgid "Drag the rings on the selected object."
+msgstr "Seret cincin pada objek yang dipilih."
+
+msgid "Map tools"
+msgstr "Alat peta"
+
+msgid "More options"
+msgstr "Opsi lainnya"
+
+msgid "Number of objects scattered per click when Radius > 0."
+msgstr "Jumlah objek yang ditebar per klik saat Radius > 0."
+
+msgid "Opens %s in the Tools panel. Right-click or hold for the others."
+msgstr "Membuka %s di panel Alat. Klik kanan atau tahan untuk yang lain."
+
+msgid "Paint copies of the Object Browser's object onto the world. Its settings are on the options bar."
+msgstr "Melukis salinan objek dari Penjelajah objek ke dunia. Pengaturannya ada di bilah opsi."
+
+msgid "Pick the object to paint in the Object Browser first."
+msgstr "Pilih dulu objek yang akan dilukis di Penjelajah objek."
+
+msgid "Radius:"
+msgstr "Radius:"
+
+msgid "Spacing:"
+msgstr "Jarak antar:"

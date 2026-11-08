@@ -727,7 +727,7 @@ DrawTextureBrowserWindow(bool *open)
 				ImGui::TextDisabled(_("Indexing textures... %d of %d TXDs"), gNextSlot, GetNumTxdSlots());
 			else
 				ImGui::TextDisabled(_("Textures: %d"), (int)items.size());
-			ImGui::BeginChild("##grid");
+			ImGui::BeginChild("##grid", UiFillRest(ImGui::GetFontSize() * 6.0f));
 			tileGrid(items, false);
 			ImGui::EndChild();
 			ImGui::EndTabItem();
@@ -747,7 +747,7 @@ DrawTextureBrowserWindow(bool *open)
 					items.push_back(i);
 			}
 			ImGui::TextDisabled(_("%d of %d"), (int)items.size(), n - 1);
-			ImGui::BeginChild("##tsgrid");
+			ImGui::BeginChild("##tsgrid", UiFillRest(ImGui::GetFontSize() * 6.0f));
 			tileGrid(items, true);
 			ImGui::EndChild();
 			ImGui::EndTabItem();

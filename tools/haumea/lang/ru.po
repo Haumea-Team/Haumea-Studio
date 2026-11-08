@@ -5198,13 +5198,6 @@ msgstr "Колесо мыши"
 msgid "Move"
 msgstr "Переместить"
 
-msgid ""
-"Move (%s)\n"
-"Drag the arrows on the selected object."
-msgstr ""
-"Переместить (%s)\n"
-"Тяните стрелки на выбранном объекте."
-
 msgid "Move by"
 msgstr "Сдвинуть на"
 
@@ -5498,9 +5491,6 @@ msgstr "Новые textdraw"
 
 msgid "New workspace"
 msgstr "Новая рабочая папка"
-
-msgid "New!"
-msgstr "Новое!"
 
 msgid ""
 "Newer builds draw text outlines as a soft ring that grows with the\n"
@@ -7055,9 +7045,6 @@ msgstr "Выделение рамкой ограничено объектами:
 msgid "Redo"
 msgstr "Повторить"
 
-msgid "Redo (%s)"
-msgstr "Повторить (%s)"
-
 msgid "Reference ID"
 msgstr "Reference ID"
 
@@ -7390,13 +7377,6 @@ msgstr "Комнаты, аккаунты и роли входят в haumea-serv
 
 msgid "Rotate"
 msgstr "Поворот"
-
-msgid ""
-"Rotate (%s)\n"
-"Drag the rings on the selected object."
-msgstr ""
-"Поворот (%s)\n"
-"Перетаскивайте кольца на выбранном объекте."
 
 msgid "Rotate gizmo"
 msgstr "Гизмо поворота"
@@ -7788,13 +7768,6 @@ msgstr "Сегменты"
 
 msgid "Select"
 msgstr "Выбрать"
-
-msgid ""
-"Select\n"
-"Click objects to select them, drag them to move along the ground."
-msgstr ""
-"Выбор\n"
-"Кликайте объекты, чтобы выбрать их, перетаскивайте, чтобы двигать по земле."
 
 msgid "Select TXD..."
 msgstr "Выбрать TXD..."
@@ -9380,9 +9353,6 @@ msgstr "Вернуть удалённый объект"
 msgid "Undo"
 msgstr "Отменить"
 
-msgid "Undo (%s)"
-msgstr "Отменить (%s)"
-
 msgid "Undo / Redo"
 msgstr "Отменить / Повторить"
 
@@ -10763,3 +10733,45 @@ msgstr "Оружие"
 
 msgid "Wearable items"
 msgstr "Носимые предметы"
+
+msgid "All brush settings"
+msgstr "Все настройки кисти"
+
+msgid "Brush disc size. 0 = single object under cursor."
+msgstr "Размер диска кисти. 0 = один объект под курсором."
+
+msgid "Click objects to select them, drag them to move along the ground."
+msgstr "Щёлкайте объекты, чтобы выбрать их; перетаскивайте, чтобы двигать по земле."
+
+msgid "Count:"
+msgstr "Количество:"
+
+msgid "Drag the arrows on the selected object."
+msgstr "Перетаскивайте стрелки на выбранном объекте."
+
+msgid "Drag the rings on the selected object."
+msgstr "Перетаскивайте кольца на выбранном объекте."
+
+msgid "Map tools"
+msgstr "Инструменты карты"
+
+msgid "More options"
+msgstr "Ещё параметры"
+
+msgid "Number of objects scattered per click when Radius > 0."
+msgstr "Сколько объектов разбрасывается за щелчок, когда Радиус > 0."
+
+msgid "Opens %s in the Tools panel. Right-click or hold for the others."
+msgstr "Открывает %s на панели «Инструменты». Правый щелчок или удержание — остальные."
+
+msgid "Paint copies of the Object Browser's object onto the world. Its settings are on the options bar."
+msgstr "Рисует копии объекта из Обозревателя объектов прямо в мире. Его настройки — на панели параметров."
+
+msgid "Pick the object to paint in the Object Browser first."
+msgstr "Сначала выберите объект для рисования в Обозревателе объектов."
+
+msgid "Radius:"
+msgstr "Радиус:"
+
+msgid "Spacing:"
+msgstr "Интервал:"

@@ -5198,13 +5198,6 @@ msgstr "Kółko myszy"
 msgid "Move"
 msgstr "Przesuń"
 
-msgid ""
-"Move (%s)\n"
-"Drag the arrows on the selected object."
-msgstr ""
-"Przesuń (%s)\n"
-"Przeciągaj strzałki na zaznaczonym obiekcie."
-
 msgid "Move by"
 msgstr "Przesuń o"
 
@@ -5498,9 +5491,6 @@ msgstr "Nowe textdraws"
 
 msgid "New workspace"
 msgstr "Nowy workspace"
-
-msgid "New!"
-msgstr "Nowość!"
 
 msgid ""
 "Newer builds draw text outlines as a soft ring that grows with the\n"
@@ -7055,9 +7045,6 @@ msgstr "Zaznaczanie prostokątem ograniczone do obiektów: %d"
 msgid "Redo"
 msgstr "Ponów"
 
-msgid "Redo (%s)"
-msgstr "Ponów (%s)"
-
 msgid "Reference ID"
 msgstr "ID odniesienia"
 
@@ -7390,13 +7377,6 @@ msgstr "Pokoje, konta i role są w haumea-server; hostowanie stąd to jedna mapa
 
 msgid "Rotate"
 msgstr "Obróć"
-
-msgid ""
-"Rotate (%s)\n"
-"Drag the rings on the selected object."
-msgstr ""
-"Obróć (%s)\n"
-"Przeciągaj pierścienie na zaznaczonym obiekcie."
 
 msgid "Rotate gizmo"
 msgstr "Gizmo obrotu"
@@ -7788,13 +7768,6 @@ msgstr "Segmenty"
 
 msgid "Select"
 msgstr "Zaznacz"
-
-msgid ""
-"Select\n"
-"Click objects to select them, drag them to move along the ground."
-msgstr ""
-"Zaznacz\n"
-"Klikaj obiekty, aby je zaznaczyć, przeciągaj je, aby przesuwać po ziemi."
 
 msgid "Select TXD..."
 msgstr "Wybierz TXD..."
@@ -9380,9 +9353,6 @@ msgstr "Cofnij usunięcie obiektu"
 msgid "Undo"
 msgstr "Cofnij"
 
-msgid "Undo (%s)"
-msgstr "Cofnij (%s)"
-
 msgid "Undo / Redo"
 msgstr "Cofnij / Ponów"
 
@@ -10763,3 +10733,45 @@ msgstr "Broń"
 
 msgid "Wearable items"
 msgstr "Przedmioty do noszenia"
+
+msgid "All brush settings"
+msgstr "Wszystkie ustawienia pędzla"
+
+msgid "Brush disc size. 0 = single object under cursor."
+msgstr "Rozmiar dysku pędzla. 0 = jeden obiekt pod kursorem."
+
+msgid "Click objects to select them, drag them to move along the ground."
+msgstr "Klikaj obiekty, aby je zaznaczyć; przeciągaj, aby przesuwać je po ziemi."
+
+msgid "Count:"
+msgstr "Liczba:"
+
+msgid "Drag the arrows on the selected object."
+msgstr "Przeciągaj strzałki na zaznaczonym obiekcie."
+
+msgid "Drag the rings on the selected object."
+msgstr "Przeciągaj pierścienie na zaznaczonym obiekcie."
+
+msgid "Map tools"
+msgstr "Narzędzia mapy"
+
+msgid "More options"
+msgstr "Więcej opcji"
+
+msgid "Number of objects scattered per click when Radius > 0."
+msgstr "Liczba obiektów rozrzucanych na kliknięcie, gdy Promień > 0."
+
+msgid "Opens %s in the Tools panel. Right-click or hold for the others."
+msgstr "Otwiera %s w panelu Narzędzia. Kliknij prawym lub przytrzymaj, aby zobaczyć pozostałe."
+
+msgid "Paint copies of the Object Browser's object onto the world. Its settings are on the options bar."
+msgstr "Maluje kopie obiektu z Przeglądarki obiektów w świecie. Jego ustawienia są na pasku opcji."
+
+msgid "Pick the object to paint in the Object Browser first."
+msgstr "Najpierw wybierz w Przeglądarce obiektów obiekt do malowania."
+
+msgid "Radius:"
+msgstr "Promień:"
+
+msgid "Spacing:"
+msgstr "Odstęp:"

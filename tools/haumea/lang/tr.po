@@ -5198,13 +5198,6 @@ msgstr "Fare tekerleği"
 msgid "Move"
 msgstr "Taşı"
 
-msgid ""
-"Move (%s)\n"
-"Drag the arrows on the selected object."
-msgstr ""
-"Taşı (%s)\n"
-"Seçili nesne üzerindeki okları sürükleyin."
-
 msgid "Move by"
 msgstr "Şu kadar taşı"
 
@@ -5498,9 +5491,6 @@ msgstr "Yeni textdraw'lar"
 
 msgid "New workspace"
 msgstr "Yeni workspace"
-
-msgid "New!"
-msgstr "Yeni!"
 
 msgid ""
 "Newer builds draw text outlines as a soft ring that grows with the\n"
@@ -7055,9 +7045,6 @@ msgstr "Dikdörtgenle seçim %d nesneyle sınırlandı"
 msgid "Redo"
 msgstr "Yinele"
 
-msgid "Redo (%s)"
-msgstr "Yinele (%s)"
-
 msgid "Reference ID"
 msgstr "Referans ID"
 
@@ -7390,13 +7377,6 @@ msgstr "Odalar, hesaplar ve roller haumea-server ile gelir; buradan barındırma
 
 msgid "Rotate"
 msgstr "Döndür"
-
-msgid ""
-"Rotate (%s)\n"
-"Drag the rings on the selected object."
-msgstr ""
-"Döndür (%s)\n"
-"Seçili nesne üzerindeki halkaları sürükleyin."
 
 msgid "Rotate gizmo"
 msgstr "Döndürme gizmo'su"
@@ -7788,13 +7768,6 @@ msgstr "Segmentler"
 
 msgid "Select"
 msgstr "Seç"
-
-msgid ""
-"Select\n"
-"Click objects to select them, drag them to move along the ground."
-msgstr ""
-"Seç\n"
-"Seçmek için nesnelere tıklayın, zemin boyunca taşımak için sürükleyin."
 
 msgid "Select TXD..."
 msgstr "TXD seç..."
@@ -9380,9 +9353,6 @@ msgstr "Nesne silmeyi geri al"
 msgid "Undo"
 msgstr "Geri al"
 
-msgid "Undo (%s)"
-msgstr "Geri al (%s)"
-
 msgid "Undo / Redo"
 msgstr "Geri al / Yinele"
 
@@ -10763,3 +10733,45 @@ msgstr "Silahlar"
 
 msgid "Wearable items"
 msgstr "Giyilebilir eşyalar"
+
+msgid "All brush settings"
+msgstr "Tüm fırça ayarları"
+
+msgid "Brush disc size. 0 = single object under cursor."
+msgstr "Fırça diski boyutu. 0 = imlecin altındaki tek nesne."
+
+msgid "Click objects to select them, drag them to move along the ground."
+msgstr "Seçmek için nesnelere tıklayın; zeminde taşımak için sürükleyin."
+
+msgid "Count:"
+msgstr "Adet:"
+
+msgid "Drag the arrows on the selected object."
+msgstr "Seçili nesnenin üzerindeki okları sürükleyin."
+
+msgid "Drag the rings on the selected object."
+msgstr "Seçili nesnenin üzerindeki halkaları sürükleyin."
+
+msgid "Map tools"
+msgstr "Harita araçları"
+
+msgid "More options"
+msgstr "Diğer seçenekler"
+
+msgid "Number of objects scattered per click when Radius > 0."
+msgstr "Yarıçap > 0 olduğunda tıklama başına dağıtılan nesne sayısı."
+
+msgid "Opens %s in the Tools panel. Right-click or hold for the others."
+msgstr "%s bölümünü Araçlar panelinde açar. Diğerleri için sağ tıklayın veya basılı tutun."
+
+msgid "Paint copies of the Object Browser's object onto the world. Its settings are on the options bar."
+msgstr "Nesne tarayıcısındaki nesnenin kopyalarını dünyaya boyar. Ayarları seçenekler çubuğundadır."
+
+msgid "Pick the object to paint in the Object Browser first."
+msgstr "Önce Nesne tarayıcısında boyanacak nesneyi seçin."
+
+msgid "Radius:"
+msgstr "Yarıçap:"
+
+msgid "Spacing:"
+msgstr "Aralık:"

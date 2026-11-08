@@ -217,18 +217,6 @@ msgstr "Passo ao mover (segure Shift)"
 msgid "Rotate step (hold Shift)"
 msgstr "Passo ao girar (segure Shift)"
 
-#: gui.cpp:2563
-msgid "Select\nClick objects to select them, drag them to move along the ground."
-msgstr "Selecionar\nClique nos objetos para selecioná-los; arraste-os para movê-los pelo chão."
-
-#: gui.cpp:2566
-msgid "Move (%s)\nDrag the arrows on the selected object."
-msgstr "Mover (%s)\nArraste as setas no objeto selecionado."
-
-#: gui.cpp:2571
-msgid "Rotate (%s)\nDrag the rings on the selected object."
-msgstr "Girar (%s)\nArraste os anéis no objeto selecionado."
-
 #: gui.cpp:2579
 msgid "Gizmo follows the map axes. Click or press %s for the object's own axes."
 msgstr "O gizmo segue os eixos do mapa. Clique ou pressione %s para os eixos do próprio objeto."
@@ -256,14 +244,6 @@ msgstr "Contornar objetos do mapa"
 #: gui.cpp:2607
 msgid "Outline selected and hovered objects"
 msgstr "Contornar objetos selecionados e sob o mouse"
-
-#: gui.cpp:2612
-msgid "Undo (%s)"
-msgstr "Desfazer (%s)"
-
-#: gui.cpp:2615
-msgid "Redo (%s)"
-msgstr "Refazer (%s)"
 
 #: gui.cpp:2646
 msgid "Workspace"
