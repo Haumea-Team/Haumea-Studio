@@ -72,3 +72,4 @@
 #define ICON_FA_LIST_CHECK      "\xef\x82\xae"  // f0ae
 #define ICON_FA_TERMINAL        "\xef\x84\xa0"  // f120
 #define ICON_FA_CARET_DOWN      "\xef\x83\x97"  // f0d7
+#define ICON_FA_USERS           "\xef\x83\x80"  // f0c0

@@ -5592,6 +5592,9 @@ msgstr "Move-se quando o mapa carrega"
 msgid "Moving this object updates the offset; moving the parent carries it along."
 msgstr "Mover este objeto atualiza o deslocamento; mover o pai o leva junto."
 
+msgid "Multiplayer"
+msgstr "Multiplayer"
+
 msgid "Multiplayer edits Pawn maps of San Andreas."
 msgstr "O multiplayer edita mapas Pawn do San Andreas."
 

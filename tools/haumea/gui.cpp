@@ -3085,6 +3085,7 @@ uiPanelVisibility(int action)
 	case SC_WINDOW_MAP_CHECK: return &showMapCheckWindow;
 	case SC_WINDOW_CHANGES: return &showDiffWindow;
 	case SC_WINDOW_LOG: return &showLogWindow;
+	case SC_WINDOW_TERMINAL: return &showTerminalWindow;
 	}
 	return nil;
 }
@@ -3104,7 +3105,7 @@ uiPanelStrip(void)
 	ImGui::BeginViewportSideBar("##PanelStrip", ImGui::GetMainViewport(), ImGuiDir_Right, button + pad*2.0f,
 		ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoDocking |
 		ImGuiWindowFlags_NoScrollWithMouse);
-	// action -2: the History panel, which has no shortcut of its own.
+	// action -2: the History panel, -3: Multiplayer; neither has a shortcut.
 	struct PanelIcon { const char *icon; int action; };
 	const PanelIcon panels[] = {
 		{ ICON_FA_MAGNIFYING_GLASS "##panel_browser", SC_WINDOW_BROWSER },
@@ -3121,6 +3122,9 @@ uiPanelStrip(void)
 		{ ICON_FA_FILE "##panel_changes", SC_WINDOW_CHANGES },
 		{ ICON_FA_CLOCK_ROTATE_LEFT "##panel_history", -2 },
 		{ ICON_FA_TERMINAL "##panel_log", SC_WINDOW_LOG },
+		{ nil, -1 },
+		{ ICON_FA_USERS "##panel_multiplayer", -3 },
+		{ ">_##panel_terminal", SC_WINDOW_TERMINAL },
 	};
 	char tip[256];
 	for(const PanelIcon &p : panels){
@@ -3131,15 +3135,16 @@ uiPanelStrip(void)
 			ImGui::Dummy(ImVec2(button, 6.0f));
 			continue;
 		}
-		bool *open = p.action == -2 ? &showHistoryWindow : uiPanelVisibility(p.action);
-		const char *key = p.action == -2 ? "" : ShortcutLabel(p.action);
-		const char *name = p.action == -2 ? _("History") : _(GetShortcutInfo(p.action)->name);
+		bool *open = p.action == -2 ? &showHistoryWindow : p.action == -3 ? &showMultiplayerWindow : uiPanelVisibility(p.action);
+		const char *key = p.action < 0 ? "" : ShortcutLabel(p.action);
+		const char *name = p.action == -2 ? _("History") : p.action == -3 ? _("Multiplayer") : _(GetShortcutInfo(p.action)->name);
 		if(key[0]) snprintf(tip, sizeof(tip), "%s (%s)", name, key);
 		else snprintf(tip, sizeof(tip), "%s", name);
 		bool on = open && *open;
 		ImGui::PushStyleColor(ImGuiCol_Text, on ? ImGui::GetStyleColorVec4(ImGuiCol_Text) : ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
 		if(uiToolbarButton(p.icon, false, tip, true, ImVec2(button, button))){
 			if(p.action == -2) showHistoryWindow ^= 1;
+			else if(p.action == -3) showMultiplayerWindow ^= 1;
 			else uiRunShortcut(p.action);
 		}
 		ImGui::PopStyleColor();
@@ -8010,6 +8015,17 @@ uiDockSpace(void)
 		ImGuiID right = ImGui::DockBuilderSplitNode(center, ImGuiDir_Right, side, nil, &center);
 		ImGui::DockBuilderDockWindow("###textdraws", right);
 		ImGui::DockBuilderFinish(textdraws);
+	}
+	// The Terminal's first time open: a strip along the bottom of the 3D view,
+	// split off only then, so the layout has no empty area without it.
+	if(!editingTextDraws && showTerminalWindow && ImGui::FindWindowSettingsByID(ImHashStr("###terminal")) == nil &&
+	   ImGui::FindWindowByName(">_ Terminal###terminal") == nil){
+		if(ImGuiDockNode *central = ImGui::DockBuilderGetCentralNode(map)){
+			ImGuiID centre = central->ID, bottom;
+			ImGui::DockBuilderSplitNode(centre, ImGuiDir_Down, 0.30f, &bottom, &centre);
+			ImGui::DockBuilderDockWindow(">_ Terminal###terminal", bottom);
+			ImGui::DockBuilderFinish(map);
+		}
 	}
 	ImGuiDockNodeFlags flags = ImGuiDockNodeFlags_PassthruCentralNode | ImGuiDockNodeFlags_NoDockingOverCentralNode;
 	ImGuiID active = editingTextDraws ? textdraws : map;

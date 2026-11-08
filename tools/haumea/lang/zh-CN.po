@@ -11110,3 +11110,6 @@ msgstr "此房间"
 
 msgid "Yes"
 msgstr "是"
+
+msgid "Multiplayer"
+msgstr "多人编辑"
