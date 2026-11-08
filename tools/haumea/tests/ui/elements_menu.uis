@@ -22,6 +22,8 @@ assert item 'Object Browser' '##place Player class'
 assert item 'Object Browser' '##place NPC'
 assert no_item 'Object Browser' '##place Pickup'
 assert item 'Object Browser' '##place_skin'
+# The browser shares its column with Object Info: Place may be below the fold.
+scroll_until 'Object Browser' '##element_place'
 assert item 'Object Browser' '##element_place'
 assert placing == 0
 assert clipped_items == 0

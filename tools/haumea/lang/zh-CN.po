@@ -11054,3 +11054,6 @@ msgstr "此会话的服务器或主机比你的 Haumea 旧：需要更新。"
 
 msgid "This session is newer than your Haumea: update Haumea."
 msgstr "此会话比你的 Haumea 新：请更新 Haumea。"
+
+msgid "Multiplayer"
+msgstr "多人编辑"

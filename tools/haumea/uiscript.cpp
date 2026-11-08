@@ -1945,6 +1945,18 @@ UiScriptTick(void)
 		const Step &next = gSteps[gStep];
 		if(next.type == Step::ITEM && itemWait < 60 &&
 		   findItem(next.window, next.label, next.nth ? next.nth : 1) == nil){
+			// Not drawn yet: after a short wait, scroll the named panel down a
+			// step every few frames, in case it is below the panel's fold
+			// (inside a child area that is out of view, so not laid out).
+			if(itemWait >= 10 && itemWait % 4 == 0 && next.window != "*"){
+				ImGuiContext &g = *GImGui;
+				for(int i = 0; i < g.Windows.Size; i++){
+					ImGuiWindow *w = g.Windows[i];
+					if(w->WasActive && !(w->Flags & ImGuiWindowFlags_ChildWindow) &&
+					   nameMatches(w->Name, next.window, true))
+						ImGui::SetScrollY(w, std::min(w->Scroll.y + 80.0f, w->ScrollMax.y));
+				}
+			}
 			itemWait++;
 			return;
 		}

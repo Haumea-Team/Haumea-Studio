@@ -43,3 +43,6 @@ msgstr "Grava as coordenadas relativas ao centro da exportação (o ponto mais b
 
 msgid "Coordinates are relative to %.2f, %.2f, %.2f"
 msgstr "As coordenadas são relativas a %.2f, %.2f, %.2f"
+
+msgid "Multiplayer"
+msgstr "Multiplayer"
