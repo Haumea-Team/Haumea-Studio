@@ -30,6 +30,9 @@ struct LayoutGuide {
 	std::vector<Knot> knots;
 	bool curved = true, closed = false, live = false, follow = true, ground = false, alongLength = true;
 	float spacing = 3, heading = 0, bank = 0;
+	int count = 0;	// objects spread evenly over the range; 0 places them every spacing metres
+	float from = 0, to = 1;	// the stretch of the path that gets objects, as fractions of its length
+	float sideOffset = 0, heightOffset = 0;	// metres across and above the curve, banking with it
 	std::vector<int> objects;
 };
 struct Pose {
@@ -95,19 +98,48 @@ void restore(const State &state)
 	selected = std::min(selected, current() ? (int)current()->knots.size() - 1 : -1);
 	BumpChangeSeq();
 }
+float spacingFor(const LayoutGuide &p)
+{
+	if (p.count < 2)
+		return p.spacing;
+	float length = LayoutMath::curveLength(p.knots, p.curved, p.closed) * (p.to - p.from);
+	bool wrap = p.closed && p.from <= 0 && p.to >= 1;
+	return std::max(.01f, length / (p.count - (wrap ? 0 : 1)));
+}
 std::vector<LayoutMath::Sample> samples(const LayoutGuide &p)
 {
-	return LayoutMath::sample(p.knots, p.curved, p.closed, p.spacing, 2000);
+	return LayoutMath::sample(p.knots, p.curved, p.closed, spacingFor(p), p.count >= 2 ? (size_t)p.count : 2000,
+	                          p.from, p.to);
+}
+// The curve's frame at a sample, with the bank and the points' tilt.
+void frame(const LayoutGuide &p, const LayoutMath::Sample &s, Point &forward, Point &right, Point &normal)
+{
+	using namespace LayoutMath;
+	forward = p.follow ? s.tangent : unit({s.tangent[0], s.tangent[1], 0});
+	normal = p.follow ? s.normal : Point{0, 0, 1};
+	float bank = (p.bank + s.tilt) * 3.14159265f / 180;
+	normal = add(mul(normal, std::cos(bank)), mul(cross(forward, normal), std::sin(bank)));
+	right = unit(cross(forward, normal));
+	normal = unit(cross(right, forward));
+}
+rw::V3d placement(const LayoutGuide &p, const LayoutMath::Sample &s)
+{
+	using namespace LayoutMath;
+	Point forward, right, normal;
+	frame(p, s, forward, right, normal);
+	rw::V3d pos = vector(add(s.p, add(mul(right, p.sideOffset), mul(normal, p.heightOffset))));
+	if (p.ground) {
+		rw::V3d hit;
+		if (GetGroundPlacementSurface(pos, &hit, nullptr, true))
+			pos.z = hit.z + GetPlacementBaseOffset(p.model);
+	}
+	return pos;
 }
 rw::Quat rotation(const LayoutGuide &p, const LayoutMath::Sample &s)
 {
 	using namespace LayoutMath;
-	Point forward = p.follow ? s.tangent : unit({s.tangent[0], s.tangent[1], 0});
-	Point normal = p.follow ? s.normal : Point{0, 0, 1};
-	float bank = p.bank * 3.14159265f / 180;
-	normal = add(mul(normal, std::cos(bank)), mul(cross(forward, normal), std::sin(bank)));
-	Point right = unit(cross(forward, normal));
-	normal = unit(cross(right, forward));
+	Point forward, right, normal;
+	frame(p, s, forward, right, normal);
 	bool x = false;
 	MapToolsModelLength(p.model, &x);
 	if (p.alongLength && x) {
@@ -154,12 +186,7 @@ void sync(LayoutGuide &p, bool reconcile)
 	if (reconcile)
 		SetSpawnObjectId(p.model);
 	for (size_t i = 0; i < result.size(); i++) {
-		rw::V3d pos = vector(result[i].p);
-		if (p.ground) {
-			rw::V3d hit;
-			if (GetGroundPlacementSurface(pos, &hit, nullptr, true))
-				pos.z = hit.z + GetPlacementBaseOffset(p.model);
-		}
+		rw::V3d pos = placement(p, result[i]);
 		rw::Quat q = rotation(p, result[i]);
 		if (i < p.objects.size()) {
 			if (ObjectInst *o = GetInstanceByID(p.objects[i]))
@@ -229,18 +256,20 @@ rw::V3d handlePosition(const LayoutGuide &p, int index, int which)
 }
 void moveHandle(LayoutGuide &p, rw::V3d pos)
 {
+	using namespace LayoutMath;
 	Knot &k = p.knots[selected];
 	if (handle == 0)
 		k.p = point(pos);
 	else {
-		k.automatic = false;
-		Point d = LayoutMath::sub(point(pos), k.p);
-		if (handle == 1) {
-			k.out = d;
-			k.in = LayoutMath::mul(d, -1);
-		} else {
-			k.in = d;
-			k.out = LayoutMath::mul(d, -1);
+		// Dragging a computed handle takes it over, keeping the other in line.
+		if (k.handles == HANDLES_AUTO || k.handles == HANDLES_VECTOR)
+			k.handles = HANDLES_ALIGNED;
+		Point d = sub(point(pos), k.p);
+		Point &moved = handle == 1 ? k.out : k.in, &other = handle == 1 ? k.in : k.out;
+		moved = d;
+		if (k.handles == HANDLES_ALIGNED) {
+			float keep = length(other);
+			other = mul(unit(d, {1, 0, 0}), -(keep > .001f ? keep : length(d)));
 		}
 	}
 	touched(p);
@@ -290,7 +319,7 @@ void createShape(int shape, int axis, float radius, float turns, float rise)
 		for (int i = 0; i < (p.closed ? segments : segments + 1); i++) {
 			float angle = i * step - (axis == 2 ? 0 : 1.570796327f);
 			Knot k;
-			k.automatic = false;
+			k.handles = LayoutMath::HANDLES_ALIGNED;
 			k.p = LayoutMath::add(origin, LayoutMath::add(LayoutMath::mul(a, radius * std::cos(angle)),
 			                                              LayoutMath::mul(b, radius * std::sin(angle))));
 			k.p[axis] += shape == 3 ? rise * i / segments : 0;
@@ -378,12 +407,7 @@ bool LayoutPathObjectsMatch()
 		auto *o = GetInstanceByID(p->objects[i]);
 		if (!o || o->m_isDeleted || o->m_objectId != p->model)
 			return false;
-		rw::V3d expected = vector(result[i].p);
-		if (p->ground) {
-			rw::V3d hit;
-			if (GetGroundPlacementSurface(expected, &hit, nullptr, true))
-				expected.z = hit.z + GetPlacementBaseOffset(p->model);
-		}
+		rw::V3d expected = placement(*p, result[i]);
 		if (length(sub(o->m_translation, expected)) > .005f)
 			return false;
 		if (o->m_lod && (o->m_lod->m_isDeleted || length(sub(o->m_lod->m_translation, expected)) > .005f))
@@ -607,6 +631,19 @@ void LayoutPathsPanel()
 	if (shape >= 2) {
 		ImGui::InputFloat(L("Radius"), &radius, 1, 5, "%.2f m");
 		radius = std::isfinite(radius) ? clamp(radius, .5f, 1000.f) : 15.f;
+		// A whole number of pieces around one turn, so the loop closes without
+		// a gap.
+		ImGui::SameLine();
+		ImGui::BeginDisabled(!selection.first);
+		if (ImGui::SmallButton(L("Fit to selection"))) {
+			float piece = MapToolsModelLength(((ObjectInst *)selection.first->item)->m_objectId, nullptr);
+			if (piece > .05f) {
+				float pieces = std::max(3.f, std::round(6.283185307f * radius / piece));
+				radius = clamp(pieces * piece / 6.283185307f, .5f, 1000.f);
+			}
+		}
+		ImGui::EndDisabled();
+		ImGui::SetItemTooltip(_("Rounds the radius so a whole number of the selected model's lengths make one turn."));
 		const char *axes[] = {_("Around X"), _("Around Y"), _("Around Z")};
 		ImGui::Combo(L("Plane"), &axis, axes, 3);
 		if (shape == 3) {
@@ -706,13 +743,19 @@ void LayoutPathsPanel()
 		Knot &k = p->knots[selected];
 		change |= ImGui::DragFloat3(L("Point position"), k.p.data(), .1f, -100000.f, 100000.f, "%.3f");
 		if (p->curved) {
-			change |= ImGui::Checkbox(L("Automatic handles"), &k.automatic);
-			if (!k.automatic && ImGui::TreeNode(L("Curve handles"))) {
+			const char *modes[] = {_("Automatic"), _("Aligned"), _("Free"), _("Corner")};
+			change |= ImGui::Combo(L("Handles"), &k.handles, modes, LayoutMath::NUM_HANDLES);
+			ImGui::SetItemTooltip(_("Automatic: smooth through the neighbours. Aligned: opposite each other, each "
+			                        "with its own length. Free: independent. Corner: straight at the neighbours."));
+			if (k.handles != LayoutMath::HANDLES_AUTO && k.handles != LayoutMath::HANDLES_VECTOR &&
+			    ImGui::TreeNode(L("Curve handles"))) {
 				change |= ImGui::DragFloat3(L("Incoming"), k.in.data(), .1f);
 				change |= ImGui::DragFloat3(L("Outgoing"), k.out.data(), .1f);
 				ImGui::TreePop();
 			}
 		}
+		change |= ImGui::DragFloat(L("Tilt"), &k.tilt, .5f, -360, 360, "%.1f");
+		ImGui::SetItemTooltip(_("Banks the objects at this point, easing to the next point's tilt."));
 		ImGui::BeginDisabled(p->knots.size() >= 256 || (!p->closed && selected + 1 >= (int)p->knots.size()));
 		if (ImGui::SmallButton(L("Insert midpoint"))) {
 			if (!before) {
@@ -752,8 +795,27 @@ void LayoutPathsPanel()
 			change = true;
 		}
 		ImGui::EndDisabled();
-		change |= ImGui::InputFloat(L("Spacing"), &p->spacing, .5f, 2, "%.2f m");
-		p->spacing = clamp(p->spacing, .1f, 1000.f);
+		int byCount = p->count >= 2;
+		const char *spacingModes[] = {_("Distance"), _("Count")};
+		if (ImGui::Combo(L("Spacing by"), &byCount, spacingModes, 2)) {
+			p->count = byCount ? std::max(2, (int)samples(*p).size()) : 0;
+			change = true;
+		}
+		if (byCount) {
+			change |= ImGui::InputInt(L("Objects"), &p->count, 1, 10);
+			p->count = clamp(p->count, 2, 2000);
+		} else {
+			change |= ImGui::InputFloat(L("Spacing"), &p->spacing, .5f, 2, "%.2f m");
+			p->spacing = clamp(p->spacing, .1f, 1000.f);
+		}
+		float range[2] = {p->from * 100, p->to * 100};
+		if (ImGui::DragFloatRange2(L("Range"), &range[0], &range[1], .2f, 0, 100, "%.1f%%", nullptr,
+		                           ImGuiSliderFlags_AlwaysClamp)) {
+			p->from = clamp(range[0] / 100, 0.f, 1.f);
+			p->to = clamp(range[1] / 100, p->from, 1.f);
+			change = true;
+		}
+		ImGui::SetItemTooltip(_("The stretch of the path that gets objects, from its first point to its last."));
 		if (ImGui::TreeNode(L("Advanced###path_placement"))) {
 			change |= ImGui::Checkbox(L("Along its length"), &p->alongLength);
 			change |= ImGui::Checkbox(L("Follow curve rotation"), &p->follow);
@@ -762,11 +824,14 @@ void LayoutPathsPanel()
 			    _("Off keeps the curve's height, so lifting a point also lifts its objects."));
 			change |= ImGui::DragFloat(L("Heading"), &p->heading, .5f, -360, 360, "%.1f");
 			change |= ImGui::DragFloat(L("Bank"), &p->bank, .5f, -180, 180, "%.1f");
+			change |= ImGui::DragFloat(L("Side offset"), &p->sideOffset, .1f, -2000, 2000, "%.2f m");
+			ImGui::SetItemTooltip(_("Moves the objects across the path, to its right; negative for its left."));
+			change |= ImGui::DragFloat(L("Height offset"), &p->heightOffset, .1f, -2000, 2000, "%.2f m");
 			ImGui::TreePop();
 		}
 		size_t count = samples(*p).size();
 		ImGui::Text(_("%d objects along this path"), (int)count);
-		if (count == 2000)
+		if (count == 2000 && p->count < 2)
 			ImGui::TextWrapped(
 			    _("The layout is limited to 2,000 objects. Increase spacing for a longer path."));
 		ImGui::BeginDisabled(count == 0 || !GetObjectDef(p->model));
@@ -793,7 +858,10 @@ void LayoutPathsPanel()
 		ImGui::TreePop();
 	}
 	if (change) {
-		bool valid = std::isfinite(p->spacing) && std::isfinite(p->heading) && std::isfinite(p->bank);
+		bool valid = std::isfinite(p->spacing) && std::isfinite(p->heading) && std::isfinite(p->bank) &&
+		             std::isfinite(p->sideOffset) && std::isfinite(p->heightOffset);
+		for (const Knot &k : p->knots)
+			valid &= std::isfinite(k.tilt);
 		for (const Knot &k : p->knots)
 			for (Point v : {k.p, k.in, k.out})
 				for (float x : v)
@@ -829,12 +897,20 @@ EditorXML::Node WriteLayoutPathsXML()
 		n.set("spacing", p.spacing);
 		n.set("heading", p.heading);
 		n.set("bank", p.bank);
+		n.set("count", p.count);
+		n.set("from", p.from);
+		n.set("to", p.to);
+		n.set("side-offset", p.sideOffset);
+		n.set("height-offset", p.heightOffset);
 		for (const Knot &k : p.knots) {
 			Node &c = n.add("knot");
 			XMLFields::write(c, "position", vector(k.p));
 			XMLFields::write(c, "in", vector(k.in));
 			XMLFields::write(c, "out", vector(k.out));
-			c.set("automatic", k.automatic);
+			// "automatic" still, for older Haumea builds.
+			c.set("automatic", k.handles == LayoutMath::HANDLES_AUTO);
+			c.set("handles", k.handles);
+			c.set("tilt", k.tilt);
 		}
 		for (int id : p.objects)
 			if (ObjectInst *o = GetInstanceByID(id))
@@ -876,10 +952,14 @@ bool ReadLayoutPathsXML(const Node &root, std::string *error, bool apply)
 			    !read(n, "live", p.live, error) || !read(n, "follow", p.follow, error) ||
 			    !read(n, "ground", p.ground, error) || !read(n, "along-length", p.alongLength, error) ||
 			    !read(n, "spacing", p.spacing, error) || !read(n, "heading", p.heading, error) ||
-			    !read(n, "bank", p.bank, error))
+			    !read(n, "bank", p.bank, error) || !read(n, "count", p.count, error) ||
+			    !read(n, "from", p.from, error) || !read(n, "to", p.to, error) ||
+			    !read(n, "side-offset", p.sideOffset, error) || !read(n, "height-offset", p.heightOffset, error))
 				return false;
 			if (p.id <= 0 || p.id > 1000000 || !ids.insert(p.id).second || p.name.size() > 95 || p.area < 0 ||
-			    p.area > 255 || p.spacing < .1f || p.spacing > 1000)
+			    p.area > 255 || p.spacing < .1f || p.spacing > 1000 || p.count < 0 || p.count > 2000 ||
+			    !(p.from >= 0 && p.from <= p.to && p.to <= 1) || !(std::abs(p.sideOffset) <= 2000) ||
+			    !(std::abs(p.heightOffset) <= 2000))
 				return bad();
 			p.model = EditorModelId(p.model);
 			size_t references = 0;
@@ -889,9 +969,16 @@ bool ReadLayoutPathsXML(const Node &root, std::string *error, bool apply)
 						return bad();
 					Knot k;
 					rw::V3d pos = {}, in = {}, out = {};
+					bool automatic = true;
 					if (!read(c, "position", pos, error) || !read(c, "in", in, error) ||
-					    !read(c, "out", out, error) || !read(c, "automatic", k.automatic, error))
+					    !read(c, "out", out, error) || !read(c, "automatic", automatic, error))
 						return false;
+					// Files from before handle modes: not automatic meant mirrored.
+					k.handles = automatic ? LayoutMath::HANDLES_AUTO : LayoutMath::HANDLES_ALIGNED;
+					if (!read(c, "handles", k.handles, error) || !read(c, "tilt", k.tilt, error))
+						return false;
+					if (k.handles < 0 || k.handles >= LayoutMath::NUM_HANDLES || !(std::abs(k.tilt) <= 360))
+						return bad();
 					for (rw::V3d v : {pos, in, out})
 						if (std::abs(v.x) > 1000000 || std::abs(v.y) > 1000000 || std::abs(v.z) > 1000000)
 							return bad();

@@ -13,3 +13,18 @@ void DrawCheckpointMarker(const ObjectInst *inst, float time, const rw::RGBA *pi
 // in the colour-coded pick pass in their id colours.
 void RenderCheckpointMarkers(float time);
 void RenderCheckpointMarkersColourCoded(void);
+
+// Driving a race in the editor, as a player would see it (haumea_races.inc's
+// order): only the checkpoint to reach is shown, Finish on the last one of
+// the last lap. Advance moves to the next; the preview ends past the finish.
+bool StartRacePreview(const char *raceName);
+void StopRacePreview(void);
+void AdvanceRacePreview(void);
+bool RacePreviewActive(void);
+const char *RacePreviewRace(void);
+// The checkpoint to reach (index in GetRaceCheckpoints), its lap, the laps
+// and how many checkpoints the race has.
+int RacePreviewTarget(void);
+int RacePreviewLap(void);
+int RacePreviewLaps(void);
+int RacePreviewCount(void);

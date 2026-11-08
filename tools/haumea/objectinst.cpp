@@ -1,5 +1,6 @@
 #include "haumea.h"
 #include "coordinatepin.h"
+#include "haumea_races_inc.h"
 #include "maptools.h"
 #include "layoutpaths.h"
 #include "documentxml.h"
@@ -1867,7 +1868,51 @@ GetNextRaceCheckpoint(const ObjectInst *inst)
 	for(size_t i = 0; i + 1 < race.size(); i++)
 		if(race[i] == inst)
 			return race[i + 1];
+	if(properties->cpRaceMode == SAMP_RACE_CIRCUIT && race.size() >= 2 && race.back() == inst)
+		return race.front();
 	return nil;
+}
+
+int
+GetRaceCheckpointShownType(const ObjectInst *inst)
+{
+	const ObjectPawnProperties *properties = GetObjectPawnProperties(inst);
+	int type = properties->cpRaceType;
+	if(type != SAMP_RACE_CP_AUTO_GROUND && type != SAMP_RACE_CP_AUTO_AIR)
+		return clamp(type, 0, 8);
+	std::vector<ObjectInst*> race;
+	GetRaceCheckpoints(properties->cpRace, race);
+	bool finish = !race.empty() &&
+		(properties->cpRaceMode == SAMP_RACE_CIRCUIT && race.size() >= 2 ? race.front() == inst : race.back() == inst);
+	return type == SAMP_RACE_CP_AUTO_AIR ? (finish ? 4 : 3) : (finish ? 1 : 0);
+}
+
+void
+SetRaceSettings(const char *raceName, int mode, int laps, bool playable)
+{
+	std::vector<ObjectInst*> race;
+	GetRaceCheckpoints(raceName, race);
+	UndoBeginGroup();
+	for(ObjectInst *inst : race){
+		ObjectPawnProperties properties = *GetObjectPawnProperties(inst);
+		properties.cpRaceMode = mode;
+		properties.cpRaceLaps = laps;
+		properties.cpRacePlayable = playable;
+		SetObjectPawnProperties(inst, properties);
+	}
+	UndoEndGroup();
+}
+
+bool
+WriteHaumeaRacesInclude(const char *path)
+{
+	FILE *f = fopen(path, "wb");
+	if(f == nil)
+		return false;
+	bool ok = true;
+	for(const char *piece : kHaumeaRacesInc)
+		ok &= fputs(piece, f) >= 0;
+	return fclose(f) == 0 && ok;
 }
 
 static int
@@ -1950,8 +1995,16 @@ normalizeObjectPawnProperties(ObjectPawnProperties *properties)
 		properties->cpOrder = 0;
 	}
 	properties->cpSize = clamp(properties->cpSize, 0.0f, 1000.0f);
-	properties->cpRaceType = clamp(properties->cpRaceType, 0, 8);
+	properties->cpRaceType = clamp(properties->cpRaceType, 0, (int)SAMP_RACE_CP_AUTO_AIR);
 	properties->cpOrder = max(properties->cpOrder, 0);
+	if(properties->elementKind == SAMP_ELEMENT_CHECKPOINT && properties->cpKind == SAMP_CHECKPOINT_RACE){
+		properties->cpRaceMode = clamp(properties->cpRaceMode, (int)SAMP_RACE_POINT_TO_POINT, (int)SAMP_RACE_CIRCUIT);
+		properties->cpRaceLaps = properties->cpRaceMode == SAMP_RACE_CIRCUIT ?
+			clamp(properties->cpRaceLaps, 1, (int)SAMP_RACE_MAX_LAPS) : 1;
+	}else{
+		properties->cpRaceMode = properties->cpRaceLaps = 0;
+		properties->cpRacePlayable = false;
+	}
 	if(properties->elementKind != SAMP_ELEMENT_AREA){
 		properties->areaShape = SAMP_AREA_CIRCLE;
 		properties->areaRadius = properties->areaHeight = 0.0f;
@@ -2024,6 +2077,23 @@ normalizeObjectPawnProperties(ObjectPawnProperties *properties)
 	if(properties->elementKind != SAMP_ELEMENT_NPC || !properties->pathName[0] ||
 	   properties->npcRecording[0] || properties->npcPlaysNode)
 		properties->npcPathRepeat = NPC_PATH_ONCE;
+	// Only free-standing objects move: an attached one goes with its parent.
+	if(properties->elementKind != SAMP_ELEMENT_OBJECT || properties->attachParent != -1)
+		properties->moveEnabled = false;
+	if(properties->moveEnabled){
+		properties->moveSpeed = std::isfinite(properties->moveSpeed) ? clamp(properties->moveSpeed, 0.01f, 1000.0f) : 1.0f;
+		for(int a = 0; a < 3; a++){
+			float &o = (&properties->moveOffset.x)[a], &r = (&properties->moveRotation.x)[a];
+			o = std::isfinite(o) ? clamp(o, -20000.0f, 20000.0f) : 0.0f;
+			r = std::isfinite(r) ? clamp(r, -360.0f, 360.0f) : 0.0f;
+		}
+		if(!properties->moveRotates)
+			properties->moveRotation = { 0.0f, 0.0f, 0.0f };
+	}else{
+		properties->moveOffset = properties->moveRotation = { 0.0f, 0.0f, 0.0f };
+		properties->moveRotates = false;
+		properties->moveSpeed = 0.0f;
+	}
 	if(properties->attachParent == -1){
 		properties->attachParent = -1;
 		properties->attachOffset = { 0.0f, 0.0f, 0.0f };
@@ -4968,6 +5038,46 @@ ReadPrefabEntries(const char *path, PrefabEntry *entries, int maxEntries, int *n
 				prefabNextToken(&cursor, e->vehiclePlate, sizeof(e->vehiclePlate));
 				continue;
 			}
+			if(strcmp(type, "race") == 0){
+				int mode, laps, playable;
+				bool valid = prefabNextToken(&cursor, token, sizeof(token)) && prefabParseIntToken(token, &objectIndex) &&
+					objectIndex >= 0 && objectIndex < numEntries &&
+					prefabNextToken(&cursor, token, sizeof(token)) && prefabParseIntToken(token, &mode) &&
+					prefabNextToken(&cursor, token, sizeof(token)) && prefabParseIntToken(token, &laps) &&
+					prefabNextToken(&cursor, token, sizeof(token)) && prefabParseIntToken(token, &playable);
+				if(!valid)
+					continue;
+				ObjectPawnProperties &el = entries[objectIndex].properties;
+				el.cpRaceMode = mode;
+				el.cpRaceLaps = laps;
+				el.cpRacePlayable = playable != 0;
+				continue;
+			}
+			if(strcmp(type, "move") == 0){
+				// move <index> <offset x y z> <speed> <turns> <rx ry rz>
+				float values[7];
+				int turns = 0;
+				bool valid = prefabNextToken(&cursor, token, sizeof(token)) &&
+					prefabParseIntToken(token, &objectIndex) && objectIndex >= 0 && objectIndex < numEntries;
+				for(int v = 0; valid && v < 4; v++){
+					valid = prefabNextToken(&cursor, token, sizeof(token));
+					values[v] = valid ? (float)atof(token) : 0.0f;
+				}
+				valid = valid && prefabNextToken(&cursor, token, sizeof(token)) && prefabParseIntToken(token, &turns);
+				for(int v = 4; valid && v < 7; v++){
+					valid = prefabNextToken(&cursor, token, sizeof(token));
+					values[v] = valid ? (float)atof(token) : 0.0f;
+				}
+				if(!valid)
+					continue;
+				ObjectPawnProperties &el = entries[objectIndex].properties;
+				el.moveEnabled = true;
+				el.moveOffset = { values[0], values[1], values[2] };
+				el.moveSpeed = values[3];
+				el.moveRotates = turns != 0;
+				el.moveRotation = { values[4], values[5], values[6] };
+				continue;
+			}
 			if(strcmp(type, "attach") == 0){
 				// v3: attach <index> <parent index> <x y z> <rx ry rz> <sync>
 				// v4 adds bone, slot, scale, material colours and preview skin.
@@ -5371,7 +5481,7 @@ paintPreviewVehicle(ObjectDef *obj, rw::Clump *clump, int colour1 = -1, int colo
 static rw::RGBA
 previewBackground(void)
 {
-	return GetUiTheme() == UI_THEME_LIGHT ? rw::RGBA{ 235, 239, 244, 255 } : rw::RGBA{ 31, 41, 48, 255 };
+	return UiThemePreviewBackground();
 }
 
 static bool
@@ -7524,6 +7634,10 @@ ExportPrefabEx(const char *path, int origin, const char *tags)
 				properties->cpRaceType, properties->cpOrder);
 			pawnWriteQuotedString(f, properties->cpRace);
 			fputc('\n', f);
+			// race <index> <mode> <laps> <playable>
+			if(properties->cpKind == SAMP_CHECKPOINT_RACE)
+				fprintf(f, "race %d %d %d %d\n", i, properties->cpRaceMode, properties->cpRaceLaps,
+					properties->cpRacePlayable ? 1 : 0);
 		}
 		if(properties->elementKind == SAMP_ELEMENT_AREA){
 			// area <index> <shape> <radius> <size x> <size y> <size z> <height> <points> x y ...
@@ -7597,6 +7711,11 @@ ExportPrefabEx(const char *path, int origin, const char *tags)
 				properties->attachSyncRotation ? 1 : 0, properties->attachBone, properties->attachSlot,
 				properties->attachScale.x, properties->attachScale.y, properties->attachScale.z,
 				properties->attachColor1, properties->attachColor2, properties->attachSkin);
+		// move <index> <offset x y z> <speed> <turns> <rx ry rz>
+		if(properties->moveEnabled)
+			fprintf(f, "move %d %f %f %f %f %d %f %f %f\n", i, properties->moveOffset.x, properties->moveOffset.y,
+				properties->moveOffset.z, properties->moveSpeed, properties->moveRotates ? 1 : 0,
+				properties->moveRotation.x, properties->moveRotation.y, properties->moveRotation.z);
 	}
 
 	fclose(f);
@@ -8769,9 +8888,20 @@ pawnWriteCode(FILE *f, const char *path, PawnCodeFormat format, bool selectedOnl
 		fprintf(f, "// NPCs that walk their path again: call %s_OnNPCFinishMovePath(npcid, pathid)\n"
 			"// from OnNPCFinishMovePath(npcid, pathid), or they stop at the end.\n", prefix);
 	int numCheckpoints = 0;
-	for(size_t i = 0; i < insts.size(); i++)
-		if(!insts[i]->m_isDeleted && GetSampElementKind(insts[i]) == SAMP_ELEMENT_CHECKPOINT)
+	// Playable races (haumea_races.inc), by name; their checkpoints are
+	// written for the include in either format, not as markers.
+	std::vector<std::string> playableRaces;
+	for(size_t i = 0; i < insts.size(); i++){
+		if(insts[i]->m_isDeleted || GetSampElementKind(insts[i]) != SAMP_ELEMENT_CHECKPOINT)
+			continue;
+		const ObjectPawnProperties *properties = GetObjectPawnProperties(insts[i]);
+		if(properties->cpKind == SAMP_CHECKPOINT_RACE && properties->cpRacePlayable && properties->cpRace[0]){
+			if(std::find(playableRaces.begin(), playableRaces.end(), properties->cpRace) == playableRaces.end())
+				playableRaces.push_back(properties->cpRace);
+		}else
 			numCheckpoints++;
+	}
+	std::sort(playableRaces.begin(), playableRaces.end());
 	if(numCheckpoints > 0 && format != PAWN_CODE_STREAMER)
 		fprintf(f, "// %d checkpoint(s) not written: map checkpoints need the streamer (natively a player\n"
 			"// has one checkpoint at a time, set with SetPlayerCheckpoint). Save as streamer code.\n",
@@ -8805,6 +8935,14 @@ pawnWriteCode(FILE *f, const char *path, PawnCodeFormat format, bool selectedOnl
 		"\n#tryinclude <open.mp>\n#if !defined _INC_open_mp\n\t#include <a_samp>\n#endif\n");
 	if(format == PAWN_CODE_STREAMER || !streamedZones.empty())
 		fprintf(f, "#include <streamer>\n");
+	if(!playableRaces.empty()){
+		fprintf(f, "\n// Races: StartMapRace(playerid, %s_race_<name>) starts one for a player. They need\n"
+			"// haumea_races.inc in your includes (Haumea Studio writes it), included before your callbacks.\n"
+			"#tryinclude <haumea_races>\n"
+			"#if !defined %s_RACE_BASE\n\t#define %s_RACE_BASE (0)\n#endif\n", prefix, prefix, prefix);
+		for(size_t r = 0; r < playableRaces.size(); r++)
+			fprintf(f, "#define %s_race_%s (%s_RACE_BASE + %d)\n", prefix, playableRaces[r].c_str(), prefix, (int)r + 1);
+	}
 	fprintf(f, "\n");
 	// Weapon names only open.mp defines, for player classes on SA-MP 0.3.7.
 	std::vector<int> openMpWeapons;
@@ -8885,6 +9023,13 @@ pawnWriteCode(FILE *f, const char *path, PawnCodeFormat format, bool selectedOnl
 		needsHandle.insert(it->first);
 		needsHandle.insert(it->second);
 	}
+	std::vector<ObjectInst*> movers;
+	for(ObjectInst *inst : insts)
+		if(!inst->m_isDeleted && !inst->m_isVehicle && GetSampElementKind(inst) == SAMP_ELEMENT_OBJECT &&
+		   !IsPlayerAttachedObject(inst) && GetObjectPawnProperties(inst)->moveEnabled){
+			movers.push_back(inst);
+			needsHandle.insert(inst);
+		}
 
 	// Objects are written group by group, in order of first appearance.
 	std::vector<std::string> groups;
@@ -9060,7 +9205,7 @@ pawnWriteCode(FILE *f, const char *path, PawnCodeFormat format, bool selectedOnl
 	for(size_t i = 0; i < insts.size() && format == PAWN_CODE_STREAMER; i++){
 		const ObjectPawnProperties *properties = GetObjectPawnProperties(insts[i]);
 		if(insts[i]->m_isDeleted || properties->elementKind != SAMP_ELEMENT_CHECKPOINT ||
-		   properties->cpKind != SAMP_CHECKPOINT_RACE)
+		   properties->cpKind != SAMP_CHECKPOINT_RACE || properties->cpRacePlayable)
 			continue;
 		if(races.find(properties->cpRace) == races.end())
 			raceNames.push_back(properties->cpRace);
@@ -9077,11 +9222,13 @@ pawnWriteCode(FILE *f, const char *path, PawnCodeFormat format, bool selectedOnl
 			for(size_t j = 0; j < race.size(); j++){
 				const ObjectPawnProperties *properties = GetObjectPawnProperties(race[j]);
 				const rw::V3d &p = race[j]->m_translation;
-				rw::V3d next = { 0.0f, 0.0f, 0.0f };	// the last one points nowhere
+				rw::V3d next = { 0.0f, 0.0f, 0.0f };	// the last one points nowhere, a circuit's at the first
 				if(j + 1 < race.size())
 					next = race[j + 1]->m_translation;
+				else if(properties->cpRaceMode == SAMP_RACE_CIRCUIT && race.size() >= 2)
+					next = race[0]->m_translation;
 				fprintf(f, "\tCreateDynamicRaceCP(%d, %.6f, %.6f, %.6f, %.6f, %.6f, %.6f, %.2f, %d, %d, -1, ",
-					properties->cpRaceType, p.x, p.y, p.z, next.x, next.y, next.z, properties->cpSize,
+					GetRaceCheckpointShownType(race[j]), p.x, p.y, p.z, next.x, next.y, next.z, properties->cpSize,
 					properties->virtualWorld, race[j]->m_area > 0 ? race[j]->m_area : -1);
 				pawnWriteDistance(f, properties->streamDistance, "STREAMER_RACE_CP_SD");
 				pawnWriteAreaArg(f, properties);
@@ -9090,6 +9237,32 @@ pawnWriteCode(FILE *f, const char *path, PawnCodeFormat format, bool selectedOnl
 			}
 		}
 		fputc('\n', f);
+	}
+	if(!playableRaces.empty()){
+		// MapRace_Create(raceid, name[], mode, laps, world, interior);
+		// MapRace_AddCheckpoint(raceid, x, y, z, radius, type), in order.
+		fputs("\t// ---- races (haumea_races.inc) ----\n#if defined _haumea_races_included\n", f);
+		for(const std::string &name : playableRaces){
+			std::vector<ObjectInst*> race;
+			GetRaceCheckpoints(name.c_str(), race);
+			race.erase(std::remove_if(race.begin(), race.end(), [&](const ObjectInst *c){
+				return std::find(insts.begin(), insts.end(), c) == insts.end(); }), race.end());
+			if(race.empty())
+				continue;
+			const ObjectPawnProperties *first = GetObjectPawnProperties(race[0]);
+			bool circuit = first->cpRaceMode == SAMP_RACE_CIRCUIT;
+			fprintf(f, "\tMapRace_Create(%s_race_%s, \"%s\", %s, %d, %d, %d);\n", prefix, name.c_str(), name.c_str(),
+				circuit ? "MAPRACE_CIRCUIT" : "MAPRACE_POINT_TO_POINT", circuit ? first->cpRaceLaps : 1,
+				first->virtualWorld, race[0]->m_area > 0 ? race[0]->m_area : -1);
+			for(ObjectInst *c : race){
+				const ObjectPawnProperties *properties = GetObjectPawnProperties(c);
+				const rw::V3d &p = c->m_translation;
+				fprintf(f, "\tMapRace_AddCheckpoint(%s_race_%s, %.6f, %.6f, %.6f, %.2f, %d);", prefix, name.c_str(),
+					p.x, p.y, p.z, std::max(properties->cpSize, 0.25f), properties->cpRaceType);
+				pawnWriteTrailingTags(f, "checkpoint", "", properties);
+			}
+		}
+		fputs("#endif\n\n", f);
 	}
 	for(size_t g = 0; g < groups.size(); g++){
 		for(size_t i = 0; i < insts.size(); i++){
@@ -9153,6 +9326,20 @@ pawnWriteCode(FILE *f, const char *path, PawnCodeFormat format, bool selectedOnl
 				properties->attachRotation.z);
 			if(!vehicle)
 				fprintf(f, ", %s", properties->attachSyncRotation ? "true" : "false");
+			fputs(");\n", f);
+		}
+	}
+	if(!movers.empty()){
+		// MoveObject(objectid, X, Y, Z, Speed, RotX = -1000.0, RotY = -1000.0, RotZ = -1000.0)
+		fputs("\n\t// ---- moving objects ----\n", f);
+		for(ObjectInst *inst : movers){
+			const ObjectPawnProperties *properties = GetObjectPawnProperties(inst);
+			rw::V3d to = add(inst->m_translation, properties->moveOffset);
+			fprintf(f, "\t%s(%s, %.6f, %.6f, %.6f, %.6f", format == PAWN_CODE_STREAMER ? "MoveDynamicObject" : "MoveObject",
+				handles[inst].c_str(), to.x, to.y, to.z, properties->moveSpeed);
+			if(properties->moveRotates)
+				fprintf(f, ", %.6f, %.6f, %.6f", properties->moveRotation.x, properties->moveRotation.y,
+					properties->moveRotation.z);
 			fputs(");\n", f);
 		}
 	}
@@ -9447,6 +9634,13 @@ struct PawnImportEntry
 	// A streamer item's areaid: the dynamic area's create entry plus one (the
 	// latest area with that variable before the item), 0 for none.
 	int areaEntry;
+	// MoveObject on its variable: where to, how fast, and the turn when all
+	// three angles are given (the client turns only then, reSA-MP
+	// MoveObjectRuntimeToTarget).
+	bool moves;
+	float moveTo[3], moveRotation[3];
+	bool moveRotates;
+	float moveSpeed;
 };
 
 static std::string pawnTrimString(const std::string &value);
@@ -9568,6 +9762,196 @@ pawnTrimString(const std::string &value)
 	return value.substr(first, last-first);
 }
 
+// Numeric #defines and consts of the map being imported (pawnCollectNumericDefines),
+// so arguments such as BASE_Z + 2.5 import.
+static std::map<std::string, double> gPawnNumericDefines;
+
+struct PawnExpression
+{
+	const std::string &s;
+	const std::map<std::string, double> &names;
+	size_t pos;
+	bool valid;
+
+	PawnExpression(const std::string &text, const std::map<std::string, double> &values)
+		: s(text), names(values), pos(0), valid(true) {}
+
+	void skipSpace(void) { while(pos < s.size() && isspace((unsigned char)s[pos])) pos++; }
+	bool take(char c)
+	{
+		skipSpace();
+		// "==" and "<=" aren't arithmetic; leave them for the caller to reject.
+		if(pos < s.size() && s[pos] == c && !(pos + 1 < s.size() && s[pos+1] == '=')){
+			pos++;
+			return true;
+		}
+		return false;
+	}
+	double atom(int depth)
+	{
+		skipSpace();
+		if(depth > 32 || pos >= s.size()){
+			valid = false;
+			return 0;
+		}
+		if(take('+')) return atom(depth + 1);
+		if(take('-')) return -atom(depth + 1);
+		if(take('(')){
+			double value = sum(depth + 1);
+			if(!take(')'))
+				valid = false;
+			return value;
+		}
+		size_t start = pos;
+		if(isalpha((unsigned char)s[pos]) || s[pos] == '_' || s[pos] == '@'){
+			while(pos < s.size() && (isalnum((unsigned char)s[pos]) || s[pos] == '_' || s[pos] == '@')) pos++;
+			std::string name = s.substr(start, pos - start);
+			// A tag (Float:x); "::" isn't one.
+			if(pos < s.size() && s[pos] == ':' && !(pos + 1 < s.size() && s[pos+1] == ':')){
+				pos++;
+				return atom(depth + 1);
+			}
+			std::map<std::string, double>::const_iterator it = names.find(name);
+			if(it != names.end())
+				return it->second;
+			valid = false;
+			return 0;
+		}
+		if(isdigit((unsigned char)s[pos]) || s[pos] == '.'){
+			std::string number;
+			if(s[pos] == '0' && pos + 1 < s.size() && (s[pos+1] == 'x' || s[pos+1] == 'X')){
+				pos += 2;
+				while(pos < s.size() && (isxdigit((unsigned char)s[pos]) || s[pos] == '_'))
+					if(s[pos++] != '_') number += s[pos-1];
+				if(number.empty() || number.size() > 8){
+					valid = false;
+					return 0;
+				}
+				return (double)(uint32)strtoul(number.c_str(), nil, 16);
+			}
+			while(pos < s.size() && (isdigit((unsigned char)s[pos]) || s[pos] == '.' || s[pos] == '_' ||
+			      ((s[pos] == 'e' || s[pos] == 'E') && pos + 1 < s.size() &&
+			       (isdigit((unsigned char)s[pos+1]) || s[pos+1] == '-' || s[pos+1] == '+')) ||
+			      ((s[pos] == '-' || s[pos] == '+') && (s[pos-1] == 'e' || s[pos-1] == 'E'))))
+				if(s[pos++] != '_') number += s[pos-1];
+			char *end = nil;
+			double value = strtod(number.c_str(), &end);
+			if(end == number.c_str() || *end != '\0'){
+				valid = false;
+				return 0;
+			}
+			return value;
+		}
+		valid = false;
+		return 0;
+	}
+	double product(int depth)
+	{
+		double value = atom(depth);
+		for(;;){
+			if(take('*'))
+				value *= atom(depth);
+			else if(take('/')){
+				double divisor = atom(depth);
+				if(divisor == 0)
+					valid = false;
+				else
+					value /= divisor;
+			}else if(take('%')){
+				double divisor = atom(depth);
+				if(divisor == 0)
+					valid = false;
+				else
+					value = fmod(value, divisor);
+			}else
+				return value;
+		}
+	}
+	double sum(int depth)
+	{
+		double value = product(depth);
+		for(;;){
+			if(take('+'))
+				value += product(depth);
+			else if(take('-'))
+				value -= product(depth);
+			else
+				return value;
+		}
+	}
+	bool read(double *out)
+	{
+		double value = sum(0);
+		skipSpace();
+		if(!valid || pos != s.size() || !std::isfinite(value))
+			return false;
+		*out = value;
+		return true;
+	}
+};
+
+static bool
+pawnEvaluateExpression(const std::string &text, double *out)
+{
+	PawnExpression expression(text, gPawnNumericDefines);
+	return expression.read(out);
+}
+
+// "#define NAME expr" and "const [Float:]NAME = expr;" whose value is a
+// number, in source order so later ones can use earlier ones. Variables
+// (new) aren't followed: their value depends on where the code runs.
+static void
+pawnCollectNumericDefines(const std::string &source, std::map<std::string, double> &out)
+{
+	size_t start = 0;
+	while(start < source.size()){
+		size_t end = source.find('\n', start);
+		if(end == std::string::npos)
+			end = source.size();
+		std::string line = pawnTrimString(source.substr(start, end - start));
+		start = end + 1;
+		size_t comment = line.find("//");
+		if(comment != std::string::npos)
+			line = pawnTrimString(line.substr(0, comment));
+		std::string name, value;
+		if(line.compare(0, 7, "#define") == 0 && line.size() > 8 && isspace((unsigned char)line[7])){
+			size_t i = 7;
+			while(i < line.size() && isspace((unsigned char)line[i])) i++;
+			size_t nameStart = i;
+			while(i < line.size() && (isalnum((unsigned char)line[i]) || line[i] == '_' || line[i] == '@')) i++;
+			// "#define NAME(%0)" is a macro, not a value.
+			if(i == nameStart || (i < line.size() && line[i] == '('))
+				continue;
+			name = line.substr(nameStart, i - nameStart);
+			value = line.substr(i);
+		}else{
+			size_t i = 0;
+			if(line.compare(0, 7, "static ") == 0) i = 7;
+			if(line.compare(i, 6, "const ") != 0)
+				continue;
+			i += 6;
+			std::string rest = line.substr(i);
+			size_t eq = rest.find('=');
+			size_t semi = rest.find(';');
+			if(eq == std::string::npos || (semi != std::string::npos && semi < eq))
+				continue;
+			name = pawnTrimString(rest.substr(0, eq));
+			size_t colon = name.find(':');
+			if(colon != std::string::npos)
+				name = pawnTrimString(name.substr(colon + 1));
+			value = rest.substr(eq + 1, semi == std::string::npos ? std::string::npos : semi - eq - 1);
+			if(name.empty() || name.find_first_not_of("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_@") != std::string::npos)
+				continue;
+		}
+		double number;
+		PawnExpression expression(pawnTrimString(value), out);
+		if(expression.read(&number))
+			out[name] = number;
+		else
+			out.erase(name);
+	}
+}
+
 static bool
 pawnParseDouble(const std::string &value, double *out)
 {
@@ -9597,10 +9981,12 @@ pawnParseDouble(const std::string &value, double *out)
 	char *end = nil;
 	const char *start = token.c_str();
 	double parsed = strtod(start, &end);
-	if(end == start || !std::isfinite((float)parsed))
+	if(end != start)
+		while(*end && isspace((unsigned char)*end)) end++;
+	// Not a plain number: arithmetic or a named constant (BASE_Z + 2.5).
+	if((end == start || *end != '\0') && !pawnEvaluateExpression(token, &parsed))
 		return false;
-	while(*end && isspace((unsigned char)*end)) end++;
-	if(*end != '\0')
+	if(!std::isfinite((float)parsed))
 		return false;
 	if(out) *out = parsed;
 	return true;
@@ -10405,6 +10791,9 @@ pawnParseSource(const std::string &rawSource, std::vector<PawnImportEntry> &entr
 	// Texture Studio's "tmpobjid = CreateObject(...)" chains resolve per object.
 	std::map<std::string, int> handleEntries;
 	std::map<std::string, int> npcPathPoints;	// points read so far, by path
+	// MapRace_Create calls by their raceid as written: the race's name and settings.
+	struct MapRaceImport { char name[PAWN_OBJECT_NAME_LEN]; int mode, laps, world, interior; };
+	std::map<std::string, MapRaceImport> mapRaces;
 	std::map<int, int> npcNodePoints;	// NPC_SetNodePoint so far, by node
 	enum PawnCallKind {
 		PAWN_CALL_CREATE,
@@ -10462,6 +10851,9 @@ pawnParseSource(const std::string &rawSource, std::vector<PawnImportEntry> &entr
 		PAWN_CALL_ADD_PLAYER_ZONE,	// Haumea_<map>_AddPlayerZone, generated with the map
 		PAWN_CALL_ADD_STREAMED_ZONE,	// Haumea_<map>_AddStreamedZone, generated with the map
 		PAWN_CALL_NPC_MOVE_REPEAT,	// Haumea_<map>_MoveByPathRepeat, generated with the map
+		PAWN_CALL_MOVE,	// MoveObject, MoveDynamicObject, MovePlayerObject
+		PAWN_CALL_MAPRACE_CREATE,	// haumea_races.inc
+		PAWN_CALL_MAPRACE_CHECKPOINT,
 	};
 	struct PawnCallName { const char *name; int offset; bool streamer; PawnCallKind kind; };
 	static const PawnCallName callNames[] = {
@@ -10486,6 +10878,9 @@ pawnParseSource(const std::string &rawSource, std::vector<PawnImportEntry> &entr
 		{ "AttachPlayerObjectToObject", 1, false, PAWN_CALL_ATTACH },
 		{ "AttachDynamicObjectToObject", 0, true, PAWN_CALL_ATTACH },
 		{ "AttachObjectToObject", 0, false, PAWN_CALL_ATTACH },
+		{ "MoveDynamicObject", 0, true, PAWN_CALL_MOVE },
+		{ "MovePlayerObject", 1, false, PAWN_CALL_MOVE },
+		{ "MoveObject", 0, false, PAWN_CALL_MOVE },
 		{ "CreateDynamicObjectEx", 0, true, PAWN_CALL_CREATE_EX },
 		{ "CreateDynamicObject", 0, true, PAWN_CALL_CREATE },
 		{ "CreatePlayerObject", 1, false, PAWN_CALL_CREATE },
@@ -10508,6 +10903,8 @@ pawnParseSource(const std::string &rawSource, std::vector<PawnImportEntry> &entr
 		{ "GangZoneShowForAll", 0, false, PAWN_CALL_GANGZONE_SHOW },
 		{ "CreateDynamicMapIcon", 0, true, PAWN_CALL_MAPICON },
 		{ "CreateDynamicRaceCP", 0, true, PAWN_CALL_RACE_CHECKPOINT },
+		{ "MapRace_Create", 0, false, PAWN_CALL_MAPRACE_CREATE },	// haumea_races.inc
+		{ "MapRace_AddCheckpoint", 0, false, PAWN_CALL_MAPRACE_CHECKPOINT },
 		{ "CreateDynamicCircle", 0, true, PAWN_CALL_AREA },
 		{ "CreateDynamicCylinder", 0, true, PAWN_CALL_AREA },
 		{ "CreateDynamicSphere", 0, true, PAWN_CALL_AREA },
@@ -10648,6 +11045,51 @@ pawnParseSource(const std::string &rawSource, std::vector<PawnImportEntry> &entr
 			attach.parent = handleEntries[parent];
 			attach.syncRotation = sync != 0;
 			attachments.push_back(attach);
+			continue;
+		}
+		if(call->kind == PAWN_CALL_MAPRACE_CREATE){
+			// MapRace_Create(raceid, name[], mode = MAPRACE_POINT_TO_POINT, laps = 1, world = -1, interior = -1)
+			MapRaceImport race = { {}, SAMP_RACE_POINT_TO_POINT, 1, -1, -1 };
+			bool valid = (int)args.size() >= offset + 2 && pawnParseString(args[offset + 1], race.name, sizeof(race.name)) &&
+				IsValidPawnObjectName(race.name);
+			if(valid && (int)args.size() > offset + 2){
+				std::string mode = pawnStripTag(args[offset + 2]);
+				race.mode = mode == "MAPRACE_CIRCUIT" ? SAMP_RACE_CIRCUIT : mode == "MAPRACE_POINT_TO_POINT" ?
+					SAMP_RACE_POINT_TO_POINT : -1;
+				if(race.mode < 0 && !pawnParseElementInt(mode, &race.mode))
+					valid = false;
+			}
+			if(valid && (int)args.size() > offset + 3) valid = pawnParseElementInt(args[offset + 3], &race.laps);
+			if(valid && (int)args.size() > offset + 4) valid = pawnParseElementInt(args[offset + 4], &race.world);
+			if(valid && (int)args.size() > offset + 5) valid = pawnParseElementInt(args[offset + 5], &race.interior);
+			if(!valid){
+				if(numSkipped) (*numSkipped)++;
+				continue;
+			}
+			mapRaces[pawnTrimString(args[offset])] = race;
+			continue;
+		}
+		if(call->kind == PAWN_CALL_MOVE){
+			// MoveObject(obj, x, y, z, speed, rx = -1000.0, ry = -1000.0, rz = -1000.0)
+			char target[64];
+			float to[3], speed, rot[3] = { -1000.0f, -1000.0f, -1000.0f };
+			bool valid = (int)args.size() >= offset + 5 &&
+				pawnParseToken(args[offset], target, sizeof(target)) &&
+				pawnParseFloat(args[offset + 1], &to[0]) && pawnParseFloat(args[offset + 2], &to[1]) &&
+				pawnParseFloat(args[offset + 3], &to[2]) && pawnParseFloat(args[offset + 4], &speed) &&
+				handleEntries.find(target) != handleEntries.end();
+			for(int k = 0; valid && k < 3 && (int)args.size() > offset + 5 + k; k++)
+				valid = pawnParseFloat(args[offset + 5 + k], &rot[k]);
+			PawnImportEntry *entry = valid ? &entries[handleEntries[target]] : nil;
+			if(entry == nil || entry->isVehicle || entry->elementKind != SAMP_ELEMENT_OBJECT || speed <= 0.0f){
+				if(numSkipped) (*numSkipped)++;
+				continue;
+			}
+			entry->moves = true;
+			memcpy(entry->moveTo, to, sizeof(to));
+			entry->moveSpeed = speed;
+			entry->moveRotates = rot[0] > -999.0f && rot[1] > -999.0f && rot[2] > -999.0f;
+			memcpy(entry->moveRotation, rot, sizeof(rot));
 			continue;
 		}
 		if(call->kind == PAWN_CALL_ATTACH_VEHICLE){
@@ -11179,7 +11621,8 @@ pawnParseSource(const std::string &rawSource, std::vector<PawnImportEntry> &entr
 		   call->kind == PAWN_CALL_MAPICON || call->kind == PAWN_CALL_AUDIO_STREAM ||
 		   call->kind == PAWN_CALL_ADD_SOUND || call->kind == PAWN_CALL_CHECKPOINT ||
 		   call->kind == PAWN_CALL_ADD_PLAYER_ZONE || call->kind == PAWN_CALL_ADD_STREAMED_ZONE ||
-		   call->kind == PAWN_CALL_RACE_CHECKPOINT || call->kind == PAWN_CALL_AREA){
+		   call->kind == PAWN_CALL_RACE_CHECKPOINT || call->kind == PAWN_CALL_AREA ||
+		   call->kind == PAWN_CALL_MAPRACE_CHECKPOINT){
 			PawnImportEntry entry = {};
 			entry.interior = -1;
 			entry.world = -1;
@@ -11403,6 +11846,32 @@ pawnParseSource(const std::string &rawSource, std::vector<PawnImportEntry> &entr
 				optInt(5, &entry.interior);
 				optDistance(7, &entry.streamDistance);
 				break;
+			case PAWN_CALL_MAPRACE_CHECKPOINT: {
+				// MapRace_AddCheckpoint(raceid, x, y, z, radius = 5.0, type = MAPRACE_AUTO_GROUND)
+				std::map<std::string, MapRaceImport>::const_iterator race = mapRaces.find(pawnTrimString(arg(0)));
+				entry.elementKind = SAMP_ELEMENT_CHECKPOINT;
+				el.cpKind = SAMP_CHECKPOINT_RACE;
+				el.cpSize = 5.0f;
+				el.cpRaceType = SAMP_RACE_CP_AUTO_GROUND;
+				valid = n >= o + 4 && race != mapRaces.end() && pawnParseFloat(arg(1), &entry.x) &&
+					pawnParseFloat(arg(2), &entry.y) && pawnParseFloat(arg(3), &entry.z);
+				optFloat(4, &el.cpSize);
+				if(valid && n > o + 5){
+					std::string type = pawnStripTag(arg(5));
+					if(type == "MAPRACE_AUTO_GROUND") el.cpRaceType = SAMP_RACE_CP_AUTO_GROUND;
+					else if(type == "MAPRACE_AUTO_AIR") el.cpRaceType = SAMP_RACE_CP_AUTO_AIR;
+					else valid = pawnParseElementInt(type, &el.cpRaceType);
+				}
+				if(valid){
+					snprintf(el.cpRace, sizeof(el.cpRace), "%s", race->second.name);
+					el.cpRaceMode = race->second.mode;
+					el.cpRaceLaps = race->second.laps;
+					el.cpRacePlayable = true;
+					entry.world = race->second.world;
+					entry.interior = race->second.interior;
+				}
+				break;
+			}
 			case PAWN_CALL_RACE_CHECKPOINT:
 				// CreateDynamicRaceCP(type, x, y, z, nextx, nexty, nextz, size, worldid,
 				//     interiorid, playerid, streamdistance)
@@ -11768,8 +12237,14 @@ readMapThumbnailObjects(const char *path, std::vector<ThumbnailObject> &out)
 	std::vector<PawnAttachImportEntry> attachments;
 	std::vector<PawnElementSetterEntry> setters;
 	int skipped = 0;
-	pawnParseSource(DecodePawnFileText(source, nil), entries, removals, vehicleInteriors, materials,
+	std::string decoded = DecodePawnFileText(source, nil);
+	// This map's constants for the parse, then the open map's back.
+	std::map<std::string, double> openMapDefines;
+	openMapDefines.swap(gPawnNumericDefines);
+	pawnCollectNumericDefines(decoded, gPawnNumericDefines);
+	pawnParseSource(decoded, entries, removals, vehicleInteriors, materials,
 		attachments, setters, &skipped);
+	gPawnNumericDefines.swap(openMapDefines);
 	struct Sized { float radius; ThumbnailObject object; };
 	std::vector<Sized> found;
 	for(const PawnImportEntry &e : entries){
@@ -11818,6 +12293,8 @@ ImportPawnSource(const std::string &rawSource, const char *path, int *numSkipped
 	gPawnStringDefines.clear();
 	gPawnUnresolvedMacros.clear();
 	pawnCollectStringDefines(source, gPawnStringDefines);
+	gPawnNumericDefines.clear();
+	pawnCollectNumericDefines(source, gPawnNumericDefines);
 	if(numSkipped)
 		*numSkipped = 0;
 	if(!isSA()){
@@ -12023,6 +12500,14 @@ ImportPawnSource(const std::string &rawSource, const char *path, int *numSkipped
 				properties.drawDistance = e.drawDistance;
 				properties.streamDistance = e.streamDistance;
 				properties.virtualWorld = e.world;
+				if(e.moves && e.elementKind == SAMP_ELEMENT_OBJECT && !e.isVehicle){
+					properties.moveEnabled = true;
+					properties.moveOffset = { e.moveTo[0] - e.x, e.moveTo[1] - e.y, e.moveTo[2] - e.z };
+					properties.moveSpeed = e.moveSpeed;
+					properties.moveRotates = e.moveRotates;
+					if(e.moveRotates)
+						properties.moveRotation = { e.moveRotation[0], e.moveRotation[1], e.moveRotation[2] };
+				}
 				SetObjectPawnProperties(inst, properties, false);
 			}
 			createdForEntry[i] = inst;
@@ -12442,6 +12927,14 @@ ImportPrefabAtEx(const char *path, rw::V3d spawnPos, float heading, const char *
 		ObjectPawnProperties properties = entries[i].properties;
 		if(properties.name[0] && FindObjectByPawnName(properties.name, created[i]))
 			properties.name[0] = '\0';
+		// A turned prefab turns where its objects move to.
+		if(properties.moveEnabled && heading != 0.0f){
+			float r = heading * (float)M_PI / 180.0f, c = cosf(r), s = sinf(r);
+			rw::V3d o = properties.moveOffset;
+			properties.moveOffset = { o.x * c - o.y * s, o.x * s + o.y * c, o.z };
+			if(properties.moveRotates)
+				properties.moveRotation.z += heading;
+		}
 		if(properties.elementKind == SAMP_ELEMENT_NPC &&
 		   FindNpcByName(properties.npcName, created[i]))
 			MakeUniqueNpcName(properties.npcName, properties.npcName, sizeof(properties.npcName));

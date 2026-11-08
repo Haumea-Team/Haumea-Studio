@@ -74,6 +74,11 @@ SOURCES = {
 	'namaka.cpp': ['namaka'],
 	'namaka.h': ['namaka'],
 	'checkpoints.cpp': ['checkpoint_types', 'el_checkpoint'],
+	'haumea_races_inc.h': ['checkpoint_types', 'el_checkpoint', 'roundtrip', 'test_in_game'],
+	'haumea_races.inc': [],	# compiled by test_races.py on the synthetic run
+	'gen_races_inc.py': [],
+	'anim_flags.h': ['el_actor', 'el_npc'],
+	'gen_anim_flags.py': [],
 	'checkpoints.h': ['checkpoint_types', 'el_checkpoint'],
 	'maptools.cpp': ['map_tools', 'line_feedback', 'coordinate_pin', 'pin_alignment', 'xml_pins'],
 	'radarart.cpp': ['radar_art', 'roundtrip'],

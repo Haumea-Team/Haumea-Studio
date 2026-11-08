@@ -25,6 +25,7 @@ namespace {
 
 std::vector<ModelMeta> gMeta;	// by model id
 std::unordered_set<std::string> gDynamic;	// object.dat's names
+std::unordered_set<std::string> gExplosive;	// the ones whose "causes explosion" column is set
 std::vector<bool> gLodTarget;	// models that are another's far version
 
 struct MetaZone { std::string name; int city; };
@@ -145,20 +146,29 @@ readDetails(int id)
 // ---- What the game files say ----
 
 std::unordered_set<std::string>
-readDynamicNames(void)
+readDynamicNames(std::unordered_set<std::string> *explosive)
 {
-	// data/object.dat: one line per model that moves when hit.
+	// data/object.dat: one line per model that moves when hit. Column L
+	// (the 12th) is "causes explosion": barrels, petrol pumps, SAM sites.
 	std::unordered_set<std::string> names;
 	FILE *f = fopen(GamePath("data/object.dat").c_str(), "rb");
 	if(f == nil)
 		return names;
 	char line[512];
 	while(fgets(line, sizeof(line), f)){
-		char name[64];
-		if(line[0] == ';' || line[0] == '*' || sscanf(line, "%63s", name) != 1)
+		if(line[0] == ';' || line[0] == '*' || line[0] == '#')
 			continue;
-		for(char *c = name; *c; c++) *c = (char)tolower((unsigned char)*c);
+		char *fields[13];
+		int n = 0;
+		for(char *t = strtok(line, " \t,\r\n"); t && n < 13; t = strtok(nil, " \t,\r\n"))
+			fields[n++] = t;
+		if(n == 0 || strlen(fields[0]) > 63)
+			continue;
+		std::string name(fields[0]);
+		for(char &c : name) c = (char)tolower((unsigned char)c);
 		names.insert(name);
+		if(explosive && n > 11 && atoi(fields[11]) != 0)
+			explosive->insert(name);
 	}
 	fclose(f);
 	return names;
@@ -302,6 +312,7 @@ fillModel(int id)
 	m.source = IsCustomModel(id) ? MODEL_SOURCE_CUSTOM : SampLoader::IsSampModel(id) ? MODEL_SOURCE_SAMP :
 		MODEL_SOURCE_GTA;
 	m.dynamic = gDynamic.count(name) != 0;
+	m.explosive = gExplosive.count(name) != 0;
 	m.breakable = obj->m_isDamageable;
 	m.timed = obj->m_isTimed;
 	m.timeOn = obj->m_timeOn;
@@ -334,7 +345,8 @@ BuildModelMeta(void)
 	gDetailsNext = 0;
 	gWorkspaceScanned.clear();
 	gOpenMapSeq = 0xFFFFFFFFu;
-	gDynamic = readDynamicNames();
+	gExplosive.clear();
+	gDynamic = readDynamicNames(&gExplosive);
 	gLodTarget.assign(NUMOBJECTDEFS, false);
 	for(int id = 0; id < NUMOBJECTDEFS; id++)
 		if(GetObjectDef(id)){
@@ -508,7 +520,7 @@ DumpModelMeta(const char *path)
 	if(f == nil)
 		return -1;
 	fputs("id\tname\tcategory\tsource\tide\ttxd\twidth\tdepth\theight\tcollision\tlod\thas_lod\tdraw_distance\t"
-		"dynamic\tbreakable\ttimed\tanimated\tupgrade\tinterior\talpha\tplacements\tcities\tzones\tpolygons\tmaterials\t"
+		"dynamic\texplosive\tbreakable\ttimed\tanimated\tupgrade\tinterior\talpha\tplacements\tcities\tzones\tpolygons\tmaterials\t"
 		"textures\n", f);
 	int n = 0;
 	for(int id = 0; id < (int)gMeta.size(); id++){
@@ -530,10 +542,10 @@ DumpModelMeta(const char *path)
 			TxdDef *txd = GetTxdDef(slot);
 			slot = txd ? txd->parentId : -1;
 		}
-		fprintf(f, "%d\t%s\t%s\t%s\t%s\t%s\t%.2f\t%.2f\t%.2f\t%d\t%d\t%d\t%.0f\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%s\t%s\t%d\t%d\t%d\n",
+		fprintf(f, "%d\t%s\t%s\t%s\t%s\t%s\t%.2f\t%.2f\t%.2f\t%d\t%d\t%d\t%.0f\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%s\t%s\t%d\t%d\t%d\n",
 			PawnModelId(id), obj->m_name, category >= 0 && category < NUM_OBJ_CATEGORIES ? objCategories[category].name : "",
 			GetModelSourceName(m.source), m.ideFile, m.txdName, m.width, m.depth, m.height, m.hasCollision,
-			m.isLod, m.hasLod, m.drawDistance, m.dynamic, m.breakable, m.timed, m.animated, m.upgrade,
+			m.isLod, m.hasLod, m.drawDistance, m.dynamic, m.explosive, m.breakable, m.timed, m.animated, m.upgrade,
 			m.interior, m.alpha, m.placements, cities.c_str(), zones.c_str(), m.polygons, m.materials, textures);
 		n++;
 	}

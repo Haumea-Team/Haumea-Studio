@@ -23,6 +23,7 @@ struct ModelMeta
 	float drawDistance;
 	int source;	// ModelSource
 	bool dynamic;	// in object.dat: it moves when hit
+	bool explosive;	// object.dat's "causes explosion": it blows up when shot or hit
 	bool breakable, timed, animated, upgrade, vehicle, skin;
 	bool interior;	// defined in an interior IDE
 	bool building;	// filed under Buildings and land, and stays put

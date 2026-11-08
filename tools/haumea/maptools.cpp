@@ -9,6 +9,7 @@
 #include "shortcuts.h"
 
 #include <math.h>
+#include <random>
 #include <stdio.h>
 #include <string.h>
 #include <algorithm>
@@ -212,6 +213,14 @@ reselect(const std::vector<ObjectInst*> &objs)
 
 // ---- array ----------------------------------------------------------------
 
+// Copies made, not counting the selection: count, or a grid of rows lines
+// of count + 1 less the selection itself.
+static int
+arrayCopies(const MapArrayParams &params)
+{
+	return params.radial || params.rows <= 1 ? params.count : (params.count + 1) * params.rows - 1;
+}
+
 static bool
 arrayCopyTransform(const MapArrayParams &params, const rw::V3d &centre, int k,
 	rw::V3d *pos, rw::Quat *rot)
@@ -221,8 +230,10 @@ arrayCopyTransform(const MapArrayParams &params, const rw::V3d &centre, int k,
 			params.angle / params.count;
 		turnAround(params.centre, worldRotation({ 0.0f, 0.0f, step * k }), pos, rot);
 	}else{
-		turnAround(centre, worldRotation(scale(params.rotate, (float)k)), pos, rot);
-		*pos = add(*pos, scale(params.offset, (float)k));
+		int rows = std::max(1, params.rows);
+		int column = rows > 1 ? k % (params.count + 1) : k, row = rows > 1 ? k / (params.count + 1) : 0;
+		turnAround(centre, worldRotation(scale(params.rotate, (float)column)), pos, rot);
+		*pos = add(*pos, add(scale(params.offset, (float)column), scale(params.rowOffset, (float)row)));
 	}
 	return true;
 }
@@ -236,7 +247,11 @@ arrayCheck(const MapArrayParams &params, const std::vector<ObjectInst*> &objs, s
 		if(error) *error = N_("make at least one copy");
 		return false;
 	}
-	if((long long)params.count * objs.size() > MAX_TOOL_OBJECTS){
+	if(!params.radial && (params.rows < 1 || params.rows > 500)){
+		if(error) *error = "rows is 1 to 500";
+		return false;
+	}
+	if((long long)arrayCopies(params) * objs.size() > MAX_TOOL_OBJECTS){
 		if(error) *error = "that would make more than " + std::to_string((int)MAX_TOOL_OBJECTS) + " objects";
 		return false;
 	}
@@ -253,7 +268,7 @@ MapToolsArrayPreview(const MapArrayParams &params, std::vector<rw::V3d> &positio
 	if(!arrayCheck(params, objs, error))
 		return false;
 	rw::V3d centre = groupCentre(objs);
-	for(int k = 1; k <= params.count; k++)
+	for(int k = 1; k <= arrayCopies(params); k++)
 		for(size_t i = 0; i < objs.size(); i++){
 			rw::V3d pos = objs[i]->m_translation;
 			rw::Quat rot = objs[i]->m_rotation;
@@ -274,7 +289,7 @@ MapToolsArray(const MapArrayParams &params, std::string *error)
 	std::vector<ObjectInst*> all = originals;
 	int made = 0;
 	UndoBeginGroup();
-	for(int k = 1; k <= params.count; k++){
+	for(int k = 1; k <= arrayCopies(params); k++){
 		// A copy of the originals in place, then moved to copy k.
 		reselect(originals);
 		if(DuplicateSelected() <= 0)
@@ -294,6 +309,89 @@ MapToolsArray(const MapArrayParams &params, std::string *error)
 	if(made == 0 && error)
 		*error = N_("could not copy the selection");
 	return made > 0 ? made : -1;
+}
+
+// ---- duplicate offset -----------------------------------------------------
+
+static MapCloneOffset gCloneOffset;
+
+MapCloneOffset &
+MapToolsCloneOffset(void)
+{
+	return gCloneOffset;
+}
+
+int
+MapToolsDuplicate(std::string *error)
+{
+	UndoBeginGroup();
+	int made = DuplicateSelected();
+	std::vector<ObjectInst*> copies = selectedObjects();
+	const MapCloneOffset &o = gCloneOffset;
+	if(made > 0 && o.enabled && !copies.empty()){
+		// One sample for the whole duplicate, so a group stays together.
+		static std::mt19937 random(std::random_device{}());
+		float v[6];
+		for(int i = 0; i < 6; i++){
+			float lo = std::min(o.low[i], o.high[i]), hi = std::max(o.low[i], o.high[i]);
+			v[i] = !o.random ? o.fixed[i] : lo == hi ? lo : std::uniform_real_distribution<float>(lo, hi)(random);
+			if(!std::isfinite(v[i]))
+				v[i] = 0.0f;
+		}
+		rw::V3d move = { v[0], v[1], v[2] };
+		rw::Quat turn = worldRotation({ v[3], v[4], v[5] });
+		if(o.local){
+			// The first object's axes: its world rotation is its stored one conjugated.
+			rw::Quat axes = rw::conj(copies[0]->m_rotation);
+			move = rw::rotate(move, axes);
+			turn = rw::normalize(rw::mult(axes, rw::mult(turn, rw::conj(axes))));
+		}
+		rw::V3d centre = groupCentre(copies);
+		for(ObjectInst *inst : copies){
+			rw::V3d pos = inst->m_translation;
+			rw::Quat rot = inst->m_rotation;
+			turnAround(centre, turn, &pos, &rot);
+			placeObject(inst, add(pos, move), rot);
+		}
+		reselect(copies);
+	}
+	UndoEndGroup();
+	if(made <= 0 && error)
+		*error = N_("could not copy the selection");
+	return made > 0 ? made : -1;
+}
+
+static void
+cloneOffsetSection(void)
+{
+	MapCloneOffset &o = gCloneOffset;
+	ImGui::Checkbox(_("Offset each duplicate"), &o.enabled);
+	ImGui::SetItemTooltip(_("Duplicate (Ctrl+D) moves and turns the copies by this much."));
+	if(!o.enabled)
+		return;
+	int mode = o.random ? 1 : 0;
+	static const char *modes[] = { N_("Fixed"), N_("Random") };
+	if(UiCombo(_("Mode##cloneoffset"), &mode, modes, IM_ARRAYSIZE(modes)))
+		o.random = mode == 1;
+	ImGui::SetItemTooltip(_("Random: a new amount within the ranges each time."));
+	ImGui::Checkbox(_("Along the object's own axes"), &o.local);
+	ImGui::SetItemTooltip(_("Off: world X, Y and Z. On: the first selected object's axes."));
+	if(!o.random){
+		ImGui::InputFloat3(_("Move##cloneoffset"), o.fixed, "%.3f");
+		ImGui::InputFloat3(_("Turn##cloneoffset"), o.fixed + 3, "%.2f");
+	}else{
+		static const char *labels[6] = { "X", "Y", "Z", "RX", "RY", "RZ" };
+		for(int i = 0; i < 6; i++){
+			ImGui::PushID(i);
+			float range[2] = { o.low[i], o.high[i] };
+			if(ImGui::InputFloat2(labels[i], range, i < 3 ? "%.3f" : "%.2f")){
+				o.low[i] = range[0];
+				o.high[i] = range[1];
+			}
+			ImGui::PopID();
+		}
+		ImGui::TextDisabled(_("From and to: metres for X, Y and Z, degrees for the turns."));
+	}
 }
 
 // ---- mirror ---------------------------------------------------------------
@@ -930,6 +1028,13 @@ arraySection(const std::vector<ObjectInst*> &objs)
 		ImGui::InputFloat3(_("Rotate"), &params.rotate.x, "%.2f");
 		ImGui::SetItemTooltip(_("How much each copy turns from the one before, in degrees\n"
 			"around the world X, Y and Z axes, about the selection's centre."));
+		ImGui::InputInt(_("Rows"), &params.rows);
+		params.rows = clamp(params.rows, 1, 500);
+		ImGui::SetItemTooltip(_("Repeats the whole line for a grid. 1 is a single line."));
+		if(params.rows > 1){
+			ImGui::InputFloat3(_("Row offset"), &params.rowOffset.x, "%.3f");
+			ImGui::SetItemTooltip(_("How far each row moves from the one before, in metres."));
+		}
 	}else{
 		ImGui::InputFloat3(_("Centre"), &params.centre.x, "%.3f");
 		ImGui::SetItemTooltip(_("The point the copies go around (a vertical axis)."));
@@ -1232,6 +1337,8 @@ MapToolsPanel(void)
 		arraySection(objs);
 	if(ImGui::CollapsingHeader(L("Mirror")))
 		mirrorSection(objs);
+	if(ImGui::CollapsingHeader(L("Duplicate offset"), gCloneOffset.enabled ? ImGuiTreeNodeFlags_DefaultOpen : 0))
+		cloneOffsetSection();
 	if(ImGui::CollapsingHeader(L("Align & distribute")))
 		alignSection(objs);
 	if(ImGui::CollapsingHeader(L("Drop & copy as Pawn")))

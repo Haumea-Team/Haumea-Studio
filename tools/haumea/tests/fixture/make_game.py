@@ -384,6 +384,12 @@ def main(target):
 	(root / 'data' / 'gta.dat').write_text('IDE DATA\\MAPS\\FIXTURE.IDE\nCOLFILE 0 MODELS\\FIXTURE.COL\n'
 	                                       'IPL DATA\\MAPS\\FIXTURE.IPL\n')
 	(root / 'data' / 'water.dat').write_text('processed\n')
+	# object.dat as the game writes it: names end in a comma, column L (the
+	# 12th) is "causes explosion". barrel4 blows up; sm_des_cactiigrp moves only.
+	(root / 'data' / 'object.dat').write_text(
+		'; (L) Causes Explosion\n'
+		'barrel4,\t100.0,\t100.0\t0.99,\t0.05,\t50.0,\t0.0,\t10.0,\t20,\t0,\t1,\t1,\t2,\t0.0, 0.0, 0.0,\texplosion_medium\n'
+		'sm_des_cactiigrp\t50.0,\t50.0\t0.99,\t0.05,\t50.0,\t0.0,\t1.0,\t0,\t0,\t1,\t0,\t0,\t0.0, 0.0, 0.0,\tnone\n')
 	# One clear midday for every weather and hour (8 x 23 lines), so objects
 	# the timecycle lights (material colours) aren't black: ambient, object
 	# ambient, sun, sky, ..., far clip 800, fog start 100, then 1.0 sun scale.

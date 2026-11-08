@@ -4,6 +4,8 @@
 #include <math.h>
 #include <string.h>
 #include <algorithm>
+#include <string>
+#include <vector>
 
 // Checkpoints drawn the way the SA-MP client shows them, with the game's own
 // marker models as C3dMarkers places them (gta-reversed Checkpoint.cpp,
@@ -292,17 +294,104 @@ flagSprite(rw::V3d centre, float half, rw::RGBA tint)
 	rw::SetRenderStatePtr(rw::TEXTURERASTER, nil);
 }
 
+// ---- Race preview ----
+
+// One player's way round a race, as haumea_races.inc runs it.
+struct RaceSimulation
+{
+	int count = 0, target = -1, mode = SAMP_RACE_POINT_TO_POINT, laps = 1, lap = 1;
+	bool started = false;
+
+	bool active(void) const { return target >= 0; }
+	bool finalTarget(void) const
+	{
+		return active() && (mode == SAMP_RACE_POINT_TO_POINT ? target == count - 1 :
+			target == 0 && started && lap == laps);
+	}
+	int type(int type) const
+	{
+		if(type == SAMP_RACE_CP_AUTO_GROUND) return finalTarget() ? 1 : 0;
+		if(type == SAMP_RACE_CP_AUTO_AIR) return finalTarget() ? 4 : 3;
+		return std::max(0, std::min(8, type));
+	}
+	void advance(void)
+	{
+		if(!active())
+			return;
+		if(finalTarget()){
+			target = -1;
+			return;
+		}
+		if(mode == SAMP_RACE_CIRCUIT && target == 0){
+			if(started)
+				lap++;
+			started = true;
+		}
+		target = (target + 1) % count;
+	}
+};
+
+static std::string gPreviewRace;
+static RaceSimulation gPreview;
+
+bool
+StartRacePreview(const char *raceName)
+{
+	std::vector<ObjectInst*> race;
+	GetRaceCheckpoints(raceName, race);
+	if(race.empty())
+		return false;
+	const ObjectPawnProperties *p = GetObjectPawnProperties(race[0]);
+	gPreview = RaceSimulation();
+	gPreview.count = (int)race.size();
+	gPreview.mode = p->cpRaceMode == SAMP_RACE_CIRCUIT && race.size() >= 2 ? SAMP_RACE_CIRCUIT : SAMP_RACE_POINT_TO_POINT;
+	gPreview.laps = gPreview.mode == SAMP_RACE_CIRCUIT ? std::max(1, p->cpRaceLaps) : 1;
+	gPreview.target = 0;
+	gPreviewRace = raceName;
+	return true;
+}
+
+void StopRacePreview(void) { gPreview.target = -1; gPreviewRace.clear(); }
+void AdvanceRacePreview(void) { gPreview.advance(); if(!gPreview.active()) gPreviewRace.clear(); }
+bool RacePreviewActive(void) { return gPreview.active() && !gPreviewRace.empty(); }
+const char *RacePreviewRace(void) { return gPreviewRace.c_str(); }
+int RacePreviewTarget(void) { return gPreview.target; }
+int RacePreviewLap(void) { return gPreview.lap; }
+int RacePreviewLaps(void) { return gPreview.laps; }
+int RacePreviewCount(void) { return gPreview.count; }
+
+// The previewed race's checkpoint for inst: -1 if it isn't the target, the
+// type to show if it is, and where the one after it is.
+static int
+previewTypeFor(const ObjectInst *inst, const std::vector<ObjectInst*> &race, rw::V3d *next, bool *hasNext)
+{
+	if(gPreview.target < 0 || gPreview.target >= (int)race.size() || race[gPreview.target] != inst)
+		return -1;
+	RaceSimulation after = gPreview;
+	after.advance();
+	*hasNext = after.active() && after.target < (int)race.size();
+	if(*hasNext)
+		*next = race[after.target]->m_translation;
+	return gPreview.type(GetObjectPawnProperties(inst)->cpRaceType);
+}
+
 // ---- Checkpoints ----
+
+// While previewing a race: the shown checkpoint's type and the one after it.
+static int gDrawType = -1;
+static bool gDrawHasNext;
+static rw::V3d gDrawNext;
 
 // Where a race checkpoint points: at the next one, or north for the last.
 static rw::V3d
 pointing(const ObjectInst *inst)
 {
-	ObjectInst *next = GetNextRaceCheckpoint(inst);
-	if(next == nil)
+	ObjectInst *nextInst = gDrawType >= 0 ? nil : GetNextRaceCheckpoint(inst);
+	if(gDrawType >= 0 ? !gDrawHasNext : nextInst == nil)
 		return { 0.0f, 1.0f, 0.0f };
-	rw::V3d d = { next->m_translation.x - inst->m_translation.x, next->m_translation.y - inst->m_translation.y,
-		next->m_translation.z - inst->m_translation.z };
+	rw::V3d next = gDrawType >= 0 ? gDrawNext : nextInst->m_translation;
+	rw::V3d d = { next.x - inst->m_translation.x, next.y - inst->m_translation.y,
+		next.z - inst->m_translation.z };
 	float length = sqrtf(d.x * d.x + d.y * d.y + d.z * d.z);
 	return length > 0.01f ? rw::V3d{ d.x / length, d.y / length, d.z / length } : rw::V3d{ 0.0f, 1.0f, 0.0f };
 }
@@ -341,7 +430,7 @@ DrawCheckpointMarker(const ObjectInst *inst, float time, const rw::RGBA *pickCol
 {
 	const ObjectPawnProperties *p = GetObjectPawnProperties(inst);
 	bool race = p->cpKind == SAMP_CHECKPOINT_RACE;
-	int type = race ? std::max(0, std::min(8, p->cpRaceType)) : -1;
+	int type = race ? (gDrawType >= 0 ? gDrawType : GetRaceCheckpointShownType(inst)) : -1;
 	float size = std::max(p->cpSize, 0.5f);
 	rw::V3d at = inst->m_translation;
 	bool picking = pickColour != nil;
@@ -433,13 +522,25 @@ renderMarkers(float time, bool picking)
 	int32 vertexAlpha = rw::GetRenderState(rw::VERTEXALPHA), zwrite = rw::GetRenderState(rw::ZWRITEENABLE);
 	int32 fog = rw::GetRenderState(rw::FOGENABLE), cull = rw::GetRenderState(rw::CULLMODE);
 	setMarkerState(picking);
+	std::vector<ObjectInst*> previewed;
+	if(RacePreviewActive())
+		GetRaceCheckpoints(RacePreviewRace(), previewed);
 	for(CPtrNode *n = instances.first; n; n = n->next){
 		ObjectInst *inst = (ObjectInst*)n->item;
 		if(inst->m_isDeleted || inst->m_editorHidden || GetSampElementKind(inst) != SAMP_ELEMENT_CHECKPOINT)
 			continue;
 		rw::RGBA id = { (uint8)(inst->m_id & 0xFF), (uint8)(inst->m_id >> 8 & 0xFF), (uint8)(inst->m_id >> 16 & 0xFF), 255 };
+		gDrawType = -1;
+		// A previewed race shows only the checkpoint to reach; the rest can
+		// still be picked.
+		if(!previewed.empty() && std::find(previewed.begin(), previewed.end(), inst) != previewed.end()){
+			gDrawType = previewTypeFor(inst, previewed, &gDrawNext, &gDrawHasNext);
+			if(gDrawType < 0 && !picking)
+				continue;
+		}
 		DrawCheckpointMarker(inst, time, picking ? &id : nil);
 	}
+	gDrawType = -1;
 	rw::SetRenderState(rw::VERTEXALPHA, vertexAlpha);
 	rw::SetRenderState(rw::ZWRITEENABLE, zwrite);
 	rw::SetRenderState(rw::FOGENABLE, fog);

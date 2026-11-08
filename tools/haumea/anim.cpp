@@ -2,6 +2,7 @@
 #include "haumea.h"
 #include "anim.h"
 #include "anim_ids.h"
+#include "anim_flags.h"
 
 #include <string.h>
 #include <stdio.h>
@@ -522,6 +523,17 @@ AnimFindInLibrary(int lib, const char *name)
 		if(rw::strcmp_ci(l->clips[i].name, name) == 0)
 			return (int)i;
 	return -1;
+}
+
+int
+AnimPedProblem(const char *lib, const char *name)
+{
+	if(lib == nil || name == nil)
+		return ANIM_PED_OK;
+	for(const AnimFlagEntry &e : animFlagEntries)
+		if(rw::strcmp_ci(e.lib, lib) == 0 && rw::strcmp_ci(e.name, name) == 0)
+			return e.objectOnly ? ANIM_PED_OBJECT_ONLY : ANIM_PED_DEFORMS;
+	return ANIM_PED_OK;
 }
 
 float

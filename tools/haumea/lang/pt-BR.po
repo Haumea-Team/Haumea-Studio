@@ -72,6 +72,10 @@ msgid "%.0f FPS  /  %.1f ms"
 msgstr "%.0f FPS  /  %.1f ms"
 
 #, c-format
+msgid "%.2f m in %.2f s"
+msgstr "%.2f m em %.2f s"
+
+#, c-format
 msgid "%.3f units | dX %.3f  dY %.3f  dZ %.3f"
 msgstr "%.3f unidades | dX %.3f  dY %.3f  dZ %.3f"
 
@@ -248,6 +252,10 @@ msgid "%d models | %d instances"
 msgstr "%d modelos | %d instâncias"
 
 #, c-format
+msgid "%d object(s) explode when shot or hit (object.dat), such as barrels and petrol pumps. Each player can blow them up on their own screen."
+msgstr "%d objeto(s) explodem ao levar tiro ou batida (object.dat), como barris e bombas de gasolina. Cada jogador pode explodi-los na própria tela."
+
+#, c-format
 msgid "%d object(s) use models the editor does not have (%s). Models from other mods are not available."
 msgstr "%d objeto(s) usam modelos que o editor não tem (%s). Modelos de outros mods não estão disponíveis."
 
@@ -308,6 +316,10 @@ msgid "%d per-player or streamed gang zone(s): CreatePlayerGangZone only compile
 msgstr "%d gang zone(s) por jogador ou com streamer: o CreatePlayerGangZone só compila e funciona no open.mp, não em um servidor SA-MP 0.3.7. Para o 0.3.7, defina-as como Global (Informações do objeto > Mostrado como, ou o Mostrado como da arte de radar)."
 
 #, c-format
+msgid "%d playable race(s) need haumea_races.inc, which isn't in the workspace's includes: without it the map compiles but has no races. A race checkpoint's settings can save it there."
+msgstr "%d corrida(s) jogável(is) precisam do haumea_races.inc, que não está nos includes do workspace: sem ele o mapa compila, mas fica sem corridas. As opções de um race checkpoint podem salvá-lo lá."
+
+#, c-format
 msgid "%d player textdraws, over the limit of %d per player."
 msgstr "%d textdraws de jogador, acima do limite de %d por jogador."
 
@@ -366,6 +378,10 @@ msgstr "%d textura(s)"
 #, c-format
 msgid "%d trailing bytes ignored"
 msgstr "%d bytes finais ignorados"
+
+#, c-format
+msgid "%d tree(s) or palm(s) tilted on X or Y: the game sways them in the wind and stands them upright, so the tilt doesn't show in game."
+msgstr "%d árvore(s) ou palmeira(s) inclinadas em X ou Y: o jogo as balança com o vento e as deixa em pé, então a inclinação não aparece no jogo."
 
 #, c-format
 msgid "%d vehicle ids (%d of them for trains, 4 each), over the limit of %d."
@@ -584,12 +600,24 @@ msgid "%s lists every keyboard shortcut; change them in Preferences."
 msgstr "%s lista todos os atalhos de teclado; mude-os em Preferências."
 
 #, c-format
+msgid "%s moves 0 m and doesn't turn, so its MoveObject does nothing."
+msgstr "%s se move 0 m e não gira, então o MoveObject dele não faz nada."
+
+#, c-format
 msgid "%s only shows inside area \"%s\", but they are in different virtual worlds or interiors: no player is ever in both."
 msgstr "%s só aparece dentro da área \"%s\", mas eles estão em mundos virtuais ou interiores diferentes: nenhum jogador fica nos dois."
 
 #, c-format
 msgid "%s pastes objects exactly where they were copied."
 msgstr "%s cola os objetos exatamente onde foram copiados."
+
+#, c-format
+msgid "%s plays %s / %s, which moves only an object's parts: the skin stands still."
+msgstr "%s toca %s / %s, que move só as partes de um objeto: a skin fica parada."
+
+#, c-format
+msgid "%s plays %s / %s, which twists the skin out of shape."
+msgstr "%s toca %s / %s, que deforma a skin."
 
 #, c-format
 msgid "%s plays driver recording %s but isn't driving a vehicle: open.mp reports it playing, yet the NPC never moves. Put it in a vehicle as the driver."
@@ -836,6 +864,9 @@ msgstr "1 Aharoni"
 msgid "1 for a solid bar. Each segment is a textdraw."
 msgstr "1 para uma barra sólida. Cada segmento é um textdraw."
 
+msgid "10  Automatic air"
+msgstr "10  Aéreo automático"
+
 msgid "10 - Unknown"
 msgstr "10 - Desconhecido"
 
@@ -998,6 +1029,9 @@ msgstr "8  Some sem efeito"
 
 msgid "8 - Unknown"
 msgstr "8 - Desconhecido"
+
+msgid "9  Automatic (normal, finish at the end)"
+msgstr "9  Automático (normal, chegada no fim)"
 
 msgid "9 - Unknown"
 msgstr "9 - Desconhecido"
@@ -1241,6 +1275,9 @@ msgstr "Alinhar seleção à régua"
 msgid "Align to surface"
 msgstr "Alinhar à superfície"
 
+msgid "Aligned"
+msgstr "Alinhadas"
+
 #, c-format
 msgid "Aligned %d instance(s) to ground"
 msgstr "%d instância(s) alinhada(s) ao chão"
@@ -1279,6 +1316,9 @@ msgstr "Ao longo de uma linha"
 
 msgid "Along its length"
 msgstr "No sentido do comprimento"
+
+msgid "Along the object's own axes"
+msgstr "Nos eixos do próprio objeto"
 
 msgid "Also"
 msgstr "Também"
@@ -1394,6 +1434,9 @@ msgstr "Qualquer colisão"
 
 msgid "Any detail"
 msgstr "Qualquer detalhe"
+
+msgid "Any tiling"
+msgstr "Qualquer repetição"
 
 msgid "Appearance"
 msgstr "Aparência"
@@ -1576,8 +1619,14 @@ msgstr "O COL gerado automaticamente não se ligou ao nome de modelo %s."
 msgid "Auto-generated COL from DFF geometry (%d -> %d tris, %d -> %d verts)."
 msgstr "COL gerado automaticamente a partir da geometria do DFF (%d -> %d triângulos, %d -> %d vértices)."
 
-msgid "Automatic handles"
-msgstr "Alças automáticas"
+msgid "Automatic"
+msgstr "Automáticas"
+
+msgid "Automatic uses OpenGL, and Direct3D 9 when OpenGL doesn't start on this PC."
+msgstr "Automático usa OpenGL, e Direct3D 9 quando o OpenGL não inicia neste PC."
+
+msgid "Automatic: smooth through the neighbours. Aligned: opposite each other, each with its own length. Free: independent. Corner: straight at the neighbours."
+msgstr "Automáticas: suaves entre os vizinhos. Alinhadas: opostas, cada uma com seu comprimento. Livres: independentes. Canto: retas para os vizinhos."
 
 msgid "Autosave unsaved maps"
 msgstr "Salvar automaticamente mapas não salvos"
@@ -1634,6 +1683,9 @@ msgstr "Faixas"
 
 msgid "Bank"
 msgstr "Inclinação lateral"
+
+msgid "Banks the objects at this point, easing to the next point's tilt."
+msgstr "Inclina os objetos neste ponto, suavizando até a inclinação do próximo."
 
 msgid "Bar (0.3.7-R2)"
 msgstr "Bar (0.3.7-R2)"
@@ -2031,6 +2083,10 @@ msgid "Checkpoint  size %.1f"
 msgstr "Checkpoint  tamanho %.1f"
 
 #, c-format
+msgid "Checkpoint %d of %d"
+msgstr "Checkpoint %d de %d"
+
+#, c-format
 msgid "Checkpoint %d of %d. Each points at the next one up; the last at none."
 msgstr "Checkpoint %d de %d. Cada um aponta para o próximo; o último, para nenhum."
 
@@ -2115,6 +2171,12 @@ msgstr ""
 
 msgid "Circle outline"
 msgstr "Contorno de círculo"
+
+msgid "Circuit"
+msgstr "Circuito"
+
+msgid "Circuit: the last checkpoint leads back to the first, lap after lap."
+msgstr "Circuito: o último checkpoint leva de volta ao primeiro, volta após volta."
 
 #, c-format
 msgid "Class %d  skin %d"
@@ -2528,6 +2590,9 @@ msgstr "Copiar transformação"
 msgid "Copy: %s"
 msgstr "Copiar: %s"
 
+msgid "Corner"
+msgstr "Canto"
+
 msgid "Corner radius"
 msgstr "Raio dos cantos"
 
@@ -2584,6 +2649,10 @@ msgstr "Não foi possível salvar os textdraws: %s"
 msgid "Could not start omp-server"
 msgstr "Não foi possível iniciar o omp-server"
 
+#, c-format
+msgid "Could not write %s"
+msgstr "Não foi possível gravar %s"
+
 msgid "Couldn't build export paths."
 msgstr "Não foi possível montar os caminhos de exportação."
 
@@ -2627,6 +2696,9 @@ msgstr "Não foi possível salvar o prefab"
 
 msgid "Couldn't snapshot files for rollback."
 msgstr "Não foi possível fazer uma cópia dos arquivos para reverter."
+
+msgid "Count"
+msgstr "Quantidade"
 
 msgid "Count / click"
 msgstr "Quantidade / clique"
@@ -3121,8 +3193,14 @@ msgstr "Despejar depuração do trânsito de prévia"
 msgid "Duplicate"
 msgstr "Duplicar"
 
+msgid "Duplicate (Ctrl+D) moves and turns the copies by this much."
+msgstr "Duplicar (Ctrl+D) move e gira as cópias nesta medida."
+
 msgid "Duplicate cleanup"
 msgstr "Limpar duplicados"
+
+msgid "Duplicate offset"
+msgstr "Deslocamento ao duplicar"
 
 msgid "Duplicate selection"
 msgstr "Duplicar seleção"
@@ -3271,6 +3349,9 @@ msgstr "Sair do modo de colocação"
 
 msgid "Exited"
 msgstr "Encerrado"
+
+msgid "Explodes"
+msgstr "Explode"
 
 msgid "Explosion"
 msgstr "Explosão"
@@ -3532,8 +3613,14 @@ msgstr "Punho"
 msgid "Fit"
 msgstr "Ajustar"
 
+msgid "Fit to selection"
+msgstr "Ajustar à seleção"
+
 msgid "Fit to this many zones"
 msgstr "Ajustar a este número de zonas"
+
+msgid "Fixed"
+msgstr "Fixo"
 
 msgid "Flag"
 msgstr "Bandeira"
@@ -3671,6 +3758,9 @@ msgstr "Enquadrar caminho"
 msgid "Frame rate"
 msgstr "Taxa de quadros"
 
+msgid "Free"
+msgstr "Livres"
+
 msgid "Free endpoint"
 msgstr "Ponta livre"
 
@@ -3689,6 +3779,9 @@ msgid ""
 msgstr ""
 "De um mapa feito antes de os textdraws terem arquivo próprio. São salvos\n"
 "de volta com o mapa como estão; mova-os para cá para editá-los."
+
+msgid "From and to: metres for X, Y and Z, degrees for the turns."
+msgstr "De e até: metros para X, Y e Z, graus para os giros."
 
 msgid "From here"
 msgstr "Daqui"
@@ -3968,6 +4061,9 @@ msgstr "Medianiz"
 msgid "Gym"
 msgstr "Academia"
 
+msgid "Handles"
+msgstr "Alças"
+
 msgid "Hangar doors"
 msgstr "Portas do hangar"
 
@@ -4014,6 +4110,9 @@ msgstr "O Haumea Studio fechou inesperadamente ou teve um erro. Um relatório po
 msgid "Haumea Studio closed unexpectedly or hit errors. Reports can help fix them."
 msgstr "O Haumea Studio fechou inesperadamente ou teve erros. Os relatórios podem ajudar a corrigir."
 
+msgid "Haumea Studio couldn't start its graphics. Update your graphics card's driver (Haumea needs OpenGL 3.3 or Direct3D 9; Windows' basic display driver, Remote Desktop and some virtual machines can't). The details are in haumea.log and haumea.stderr.log in:"
+msgstr "O Haumea Studio não conseguiu iniciar os gráficos. Atualize o driver da sua placa de vídeo (o Haumea precisa de OpenGL 3.3 ou Direct3D 9; o driver de vídeo básico do Windows, a Área de Trabalho Remota e algumas máquinas virtuais não oferecem isso). Os detalhes estão em haumea.log e haumea.stderr.log em:"
+
 msgid "Haumea Studio is free software under the GNU General Public License, version 2 or any later version. It includes components under their own licenses."
 msgstr "Haumea Studio é software livre sob a Licença Pública Geral GNU, versão 2 ou qualquer versão posterior. Ele inclui componentes sob as próprias licenças."
 
@@ -4055,6 +4154,9 @@ msgstr "Altura"
 
 msgid "Height Z (m)"
 msgstr "Altura Z (m)"
+
+msgid "Height offset"
+msgstr "Deslocamento na altura"
 
 msgid "Height shading"
 msgstr "Sombreamento por altura"
@@ -4205,6 +4307,16 @@ msgstr "Como eu..."
 
 msgid "How far each copy moves from the one before, in metres."
 msgstr "Quanto cada cópia se move em relação à anterior, em metros."
+
+msgid "How far each row moves from the one before, in metres."
+msgstr "Quanto cada linha se afasta da anterior, em metros."
+
+msgid ""
+"How far it goes, in metres along the world axes. It follows the object when\n"
+"you move it."
+msgstr ""
+"Até onde ele vai, em metros nos eixos do mundo. Acompanha o objeto quando\n"
+"você o move."
 
 msgid "How far the arrow keys move the selection; Shift moves ten times as far."
 msgstr "Quanto as setas movem a seleção; Shift move dez vezes mais."
@@ -4455,6 +4567,9 @@ msgstr "Modelo de interior"
 msgid "Interiors"
 msgstr "Interiores"
 
+msgid "Into the workspace's qawno/include (or pawno/include), where pawncc finds it."
+msgstr "Na pasta qawno/include (ou pawno/include) do workspace, onde o pawncc o encontra."
+
 msgid "Invalid or too long Pawn map path"
 msgstr "Caminho do mapa Pawn inválido ou longo demais"
 
@@ -4591,6 +4706,13 @@ msgstr "Pousar em objetos"
 
 msgid "Language"
 msgstr "Idioma"
+
+#, c-format
+msgid "Lap %d of %d, checkpoint %d of %d"
+msgstr "Volta %d de %d, checkpoint %d de %d"
+
+msgid "Laps"
+msgstr "Voltas"
 
 msgid "Large (10-50 m)"
 msgstr "Grande (10-50 m)"
@@ -5315,11 +5437,17 @@ msgstr "Mover para um arquivo separado..."
 msgid "Move to artboard"
 msgstr "Mover para a prancheta"
 
+msgid "MoveObject (MoveDynamicObject with the streamer) right after the object is made."
+msgstr "MoveObject (MoveDynamicObject com o streamer) logo depois de o objeto ser criado."
+
 msgid "Moved"
 msgstr "Movidos"
 
 msgid "Movement"
 msgstr "Movimento"
+
+msgid "Moves only an object's parts: a skin stands still."
+msgstr "Move só as partes de um objeto: a skin fica parada."
 
 msgid "Moves the attachment root to its family's bounding-box centre while keeping every child's world position and rotation."
 msgstr "Move a raiz do vínculo para o centro dos limites do conjunto, mantendo a posição e a rotação globais de cada filho."
@@ -5327,8 +5455,14 @@ msgstr "Move a raiz do vínculo para o centro dos limites do conjunto, mantendo 
 msgid "Moves the camera to look at a point: paste x, y, z or a SetPlayerPos line."
 msgstr "Move a câmera para olhar um ponto: cole x, y, z ou uma linha SetPlayerPos."
 
+msgid "Moves the objects across the path, to its right; negative for its left."
+msgstr "Move os objetos para o lado do caminho, à direita; negativo para a esquerda."
+
 msgid "Moves when hit"
 msgstr "Move-se ao ser atingido"
+
+msgid "Moves when the map loads"
+msgstr "Move-se quando o mapa carrega"
 
 msgid "Moving this object updates the offset; moving the parent carries it along."
 msgstr "Mover este objeto atualiza o deslocamento; mover o pai o leva junto."
@@ -5574,6 +5708,9 @@ msgstr ""
 msgid "Next"
 msgstr "Próxima"
 
+msgid "Next checkpoint"
+msgstr "Próximo checkpoint"
+
 msgid "Nickname"
 msgstr "Apelido"
 
@@ -5770,10 +5907,10 @@ msgstr "Culling normal"
 
 msgid ""
 "Normal shows an arrow to the next checkpoint; Finish a flag.\n"
-"The Air types are rings for planes."
+"The Air types are rings for planes. Automatic is Normal until the race's end, then Finish."
 msgstr ""
 "Normal mostra uma seta para o próximo checkpoint; Chegada, uma bandeira.\n"
-"Os tipos Aéreo são anéis para aviões."
+"Os tipos Aéreo são anéis para aviões. Automático é Normal até o fim da corrida, depois Chegada."
 
 msgid "North"
 msgstr "Norte"
@@ -5955,11 +6092,17 @@ msgstr ""
 "Desligado: os das pontas ficam e os espaços entre eles ficam iguais.\n"
 "Ligado: cada um fica a esta distância do anterior, a partir do primeiro."
 
+msgid "Off: world X, Y and Z. On: the first selected object's axes."
+msgstr "Desligado: X, Y e Z do mundo. Ligado: os eixos do primeiro objeto selecionado."
+
 msgid "Offer it again"
 msgstr "Oferecer de novo"
 
 msgid "Offset"
 msgstr "Deslocamento"
+
+msgid "Offset each duplicate"
+msgstr "Deslocar cada duplicata"
 
 msgid "On foot"
 msgstr "A pé"
@@ -6109,6 +6252,9 @@ msgstr "Abrir a porta no meu roteador"
 
 msgid "Open workspace"
 msgstr "Abrir workspace"
+
+msgid "OpenGL didn't start on this PC, so Automatic uses Direct3D 9."
+msgstr "O OpenGL não iniciou neste PC, então Automático usa Direct3D 9."
 
 #, c-format
 msgid "Opened %s"
@@ -6571,6 +6717,9 @@ msgstr "Reproduza um som ou áudio próximo deste ponto."
 msgid "PlayAudioStreamForPlayer. Started for each player in _ShowForPlayer."
 msgstr "PlayAudioStreamForPlayer. Iniciado para cada jogador em _ShowForPlayer."
 
+msgid "Playable race"
+msgstr "Corrida jogável"
+
 msgid "Playback speed in game (4.1 is normal). The editor plays at normal speed."
 msgstr "Velocidade no jogo (4.1 é a normal). O editor toca na velocidade normal."
 
@@ -6642,6 +6791,9 @@ msgstr "Posição do ponto"
 
 msgid "Point settings"
 msgstr "Configurações do ponto"
+
+msgid "Point to point"
+msgstr "Ponto a ponto"
 
 msgid "Points down"
 msgstr "Aponta para baixo"
@@ -6786,8 +6938,14 @@ msgstr "Prévia do movimento"
 msgid "Preview movement walks it in the viewport; the map saves NPC_MoveByPath."
 msgstr "Pré-visualizar movimento o faz andar na viewport; o mapa salva NPC_MoveByPath."
 
+msgid "Preview race"
+msgstr "Prévia da corrida"
+
 msgid "Preview skin used to position bone attachments."
 msgstr "Skin de prévia usada para posicionar os acessórios nos ossos."
+
+msgid "Preview the movement"
+msgstr "Prévia do movimento"
 
 msgid ""
 "Previews virtual worlds, interiors, areas and client object limits.\n"
@@ -6925,6 +7083,10 @@ msgid "Race \"%s\" has one checkpoint: there is nothing to race to."
 msgstr "A corrida \"%s\" tem um checkpoint só: não há para onde correr."
 
 #, c-format
+msgid "Race \"%s\" is a circuit with one checkpoint: StartMapRace refuses it (a circuit needs at least 2)."
+msgstr "A corrida \"%s\" é um circuito com um checkpoint: o StartMapRace a recusa (um circuito precisa de pelo menos 2)."
+
+#, c-format
 msgid "Race \"%s\": %d checkpoints share order %d, so which one comes first is undefined."
 msgstr "Corrida \"%s\": %d checkpoints têm a ordem %d, então não se sabe qual vem primeiro."
 
@@ -6934,6 +7096,9 @@ msgstr "Corrida %s"
 
 msgid "Race checkpoint"
 msgstr "Race checkpoint"
+
+msgid "Race finished"
+msgstr "Corrida concluída"
 
 msgid "Race: green light"
 msgstr "Corrida: luz verde"
@@ -6991,11 +7156,20 @@ msgstr "Chuva (0.3.7-R2)"
 msgid "Ramp / helix"
 msgstr "Rampa / hélice"
 
+msgid "Random"
+msgstr "Aleatório"
+
 msgid "Random (-1)"
 msgstr "Aleatória (-1)"
 
 msgid "Random sideways offset from the node line, so NPCs do not walk in single file."
 msgstr "Deslocamento lateral aleatório da linha dos nós, para os NPCs não andarem em fila."
+
+msgid "Random: a new amount within the ranges each time."
+msgstr "Aleatório: um valor novo dentro dos intervalos a cada vez."
+
+msgid "Range"
+msgstr "Trecho"
 
 #, c-format
 msgid "Raw flags: 0x%X"
@@ -7188,6 +7362,9 @@ msgstr "Renomear variável"
 msgid "Rename..."
 msgstr "Renomear..."
 
+msgid "Renderer"
+msgstr "Renderizador"
+
 msgid "Reopen last map on startup"
 msgstr "Reabrir o último mapa ao iniciar"
 
@@ -7199,6 +7376,9 @@ msgstr "Repetir"
 
 msgid "Repeating siren"
 msgstr "Sirene repetida"
+
+msgid "Repeats the whole line for a grid. 1 is a single line."
+msgstr "Repete a linha inteira para formar uma grade. 1 é uma linha só."
 
 msgid "Replace"
 msgstr "Substituir"
@@ -7279,6 +7459,9 @@ msgstr "Reiniciar o Haumea Studio"
 
 msgid "Restart Haumea to apply the new anti-aliasing level."
 msgstr "Reinicie o Haumea para aplicar o novo nível de antisserrilhamento."
+
+msgid "Restart Haumea to switch renderers."
+msgstr "Reinicie o Haumea para trocar de renderizador."
 
 msgid "Restart and Discard Changes"
 msgstr "Reiniciar e descartar alterações"
@@ -7443,8 +7626,14 @@ msgstr "Caixa arredondada"
 msgid "Rounds every rotation angle to this step."
 msgstr "Arredonda cada ângulo de rotação para este passo."
 
+msgid "Rounds the radius so a whole number of the selected model's lengths make one turn."
+msgstr "Arredonda o raio para que um número inteiro de comprimentos do modelo selecionado forme uma volta."
+
 msgid "Route"
 msgstr "Rota"
+
+msgid "Row offset"
+msgstr "Deslocamento da linha"
 
 msgid "Rows"
 msgstr "Linhas"
@@ -7471,6 +7660,10 @@ msgstr "Em execução"
 #, c-format
 msgid "Running on 127.0.0.1:%d"
 msgstr "Rodando em 127.0.0.1:%d"
+
+#, c-format
+msgid "Running: %s"
+msgstr "Em uso: %s"
 
 msgid ""
 "Runs the map as it is now on a private open.mp test server.\n"
@@ -7597,6 +7790,9 @@ msgstr "Salvar as alterações em %s?"
 msgid "Save disk"
 msgstr "Disquete de salvar"
 
+msgid "Save haumea_races.inc to the workspace"
+msgstr "Salvar haumea_races.inc no workspace"
+
 msgid "Save house"
 msgstr "Casa segura"
 
@@ -7688,6 +7884,15 @@ msgstr "Cores salvas"
 
 msgid "Saved colours, and a colour typed as 0xRRGGBBAA, #RRGGBB, rgba(...) or numbers"
 msgstr "Cores salvas, e uma cor digitada como 0xRRGGBBAA, #RRGGBB, rgba(...) ou números"
+
+msgid ""
+"Saved for haumea_races.inc: each player races on their own with\n"
+"StartMapRace, seeing one checkpoint at a time, with laps and times.\n"
+"Works without the streamer. Off: every checkpoint is a fixed marker."
+msgstr ""
+"Salva para o haumea_races.inc: cada jogador corre sozinho com\n"
+"StartMapRace, vendo um checkpoint por vez, com voltas e tempos.\n"
+"Funciona sem o streamer. Desligado: cada checkpoint é um marcador fixo."
 
 msgid "Saved views"
 msgstr "Vistas salvas"
@@ -8134,8 +8339,14 @@ msgstr ""
 msgid "Shows the mirror and where the objects go before you apply."
 msgstr "Mostra o espelho e para onde os objetos vão antes de aplicar."
 
+msgid "Shows the race as a player drives it: one checkpoint at a time."
+msgstr "Mostra a corrida como um jogador a percorre: um checkpoint por vez."
+
 msgid "Shows where the copies go before you apply."
 msgstr "Mostra para onde as cópias vão antes de aplicar."
+
+msgid "Side offset"
+msgstr "Deslocamento lateral"
 
 msgid "Signs and statues"
 msgstr "Placas e estátuas"
@@ -8323,6 +8534,9 @@ msgstr "Espaçamento"
 msgid "Spacing (m)"
 msgstr "Espaçamento (m)"
 
+msgid "Spacing by"
+msgstr "Espaçar por"
+
 msgid "Spawn"
 msgstr "Criação"
 
@@ -8339,6 +8553,9 @@ msgstr ""
 "0 = Padrão (nó de caminho normal)\n"
 "1 = Bloqueio (a polícia pode montar bloqueios aqui)\n"
 "2 = Estacionamento (veículos podem estacionar neste nó)"
+
+msgid "Speed"
+msgstr "Velocidade"
 
 msgid "Speed for the move type"
 msgstr "Velocidade do tipo de movimento"
@@ -8735,6 +8952,13 @@ msgstr ""
 msgid "Textures"
 msgstr "Texturas"
 
+msgid ""
+"Textures that repeat without a seam, for floors, walls and long surfaces,\n"
+"judged from their edges; a guess, so check how it looks."
+msgstr ""
+"Texturas que se repetem sem emenda, para pisos, paredes e superfícies longas,\n"
+"avaliadas pelas bordas; é uma estimativa, então confira o resultado."
+
 #, c-format
 msgid "Textures: %d"
 msgstr "Texturas: %d"
@@ -8957,6 +9181,9 @@ msgstr "Os sprites que a compõem"
 msgid "The start screen: workspaces, their maps and the game folder."
 msgstr "A tela inicial: workspaces, seus mapas e a pasta do jogo."
 
+msgid "The stretch of the path that gets objects, from its first point to its last."
+msgstr "O trecho do caminho que recebe objetos, do primeiro ao último ponto."
+
 msgid "The tested releases everyone gets."
 msgstr "As versões testadas que todo mundo recebe."
 
@@ -9095,6 +9322,18 @@ msgstr "Tamanho do bloco"
 
 msgid "Tiles"
 msgstr "Blocos"
+
+msgid "Tiles both ways"
+msgstr "Repete nos dois sentidos"
+
+msgid "Tiles left to right"
+msgstr "Repete da esquerda para a direita"
+
+msgid "Tiles top to bottom"
+msgstr "Repete de cima para baixo"
+
+msgid "Tilt"
+msgstr "Inclinação"
 
 msgid "Tilt to slope"
 msgstr "Inclinar na encosta"
@@ -9253,6 +9492,9 @@ msgstr "Tentar de novo"
 msgid "Tuning parts"
 msgstr "Peças de tuning"
 
+msgid "Turn"
+msgstr "Giro"
+
 msgid "Turn by"
 msgstr "Girar por"
 
@@ -9265,6 +9507,15 @@ msgid ""
 msgstr ""
 "Gira os modelos mais compridos de lado (a maioria das cercas e barreiras)\n"
 "para que sigam a linha."
+
+msgid "Turns on the way"
+msgstr "Gira no caminho"
+
+msgid "Turns to"
+msgstr "Gira até"
+
+msgid "Twists the skin out of shape."
+msgstr "Deforma a skin."
 
 msgid "Two players"
 msgstr "Dois jogadores"
@@ -10049,6 +10300,9 @@ msgstr "não foi possível abrir o launcher do open.mp"
 
 msgid "could not start wine"
 msgstr "não foi possível iniciar o wine"
+
+msgid "could not write haumea_races.inc"
+msgstr "não foi possível gravar o haumea_races.inc"
 
 msgid "could not write the test gamemode"
 msgstr "não foi possível gravar o gamemode de teste"

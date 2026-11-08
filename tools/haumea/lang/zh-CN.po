@@ -1506,9 +1506,6 @@ msgstr "自动生成的 COL 未能附加到模型名 %s。"
 msgid "Auto-generated COL from DFF geometry (%d -> %d tris, %d -> %d verts)."
 msgstr "由 DFF 几何体自动生成的 COL (%d -> %d 三角形, %d -> %d 顶点)。"
 
-msgid "Automatic handles"
-msgstr "自动控制柄"
-
 msgid "Autosave unsaved maps"
 msgstr "自动保存未保存的地图"
 
@@ -3859,6 +3856,9 @@ msgstr "Haumea Studio 意外关闭或遇到错误。提交报告有助于修复�
 msgid "Haumea Studio closed unexpectedly or hit errors. Reports can help fix them."
 msgstr "Haumea Studio 意外关闭或遇到多个错误。提交报告有助于修复问题。"
 
+msgid "Haumea Studio couldn't start its graphics. Update your graphics card's driver (Haumea needs OpenGL 3.3 or Direct3D 9; Windows' basic display driver, Remote Desktop and some virtual machines can't). The details are in haumea.log and haumea.stderr.log in:"
+msgstr "Haumea Studio 无法启动图形。请更新显卡驱动程序（Haumea 需要 OpenGL 3.3 或 Direct3D 9；Windows 基本显示驱动程序、远程桌面和部分虚拟机无法满足）。详细信息位于以下文件夹中的 haumea.log 和 haumea.stderr.log："
+
 msgid "Haumea Studio is free software under the GNU General Public License, version 2 or any later version. It includes components under their own licenses."
 msgstr "Haumea Studio 是依据 GNU 通用公共许可证第 2 版或任何更高版本发布的自由软件。它包含遵循其自身许可证的组件。"
 
@@ -5519,13 +5519,6 @@ msgstr "正午"
 
 msgid "Normal cull"
 msgstr "正常剔除"
-
-msgid ""
-"Normal shows an arrow to the next checkpoint; Finish a flag.\n"
-"The Air types are rings for planes."
-msgstr ""
-"Normal 显示指向下一个 checkpoint 的箭头；Finish 是一面旗帜。\n"
-"Air 类型是给飞机用的圆环。"
 
 msgid "North"
 msgstr "北"
@@ -10510,3 +10503,264 @@ msgstr "你的路由器已转发该端口：通过互联网，其他人使用你
 
 msgid "Over IPv6, others can join at %s when your router lets them in."
 msgstr "通过 IPv6，在你的路由器允许时，其他人可以在 %s 加入。"
+
+#, c-format
+msgid "%.2f m in %.2f s"
+msgstr "%.2f 米，用时 %.2f 秒"
+
+#, c-format
+msgid "%d object(s) explode when shot or hit (object.dat), such as barrels and petrol pumps. Each player can blow them up on their own screen."
+msgstr "%d 个物体在被射击或撞击时会爆炸（object.dat），例如油桶和加油泵。每个玩家都能在自己的屏幕上引爆它们。"
+
+#, c-format
+msgid "%d playable race(s) need haumea_races.inc, which isn't in the workspace's includes: without it the map compiles but has no races. A race checkpoint's settings can save it there."
+msgstr "%d 个可玩竞赛需要 haumea_races.inc，但工作区的 include 中没有它：没有它地图仍能编译，但没有竞赛。可在 race checkpoint 的设置中把它保存到那里。"
+
+#, c-format
+msgid "%d tree(s) or palm(s) tilted on X or Y: the game sways them in the wind and stands them upright, so the tilt doesn't show in game."
+msgstr "%d 棵树或棕榈在 X 或 Y 上倾斜：游戏会让它们随风摇摆并保持直立，所以倾斜在游戏中不会显示。"
+
+#, c-format
+msgid "%s moves 0 m and doesn't turn, so its MoveObject does nothing."
+msgstr "%s 移动 0 米且不旋转，所以它的 MoveObject 不起作用。"
+
+msgid "10  Automatic air"
+msgstr "10  空中自动"
+
+msgid "9  Automatic (normal, finish at the end)"
+msgstr "9  自动（正常，最后为终点）"
+
+msgid "Aligned"
+msgstr "对齐"
+
+msgid "Automatic"
+msgstr "自动"
+
+msgid "Automatic: smooth through the neighbours. Aligned: opposite each other, each with its own length. Free: independent. Corner: straight at the neighbours."
+msgstr "自动：在相邻点之间平滑。对齐：方向相反，各自保持长度。自由：互不影响。拐角：直指相邻点。"
+
+msgid "Banks the objects at this point, easing to the next point's tilt."
+msgstr "在此点使物体侧倾，并平滑过渡到下一个点的倾斜。"
+
+#, c-format
+msgid "Checkpoint %d of %d"
+msgstr "Checkpoint %d / %d"
+
+msgid "Circuit"
+msgstr "环形赛道"
+
+msgid "Circuit: the last checkpoint leads back to the first, lap after lap."
+msgstr "环形赛道：最后一个 checkpoint 通回第一个，一圈又一圈。"
+
+msgid "Corner"
+msgstr "拐角"
+
+#, c-format
+msgid "Could not write %s"
+msgstr "无法写入 %s"
+
+msgid "Count"
+msgstr "数量"
+
+msgid "Explodes"
+msgstr "会爆炸"
+
+msgid "Fit to selection"
+msgstr "适配所选"
+
+msgid "Free"
+msgstr "自由"
+
+msgid "Handles"
+msgstr "控制柄"
+
+msgid "Height offset"
+msgstr "高度偏移"
+
+msgid "How far each row moves from the one before, in metres."
+msgstr "每一行相对上一行移动的距离，单位为米。"
+
+msgid ""
+"How far it goes, in metres along the world axes. It follows the object when\n"
+"you move it."
+msgstr ""
+"它移动的距离，沿世界坐标轴，单位为米。移动物体时\n"
+"它会跟随物体。"
+
+msgid "Into the workspace's qawno/include (or pawno/include), where pawncc finds it."
+msgstr "保存到工作区的 qawno/include（或 pawno/include），pawncc 会在那里找到它。"
+
+#, c-format
+msgid "Lap %d of %d, checkpoint %d of %d"
+msgstr "第 %d / %d 圈，checkpoint %d / %d"
+
+msgid "Laps"
+msgstr "圈数"
+
+msgid "MoveObject (MoveDynamicObject with the streamer) right after the object is made."
+msgstr "物体创建后立即执行 MoveObject（使用 streamer 时为 MoveDynamicObject）。"
+
+msgid "Moves the objects across the path, to its right; negative for its left."
+msgstr "将物体横向移离路径，向右；负值向左。"
+
+msgid "Moves when the map loads"
+msgstr "地图加载时移动"
+
+msgid "Next checkpoint"
+msgstr "下一个 checkpoint"
+
+msgid ""
+"Normal shows an arrow to the next checkpoint; Finish a flag.\n"
+"The Air types are rings for planes. Automatic is Normal until the race's end, then Finish."
+msgstr ""
+"正常显示指向下一个 checkpoint 的箭头；终点显示旗帜。\n"
+"空中类型是给飞机的圆环。自动在竞赛结束前为正常，最后为终点。"
+
+msgid "Playable race"
+msgstr "可玩竞赛"
+
+msgid "Point to point"
+msgstr "点到点"
+
+msgid "Preview race"
+msgstr "预览竞赛"
+
+msgid "Preview the movement"
+msgstr "预览移动"
+
+#, c-format
+msgid "Race \"%s\" is a circuit with one checkpoint: StartMapRace refuses it (a circuit needs at least 2)."
+msgstr "竞赛“%s”是只有一个 checkpoint 的环形赛道：StartMapRace 会拒绝它（环形赛道至少需要 2 个）。"
+
+msgid "Race finished"
+msgstr "竞赛完成"
+
+msgid "Range"
+msgstr "范围"
+
+msgid "Repeats the whole line for a grid. 1 is a single line."
+msgstr "重复整行以形成网格。1 表示单行。"
+
+msgid "Rounds the radius so a whole number of the selected model's lengths make one turn."
+msgstr "取整半径，使所选模型长度的整数倍正好绕一圈。"
+
+msgid "Row offset"
+msgstr "行偏移"
+
+msgid "Save haumea_races.inc to the workspace"
+msgstr "将 haumea_races.inc 保存到工作区"
+
+msgid ""
+"Saved for haumea_races.inc: each player races on their own with\n"
+"StartMapRace, seeing one checkpoint at a time, with laps and times.\n"
+"Works without the streamer. Off: every checkpoint is a fixed marker."
+msgstr ""
+"为 haumea_races.inc 保存：每个玩家用 StartMapRace\n"
+"单独比赛，一次只看到一个 checkpoint，并有圈数和用时。\n"
+"无需 streamer。关闭时：每个 checkpoint 都是固定标记。"
+
+msgid "Shows the race as a player drives it: one checkpoint at a time."
+msgstr "按玩家驾驶时的样子显示竞赛：一次一个 checkpoint。"
+
+msgid "Side offset"
+msgstr "侧向偏移"
+
+msgid "Spacing by"
+msgstr "间距方式"
+
+msgid "Speed"
+msgstr "速度"
+
+msgid "The stretch of the path that gets objects, from its first point to its last."
+msgstr "路径上放置物体的区段，从第一个点到最后一个点。"
+
+msgid "Tilt"
+msgstr "倾斜"
+
+msgid "Turns on the way"
+msgstr "途中旋转"
+
+msgid "Turns to"
+msgstr "旋转到"
+
+msgid "could not write haumea_races.inc"
+msgstr "无法写入 haumea_races.inc"
+
+#, c-format
+msgid "%s plays %s / %s, which moves only an object's parts: the skin stands still."
+msgstr "%s 播放 %s / %s，它只移动物体的部件：皮肤会保持不动。"
+
+#, c-format
+msgid "%s plays %s / %s, which twists the skin out of shape."
+msgstr "%s 播放 %s / %s，它会让皮肤变形。"
+
+msgid "Along the object's own axes"
+msgstr "沿物体自身的轴"
+
+msgid "Any tiling"
+msgstr "任意平铺"
+
+msgid "Duplicate (Ctrl+D) moves and turns the copies by this much."
+msgstr "复制副本（Ctrl+D）时按此量移动并旋转副本。"
+
+msgid "Duplicate offset"
+msgstr "复制副本偏移"
+
+msgid "Fixed"
+msgstr "固定"
+
+msgid "From and to: metres for X, Y and Z, degrees for the turns."
+msgstr "从和到：X、Y、Z 为米，旋转为度。"
+
+msgid "Moves only an object's parts: a skin stands still."
+msgstr "只移动物体的部件：皮肤会保持不动。"
+
+msgid "Off: world X, Y and Z. On: the first selected object's axes."
+msgstr "关闭：世界 X、Y、Z。开启：第一个所选物体的轴。"
+
+msgid "Offset each duplicate"
+msgstr "偏移每个副本"
+
+msgid "Random"
+msgstr "随机"
+
+msgid "Random: a new amount within the ranges each time."
+msgstr "随机：每次在范围内取新的值。"
+
+msgid "Tiles both ways"
+msgstr "双向平铺"
+
+msgid "Tiles left to right"
+msgstr "左右平铺"
+
+msgid "Tiles top to bottom"
+msgstr "上下平铺"
+
+msgid "Turn"
+msgstr "旋转"
+
+msgid "Twists the skin out of shape."
+msgstr "会让皮肤变形。"
+
+msgid ""
+"Textures that repeat without a seam, for floors, walls and long surfaces,\n"
+"judged from their edges; a guess, so check how it looks."
+msgstr ""
+"可无缝重复的贴图，适用于地面、墙面和长表面，\n"
+"根据边缘判断；只是估计，请检查实际效果。"
+
+msgid "Renderer"
+msgstr "渲染器"
+
+msgid "Automatic uses OpenGL, and Direct3D 9 when OpenGL doesn't start on this PC."
+msgstr "自动：使用 OpenGL；如果 OpenGL 无法在此电脑上启动，则使用 Direct3D 9。"
+
+#, c-format
+msgid "Running: %s"
+msgstr "正在使用：%s"
+
+msgid "OpenGL didn't start on this PC, so Automatic uses Direct3D 9."
+msgstr "OpenGL 无法在此电脑上启动，因此自动模式使用 Direct3D 9。"
+
+msgid "Restart Haumea to switch renderers."
+msgstr "重新启动 Haumea 以切换渲染器。"

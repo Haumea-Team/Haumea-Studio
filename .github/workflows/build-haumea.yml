@@ -104,6 +104,12 @@ jobs:
         working-directory: librw/build
         run: msbuild librw.sln /p:Configuration=Release /p:Platform=win-amd64-gl3 /t:librw /m
 
+      # haumea-d3d9.exe: haumea.exe starts it when OpenGL doesn't.
+      - name: Build librw (Direct3D 9)
+        shell: cmd
+        working-directory: librw/build
+        run: msbuild librw.sln /p:Configuration=Release /p:Platform=win-amd64-d3d9 /t:librw /m
+
       - name: Generate Haumea project files
         shell: cmd
         working-directory: haumea
@@ -114,9 +120,18 @@ jobs:
         working-directory: haumea/build
         run: msbuild librwgta.sln /p:Configuration=Release /p:Platform=win-amd64-gl3 /t:librwgta;haumea;haumea-server /m
 
+      - name: Build Haumea Studio (Direct3D 9)
+        shell: cmd
+        working-directory: haumea/build
+        run: msbuild librwgta.sln /p:Configuration=Release /p:Platform=win-amd64-d3d9 /t:librwgta;haumea /m
+
       - name: Check the build number and commit (Windows)
         working-directory: haumea
-        run: python tools/release/check_buildinfo.py bin/win-amd64-gl3/Release/haumea.exe
+        run: |
+          foreach ($gfx in @('gl3', 'd3d9')) {
+            python tools/release/check_buildinfo.py "bin/win-amd64-$gfx/Release/haumea.exe"
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
 
       - name: Stage Windows editor bundle
         shell: pwsh
@@ -125,6 +140,7 @@ jobs:
           New-Item -ItemType Directory -Force -Path $bundle | Out-Null
           Copy-Item "haumea\bin\win-amd64-gl3\Release\haumea.exe" $bundle
           Copy-Item "haumea\bin\win-amd64-gl3\Release\haumea-server.exe" $bundle
+          Copy-Item "haumea\bin\win-amd64-d3d9\Release\haumea.exe" (Join-Path $bundle "haumea-d3d9.exe")
           $fonts = Join-Path $bundle "fonts"
           New-Item -ItemType Directory -Force -Path $fonts | Out-Null
           Copy-Item "haumea\fonts\*" $fonts -Recurse
@@ -823,7 +839,7 @@ jobs:
         shell: pwsh
         run: |
           python haumea/tools/release/package_downloads.py --platform windows `
-            --engine dist/windows/haumea.exe --glfw dist/windows/glfw3.dll `
+            --engine dist/windows/haumea.exe --engine-d3d9 dist/windows/haumea-d3d9.exe --glfw dist/windows/glfw3.dll `
             --namaka dist/namaka/Haumea-Namaka-windows-x86_64.zip `
             --stage dist/windows-bundle --output dist/portable
       - name: Build the Windows installer
@@ -843,7 +859,7 @@ jobs:
           $setup = Start-Process dist/setup/Haumea-Studio-Windows-Setup.exe -Wait -PassThru `
             -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', "/DIR=`"$dest`""
           if ($setup.ExitCode -ne 0) { throw 'Installation failed' }
-          foreach ($file in @('haumea.exe', 'glfw3.dll', 'START_HERE.txt', 'lang/pt-BR.po', 'namaka/namaka_install.py')) {
+          foreach ($file in @('haumea.exe', 'haumea-d3d9.exe', 'glfw3.dll', 'START_HERE.txt', 'lang/pt-BR.po', 'namaka/namaka_install.py')) {
             if (!(Test-Path (Join-Path $dest $file))) { throw "Missing installed file: $file" }
           }
           $editor = Start-Process "$dest/haumea.exe" -ArgumentList '--version' -Wait -PassThru `

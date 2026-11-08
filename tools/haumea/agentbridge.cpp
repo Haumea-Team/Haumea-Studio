@@ -1643,6 +1643,12 @@ agentPropertiesJson(ObjectInst *inst)
 				add("attach_skin", std::to_string(p.attachSkin));
 			}
 		}
+		if(p.moveEnabled){
+			add("move_offset", jsonVector3(p.moveOffset));
+			add("move_speed", jsonFloat(p.moveSpeed));
+			if(p.moveRotates)
+				add("move_rotation", jsonVector3(p.moveRotation));
+		}
 		break;
 	case AGENT_KIND_VEHICLE:
 		add("color1", std::to_string(inst->m_vehicleColor1));
@@ -1733,6 +1739,10 @@ agentPropertiesJson(ObjectInst *inst)
 			add("race_type", std::to_string(p.cpRaceType));
 			add("race", str(p.cpRace));
 			add("order", std::to_string(p.cpOrder));
+			add("race_mode", p.cpRaceMode == SAMP_RACE_CIRCUIT ? "\"circuit\"" : "\"point_to_point\"");
+			if(p.cpRaceMode == SAMP_RACE_CIRCUIT)
+				add("race_laps", std::to_string(p.cpRaceLaps));
+			add("race_playable", p.cpRacePlayable ? "true" : "false");
 		}
 		break;
 	case SAMP_ELEMENT_AREA:{
@@ -1868,6 +1878,7 @@ struct AgentInstanceEdit
 	bool setAttachColor1;
 	bool setAttachColor2;
 	bool setAttachSkin;
+	bool syncRace;	// race_mode/laps/playable: copied to the race's other checkpoints
 	bool setPaintjob;
 	int paintjob;
 	bool setPlate;
@@ -1957,6 +1968,26 @@ applyAgentProperty(ObjectInst *inst, int kind, ObjectPawnProperties &p, AgentIns
 		if(!only({ SAMP_ELEMENT_OBJECT })) return false;
 		if(!parseInt(value, &i) || i < 0 || i > 9) return fail("expects a player slot from 0 to 9");
 		p.attachSlot = i; edit.setAttachSlot = true; return true;
+	}
+	if(key == "move_offset" || key == "move_rotation"){
+		if(!only({ SAMP_ELEMENT_OBJECT })) return false;
+		if(lowercase(value.c_str()) == "none"){
+			if(key == "move_offset") p.moveEnabled = false;
+			else p.moveRotates = false;
+			return true;
+		}
+		rw::V3d vector;
+		if(!parseFloatVector3(value, &vector)) return fail("expects three numbers, e.g. [0.0, 0.0, 3.0], or none");
+		if(!p.moveEnabled && p.moveSpeed <= 0.0f) p.moveSpeed = 2.0f;
+		p.moveEnabled = true;
+		if(key == "move_offset") p.moveOffset = vector;
+		else{ p.moveRotation = vector; p.moveRotates = true; }
+		return true;
+	}
+	if(key == "move_speed"){
+		if(!only({ SAMP_ELEMENT_OBJECT })) return false;
+		if(!parseFloat(value, &f) || f <= 0.0f || f > 1000.0f) return fail("expects metres a second, above 0");
+		p.moveEnabled = true; p.moveSpeed = f; return true;
 	}
 	if(key == "attach_offset" || key == "attach_rotation" || key == "attach_scale"){
 		if(!only({ SAMP_ELEMENT_OBJECT })) return false;
@@ -2182,8 +2213,29 @@ applyAgentProperty(ObjectInst *inst, int kind, ObjectPawnProperties &p, AgentIns
 	}
 	if(key == "race_type"){
 		if(!only({ SAMP_ELEMENT_CHECKPOINT })) return false;
-		if(!parseInt(value, &i) || i < 0 || i > 8) return fail("expects a race checkpoint type 0-8 (0 normal, 1 finish)");
+		if(!parseInt(value, &i) || i < 0 || i > SAMP_RACE_CP_AUTO_AIR)
+			return fail("expects a race checkpoint type 0-10 (0 normal, 1 finish, 9 automatic, 10 automatic air)");
 		p.cpRaceType = i; return true;
+	}
+	if(key == "race_mode" || key == "race_laps" || key == "race_playable"){
+		// The whole race's settings: set here, then copied to its other
+		// checkpoints after the edit (agentSyncRaceSettings).
+		if(!only({ SAMP_ELEMENT_CHECKPOINT })) return false;
+		if(key == "race_mode"){
+			std::string mode = lowercase(value.c_str());
+			if(mode == "circuit") p.cpRaceMode = SAMP_RACE_CIRCUIT;
+			else if(mode == "point_to_point") p.cpRaceMode = SAMP_RACE_POINT_TO_POINT;
+			else return fail("expects point_to_point or circuit");
+		}else if(key == "race_laps"){
+			if(!parseInt(value, &i) || i < 1 || i > SAMP_RACE_MAX_LAPS) return fail("expects 1-999 laps");
+			p.cpRaceLaps = i;
+		}else{
+			if(!parseBoolField(value, &b)) return fail("expects true or false");
+			p.cpRacePlayable = b;
+		}
+		p.cpKind = SAMP_CHECKPOINT_RACE;
+		edit.syncRace = true;
+		return true;
 	}
 	if(key == "race"){
 		if(!only({ SAMP_ELEMENT_CHECKPOINT })) return false;
@@ -2377,6 +2429,10 @@ applyAgentProperties(ObjectInst *inst, const std::vector<std::string> &lines, si
 		return false;
 	}
 	SetObjectPawnProperties(inst, p, true);
+	if(edit.syncRace){
+		const ObjectPawnProperties *set = GetObjectPawnProperties(inst);
+		SetRaceSettings(set->cpRace, set->cpRaceMode, set->cpRaceLaps, set->cpRacePlayable);
+	}
 	if(edit.setAttach){
 		if(edit.attachTo == PAWN_ATTACH_PLAYER){
 			if(!AttachObjectToPlayer(inst, requested.attachSkin)){
@@ -2888,7 +2944,21 @@ handleMapTool(const std::string &requestId, const std::vector<std::string> &line
 		p.rotate = vec("rotate", { 0.0f, 0.0f, 0.0f });
 		p.centre = vec("centre", TheCamera.m_target);
 		p.angle = num("angle", 360.0f);
+		p.rows = (int)num("rows", 1.0f);
+		p.rowOffset = vec("row_offset", { 5.0f, 0.0f, 0.0f });
 		result = MapToolsArray(p, &error);
+	}else if(op == "duplicate"){
+		// Like Ctrl+D with the Tools window's duplicate offset, set here for this one.
+		MapCloneOffset saved = MapToolsCloneOffset();
+		MapCloneOffset &o = MapToolsCloneOffset();
+		rw::V3d move = vec("offset", { 0.0f, 0.0f, 0.0f }), turn = vec("rotate", { 0.0f, 0.0f, 0.0f });
+		o = MapCloneOffset();
+		o.enabled = true;
+		o.local = flag("local", false);
+		float values[6] = { move.x, move.y, move.z, turn.x, turn.y, turn.z };
+		memcpy(o.fixed, values, sizeof(values));
+		result = MapToolsDuplicate(&error);
+		o = saved;
 	}else if(op == "mirror"){
 		int axis = axisOf("axis", 0);
 		// around: selection (its centre), origin, or the mirror's coordinate.
@@ -2938,7 +3008,7 @@ handleMapTool(const std::string &requestId, const std::vector<std::string> &line
 			flag("on_ground", true), &error);
 	}else{
 		writeError(requestId, "unknown maptool operation (array, mirror, align, distribute, "
-			"snap_rotations, drop, relative, lay_along, radar_art)");
+			"snap_rotations, drop, relative, lay_along, radar_art, duplicate)");
 		return;
 	}
 	if(result < 0){
@@ -3757,7 +3827,7 @@ handleRequest(const std::vector<std::string> &lines)
 				continue;
 			int category = GetObjectCategory(id);
 			std::string flags, cities, zones;
-			struct { bool on; const char *name; } fl[] = { { m->dynamic, "dynamic" }, { m->breakable, "breakable" },
+			struct { bool on; const char *name; } fl[] = { { m->dynamic, "dynamic" }, { m->explosive, "explosive" }, { m->breakable, "breakable" },
 				{ m->timed, "timed" }, { m->animated, "animated" }, { m->upgrade, "upgrade" },
 				{ m->building, "building" }, { m->interior, "interior" }, { m->alpha, "alpha" },
 				{ m->twoSided, "two_sided" }, { m->isLod, "lod" }, { m->hasLod, "has_lod" } };
@@ -3798,7 +3868,9 @@ handleRequest(const std::vector<std::string> &lines)
 			snprintf(head, sizeof(head), "%s{\"model\":%d,\"txd\":\"", i ? "," : "", r.model);
 			json += head + jsonEscapeBytes(r.txd.c_str()) + "\",\"texture\":\"" + jsonEscapeBytes(r.texture.c_str()) +
 				"\",\"samp\":" + (r.samp ? "true" : "false") + ",\"custom\":" + (r.custom ? "true" : "false") +
-				",\"tstudio_index\":" + std::to_string(r.tstudioIndex) + "}";
+				",\"tstudio_index\":" + std::to_string(r.tstudioIndex) +
+				(r.tiles ? std::string(",\"tiles\":\"") + (r.tiles == 3 ? "both" : r.tiles == 1 ? "across" : "down") + "\"" :
+					std::string()) + "}";
 		}
 		writeResponse(requestId, true, json + "]");
 		return;

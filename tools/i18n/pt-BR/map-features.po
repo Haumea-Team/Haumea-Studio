@@ -1,0 +1,242 @@
+# Model checks, themes, curves, grids, moving objects and races.
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+
+#, c-format
+msgid "%.2f m in %.2f s"
+msgstr "%.2f m em %.2f s"
+
+#, c-format
+msgid "%d object(s) explode when shot or hit (object.dat), such as barrels and petrol pumps. Each player can blow them up on their own screen."
+msgstr "%d objeto(s) explodem ao levar tiro ou batida (object.dat), como barris e bombas de gasolina. Cada jogador pode explodi-los na própria tela."
+
+#, c-format
+msgid "%d playable race(s) need haumea_races.inc, which isn't in the workspace's includes: without it the map compiles but has no races. A race checkpoint's settings can save it there."
+msgstr "%d corrida(s) jogável(is) precisam do haumea_races.inc, que não está nos includes do workspace: sem ele o mapa compila, mas fica sem corridas. As opções de um race checkpoint podem salvá-lo lá."
+
+#, c-format
+msgid "%d tree(s) or palm(s) tilted on X or Y: the game sways them in the wind and stands them upright, so the tilt doesn't show in game."
+msgstr "%d árvore(s) ou palmeira(s) inclinadas em X ou Y: o jogo as balança com o vento e as deixa em pé, então a inclinação não aparece no jogo."
+
+#, c-format
+msgid "%s moves 0 m and doesn't turn, so its MoveObject does nothing."
+msgstr "%s se move 0 m e não gira, então o MoveObject dele não faz nada."
+
+msgid "10  Automatic air"
+msgstr "10  Aéreo automático"
+
+msgid "9  Automatic (normal, finish at the end)"
+msgstr "9  Automático (normal, chegada no fim)"
+
+msgid "Aligned"
+msgstr "Alinhadas"
+
+msgid "Automatic"
+msgstr "Automáticas"
+
+msgid "Automatic: smooth through the neighbours. Aligned: opposite each other, each with its own length. Free: independent. Corner: straight at the neighbours."
+msgstr "Automáticas: suaves entre os vizinhos. Alinhadas: opostas, cada uma com seu comprimento. Livres: independentes. Canto: retas para os vizinhos."
+
+msgid "Banks the objects at this point, easing to the next point's tilt."
+msgstr "Inclina os objetos neste ponto, suavizando até a inclinação do próximo."
+
+#, c-format
+msgid "Checkpoint %d of %d"
+msgstr "Checkpoint %d de %d"
+
+msgid "Circuit"
+msgstr "Circuito"
+
+msgid "Circuit: the last checkpoint leads back to the first, lap after lap."
+msgstr "Circuito: o último checkpoint leva de volta ao primeiro, volta após volta."
+
+msgid "Corner"
+msgstr "Canto"
+
+#, c-format
+msgid "Could not write %s"
+msgstr "Não foi possível gravar %s"
+
+msgid "Count"
+msgstr "Quantidade"
+
+msgid "Explodes"
+msgstr "Explode"
+
+msgid "Fit to selection"
+msgstr "Ajustar à seleção"
+
+msgid "Free"
+msgstr "Livres"
+
+msgid "Handles"
+msgstr "Alças"
+
+msgid "Height offset"
+msgstr "Deslocamento na altura"
+
+msgid "How far each row moves from the one before, in metres."
+msgstr "Quanto cada linha se afasta da anterior, em metros."
+
+msgid ""
+"How far it goes, in metres along the world axes. It follows the object when\n"
+"you move it."
+msgstr ""
+"Até onde ele vai, em metros nos eixos do mundo. Acompanha o objeto quando\n"
+"você o move."
+
+msgid "Into the workspace's qawno/include (or pawno/include), where pawncc finds it."
+msgstr "Na pasta qawno/include (ou pawno/include) do workspace, onde o pawncc o encontra."
+
+#, c-format
+msgid "Lap %d of %d, checkpoint %d of %d"
+msgstr "Volta %d de %d, checkpoint %d de %d"
+
+msgid "Laps"
+msgstr "Voltas"
+
+msgid "MoveObject (MoveDynamicObject with the streamer) right after the object is made."
+msgstr "MoveObject (MoveDynamicObject com o streamer) logo depois de o objeto ser criado."
+
+msgid "Moves the objects across the path, to its right; negative for its left."
+msgstr "Move os objetos para o lado do caminho, à direita; negativo para a esquerda."
+
+msgid "Moves when the map loads"
+msgstr "Move-se quando o mapa carrega"
+
+msgid "Next checkpoint"
+msgstr "Próximo checkpoint"
+
+msgid "Playable race"
+msgstr "Corrida jogável"
+
+msgid "Point to point"
+msgstr "Ponto a ponto"
+
+msgid "Preview race"
+msgstr "Prévia da corrida"
+
+msgid "Preview the movement"
+msgstr "Prévia do movimento"
+
+#, c-format
+msgid "Race \"%s\" is a circuit with one checkpoint: StartMapRace refuses it (a circuit needs at least 2)."
+msgstr "A corrida \"%s\" é um circuito com um checkpoint: o StartMapRace a recusa (um circuito precisa de pelo menos 2)."
+
+msgid "Race finished"
+msgstr "Corrida concluída"
+
+msgid "Range"
+msgstr "Trecho"
+
+msgid "Repeats the whole line for a grid. 1 is a single line."
+msgstr "Repete a linha inteira para formar uma grade. 1 é uma linha só."
+
+msgid "Rounds the radius so a whole number of the selected model's lengths make one turn."
+msgstr "Arredonda o raio para que um número inteiro de comprimentos do modelo selecionado forme uma volta."
+
+msgid "Row offset"
+msgstr "Deslocamento da linha"
+
+msgid "Save haumea_races.inc to the workspace"
+msgstr "Salvar haumea_races.inc no workspace"
+
+msgid ""
+"Saved for haumea_races.inc: each player races on their own with\n"
+"StartMapRace, seeing one checkpoint at a time, with laps and times.\n"
+"Works without the streamer. Off: every checkpoint is a fixed marker."
+msgstr ""
+"Salva para o haumea_races.inc: cada jogador corre sozinho com\n"
+"StartMapRace, vendo um checkpoint por vez, com voltas e tempos.\n"
+"Funciona sem o streamer. Desligado: cada checkpoint é um marcador fixo."
+
+msgid "Shows the race as a player drives it: one checkpoint at a time."
+msgstr "Mostra a corrida como um jogador a percorre: um checkpoint por vez."
+
+msgid "Side offset"
+msgstr "Deslocamento lateral"
+
+msgid "Spacing by"
+msgstr "Espaçar por"
+
+msgid "Speed"
+msgstr "Velocidade"
+
+msgid "The stretch of the path that gets objects, from its first point to its last."
+msgstr "O trecho do caminho que recebe objetos, do primeiro ao último ponto."
+
+msgid "Tilt"
+msgstr "Inclinação"
+
+msgid "Turns on the way"
+msgstr "Gira no caminho"
+
+msgid "Turns to"
+msgstr "Gira até"
+
+msgid "could not write haumea_races.inc"
+msgstr "não foi possível gravar o haumea_races.inc"
+
+#, c-format
+msgid "%s plays %s / %s, which moves only an object's parts: the skin stands still."
+msgstr "%s toca %s / %s, que move só as partes de um objeto: a skin fica parada."
+
+#, c-format
+msgid "%s plays %s / %s, which twists the skin out of shape."
+msgstr "%s toca %s / %s, que deforma a skin."
+
+msgid "Along the object's own axes"
+msgstr "Nos eixos do próprio objeto"
+
+msgid "Any tiling"
+msgstr "Qualquer repetição"
+
+msgid "Duplicate (Ctrl+D) moves and turns the copies by this much."
+msgstr "Duplicar (Ctrl+D) move e gira as cópias nesta medida."
+
+msgid "Duplicate offset"
+msgstr "Deslocamento ao duplicar"
+
+msgid "Fixed"
+msgstr "Fixo"
+
+msgid "From and to: metres for X, Y and Z, degrees for the turns."
+msgstr "De e até: metros para X, Y e Z, graus para os giros."
+
+msgid "Moves only an object's parts: a skin stands still."
+msgstr "Move só as partes de um objeto: a skin fica parada."
+
+msgid "Off: world X, Y and Z. On: the first selected object's axes."
+msgstr "Desligado: X, Y e Z do mundo. Ligado: os eixos do primeiro objeto selecionado."
+
+msgid "Offset each duplicate"
+msgstr "Deslocar cada duplicata"
+
+msgid "Random"
+msgstr "Aleatório"
+
+msgid "Random: a new amount within the ranges each time."
+msgstr "Aleatório: um valor novo dentro dos intervalos a cada vez."
+
+msgid ""
+"Textures that repeat without a seam, for floors, walls and long surfaces,\n"
+"judged from their edges; a guess, so check how it looks."
+msgstr ""
+"Texturas que se repetem sem emenda, para pisos, paredes e superfícies longas,\n"
+"avaliadas pelas bordas; é uma estimativa, então confira o resultado."
+
+msgid "Tiles both ways"
+msgstr "Repete nos dois sentidos"
+
+msgid "Tiles left to right"
+msgstr "Repete da esquerda para a direita"
+
+msgid "Tiles top to bottom"
+msgstr "Repete de cima para baixo"
+
+msgid "Turn"
+msgstr "Giro"
+
+msgid "Twists the skin out of shape."
+msgstr "Deforma a skin."

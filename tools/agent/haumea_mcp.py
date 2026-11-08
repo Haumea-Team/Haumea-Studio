@@ -821,6 +821,8 @@ ELEMENT_PROPERTIES_DOC = """Properties by kind (all optional; defaults in bracke
 	every kind: name (Pawn variable), group, comment, world (-1 every world), interior,
 	  interior_zero_only [false; streamer, interior 0: writes interiorid 0, only interior 0,
 	  instead of -1, every interior], draw_distance, stream_distance (streamer)
+	object: move_offset [x,y,z] (MoveObject: metres from where it stands; "none" stops it
+	  moving), move_speed (m/s), move_rotation [rx,ry,rz] (the turn on the way; "none");
 	object: attach_to (instance id, -1 detaches), attach_sync_rotation
 	vehicle: color1, color2 [-1 random], respawn_delay [100 seconds; -1 never], paintjob [-1 none],
 	  plate [none], mods [none; component ids, a wrong one lists those that fit]
@@ -849,8 +851,12 @@ ELEMENT_PROPERTIES_DOC = """Properties by kind (all optional; defaults in bracke
 	  url and use_position [true] (stream), sound_id [1097] and stop_on_leave [true] (game; 0 stops it)
 	checkpoint (streamer only; native saves leave them out): checkpoint_kind (normal:
 	  CreateDynamicCP; race: CreateDynamicRaceCP pointing at the next one of its race),
-	  size [5], race_type [0 normal; 1 finish, 3-8 air], race (name; sets kind race),
-	  order [after the race's last checkpoint]
+	  size [5], race_type [0 normal; 1 finish, 3-8 air; 9 automatic: normal, finish on
+	  the last; 10 the same in the air], race (name; sets kind race),
+	  order [after the race's last checkpoint], race_mode [point_to_point; circuit: the last
+	  leads back to the first], race_laps [1; circuits], race_playable [false; true saves the
+	  race for haumea_races.inc: StartMapRace(playerid, <map prefix>_race_<name>), works
+	  without the streamer]; the race settings apply to all of the race's checkpoints
 	area (streamer only; a dynamic area, CreateDynamicCircle..Polygon; the position is its
 	  centre, or the bottom centre for a cuboid, cube or cylinder): area_shape [cuboid; circle,
 	  cylinder, sphere, rectangle, cuboid, cube, polygon], radius [10] (circle, cylinder,
@@ -1002,10 +1008,11 @@ def set_element_properties(instance_id: int, properties: dict) -> dict:
 
 @mcp.tool()
 def map_tool(op: Literal["array", "mirror", "align", "distribute", "snap_rotations",
-                         "drop", "relative", "lay_along", "radar_art"],
+                         "drop", "relative", "lay_along", "radar_art", "duplicate"],
              ids: list[int] | None = None, count: int | None = None, radial: bool | None = None,
              offset: list[float] | None = None, rotate: list[float] | None = None,
              centre: list[float] | None = None, angle: float | None = None,
+             rows: int | None = None, row_offset: list[float] | None = None,
              axis: Literal["x", "y", "z"] | None = None,
              around: str | None = None,
              mode: Literal["min", "centre", "max"] | None = None, step: float | None = None,
@@ -1019,7 +1026,10 @@ def map_tool(op: Literal["array", "mirror", "align", "distribute", "snap_rotatio
 
 	array: count copies; linear (offset [x,y,z] m and rotate [x,y,z] degrees per copy,
 	  turning around the group centre) or radial=true (around centre [x,y,z], spread over
-	  angle degrees; 360 is a full circle including the originals).
+	  angle degrees; 360 is a full circle including the originals). Linear with rows > 1
+	  repeats the whole line rows times, row_offset [x,y,z] m apart, for a grid.
+	duplicate: one copy of ids moved by offset [x,y,z] m and turned by rotate [x,y,z]
+	  degrees around the group centre; local=true uses the first object's own axes.
 	mirror: axis x or y, around selection (its centre), origin or a coordinate on that
 	  axis (e.g. "1479.6"); rotations are fixed so
 	  ramps and stairs face the mirrored way. copy=true mirrors a copy (for symmetric
@@ -1051,7 +1061,7 @@ def map_tool(op: Literal["array", "mirror", "align", "distribute", "snap_rotatio
 	model is a Pawn model id (custom models are negative). Returns the objects afterwards
 	(with copies or new objects) as ids, or the Pawn; the selection is left empty."""
 	return service.map_tool(op, ids, count=count, radial=radial, offset=offset, rotate=rotate,
-	                        centre=centre, angle=angle, axis=axis, around=around, mode=mode,
+	                        centre=centre, angle=angle, rows=rows, row_offset=row_offset, axis=axis, around=around, mode=mode,
 	                        step=step, attach=attach, copy=copy, points=points, model=model,
 	                        spacing=spacing, heading=heading, along_length=along_length,
 	                        follow_slope=follow_slope,
@@ -1134,7 +1144,8 @@ def search_textures(query: str, limit: int = 50) -> dict:
 	is, so SetObjectMaterial(obj, slot, model, txd, texture, ...) resolves in
 	game (pass them to set_object_material). samp marks SA-MP's textures,
 	custom the workspace's custom models, and tstudio_index is the texture's
-	number in Texture Studio's list (0 when it has none)."""
+	number in Texture Studio's list (0 when it has none). tiles (across, down or both)
+	marks textures that repeat without a seam, the ones for floors, walls and long surfaces."""
 	return service.engine("texture_search", [query, int(limit)])
 
 
@@ -1147,7 +1158,7 @@ def filter_assets(filters: str = "", name: str = "", limit: int = 200,
 	Ranges are min-max (either side may be empty): size (longest side, m), width (X), depth (Y),
 	height (Z), volume (m3), footprint (m2), draw_distance (m), polygons, materials.
 	Lists (any of): source=gta,samp,custom; type=object,building,dynamic,breakable,timed,animated,
-	upgrade,interior,exterior,alpha; city=los_santos,san_fierro,las_venturas,countryside,interiors,
+	upgrade,interior,exterior,alpha,explosive; city=los_santos,san_fierro,las_venturas,countryside,interiors,
 	not_placed; zone=<names from the game, e.g. Ganton,Doherty>; mine=favourites,recent,open_map,workspace.
 	Others: ide=<text in the IDE path>, txd=<text>, texture=<text in a texture name>,
 	collision=with|without, two_sided=1, lod=hd|lod, has_lod=1|0, hour=0-23 (timed models shown then),

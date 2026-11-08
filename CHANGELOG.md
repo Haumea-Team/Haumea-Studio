@@ -17,6 +17,31 @@
   Portuguese translations for the redesigned controls.
 - Make right-click menus tolerate small cursor movements without starting camera look.
 
+### Mapping tools and races
+
+- Pick from 29 more themes in Preferences (Catppuccin, Dracula, Gruvbox, Nord, Solarized,
+  Tokyo Night and more) besides Dark and Light.
+- Open maps whose arguments are arithmetic or named numbers: `BASE_Z + 2.5`, numeric
+  `#define`s and `const`s, hex.
+- Filter models that explode (object.dat). Map Check notes explosive objects and warns
+  about trees and palms tilted on X or Y, which the game stands upright.
+- Selected and hovered objects show their outline from the camera too, so smooth models
+  such as barrels and rocks have a contour.
+- Paths and curves: per-point handle modes (Automatic, Aligned, Free, Corner) and tilt,
+  a start and end range, side and height offsets, and spacing by count. Loops and helices
+  can fit the selected model's length. The Array tool repeats a line in rows for a grid.
+- Moving objects: MoveObject / MoveDynamicObject on an object, kept relative to it, with an
+  optional turn, a preview of the movement in the 3D view, prefabs, Map Check and Namaka keys.
+- Animations a skin can't use are dimmed in the picker, with a Map Check warning: 46 move
+  only an object's parts, 34 twist the skin.
+- The Texture Browser filters textures that tile (left to right, top to bottom or both),
+  and Namaka's texture search marks them.
+- Duplicate offset in Tools: Ctrl+D moves and turns each copy by a fixed or random amount,
+  in world or the object's own axes (also Namaka's map_tool duplicate).
+- Races: point to point or circuits with laps, automatic checkpoint types (Finish at the end),
+  a walk-through preview in the editor, and playable races for `haumea_races.inc`
+  (StartMapRace, laps and times, with or without the streamer; `/race` in Test in game).
+
 ### Installation and workspaces
 
 - Install Haumea with the Windows or Linux installer, or the unsigned Apple Silicon DMG.
@@ -62,6 +87,9 @@
   A pixel-exact canvas renders at the player's resolution before scaling for editing.
 - Model previews now match the game's placement, orientation and mirroring more closely,
   including planes, skins and negative preview sizes.
+- Textdraws without a name of their own are written as one array per kind,
+  `<prefix>_td[k]` and `<prefix>_ptd[playerid][k]`, instead of one variable each.
+  Named textdraws keep their own variables, and older files read back into the arrays.
 
 ### Finding objects and measuring
 

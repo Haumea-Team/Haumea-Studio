@@ -24,7 +24,9 @@
 struct TexEntry {
 	int txdSlot;
 	char name[32];
+	uint8 tiles;	// TILES_*: whether it repeats without a seam (textureTilesFromData)
 };
+enum { TILES_ACROSS = 1, TILES_DOWN = 2 };
 
 static std::vector<TexEntry> gIndex;
 static int gNextSlot;	// TXD slots indexed so far
@@ -32,7 +34,114 @@ static std::vector<int> gOwner;	// txd slot -> model whose TXD it is, or -1
 static std::vector<uint8> gKind;	// txd slot -> KIND_*
 enum { KIND_GAME, KIND_SAMP, KIND_CUSTOM };
 
-// Texture names straight from a TXD's chunks, without decoding the pixels.
+// Whether a texture tiles: decoded at its first mip level of 64 pixels or
+// less, the colour difference between its left and right columns (and its
+// top and bottom rows) against the usual difference between neighbouring
+// columns (rows). Where an edge meets the opposite one no worse than
+// neighbours meet inside, the texture repeats without a seam; a grassy
+// texture's edges differ as much as its insides do, a sign's or a car's far
+// more. The method is tuned on the game's gta3.img.
+// s: the TextureNative's struct data, end: the end of the chunk.
+static uint8
+textureTilesFromData(const uint8 *s, const uint8 *end)
+{
+	if(end - s < 88)
+		return 0;
+	uint32 platform = *(const uint32*)s;
+	uint32 format = *(const uint32*)(s + 72), d3dformat = *(const uint32*)(s + 76);
+	int w = *(const uint16*)(s + 80), h = *(const uint16*)(s + 82);
+	int levels = s[85], compression = s[87];
+	const uint8 *q = s + 88;
+	const uint8 *palette = nil;
+	if(format & 0x2000){ palette = q; q += 1024; }	// PAL8
+	else if(format & 0x4000)
+		return 0;	// PAL4: none in the game's textures
+	int dxt = 0;
+	if(platform == 8 && (compression == 1 || compression == 3 || compression == 5))
+		dxt = compression;
+	else if(platform == 9 && (compression & 8))
+		dxt = d3dformat == 0x31545844 ? 1 : d3dformat == 0x33545844 ? 3 : d3dformat == 0x35545844 ? 5 : -1;
+	else if(platform != 8 && platform != 9)
+		return 0;
+	if(dxt < 0)
+		return 0;
+	// The level to look at.
+	const uint8 *pixels = nil;
+	uint32 size = 0;
+	for(int lv = 0; lv < levels; lv++){
+		if(end - q < 4)
+			return 0;
+		size = *(const uint32*)q;
+		q += 4;
+		if(size > (uint32)(end - q))
+			return 0;
+		if(std::max(w, h) <= 64 || lv == levels - 1){
+			pixels = q;
+			break;
+		}
+		q += size;
+		w = std::max(1, w / 2);
+		h = std::max(1, h / 2);
+	}
+	if(pixels == nil || w < 4 || h < 4)
+		return 0;
+	std::vector<uint8> rgb(w * h * 3);
+	if(dxt){
+		if(size < (uint32)((w / 4) * (h / 4) * (dxt == 1 ? 8 : 16)) || w % 4 || h % 4)
+			return 0;
+		rw::Image *img = rw::Image::create(w, h, 32);
+		img->allocate();
+		img->setPixelsDXT(dxt, (uint8*)pixels);
+		for(int i = 0; i < w * h; i++)
+			memcpy(&rgb[i * 3], &img->pixels[i * 4], 3);
+		img->destroy();
+	}else{
+		int bpp = palette ? 1 : (format & 0xF00) == 0x500 || (format & 0xF00) == 0x600 ? 4 : 2;
+		if(size < (uint32)(w * h * bpp) || (palette && end - palette < 1024))
+			return 0;
+		for(int i = 0; i < w * h; i++){
+			uint8 *o = &rgb[i * 3];
+			if(palette){
+				memcpy(o, palette + 4 * pixels[i], 3);
+				continue;
+			}
+			uint32 c = bpp == 4 ? *(const uint32*)(pixels + 4 * i) : *(const uint16*)(pixels + 2 * i);
+			switch(format & 0xF00){
+			case 0x500: case 0x600:	// B, G, R, A in memory
+				o[0] = c >> 16 & 0xFF; o[1] = c >> 8 & 0xFF; o[2] = c & 0xFF; break;
+			case 0x200:	// 565
+				o[0] = (c >> 11 & 31) * 255 / 31; o[1] = (c >> 5 & 63) * 255 / 63; o[2] = (c & 31) * 255 / 31; break;
+			case 0x100:	// 1555
+				o[0] = (c >> 10 & 31) * 255 / 31; o[1] = (c >> 5 & 31) * 255 / 31; o[2] = (c & 31) * 255 / 31; break;
+			case 0x300:	// 4444
+				o[0] = (c >> 8 & 15) * 17; o[1] = (c >> 4 & 15) * 17; o[2] = (c & 15) * 17; break;
+			default:
+				return 0;
+			}
+		}
+	}
+	auto diff = [&](int x0, int y0, int x1, int y1){
+		const uint8 *a = &rgb[(y0 * w + x0) * 3], *b = &rgb[(y1 * w + x1) * 3];
+		return abs(a[0] - b[0]) + abs(a[1] - b[1]) + abs(a[2] - b[2]);
+	};
+	double edgeX = 0, insideX = 0, edgeY = 0, insideY = 0;
+	for(int y = 0; y < h; y++){
+		edgeX += diff(0, y, w - 1, y);
+		for(int x = 0; x + 1 < w; x++)
+			insideX += diff(x, y, x + 1, y);
+	}
+	for(int x = 0; x < w; x++){
+		edgeY += diff(x, 0, x, h - 1);
+		for(int y = 0; y + 1 < h; y++)
+			insideY += diff(x, y, x, y + 1);
+	}
+	edgeX /= h; insideX /= h * (w - 1);
+	edgeY /= w; insideY /= w * (h - 1);
+	// Sums of three channels (0 to 765): no worse than 1.2 times the inside, give or take 4.
+	return (edgeX <= 1.2 * insideX + 4.0 ? TILES_ACROSS : 0) | (edgeY <= 1.2 * insideY + 4.0 ? TILES_DOWN : 0);
+}
+
+// Texture names straight from a TXD's chunks, and whether each tiles.
 static void
 readTxdNames(const uint8 *data, int size, int slot)
 {
@@ -50,6 +159,7 @@ readTxdNames(const uint8 *data, int size, int slot)
 			e.txdSlot = slot;
 			memcpy(e.name, name, 31);
 			e.name[31] = '\0';
+			e.tiles = textureTilesFromData(data + p + 24, data + std::min(end, (int)(p + 12 + std::min(len, (uint32)(end - p)))));
 			if(e.name[0])
 				gIndex.push_back(e);
 		}
@@ -127,6 +237,7 @@ indexSlot(int slot)
 			e.txdSlot = slot;
 			strncpy(e.name, t->name, 31);
 			e.name[31] = '\0';
+			e.tiles = 0;	// already turned into the renderer's rasters
 			gIndex.push_back(e);
 		}
 	}
@@ -220,6 +331,7 @@ SearchTextures(const char *query, int limit, std::vector<TextureSearchResult> &o
 		r.samp = gKind[e.txdSlot] == KIND_SAMP;
 		r.custom = gKind[e.txdSlot] == KIND_CUSTOM;
 		r.tstudioIndex = tstudioIndexOf(txd->name, e.name);
+		r.tiles = e.tiles;
 		out.push_back(r);
 	}
 	return (int)out.size();
@@ -404,6 +516,10 @@ applyTextureSelection(const Pick &pick, const std::string &key)
 enum { SHOW_ALL, SHOW_SAMP, SHOW_CUSTOM, SHOW_RECENT, SHOW_FAVOURITES };
 static ImGuiTextFilter gSearch, gTxdFilter, gTsSearch;
 static int gShow;
+// 0 any; else textures that tile (TexEntry::tiles): 1 left to right,
+// 2 top to bottom, 3 both ways.
+static int gTiles;
+
 static float gTile = 5.0f;
 
 static bool
@@ -418,6 +534,8 @@ passes(const TexEntry &e, const std::string &key)
 	case SHOW_FAVOURITES: if(!gFavourites.count(key)) return false; break;
 	case SHOW_RECENT: if(std::find(gRecent.begin(), gRecent.end(), key) == gRecent.end()) return false; break;
 	}
+	if(gTiles && (e.tiles & gTiles) != gTiles)
+		return false;
 	return gSearch.PassFilter(e.name) && gTxdFilter.PassFilter(pawnTxdName(e.txdSlot));
 }
 
@@ -575,6 +693,15 @@ DrawTextureBrowserWindow(bool *open)
 			ImGui::SameLine();
 			ImGui::SetNextItemWidth(ImGui::GetFontSize() * 5.0f);
 			ImGui::SliderFloat("##tile", &gTile, 3.0f, 12.0f, _("Size"));
+			static const char *tiles[] = { N_("Any tiling"), N_("Tiles left to right"), N_("Tiles top to bottom"),
+				N_("Tiles both ways") };
+			const char *tileNames[IM_ARRAYSIZE(tiles)];
+			for(int i = 0; i < IM_ARRAYSIZE(tiles); i++)
+				tileNames[i] = _(tiles[i]);
+			ImGui::SetNextItemWidth(ImGui::GetFontSize() * 12.0f);
+			ImGui::Combo("##tiles", &gTiles, tileNames, IM_ARRAYSIZE(tiles));
+			ImGui::SetItemTooltip(_("Textures that repeat without a seam, for floors, walls and long surfaces,\n"
+				"judged from their edges; a guess, so check how it looks."));
 			std::vector<int> items;
 			if(gShow == SHOW_RECENT || gShow == SHOW_FAVOURITES){
 				// Looked up by "txd:texture", recent ones newest first.

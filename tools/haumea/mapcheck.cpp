@@ -9,6 +9,8 @@
 #include "encoding.h"
 #include "radarart.h"
 #include "materialtext.h"
+#include "modelmeta.h"
+#include "anim.h"
 
 #include <ctype.h>
 #include <math.h>
@@ -453,11 +455,34 @@ RunMapCheck(int pawnFormat, MapCheckResult *result, bool translated)
 			"goes in the workspace's models/artconfig.txt (AddSimpleModel) with its DFF and TXD; anything "
 			"else needs a similar game or SA-MP object in its place (search the Object Browser).")));
 	}
+	std::vector<ObjectInst*> tiltedTrees, explosive;
 	for(ObjectInst *inst : objects){
 		ObjectDef *obj = GetObjectDef(inst->m_objectId);
-		if(obj == nil || obj->m_cantLoad)
+		if(obj == nil || obj->m_cantLoad){
 			c.add(MAPCHECK_ERROR, MODELS, inst, tr(N_("%s: its model can't be loaded.")), label(inst, name, sizeof(name)));
+			continue;
+		}
+		// Trees and palms sway: CEntity::ModifyMatrixForTreeInWind (gta-reversed
+		// Entity.cpp) rewrites the up axis's X and Y every frame, so a tilt is lost.
+		// The up axis's Z is 1 - 2(x^2 + y^2); under cos(0.5 deg) it leans.
+		const rw::Quat &q = inst->m_rotation;
+		if(obj->m_type == ObjectDef::ATOMIC && (obj->m_isTree || obj->m_isPalmTree) && !obj->m_isTag &&
+		   1.0f - 2.0f*(q.x*q.x + q.y*q.y) < 0.99996f)
+			tiltedTrees.push_back(inst);
+		const ModelMeta *meta = GetModelMeta(inst->m_objectId);
+		if(meta && meta->explosive)
+			explosive.push_back(inst);
+		const ObjectPawnProperties *p = GetObjectPawnProperties(inst);
+		if(p->moveEnabled && length(p->moveOffset) < 0.001f && !p->moveRotates)
+			c.add(MAPCHECK_WARNING, MODELS, inst, tr(N_("%s moves 0 m and doesn't turn, so its MoveObject does nothing.")),
+				label(inst, name, sizeof(name)));
 	}
+	if(!tiltedTrees.empty())
+		c.add(MAPCHECK_WARNING, MODELS, ids(tiltedTrees), tr(N_("%d tree(s) or palm(s) tilted on X or Y: the game sways "
+			"them in the wind and stands them upright, so the tilt doesn't show in game.")), (int)tiltedTrees.size());
+	if(!explosive.empty())
+		c.add(MAPCHECK_INFO, MODELS, ids(explosive), tr(N_("%d object(s) explode when shot or hit (object.dat), such as "
+			"barrels and petrol pumps. Each player can blow them up on their own screen.")), (int)explosive.size());
 
 	// --- Positions ---
 	const char *PLACES = tr(N_("Positions"));
@@ -534,6 +559,17 @@ RunMapCheck(int pawnFormat, MapCheckResult *result, bool translated)
 
 	// --- Elements ---
 	const char *ELEMENTS = tr(N_("Elements"));
+	for(int kind : { SAMP_ELEMENT_ACTOR, SAMP_ELEMENT_NPC })
+		for(ObjectInst *inst : byKind[kind]){
+			const ObjectPawnProperties *p = GetObjectPawnProperties(inst);
+			int problem = p->animName[0] ? AnimPedProblem(p->animLib, p->animName) : ANIM_PED_OK;
+			if(problem == ANIM_PED_OBJECT_ONLY)
+				c.add(MAPCHECK_WARNING, ELEMENTS, inst, tr(N_("%s plays %s / %s, which moves only an object's parts: "
+					"the skin stands still.")), label(inst, name, sizeof(name)), p->animLib, p->animName);
+			else if(problem == ANIM_PED_DEFORMS)
+				c.add(MAPCHECK_WARNING, ELEMENTS, inst, tr(N_("%s plays %s / %s, which twists the skin out of shape.")),
+					label(inst, name, sizeof(name)), p->animLib, p->animName);
+		}
 	for(ObjectInst *inst : byKind[SAMP_ELEMENT_LABEL]){
 		const ObjectPawnProperties *p = GetObjectPawnProperties(inst);
 		if(p->labelText[0] == '\0')
@@ -690,20 +726,26 @@ RunMapCheck(int pawnFormat, MapCheckResult *result, bool translated)
 
 	// --- Checkpoints (streamer only) ---
 	const char *CHECKPOINTS = tr(N_("Checkpoints"));
-	std::vector<ObjectInst*> plainCps, raceCps;
+	std::vector<ObjectInst*> plainCps, raceCps, markers;
 	std::map<std::string, std::vector<ObjectInst*>> races;
+	std::set<std::string> playable;
 	for(ObjectInst *inst : byKind[SAMP_ELEMENT_CHECKPOINT]){
 		const ObjectPawnProperties *p = GetObjectPawnProperties(inst);
 		if(p->cpKind == SAMP_CHECKPOINT_RACE){
 			raceCps.push_back(inst);
 			races[p->cpRace].push_back(inst);
+			if(p->cpRacePlayable && p->cpRace[0])
+				playable.insert(p->cpRace);
 		}else
 			plainCps.push_back(inst);
+		// Playable races go to haumea_races.inc in either format.
+		if(p->cpKind != SAMP_CHECKPOINT_RACE || !p->cpRacePlayable || !p->cpRace[0])
+			markers.push_back(inst);
 	}
-	if(!streamer && !byKind[SAMP_ELEMENT_CHECKPOINT].empty())
-		c.add(MAPCHECK_WARNING, CHECKPOINTS, ids(byKind[SAMP_ELEMENT_CHECKPOINT]), tr(N_("%d checkpoint(s) are not written "
+	if(!streamer && !markers.empty())
+		c.add(MAPCHECK_WARNING, CHECKPOINTS, ids(markers), tr(N_("%d checkpoint(s) are not written "
 			"in native code (a player has one checkpoint at a time, set by the script). Save as Streamer code.")),
-			(int)byKind[SAMP_ELEMENT_CHECKPOINT].size());
+			(int)markers.size());
 	else if(plainCps.size() + raceCps.size() > 1)
 		c.add(MAPCHECK_INFO, CHECKPOINTS, std::vector<int>(), tr(N_("%d checkpoint(s) and %d race checkpoint(s): a player "
 			"sees one of each at a time, so the streamer shows the nearest.")), (int)plainCps.size(), (int)raceCps.size());
@@ -712,6 +754,10 @@ RunMapCheck(int pawnFormat, MapCheckResult *result, bool translated)
 		if(race.second.size() == 1)
 			c.add(MAPCHECK_WARNING, CHECKPOINTS, ids(race.second), tr(N_("Race \"%s\" has one checkpoint: there is "
 				"nothing to race to.")), raceName);
+		if(race.second.size() == 1 && GetObjectPawnProperties(race.second[0])->cpRaceMode == SAMP_RACE_CIRCUIT &&
+		   playable.count(race.first))
+			c.add(MAPCHECK_ERROR, CHECKPOINTS, ids(race.second), tr(N_("Race \"%s\" is a circuit with one checkpoint: "
+				"StartMapRace refuses it (a circuit needs at least 2).")), raceName);
 		std::map<int, std::vector<ObjectInst*>> orders;
 		for(ObjectInst *inst : race.second)
 			orders[GetObjectPawnProperties(inst)->cpOrder].push_back(inst);
@@ -719,6 +765,14 @@ RunMapCheck(int pawnFormat, MapCheckResult *result, bool translated)
 			if(order.second.size() > 1)
 				c.add(MAPCHECK_ERROR, CHECKPOINTS, ids(order.second), tr(N_("Race \"%s\": %d checkpoints share order %d, "
 					"so which one comes first is undefined.")), raceName, (int)order.second.size(), order.first);
+	}
+
+	if(!playable.empty()){
+		std::string a = WorkspacePath("qawno/include/haumea_races.inc"), b = WorkspacePath("pawno/include/haumea_races.inc");
+		if(!fileExists(a) && !fileExists(b))
+			c.add(MAPCHECK_INFO, CHECKPOINTS, std::vector<int>(), tr(N_("%d playable race(s) need haumea_races.inc, "
+				"which isn't in the workspace's includes: without it the map compiles but has no races. A race "
+				"checkpoint's settings can save it there.")), (int)playable.size());
 	}
 
 	// --- Dynamic areas (streamer only) ---

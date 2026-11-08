@@ -104,10 +104,15 @@ void panic(const char *fmt, ...);
 void debug(const char *fmt, ...);
 void log(const char *fmt, ...);
 void SetupStyle(void);
-enum { UI_THEME_DARK, UI_THEME_LIGHT };
+// 0 and 1 are Haumea's own; the rest are palettes (style.cpp).
+enum { UI_THEME_DARK, UI_THEME_LIGHT, UI_THEME_FIRST_PALETTE };
 enum { UI_COLOR_SUCCESS, UI_COLOR_WARNING, UI_COLOR_ERROR, UI_COLOR_INFO };
 int GetUiTheme(void);
 void SetUiTheme(int theme);
+int NumUiThemes(void);
+const char *GetUiThemeName(int theme);	// in the UI's language
+bool UiThemeIsLight(void);	// dark text on a light background
+rw::RGBA UiThemePreviewBackground(void);	// behind model previews and thumbnails
 ImVec4 UiSemanticColor(int color);
 void SetupFonts(void);
 bool GetEditorRootDirectory(char *dir, size_t size);
@@ -121,8 +126,16 @@ FILE *fopenHaumeaDataWrite(const char *name);
 void setHotReloadTracePath(const char *path);
 void hotReloadTrace(const char *fmt, ...);
 void addToLogWindow(const char *fmt, va_list args);
+void OpenLogFile(bool append);	// append: a renderer hand-over's second process
 void LoadInitialEditorWindowState(int *width, int *height);
 void LoadInitialAntialiasingSettings(void);
+// Windows ships haumea.exe (OpenGL) and haumea-d3d9.exe (Direct3D 9); the
+// setting says which one runs, and a start where OpenGL failed goes to Direct3D 9.
+enum { RENDERER_AUTO, RENDERER_OPENGL, RENDERER_D3D9 };
+extern int gRendererChoice;
+extern bool gRendererGlFailed;	// OpenGL didn't start on this PC: Automatic uses Direct3D 9
+void LoadInitialRendererSettings(void);
+bool RendererChoiceAvailable(void);	// both exes are there
 void ApplyInitialEditorWindowState(void);
 // Startup splash window and its growth into the editor window (GLFW builds).
 #define HAUMEA_SPLASH_WIDTH 880
@@ -372,6 +385,11 @@ enum {
 	SAMP_CHECKPOINT_NORMAL,	// CreateDynamicCP
 	SAMP_CHECKPOINT_RACE,	// CreateDynamicRaceCP
 };
+// A race: from first to last, or round and round (cpRaceMode). The race
+// checkpoint types after the client's 0-8: Normal until the end, then Finish
+// (as haumea_races.inc does).
+enum { SAMP_RACE_POINT_TO_POINT, SAMP_RACE_CIRCUIT };
+enum { SAMP_RACE_CP_AUTO_GROUND = 9, SAMP_RACE_CP_AUTO_AIR = 10, SAMP_RACE_MAX_LAPS = 999 };
 
 // How a gang zone is shown (ObjectPawnProperties::zoneMode).
 enum {
@@ -409,6 +427,14 @@ struct ObjectPawnProperties
 	rw::V3d attachScale;	// SetPlayerAttachedObject scale
 	uint32 attachColor1, attachColor2;	// SetPlayerAttachedObject material colours (ARGB)
 	int attachSkin;	// preview skin for the generic player target
+	// MoveObject / MoveDynamicObject once the object is made: it glides by
+	// moveOffset (world axes, from where it stands, so it follows the object)
+	// at moveSpeed m/s and, with moveRotates, turns to moveRotation.
+	bool moveEnabled;
+	rw::V3d moveOffset;
+	rw::V3d moveRotation;	// degrees, SA-MP Euler order
+	bool moveRotates;
+	float moveSpeed;	// metres a second
 
 	// SA-MP element settings; elementKind is SAMP_ELEMENT_OBJECT for objects
 	// and vehicles. The world, draw and stream distances above apply too.
@@ -482,6 +508,12 @@ struct ObjectPawnProperties
 	int cpRaceType;	// CreateDynamicRaceCP type: 0 normal .. 8
 	char cpRace[PAWN_OBJECT_NAME_LEN];
 	int cpOrder;
+	// The whole race's settings, the same on each of its checkpoints
+	// (SetRaceSettings). Playable races are saved for haumea_races.inc
+	// (MapRace_Create), one player at a time, instead of as fixed markers.
+	int cpRaceMode;	// SAMP_RACE_POINT_TO_POINT / SAMP_RACE_CIRCUIT
+	int cpRaceLaps;	// circuits: 1 to SAMP_RACE_MAX_LAPS
+	bool cpRacePlayable;
 	// Dynamic areas (streamer only). The shape sits around the position;
 	// a rectangle or cuboid is areaSize wide, centred in x and y, its z
 	// going up from the position.
@@ -994,7 +1026,8 @@ void UiScriptRestateMouse(void);	// d3d9: the script's pointer over the backend'
 void DrawTextureBrowserWindow(bool *open);
 // Help > About > Licenses (licenses.cpp)
 void DrawLicensesWindow(bool *open);
-struct TextureSearchResult { int model; std::string txd, texture; bool samp, custom; int tstudioIndex; };
+struct TextureSearchResult { int model; std::string txd, texture; bool samp, custom; int tstudioIndex;
+	int tiles; };	// tiles: 0 not, 1 left to right, 2 top to bottom, 3 both
 int SearchTextures(const char *query, int limit, std::vector<TextureSearchResult> &out);	// indexes everything first
 // Texture Studio's texture list (tstudio.cpp): Texture Studio maps store
 // textures as indices into it, so its order matters. The workspace's own
@@ -1136,7 +1169,16 @@ void GetNpcPathPoints(const char *pathName, std::vector<ObjectInst*> &out);
 void GetNpcPathNames(std::vector<std::string> &out);
 // A race's checkpoints in order, and the one after a race checkpoint (nil for the last).
 void GetRaceCheckpoints(const char *raceName, std::vector<ObjectInst*> &out);
+// The next checkpoint; a circuit's last leads back to its first.
 ObjectInst *GetNextRaceCheckpoint(const ObjectInst *inst);
+// The type a player sees on a checkpoint shown on its own (a marker): the
+// automatic types become Finish on a race's last checkpoint (a circuit's
+// first, where laps end) and Normal before; air ones likewise.
+int GetRaceCheckpointShownType(const ObjectInst *inst);
+// Mode, laps and playable on every checkpoint of the race, as one undo step.
+void SetRaceSettings(const char *raceName, int mode, int laps, bool playable);
+// haumea_races.inc, written to path; false if it can't be.
+bool WriteHaumeaRacesInclude(const char *path);
 int GetSpawnElementKind(void);
 // Stand-in model used to draw and pick elements that have no model.
 int GetSampElementProxyModel(int kind);
@@ -1900,6 +1942,10 @@ void SplashKeepAlive(void);
 extern ImFont *gCodeFont;
 extern ImFont *gTitleFont;
 void RenderLinesNow(const rw::V3d *points, int numPoints, rw::RGBA col);
+// Selected objects that move (MoveObject): a line to where they go, a ghost
+// there, and one gliding between at their speed.
+extern bool gPreviewObjectMoves;
+void RenderObjectMovePreviews(void);
 void RenderObjectOutlines(void);
 
 

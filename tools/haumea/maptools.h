@@ -19,6 +19,10 @@ struct MapArrayParams {
 	// over angle degrees (360: a full circle with the selection included).
 	rw::V3d centre;
 	float angle;
+	// Linear only: the line (the selection and its copies) repeated rows
+	// times, each row_offset metres from the one before, for a grid.
+	int rows = 1;
+	rw::V3d rowOffset = { 5.0f, 0.0f, 0.0f };
 };
 
 // Where each copy's objects would go, for previews: for every copy, the
@@ -30,6 +34,21 @@ int MapToolsArray(const MapArrayParams &params, std::string *error);
 // axis: 0 = X (flip east-west), 1 = Y (flip north-south). The plane goes
 // through *at on that axis, or the selection's centre when at is nil.
 // keepOriginal mirrors a copy and leaves the selection where it is.
+// Duplicate (Ctrl+D) with an offset:
+// each copy moved and turned by a fixed amount or a random one within
+// ranges, in world axes or the first selected object's own.
+struct MapCloneOffset {
+	bool enabled = false;
+	bool random = false;
+	bool local = false;
+	float fixed[6] = { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };	// x y z metres, rx ry rz degrees
+	float low[6] = { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f }, high[6] = { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
+};
+MapCloneOffset &MapToolsCloneOffset(void);
+// Duplicates the selection, then moves the copies by the offset when it's
+// on; one undo step. Returns the copies, or -1.
+int MapToolsDuplicate(std::string *error);
+
 int MapToolsMirror(int axis, const float *at, bool keepOriginal, std::string *error);
 // Where the selection's objects would go (selection order), and the mirror's
 // coordinate on that axis, for previews.

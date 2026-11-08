@@ -69,7 +69,7 @@ __HAUMEA_PAYLOAD__
     output.chmod(0o755)
 
 
-def package(platform, engine, stage, output, namaka=None, glfw=None):
+def package(platform, engine, stage, output, namaka=None, glfw=None, engine_d3d9=None):
     if namaka is None:
         raise ValueError('Every platform download must include the Namaka bundle')
     if platform == 'windows' and glfw is None:
@@ -80,6 +80,9 @@ def package(platform, engine, stage, output, namaka=None, glfw=None):
     shutil.copy2(engine, stage / binary)
     if platform != 'windows':
         (stage / binary).chmod(0o755)
+    if engine_d3d9:
+        # Started by haumea.exe when OpenGL doesn't, or chosen in Preferences.
+        shutil.copy2(engine_d3d9, stage / 'haumea-d3d9.exe')
     for name in ('LICENSE', 'THIRD_PARTY_NOTICES.md'):
         shutil.copy2(ROOT / name, stage / name)
     for source, name in ((ROOT / 'fonts', 'fonts'),
@@ -98,7 +101,9 @@ def package(platform, engine, stage, output, namaka=None, glfw=None):
                 shutil.copy2(dll, stage / dll.name)
     start = {
         'windows': 'Extract the entire ZIP, open the Haumea Studio folder and double-click haumea.exe.\n'
-                   'Keep the folders and glfw3.dll beside it. No Python setup is needed to use the editor.\n',
+                   'Keep the folders and glfw3.dll beside it. No Python setup is needed to use the editor.\n'
+                   'haumea-d3d9.exe is the Direct3D 9 version: haumea.exe starts it by itself when\n'
+                   'OpenGL doesn\'t start, and Preferences > Renderer chooses between them.\n',
         'linux': 'Extract this archive into its own folder, then run ./haumea.\n'
                  'To add Haumea Studio to your applications menu, run: python3 install-linux.py\n'
                  'Dependencies: libglfw3, curl and Python 3.10+ (installer only); zenity or kdialog for file browsing.\n'
@@ -136,6 +141,7 @@ def main():
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--namaka', type=Path)
     parser.add_argument('--glfw', type=Path)
+    parser.add_argument('--engine-d3d9', type=Path, help='Windows: the Direct3D 9 haumea.exe')
     args = parser.parse_args()
     package(**vars(args))
 

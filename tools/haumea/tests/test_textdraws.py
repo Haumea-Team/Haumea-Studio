@@ -94,6 +94,38 @@ public OnPlayerConnect(playerid)
 }
 '''
 
+# A textdraw file from before the arrays: one variable per textdraw.
+OLD_NAMES = '''new Text:Haumea_old_td0;
+new Text:Banner;
+new PlayerText:Haumea_old_ptd2[MAX_PLAYERS];
+new PlayerText:Haumea_old_ptd3[MAX_PLAYERS];
+stock Haumea_old_CreateTextDraws()
+{
+	Haumea_old_td0 = TextDrawCreate(10.0, 10.0, "A");
+	Banner = TextDrawCreate(320.0, 5.0, "Banner");
+}
+stock Haumea_old_ShowTextDraws(playerid)
+{
+	Haumea_old_ptd2[playerid] = CreatePlayerTextDraw(playerid, 100.0, 100.0, "One");
+	Haumea_old_ptd3[playerid] = CreatePlayerTextDraw(playerid, 110.0, 110.0, "Two");
+	PlayerTextDrawColor(playerid, Haumea_old_ptd3[playerid], 0xFF0000FF);
+}
+'''
+
+GAMEMODE_HUD = '''#include "hud.pwn"
+main(){}
+public OnGameModeInit()
+{
+	Haumea_hud_CreateTextDraws();
+	return 1;
+}
+public OnPlayerConnect(playerid)
+{
+	Haumea_hud_ShowTextDraws(playerid);
+	return 1;
+}
+'''
+
 
 @unittest.skipUnless(GAME_DIR and BINARY and HAVE_DISPLAY,
                      'set HAUMEA_GAME_DIR and build the editor to run')
@@ -169,6 +201,29 @@ class TextDrawTests(unittest.TestCase):
             self.assertIn('TextDrawShowForPlayer(playerid, Title);', out)
 
             self.compile(tmp, GAMEMODE)
+
+    def test_unnamed_textdraws_share_arrays(self):
+        """Textdraws without a name of their own go into one array per kind;
+        an older file's Haumea_..._ptd2 variables join them."""
+        with tempfile.TemporaryDirectory() as tmp:
+            Path(tmp, 'old.pwn').write_text(OLD_NAMES)
+            result = run_editor([BINARY, '--game', GAME_DIR, '--textdraw-roundtrip', str(Path(tmp, 'old.pwn')),
+                                 str(Path(tmp, 'hud.pwn'))],
+                                cwd=tmp, env=editor_env(tmp), capture_output=True, text=True)
+            self.assertIn(': 4 textdraw(s)', result.stdout, result.stdout[-2000:])
+            hud = Path(tmp, 'hud.pwn').read_text()
+            self.assertIn('new Text:Banner;', hud)
+            self.assertIn('new Text:Haumea_hud_td0;', hud)	# the only unnamed global: no array of one
+            self.assertIn('new PlayerText:Haumea_hud_ptd[MAX_PLAYERS][2];', hud)
+            self.assertIn('Haumea_hud_ptd[playerid][1] = CreatePlayerTextDraw(playerid, 110.000, 110.000, "Two");', hud)
+            self.assertIn('PlayerTextDrawColour(playerid, Haumea_hud_ptd[playerid][1], 0xFF0000FF);', hud)
+            self.assertNotIn('Haumea_old_', hud)
+            # Read back, the arrays give the same file.
+            result = run_editor([BINARY, '--game', GAME_DIR, '--textdraw-roundtrip', str(Path(tmp, 'hud.pwn')),
+                                 str(Path(tmp, 'hud2.pwn'))],
+                                cwd=tmp, env=editor_env(tmp), capture_output=True, text=True)
+            self.assertEqual(Path(tmp, 'hud2.pwn').read_text().replace('hud2', 'hud'), hud)
+            self.compile(tmp, GAMEMODE_HUD, ('OMP_INCLUDE',))
 
 
 if __name__ == '__main__':

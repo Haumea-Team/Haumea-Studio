@@ -31,6 +31,8 @@ class DownloadsTests(unittest.TestCase):
         self.engine = self.work / 'haumea'
         self.engine.write_text('#!/bin/sh\nprintf "%s\\n" "$@"\n')
         self.engine.chmod(0o755)
+        self.d3d9 = self.work / 'haumea-d3d9-build.exe'
+        self.d3d9.write_bytes(b'Direct3D 9 test editor')
         self.glfw = self.work / 'glfw3.dll'
         self.glfw.write_bytes(b'GLFW test DLL')
         (self.work / 'vcruntime140.dll').write_bytes(b'Runtime test DLL')
@@ -47,7 +49,7 @@ class DownloadsTests(unittest.TestCase):
                '--engine', str(self.engine), '--stage', str(stage), '--output', str(output)]
         cmd += ['--namaka', str(self.namaka)]
         if platform == 'windows':
-            cmd += ['--glfw', str(self.glfw)]
+            cmd += ['--glfw', str(self.glfw), '--engine-d3d9', str(self.d3d9)]
         subprocess.run(cmd, check=True, capture_output=True, text=True)
         return stage, output
 
@@ -56,7 +58,7 @@ class DownloadsTests(unittest.TestCase):
         with zipfile.ZipFile(output / 'Haumea-Studio-Windows-Portable.zip') as archive:
             names = archive.namelist()
             self.assertTrue(all(n.startswith('Haumea Studio/') for n in names))
-            for name in ('haumea.exe', 'glfw3.dll', 'vcruntime140.dll', 'START_HERE.txt',
+            for name in ('haumea.exe', 'haumea-d3d9.exe', 'glfw3.dll', 'vcruntime140.dll', 'START_HERE.txt',
                          'LICENSE', 'THIRD_PARTY_NOTICES.md', 'lang/pt-BR.po',
                          'namaka/namaka_install.py', 'namaka/wheelhouse/dependency.whl'):
                 self.assertIn('Haumea Studio/' + name, names)

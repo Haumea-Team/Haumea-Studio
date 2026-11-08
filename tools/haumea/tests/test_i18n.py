@@ -177,9 +177,12 @@ assert item 'Object Browser' '##place_skin'
 shortcut window_preferences
 wait 5
 assert window '首选项'
-assert item 'Preferences' '深色'
-assert item 'Preferences' '浅色'
-click_item 'Preferences' '浅色'
+assert item 'Preferences' '主题'
+click_item 'Preferences' '主题'
+wait 3
+assert item '*' '深色'
+assert item '*' '浅色'
+click_item '*' '浅色'
 wait 3
 assert missing_catalog_glyphs == 0
 click_item 'Preferences' 'Performance'

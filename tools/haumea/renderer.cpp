@@ -1087,13 +1087,22 @@ RenderInit(void)
 // it. They show selected and hovered objects whatever their textures, so
 // invisible and see-through objects can still be found and retextured.
 
+// A smooth edge between two faces: on the silhouette when the camera sees
+// one face and not the other. Smooth models (barrels, rocks) have no borders
+// or creases, so only these give them a contour.
+struct SilhouetteEdge
+{
+	rw::V3d a, b, n1, n2;
+};
+
 // Model-space segments (pairs of points) along a geometry's open borders
 // and sharp creases. Vertices are welded by position first, so texture
 // seams do not count as borders.
 static void
-BuildOutlineEdges(rw::Geometry *geo, std::vector<rw::V3d> &out)
+BuildOutlineEdges(rw::Geometry *geo, std::vector<rw::V3d> &out, std::vector<SilhouetteEdge> &smooth)
 {
 	out.clear();
+	smooth.clear();
 	if(geo->triangles == nil || geo->numMorphTargets < 1 || geo->morphTargets[0].vertices == nil)
 		return;
 	rw::V3d *verts = geo->morphTargets[0].vertices;
@@ -1110,7 +1119,7 @@ BuildOutlineEdges(rw::Geometry *geo, std::vector<rw::V3d> &out)
 	}
 
 	struct EdgeInfo {
-		rw::V3d normal;
+		rw::V3d normal, normal2;
 		int count;
 		bool crease;	// two faces meet at a sharp angle
 		bool opposite;	// back-to-back faces, as on a double-sided sheet
@@ -1133,12 +1142,13 @@ BuildOutlineEdges(rw::Geometry *geo, std::vector<rw::V3d> &out)
 			uint64 key = a < b ? (uint64)a << 32 | b : (uint64)b << 32 | a;
 			auto it = edges.find(key);
 			if(it == edges.end()){
-				EdgeInfo info = { n, 1, false, false };
+				EdgeInfo info = { n, n, 1, false, false };
 				edges.emplace(key, info);
 				continue;
 			}
 			EdgeInfo &info = it->second;
 			info.count++;
+			info.normal2 = n;
 			float d = dot(n, info.normal);
 			if(d < -0.98f)
 				info.opposite = true;
@@ -1153,7 +1163,8 @@ BuildOutlineEdges(rw::Geometry *geo, std::vector<rw::V3d> &out)
 		if(info.count == 1 || info.crease || (info.count == 2 && info.opposite)){
 			out.push_back(verts[edge.first >> 32]);
 			out.push_back(verts[edge.first & 0xFFFFFFFF]);
-		}
+		}else if(info.count == 2)
+			smooth.push_back({ verts[edge.first >> 32], verts[edge.first & 0xFFFFFFFF], info.normal, info.normal2 });
 	}
 }
 
@@ -1162,38 +1173,62 @@ struct OutlineCacheEntry
 	int numVertices;
 	int numTriangles;
 	std::vector<rw::V3d> points;
+	std::vector<SilhouetteEdge> smooth;
 };
 static std::unordered_map<rw::Geometry*, OutlineCacheEntry> outlineCache;
 
-static const std::vector<rw::V3d>&
+static const OutlineCacheEntry&
 GetOutlineEdges(rw::Geometry *geo)
 {
 	auto it = outlineCache.find(geo);
 	// A streamed-out model's geometry can be freed and the address reused.
 	if(it != outlineCache.end() && it->second.numVertices == geo->numVertices &&
 	   it->second.numTriangles == geo->numTriangles)
-		return it->second.points;
+		return it->second;
 	if(outlineCache.size() > 4096)
 		outlineCache.clear();
 	OutlineCacheEntry &entry = outlineCache[geo];
 	entry.numVertices = geo->numVertices;
 	entry.numTriangles = geo->numTriangles;
-	BuildOutlineEdges(geo, entry.points);
-	return entry.points;
+	BuildOutlineEdges(geo, entry.points, entry.smooth);
+	return entry;
 }
 
+// silhouette: also the smooth edges on the contour from the camera; only
+// for the few selected and hovered objects, since it changes every frame.
 static void
-AddAtomicOutline(rw::Atomic *atomic, std::vector<rw::V3d> &out)
+AddAtomicOutline(rw::Atomic *atomic, std::vector<rw::V3d> &out, bool silhouette)
 {
 	rw::Geometry *geo = atomic->geometry;
 	if(geo == nil || !(atomic->getFlags() & rw::Atomic::RENDER))
 		return;
-	const std::vector<rw::V3d> &edges = GetOutlineEdges(geo);
-	if(edges.empty())
-		return;
+	const OutlineCacheEntry &entry = GetOutlineEdges(geo);
+	const std::vector<rw::V3d> &edges = entry.points;
+	rw::Matrix *ltm = atomic->getFrame()->getLTM();
 	size_t start = out.size();
-	out.resize(start + edges.size());
-	rw::V3d::transformPoints(&out[start], edges.data(), (int32)edges.size(), atomic->getFrame()->getLTM());
+	if(!edges.empty()){
+		out.resize(start + edges.size());
+		rw::V3d::transformPoints(&out[start], edges.data(), (int32)edges.size(), ltm);
+	}
+	if(silhouette && !entry.smooth.empty()){
+		// The camera in model space: which side of a face it is on doesn't
+		// change under the object's transform, scaled or not.
+		rw::Matrix inverse;
+		rw::Matrix::invert(&inverse, ltm);
+		rw::V3d eye;
+		rw::V3d::transformPoints(&eye, &TheCamera.m_position, 1, &inverse);
+		size_t silhouetteStart = out.size();
+		for(const SilhouetteEdge &e : entry.smooth){
+			rw::V3d toEye = sub(eye, e.a);
+			if((dot(e.n1, toEye) > 0.0f) != (dot(e.n2, toEye) > 0.0f)){
+				out.push_back(e.a);
+				out.push_back(e.b);
+			}
+		}
+		if(out.size() > silhouetteStart)
+			rw::V3d::transformPoints(&out[silhouetteStart], &out[silhouetteStart],
+				(int32)(out.size() - silhouetteStart), ltm);
+	}
 	// Pull the lines a little toward the camera so they win the depth test
 	// against the surface they lie on.
 	for(size_t i = start; i < out.size(); i++)
@@ -1201,16 +1236,16 @@ AddAtomicOutline(rw::Atomic *atomic, std::vector<rw::V3d> &out)
 }
 
 static void
-AddInstOutline(ObjectInst *inst, std::vector<rw::V3d> &out)
+AddInstOutline(ObjectInst *inst, std::vector<rw::V3d> &out, bool silhouette = false)
 {
 	ObjectDef *obj = GetObjectDef(inst->m_objectId);
 	if(obj == nil || inst->m_rwObject == nil)
 		return;
 	if(obj->m_type == ObjectDef::ATOMIC)
-		AddAtomicOutline((rw::Atomic*)inst->m_rwObject, out);
+		AddAtomicOutline((rw::Atomic*)inst->m_rwObject, out, silhouette);
 	else if(obj->m_type == ObjectDef::CLUMP){
 		FORLIST(lnk, ((rw::Clump*)inst->m_rwObject)->atomics)
-			AddAtomicOutline(rw::Atomic::fromClump(lnk), out);
+			AddAtomicOutline(rw::Atomic::fromClump(lnk), out, silhouette);
 	}
 }
 
@@ -1239,9 +1274,9 @@ RenderObjectOutlines(void)
 		if(inst->m_highlight == HIGHLIGHT_MATCH && points[OUTLINE_MATCH].size() < maxMapPoints)
 			AddInstOutline(inst, points[OUTLINE_MATCH]);
 		else if(inst->m_selected && gOutlineSelection)
-			AddInstOutline(inst, points[OUTLINE_SELECTED]);
+			AddInstOutline(inst, points[OUTLINE_SELECTED], points[OUTLINE_SELECTED].size() < maxMapPoints);
 		else if(inst->m_highlight == HIGHLIGHT_HOVER && gOutlineSelection)
-			AddInstOutline(inst, points[OUTLINE_HOVER]);
+			AddInstOutline(inst, points[OUTLINE_HOVER], true);
 		else if(gOutlineMapObjects && points[OUTLINE_MAP].size() < maxMapPoints &&
 		        PawnObjectNeedsExport(inst) &&
 		        length(sub(inst->m_translation, TheCamera.m_position)) < maxMapDistance)
@@ -1264,4 +1299,47 @@ RenderObjectOutlines(void)
 	for(int k = 0; k < NUM_OUTLINES; k++)
 		RenderLinesNow(points[k].data(), (int)points[k].size(), colours[k]);
 	rw::SetRenderState(rw::ZWRITEENABLE, 1);
+}
+
+// Where selected moving objects go (MoveObject): a line, a ghost at the end
+// and one gliding there and back at the object's speed, pausing at each end.
+// The client moves at a constant speed and turns in step with the distance
+// (reSA-MP MoveObjectRuntimeToTarget); with no distance the turn takes a second here.
+void
+RenderObjectMovePreviews(void)
+{
+	if(!gPreviewObjectMoves)
+		return;
+	float now = (float)ImGui::GetTime();
+	for(CPtrNode *p = selection.first; p; p = p->next){
+		ObjectInst *inst = (ObjectInst*)p->item;
+		if(inst->m_isDeleted || inst->m_isVehicle || GetSampElementKind(inst) != SAMP_ELEMENT_OBJECT)
+			continue;
+		const ObjectPawnProperties *properties = GetObjectPawnProperties(inst);
+		if(!properties->moveEnabled)
+			continue;
+		rw::V3d from = inst->m_translation, to = add(from, properties->moveOffset);
+		rw::Quat startRot = inst->m_rotation;
+		rw::Quat endRot = properties->moveRotates ? MakeObjectRotationDegrees(properties->moveRotation) : startRot;
+		rw::V3d line[2] = { from, to };
+		RenderLinesNow(line, 2, { 120, 230, 255, 255 });
+		RenderPlacementGhost(inst->m_objectId, to, endRot, { 120, 230, 255, 70 });
+
+		float distance = length(properties->moveOffset);
+		float duration = distance > 0.001f ? distance / std::max(properties->moveSpeed, 0.01f) : 1.0f;
+		const float pause = 0.5f;
+		float cycle = 2.0f * (duration + pause);
+		float t = fmodf(now, cycle);
+		float f = t < duration ? t / duration : t < duration + pause ? 1.0f :
+			t < 2.0f * duration + pause ? 1.0f - (t - duration - pause) / duration : 0.0f;
+		// Normalised lerp, the short way round.
+		rw::Quat a = startRot, b = endRot;
+		if(a.x*b.x + a.y*b.y + a.z*b.z + a.w*b.w < 0.0f)
+			b = { -b.x, -b.y, -b.z, -b.w };
+		rw::Quat q = { a.x + (b.x - a.x)*f, a.y + (b.y - a.y)*f, a.z + (b.z - a.z)*f, a.w + (b.w - a.w)*f };
+		float n = sqrtf(q.x*q.x + q.y*q.y + q.z*q.z + q.w*q.w);
+		if(n > 1e-6f)
+			q = { q.x/n, q.y/n, q.z/n, q.w/n };
+		RenderPlacementGhost(inst->m_objectId, add(from, scale(properties->moveOffset, f)), q, { 120, 230, 255, 150 });
+	}
 }

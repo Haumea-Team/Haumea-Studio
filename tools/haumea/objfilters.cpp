@@ -22,11 +22,12 @@ struct Range
 };
 
 enum { TYPE_OBJECT, TYPE_BUILDING, TYPE_DYNAMIC, TYPE_BREAKABLE, TYPE_TIMED, TYPE_ANIMATED, TYPE_UPGRADE,
-	TYPE_INTERIOR, TYPE_EXTERIOR, TYPE_ALPHA, NUM_TYPES };
+	TYPE_INTERIOR, TYPE_EXTERIOR, TYPE_ALPHA, TYPE_EXPLOSIVE, NUM_TYPES };
 const char *const kTypeKeys[NUM_TYPES] = { "object", "building", "dynamic", "breakable", "timed", "animated",
-	"upgrade", "interior", "exterior", "alpha" };
+	"upgrade", "interior", "exterior", "alpha", "explosive" };
 const char *const kTypeNames[NUM_TYPES] = { N_("Object"), N_("Building"), N_("Moves when hit"), N_("Breakable"), N_("Timed (day or night)"),
-	N_("Animated"), N_("Vehicle upgrade part"), N_("Interior model"), N_("Exterior model"), N_("See-through (alpha)") };
+	N_("Animated"), N_("Vehicle upgrade part"), N_("Interior model"), N_("Exterior model"), N_("See-through (alpha)"),
+	N_("Explodes") };
 const char *const kSourceKeys[NUM_MODEL_SOURCES] = { "gta", "samp", "custom" };
 const char *const kCityKeys[NUM_MODEL_CITIES] = { "los_santos", "san_fierro", "las_venturas", "countryside",
 	"interiors" };
@@ -94,6 +95,7 @@ isType(const ModelMeta &m, int type)
 	case TYPE_INTERIOR: return m.interior;
 	case TYPE_EXTERIOR: return !m.interior;
 	case TYPE_ALPHA: return m.alpha;
+	case TYPE_EXPLOSIVE: return m.explosive;
 	}
 	return false;
 }

@@ -2411,10 +2411,10 @@ msgstr "Nenhum: a skin fica parada."
 #: tools/haumea/gui.cpp:8799
 msgid ""
 "Normal shows an arrow to the next checkpoint; Finish a flag.\n"
-"The Air types are rings for planes."
+"The Air types are rings for planes. Automatic is Normal until the race's end, then Finish."
 msgstr ""
 "Normal mostra uma seta para o próximo checkpoint; Chegada, uma bandeira.\n"
-"Os tipos Aéreo são anéis para aviões."
+"Os tipos Aéreo são anéis para aviões. Automático é Normal até o fim da corrida, depois Chegada."
 
 #: tools/haumea/gui.cpp:8025
 msgid "North"

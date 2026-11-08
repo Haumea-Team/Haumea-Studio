@@ -27,9 +27,6 @@ msgstr "Ao redor de Y"
 msgid "Around Z"
 msgstr "Ao redor de Z"
 
-msgid "Automatic handles"
-msgstr "Alças automáticas"
-
 msgid "Bank"
 msgstr "Inclinação lateral"
 

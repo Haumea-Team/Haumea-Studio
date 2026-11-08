@@ -19,6 +19,10 @@ int AnimNumInLibrary(int lib);
 const char *AnimName(int lib, int index);
 int AnimFindInLibrary(int lib, const char *name);
 float AnimDuration(int lib, int index);	// seconds
+// Animations a ped skin (actor, NPC, player) can't use: some move only an
+// object's parts, so a skin stands still; others twist the skin out of shape.
+enum { ANIM_PED_OK, ANIM_PED_OBJECT_ONLY, ANIM_PED_DEFORMS };
+int AnimPedProblem(const char *lib, const char *name);
 // The client's animation ID (GetAnimationName, on-foot sync data and .rec
 // files) as library and name; false for 0 and unknown IDs.
 bool AnimFromSampId(int id, char *lib, size_t libSize, char *name, size_t nameSize);

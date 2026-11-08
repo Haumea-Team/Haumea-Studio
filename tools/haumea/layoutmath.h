@@ -41,9 +41,14 @@ inline Point mix(Point a, Point b, float t)
 {
 	return add(mul(a, 1 - t), mul(b, t));
 }
+// How a point's handles behave: computed from the neighbours (AUTO),
+// opposite each other with their own lengths (ALIGNED), independent (FREE),
+// or straight at the neighbours (VECTOR, a corner).
+enum Handles { HANDLES_AUTO, HANDLES_ALIGNED, HANDLES_FREE, HANDLES_VECTOR, NUM_HANDLES };
 struct Knot {
 	Point p, in = {0, 0, 0}, out = {0, 0, 0};
-	bool automatic = true;
+	int handles = HANDLES_AUTO;
+	float tilt = 0;	// degrees about the curve, eased to the next point's
 };
 inline Point bezier(const Knot &a, const Knot &b, float t)
 {
@@ -62,7 +67,12 @@ inline void automaticHandles(std::vector<Knot> &v, bool closed)
 	if (v.size() < 2)
 		return;
 	for (size_t i = 0; i < v.size(); i++)
-		if (v[i].automatic) {
+		if (v[i].handles == HANDLES_VECTOR) {
+			// A third of the way to each neighbour: straight segments meet here.
+			bool first = !closed && i == 0, last = !closed && i + 1 == v.size();
+			v[i].in = first ? Point{0, 0, 0} : mul(sub(v[(i + v.size() - 1) % v.size()].p, v[i].p), 1.f / 3);
+			v[i].out = last ? Point{0, 0, 0} : mul(sub(v[(i + 1) % v.size()].p, v[i].p), 1.f / 3);
+		} else if (v[i].handles == HANDLES_AUTO) {
 			Point before = v[(i + v.size() - 1) % v.size()].p, after = v[(i + 1) % v.size()].p;
 			if (!closed && i == 0)
 				before = v[i].p;
@@ -81,29 +91,39 @@ inline Knot split(Knot &a, Knot &b, float t = .5f)
 	Point a2 = mix(a1, b1, t), b2 = mix(b1, c1, t), p = mix(a2, b2, t);
 	a.out = sub(a1, a.p);
 	b.in = sub(c1, b.p);
-	a.automatic = b.automatic = false;
+	// The split keeps the curve only if the handles stay as they are now.
+	if (a.handles != HANDLES_FREE)
+		a.handles = HANDLES_ALIGNED;
+	if (b.handles != HANDLES_FREE)
+		b.handles = HANDLES_ALIGNED;
 	Knot k;
 	k.p = p;
 	k.in = sub(a2, p);
 	k.out = sub(b2, p);
-	k.automatic = false;
+	k.handles = HANDLES_ALIGNED;
+	k.tilt = a.tilt + (b.tilt - a.tilt) * t;
 	return k;
 }
 struct Sample {
 	Point p, tangent, normal;
 	float distance = 0;
+	float tilt = 0;	// degrees, from the points around it
 };
-inline std::vector<Sample> sample(const std::vector<Knot> &knots, bool curved, bool closed, float spacing,
-                                  size_t limit = 2000)
+// The curve as closely spaced points with their distance along it; empty if
+// the knots aren't usable.
+inline std::vector<Sample> densePoints(const std::vector<Knot> &knots, bool curved, bool closed, float spacing)
 {
-	std::vector<Sample> dense, result;
-	if (knots.size() < 2 || !std::isfinite(spacing) || spacing < .01f || limit == 0)
-		return result;
-	for (const Knot &k : knots)
+	std::vector<Sample> dense;
+	if (knots.size() < 2 || !std::isfinite(spacing) || spacing < .01f)
+		return dense;
+	for (const Knot &k : knots) {
+		if (!std::isfinite(k.tilt) || std::abs(k.tilt) > 3600)
+			return dense;
 		for (Point p : {k.p, k.in, k.out})
 			for (float v : p)
 				if (!std::isfinite(v) || std::abs(v) > 1000000)
-					return result;
+					return dense;
+	}
 	float total = 0;
 	size_t segments = closed ? knots.size() : knots.size() - 1;
 	for (size_t i = 0; i < segments; i++) {
@@ -116,6 +136,8 @@ inline std::vector<Sample> sample(const std::vector<Knot> &knots, bool curved, b
 			Sample s;
 			s.p = curved ? bezier(a, b, t) : mix(a.p, b.p, t);
 			s.tangent = unit(curved ? tangent(a, b, t) : sub(b.p, a.p));
+			// Smoothstep, so a banked stretch eases in and out at its points.
+			s.tilt = a.tilt + (b.tilt - a.tilt) * t * t * (3 - 2 * t);
 			if (!dense.empty())
 				total += length(sub(s.p, dense.back().p));
 			s.distance = total;
@@ -123,10 +145,38 @@ inline std::vector<Sample> sample(const std::vector<Knot> &knots, bool curved, b
 		}
 	}
 	if (total < .001f)
+		dense.clear();
+	return dense;
+}
+inline float curveLength(const std::vector<Knot> &knots, bool curved, bool closed)
+{
+	std::vector<Sample> dense = densePoints(knots, curved, closed, .1f);
+	return dense.empty() ? 0 : dense.back().distance;
+}
+// Points every spacing metres from from to to, fractions of the length.
+inline std::vector<Sample> sample(const std::vector<Knot> &knots, bool curved, bool closed, float spacing,
+                                  size_t limit = 2000, float from = 0, float to = 1)
+{
+	std::vector<Sample> result;
+	if (limit == 0 || !std::isfinite(from) || !std::isfinite(to))
 		return result;
+	from = std::max(0.f, std::min(1.f, from));
+	to = std::max(from, std::min(1.f, to));
+	std::vector<Sample> dense = densePoints(knots, curved, closed, spacing);
+	if (dense.empty())
+		return result;
+	float total = dense.back().distance;
+	float start = from * total, end = to * total;
+	// A whole closed curve would put its last object on its first.
+	bool wrap = closed && from <= 0 && to >= 1;
 	size_t cursor = 1;
-	for (float d = 0; d <= (closed ? total - .0001f : total + .0001f) && result.size() < limit;
-	     d += spacing) {
+	// Multiplied, not summed, so an even count lands its last object on the end.
+	float slack = std::max(.0001f, spacing * .001f);
+	for (size_t i = 0;; i++) {
+		float d = start + i * spacing;
+		if (d > (wrap ? end - slack : end + slack) || result.size() >= limit)
+			break;
+		d = std::min(d, end);
 		while (cursor + 1 < dense.size() && dense[cursor].distance < d)
 			cursor++;
 		const Sample &a = dense[cursor - 1], &b = dense[cursor];
@@ -136,6 +186,7 @@ inline std::vector<Sample> sample(const std::vector<Knot> &knots, bool curved, b
 		Sample s;
 		s.p = mix(a.p, b.p, f);
 		s.tangent = curved ? unit(mix(a.tangent, b.tangent, f), a.tangent) : b.tangent;
+		s.tilt = a.tilt + (b.tilt - a.tilt) * f;
 		s.distance = d;
 		Point n = {0, 0, 1};
 		if (!result.empty()) {

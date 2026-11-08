@@ -408,7 +408,7 @@ class HaumeaService:
 	# Tools > Array, Mirror, Align & distribute, Drop & copy as Pawn, Along a line
 	# and Radar art from objects.
 	MAP_TOOL_OPS = ("array", "mirror", "align", "distribute", "snap_rotations",
-	                "drop", "relative", "lay_along", "radar_art")
+	                "drop", "relative", "lay_along", "radar_art", "duplicate")
 
 	def map_tool(self, op: str, ids: list[int] | None = None, **params) -> dict:
 		op = str(op).strip().lower()

@@ -35,6 +35,11 @@ void writeProperties(Node &node, const ObjectPawnProperties &value)
 	write(node, "attachColor1", value.attachColor1);
 	write(node, "attachColor2", value.attachColor2);
 	write(node, "attachSkin", value.attachSkin);
+	write(node, "moveEnabled", value.moveEnabled);
+	write(node, "moveOffset", value.moveOffset);
+	write(node, "moveRotation", value.moveRotation);
+	write(node, "moveRotates", value.moveRotates);
+	write(node, "moveSpeed", value.moveSpeed);
 	write(node, "elementKind", value.elementKind);
 	write(node, "pickupType", value.pickupType);
 	write(node, "labelText", value.labelText);
@@ -89,6 +94,9 @@ void writeProperties(Node &node, const ObjectPawnProperties &value)
 	write(node, "cpKind", value.cpKind);
 	write(node, "cpSize", value.cpSize);
 	write(node, "cpRaceType", value.cpRaceType);
+	write(node, "cpRaceMode", value.cpRaceMode);
+	write(node, "cpRaceLaps", value.cpRaceLaps);
+	write(node, "cpRacePlayable", value.cpRacePlayable);
 	write(node, "cpRace", value.cpRace);
 	write(node, "cpOrder", value.cpOrder);
 	write(node, "areaShape", value.areaShape);
@@ -133,6 +141,10 @@ bool readProperties(const Node &node, ObjectPawnProperties &value, std::string *
 	if (!read(node, "attachColor2", value.attachColor2, error))
 		return false;
 	if (!read(node, "attachSkin", value.attachSkin, error))
+		return false;
+	if (!read(node, "moveEnabled", value.moveEnabled, error) || !read(node, "moveOffset", value.moveOffset, error) ||
+	    !read(node, "moveRotation", value.moveRotation, error) || !read(node, "moveRotates", value.moveRotates, error) ||
+	    !read(node, "moveSpeed", value.moveSpeed, error))
 		return false;
 	if (!read(node, "elementKind", value.elementKind, error))
 		return false;
@@ -241,6 +253,9 @@ bool readProperties(const Node &node, ObjectPawnProperties &value, std::string *
 	if (!read(node, "cpSize", value.cpSize, error))
 		return false;
 	if (!read(node, "cpRaceType", value.cpRaceType, error))
+		return false;
+	if (!read(node, "cpRaceMode", value.cpRaceMode, error) || !read(node, "cpRaceLaps", value.cpRaceLaps, error) ||
+	    !read(node, "cpRacePlayable", value.cpRacePlayable, error))
 		return false;
 	if (!read(node, "cpRace", value.cpRace, error))
 		return false;

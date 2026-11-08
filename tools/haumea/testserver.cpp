@@ -492,6 +492,7 @@ struct TsNeeds {
 	std::string prefix;
 	bool removeWorldObjects, showForPlayer;
 	bool textDraws, soundTick, soundArea;	// helpers the gamemode has to call
+	bool races;	// playable races: haumea_races.inc beside the gamemode, and /race
 	std::string textDrawFile;	// the textdraw file's prefix, when it has textdraws
 };
 
@@ -513,6 +514,7 @@ tsScanMap(const std::string &code)
 	needs.textDraws = code.find("stock " + needs.prefix + "_CreateTextDraws(") != std::string::npos;
 	needs.soundTick = code.find("stock " + needs.prefix + "_SoundTick(") != std::string::npos;
 	needs.soundArea = code.find("stock " + needs.prefix + "_SoundArea(") != std::string::npos;
+	needs.races = code.find("\tMapRace_Create(") != std::string::npos;
 	return needs;
 }
 
@@ -787,6 +789,8 @@ tsGamemode(const TsNeeds &needs)
 		+ (needs.textDraws ? "\t" + p + "_ShowTextDraws(playerid);\n" : std::string()) +
 		(needs.textDrawFile.empty() ? std::string() : "\t" + needs.textDrawFile + "_ShowTextDraws(playerid);\n") +
 		"\tSendClientMessage(playerid, 0xA0C0FFFF, \"Haumea test: /v <model> spawns a vehicle, /tp goes to the editor camera, /reload reloads the map.\");\n"
+		+ (needs.races ? std::string("\tSendClientMessage(playerid, 0xA0C0FFFF, \"/race <n> starts the map's race n (1 is the first by name).\");\n") :
+			std::string()) +
 		"\treturn 1;\n"
 		"}\n"
 		"\n"
@@ -836,6 +840,14 @@ tsGamemode(const TsNeeds &needs)
 		"\t\tSetCameraBehindPlayer(playerid);\n"
 		"\t\treturn 1;\n"
 		"\t}\n"
+		+ (needs.races ? std::string(
+		"\tif(!strcmp(cmdtext, \"/race\", true, 5))\n"
+		"\t{\n"
+		"\t\tnew n = cmdtext[5] ? strval(cmdtext[5]) : 1;\n"
+		"\t\tif(!StartMapRace(playerid, ") + p + "_RACE_BASE + n))\n"
+		"\t\t\treturn SendClientMessage(playerid, 0xFF8080FF, \"No such race here (or not in its world or interior).\");\n"
+		"\t\treturn 1;\n"
+		"\t}\n" : std::string()) +
 		"\tif(!strcmp(cmdtext, \"/reload\", true))\n"
 		"\t{\n"
 		"\t\tSendClientMessageToAll(0xA0C0FFFF, \"Reloading the map...\");\n"
@@ -860,6 +872,22 @@ tsGamemode(const TsNeeds &needs)
 		"\t}\n"
 		"\treturn 0;\n"
 		"}\n";
+	if(needs.races)
+		code +=
+			"\n"
+			"public OnMapRaceLap(playerid, raceid, lap, milliseconds)\n"
+			"{\n"
+			"\tnew text[64];\n"
+			"\tformat(text, sizeof(text), \"Lap %d: %d.%03d s\", lap, milliseconds / 1000, milliseconds % 1000);\n"
+			"\treturn SendClientMessage(playerid, 0xA0FFA0FF, text);\n"
+			"}\n"
+			"\n"
+			"public OnMapRaceFinish(playerid, raceid, milliseconds)\n"
+			"{\n"
+			"\tnew text[64];\n"
+			"\tformat(text, sizeof(text), \"Finished in %d.%03d s\", milliseconds / 1000, milliseconds % 1000);\n"
+			"\treturn SendClientMessage(playerid, 0xA0FFA0FF, text);\n"
+			"}\n";
 	if(needs.npcs)
 		code +=
 			"\n"
@@ -1008,6 +1036,10 @@ TestServerRunMap(int pawnFormat)
 	}
 	if(!tsSetup(source, &needs, &error)){
 		tsFail(error);
+		return;
+	}
+	if(needs.races && !WriteHaumeaRacesInclude(tsJoin(gamemodes, "haumea_races.inc").c_str())){
+		tsFail(N_("could not write haumea_races.inc"));
 		return;
 	}
 	if(!tsWriteText(tsJoin(gamemodes, "haumea_test.pwn"), tsGamemode(needs))){
