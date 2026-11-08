@@ -26,14 +26,18 @@ click_item '*' 'TextDraws'
 wait 8
 click_item 'TextDraws' 'Sprite'
 wait 5
-scroll_until 'TextDraws' 'Sprite TXD'
-click_item 'TextDraws' 'Sprite TXD'
+# The sprite picker is a popup under the sprite's own field.
+scroll_until 'TextDraws' 'Browse sprites...'
+click_item 'TextDraws' 'Browse sprites...'
+wait 3
+click_item '' 'Sprite TXD'
 wait 3
 click_item '*' 'mdl-1000  (ui_barrel)'
 wait 5
-scroll_until 'TextDraws' '##s'
-click_item 'TextDraws' '##s'
+click_item '' '##s'
 wait 5
+key Escape
+wait 2
 move 900 400
 shortcut save_map_as
 wait 5

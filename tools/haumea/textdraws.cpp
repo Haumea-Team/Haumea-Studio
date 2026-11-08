@@ -134,6 +134,15 @@ resetUndo(void)
 	gEditPending = false;
 }
 
+// Someone else's change to the file (multiplayer): a step back to a list
+// from before it would throw it away, so the history starts again here.
+void
+TextDrawsReplacedByOthers(void)
+{
+	resetUndo();
+	gChangeSeq++;
+}
+
 void
 NewTextDrawFile(void)
 {

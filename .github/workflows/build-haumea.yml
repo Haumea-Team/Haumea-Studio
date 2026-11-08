@@ -112,7 +112,7 @@ jobs:
       - name: Build Haumea Studio
         shell: cmd
         working-directory: haumea/build
-        run: msbuild librwgta.sln /p:Configuration=Release /p:Platform=win-amd64-gl3 /t:librwgta;haumea /m
+        run: msbuild librwgta.sln /p:Configuration=Release /p:Platform=win-amd64-gl3 /t:librwgta;haumea;haumea-server /m
 
       - name: Check the build number and commit (Windows)
         working-directory: haumea
@@ -124,6 +124,7 @@ jobs:
           $bundle = Join-Path $env:GITHUB_WORKSPACE "dist\haumea-windows-gl3"
           New-Item -ItemType Directory -Force -Path $bundle | Out-Null
           Copy-Item "haumea\bin\win-amd64-gl3\Release\haumea.exe" $bundle
+          Copy-Item "haumea\bin\win-amd64-gl3\Release\haumea-server.exe" $bundle
           $fonts = Join-Path $bundle "fonts"
           New-Item -ItemType Directory -Force -Path $fonts | Out-Null
           Copy-Item "haumea\fonts\*" $fonts -Recurse
@@ -207,7 +208,7 @@ jobs:
 
       - name: Build Haumea Studio
         working-directory: haumea/build
-        run: make config=release_linux-amd64-gl3 librwgta haumea "-j$(nproc)"
+        run: make config=release_linux-amd64-gl3 librwgta haumea haumea-server "-j$(nproc)"
 
       - name: Check the build number and commit (Linux)
         working-directory: haumea
@@ -227,6 +228,13 @@ jobs:
         with:
           name: haumea-linux-gl3
           path: haumea/bin/linux-amd64-gl3/Release/haumea
+
+      - name: Upload haumea-server (Linux)
+        uses: actions/upload-artifact@v4
+        with:
+          name: haumea-server-linux
+          path: haumea/bin/linux-amd64-gl3/Release/haumea-server
+          if-no-files-found: error
 
       - name: Upload the Linux symbols
         uses: actions/upload-artifact@v4
@@ -504,7 +512,7 @@ jobs:
     runs-on: ubuntu-24.04
     env:
       # Bump this when MCP tools are added or removed on purpose.
-      AGENT_MCP_TOOLS: 83
+      AGENT_MCP_TOOLS: 84
       BUNDLE: Haumea-Namaka-linux-x86_64
 
     steps:
@@ -678,7 +686,7 @@ jobs:
     needs: build-macos
     runs-on: macos-latest
     env:
-      AGENT_MCP_TOOLS: 83
+      AGENT_MCP_TOOLS: 84
       BUNDLE: Haumea-Namaka-macos-arm64
     steps:
       - uses: actions/checkout@v4

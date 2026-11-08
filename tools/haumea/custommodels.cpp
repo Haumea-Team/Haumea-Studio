@@ -6,6 +6,7 @@
 #include "i18n.h"
 #include "serverartwork.h"
 
+#include <algorithm>
 #include <regex>
 #include <string>
 #include <vector>
@@ -31,6 +32,11 @@ static const std::regex rAddSimpleModelTimed(R"(AddSimpleModelTimed\s*\(\s*(-?\d
 struct CustomModel {
 	int editorId;
 	std::string dffPath;
+	// As the server lists it, for a multiplayer session's copy.
+	int pawnId, baseId;
+	std::string txdPath;
+	bool timed, character;
+	int timeOn, timeOff;
 };
 
 static std::string gServerDir;	// the server folder holding models/
@@ -40,6 +46,7 @@ static std::map<int, std::string> gTxdPaths;	// txd slot -> file
 static std::map<std::string, int> gTxdSlots;	// file -> txd slot
 static std::string gLastMapPath;
 static std::map<int, int> gLegacyRemap;	// old modloader/Haumea ID -> editor ID
+static std::string gLookupDir;	// where model files are looked up instead of gModelsDir
 
 int
 PawnModelId(int editorId)
@@ -123,11 +130,12 @@ GetCustomModelsDir(void)
 static std::string
 findModelFile(const std::string &name)
 {
-	std::string path = gModelsDir + "/" + name;
+	const std::string &base = gLookupDir.empty() ? gModelsDir : gLookupDir;
+	std::string path = base + "/" + name;
 	if(isFile(path))
 		return path;
 #ifndef _WIN32
-	std::string dir = gModelsDir;
+	std::string dir = base;
 	std::string file = name;
 	size_t slash = name.find_last_of("/\\");
 	if(slash != std::string::npos){
@@ -379,7 +387,7 @@ addModel(int pawnId, int baseId, const std::string &dff, const std::string &txd,
 		obj->m_timeOff = timeOff;
 	}
 	SetObjectCategory(editorId, CUSTOM_MODELS_CATEGORY);
-	CustomModel model = { editorId, dffPath };
+	CustomModel model = { editorId, dffPath, pawnId, baseId, txdPath, timed, character, timeOn, timeOff };
 	gModels.push_back(model);
 }
 
@@ -482,6 +490,55 @@ LoadCustomModelsForMap(const char *mapPath, const std::string &source)
 		log("CustomModels: %s\n", problems[i].c_str());
 	if(!problems.empty())
 		Toast(TOAST_SPAWN, _("Custom models that couldn't be loaded: %d (see the log)"), (int)problems.size());
+}
+
+// ---- A multiplayer session's custom models ----
+
+static std::string
+baseName(const std::string &path)
+{
+	size_t slash = path.find_last_of("/\\");
+	return slash == std::string::npos ? path : path.substr(slash + 1);
+}
+
+std::string
+CustomModelsSessionList(std::map<std::string, std::string> &files)
+{
+	std::vector<std::pair<int, std::string>> lines;
+	for(const CustomModel &m : gModels){
+		std::string dff = baseName(m.dffPath), txd = baseName(m.txdPath);
+		files.emplace(dff, m.dffPath);
+		files.emplace(txd, m.txdPath);
+		char line[512];
+		if(m.character)
+			snprintf(line, sizeof(line), "AddCharModel(%d, %d, \"%s\", \"%s\");\n", m.baseId, m.pawnId,
+				dff.c_str(), txd.c_str());
+		else if(m.timed)
+			snprintf(line, sizeof(line), "AddSimpleModelTimed(-1, %d, %d, \"%s\", \"%s\", %d, %d);\n", m.baseId,
+				m.pawnId, dff.c_str(), txd.c_str(), m.timeOn, m.timeOff);
+		else
+			snprintf(line, sizeof(line), "AddSimpleModel(-1, %d, %d, \"%s\", \"%s\");\n", m.baseId, m.pawnId,
+				dff.c_str(), txd.c_str());
+		lines.emplace_back(m.pawnId, line);
+	}
+	std::sort(lines.begin(), lines.end());
+	std::string out;
+	for(const auto &line : lines)
+		out += line.second;
+	return out;
+}
+
+int
+AddSessionCustomModels(const std::string &dir, const std::string &artconfig)
+{
+	size_t before = gModels.size();
+	std::vector<std::string> problems;
+	gLookupDir = dir;
+	readModelCalls(artconfig, problems);
+	gLookupDir.clear();
+	for(size_t i = 0; i < problems.size(); i++)
+		log("CustomModels: session: %s\n", problems[i].c_str());
+	return (int)(gModels.size() - before);
 }
 
 bool

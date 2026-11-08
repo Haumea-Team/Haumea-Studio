@@ -1,4 +1,5 @@
 #include "haumea.h"
+#include "multiplayer.h"
 #include "discordpresence.h"
 #include "i18n.h"
 #include "crashreports.h"
@@ -1153,6 +1154,7 @@ AppEventHandler(sk::Event e, void *param)
 			ApplyInitialEditorWindowState();
 		return EVENTPROCESSED;
 	case RWTERMINATE:
+		MultiplayerLeave();	// tells the others, takes the router's forward away
 		DiscordPresenceShutdown();
 #if defined(_WIN32) && defined(RW_D3D9)
 		ImGui_ImplRW_Shutdown();

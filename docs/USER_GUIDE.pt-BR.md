@@ -327,25 +327,62 @@ precisam da biblioteca C de 32 bits: veja [Instalação](../README.pt-BR.md#inst
 Várias pessoas podem editar um mapa ao mesmo tempo. **Arquivo → Multiplayer...** abre o painel:
 
 - **Hospedar este mapa**: compartilha o mapa que está aberto. O painel mostra a porta (7790, a
-  menos que você mude) e um **código da sessão** de seis letras.
-- **Entrar**: digite o endereço do anfitrião, a porta e o código. Entrar substitui o mapa que
-  você tem aberto pelo do anfitrião, então salve o seu antes.
+  menos que você mude) e um **código da sessão** de seis letras. Com **Abrir a porta no meu
+  roteador** (ligado por padrão) o Haumea pede ao seu roteador para redirecionar a porta (UPnP) e
+  mostra o endereço pelo qual as pessoas entram pela internet.
+- **Entrar**: digite o endereço, a porta e o código do anfitrião (ou a senha do servidor, abaixo).
+  Entrar substitui o mapa e o arquivo de textdraws que você tem abertos pelos da sessão, então
+  salve os seus antes.
 
 Todos veem as mudanças dos outros na hora: objetos, veículos, todos os elementos do SA-MP e as
-configurações deles, materiais, anexos, prédios do GTA removidos ou movidos e as textdraws do
-próprio mapa. Desfazer vale para os seus próprios passos. A câmera de cada pessoa aparece como um
-ponto colorido com o nome dela, e o que ela selecionou ganha uma caixa na cor dela; **Ir até**
-olha de onde ela está olhando.
+configurações deles, grupos e travas, materiais, anexos, prédios do GTA removidos ou movidos,
+remoções por área, arte do radar, as textdraws do mapa, o arquivo do editor de TextDraws, pinos de
+alinhamento, caminhos 3D, os nodes de NPC da ferramenta Nodes e modelos customizados do 0.3.DL (os arquivos DFF e TXD vão para quem não
+os tem). Desfazer vale para os seus próprios passos; um passo em algo que outra pessoa mudou depois é
+pulado, então nunca joga fora a mudança dela. A câmera de cada pessoa aparece como um ponto colorido
+com o nome dela, e o que ela selecionou ganha uma caixa na cor dela; **Ir até** olha de onde ela
+está olhando.
 
 Cada pessoa salva a própria cópia com **Arquivo → Salvar**. Abrir ou começar outro mapa sai de
 uma sessão em que você entrou; quando o anfitrião abre um, ele substitui o de todos. **Parar de
-hospedar** ou **Sair** mantém o mapa como está. Arte do radar, pinos de alinhamento, caminhos 3D,
-a ferramenta Nodes e os arquivos de textdraws ficam em cada computador.
+hospedar** ou **Sair** mantém o mapa como está. Cada pessoa salva os arquivos da ferramenta Nodes com o
+**Salvar** dela.
 
 Todos precisam da mesma versão do Haumea e do mesmo jogo. Na mesma rede, entre com o endereço
-local do anfitrião (por exemplo `192.168.1.20`). Pela internet, o anfitrião precisa redirecionar a
-porta para o computador dele, ou vocês podem usar uma VPN como o Tailscale. Só entra quem tem o
-código.
+local do anfitrião (por exemplo `192.168.1.20`). Pela internet, o roteador precisa redirecionar a
+porta: o Haumea pede isso a ele, e quando o seu roteador não faz UPnP, redirecione a porta à mão,
+use uma VPN como o Tailscale ou rode o haumea-server (abaixo). Quando o seu computador tem um
+endereço IPv6 público (comum mesmo atrás de CGNAT), o painel o mostra também: os outros entram por ele
+quando o roteador deixa. A conexão é criptografada, e só entra quem tem o código.
+
+### Uma sessão que fica no ar: haumea-server
+
+O `haumea-server` mantém uma sessão numa máquina que fica sempre ligada, como a que roda o seu
+servidor SA-MP ou open.mp, então ninguém precisa deixar o Haumea aberto para hospedar. Ele não
+precisa do jogo nem de tela:
+
+```sh
+haumea-server --port 7790 --password "algo comprido" --state equipe.hmps
+```
+
+Abra essa porta TCP no firewall da máquina, e todos entram com o endereço dela, a porta e a senha.
+A primeira pessoa a entrar numa sessão vazia envia o mapa que tem aberto, e ele vira o da sessão;
+quem entra depois recebe o da sessão. Com `--state` a sessão, com os arquivos dos modelos
+customizados, fica guardada nesse arquivo, cada mudança escrita na hora (em `equipe.hmps.log` até o
+próximo salvamento), e volta quando o servidor reinicia, mesmo depois de o programa cair. Ele escuta
+em IPv6 e IPv4 ao mesmo tempo. `haumea-server
+--help` lista o resto (`--bind`, `--name`, `--max-clients`). Cinco senhas erradas de um mesmo
+endereço o fazem esperar dez minutos.
+
+Toda conexão é criptografada (X25519 e XChaCha20-Poly1305, do Monocypher), com chaves ligadas à
+senha pelo Argon2: quem observa o tráfego não vê o mapa nem nada em que testar senhas. Alguém que
+consiga se pôr no meio da conexão ainda poderia testar palpites contra uma entrada, então escolha
+uma senha que ninguém adivinhe.
+
+O Namaka também entra em sessões (`multiplayer_session`): vários agentes podem construir numa mesma
+sessão, cada um no seu Haumea ou vários num só. Cada agente tem a própria sessão de edição; desfazê-
+la ou usar desfazer só retira as edições daquele agente, e o que outra pessoa mudou por último fica
+como ela deixou.
 
 ## Salvando
 

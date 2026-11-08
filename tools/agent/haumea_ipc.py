@@ -24,6 +24,10 @@ MAX_REQUEST_BYTES = 1_048_576
 # sockaddr_un.sun_path, with its terminating NUL.
 SUN_PATH_MAX = 104 if sys.platform == "darwin" else 108
 MAX_RESPONSE_BYTES = 4 * 1024 * 1024
+# Who this process is to the editor: several agents can work in one Haumea,
+# each with its own edit session. It goes after an '@' in each request id.
+AGENT_ID = "".join(c for c in os.environ.get("HAUMEA_AGENT_ID", "") if c.isalnum() or c in "-_")[:40] \
+	or uuid.uuid4().hex[:12]
 
 
 def haumea_config_dir() -> Path:
@@ -60,9 +64,11 @@ class HaumeaError(RuntimeError):
 
 
 class HaumeaClient:
-	def __init__(self, engine_socket: Path = DEFAULT_ENGINE_SOCKET, timeout: float = 30.0):
+	def __init__(self, engine_socket: Path = DEFAULT_ENGINE_SOCKET, timeout: float = 30.0,
+	             agent: str | None = None):
 		self.engine_socket = Path(engine_socket)
 		self.timeout = timeout
+		self.agent = agent or AGENT_ID
 		self.tcp_port = os.environ.get("HAUMEA_ENGINE_TCP_PORT")
 		self.token = os.environ.get("HAUMEA_ENGINE_TOKEN", "")
 		# Nothing set: a Haumea listening for Namaka on its own (connection.json
@@ -106,7 +112,7 @@ class HaumeaClient:
 					"Haumea isn't listening for Namaka. Start Haumea with Namaka installed and "
 					"\"Let Namaka connect\" on (Preferences > Namaka).")
 		self._check_config()
-		request_id = uuid.uuid4().hex
+		request_id = uuid.uuid4().hex + "@" + self.agent
 		encoded_fields = [str(field) for field in fields]
 		if any("\n" in field or "\r" in field for field in encoded_fields):
 			raise ValueError("Haumea IPC fields cannot contain newlines")

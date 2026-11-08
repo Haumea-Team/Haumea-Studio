@@ -63,6 +63,11 @@ void DrawNodesWindow(bool *open);	// nodes_ui.cpp
 // stack; RestoreNodeAreas puts areas back from it.
 void UpdateNodesUndo(void);
 uint64 NodesFingerprint(void);	// of every loaded area, for tests
+// Multiplayer: an area's NODES<area>.DAT bytes, when it was edited here or
+// came from the session (else false), and the session's put in place.
+uint32 NodesEditSerial(void);	// moves with every node edit
+bool GetSharedAreaData(int areaId, std::vector<uint8> &data);
+bool SetSharedAreaData(int areaId, const std::vector<uint8> &data);
 void RestoreNodeAreas(const std::vector<int> &areas, const std::vector<std::shared_ptr<void>> &states);
 bool HandleNodesViewportClick(void);	// nodes_ui.cpp
 

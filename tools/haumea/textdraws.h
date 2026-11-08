@@ -76,6 +76,7 @@ void InitTextDraw(TextDraw *td);	// the client's defaults
 // The textdraw file: textdraws live in their own .pwn/.inc, apart from the map.
 std::vector<TextDraw> &GetTextDraws(void);
 void TextDrawsChanged(void);	// after an edit: marks the file unsaved; an undo step follows
+void TextDrawsReplacedByOthers(void);	// multiplayer: marks it unsaved, and undo starts again
 unsigned int TextDrawsChangeSeq(void);	// moves with every edit, undo and save
 const char *GetTextDrawFilePath(void);	// "" while untitled
 const char *GetTextDrawFileName(void);	// the file name, or "Untitled textdraws"

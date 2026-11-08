@@ -1484,6 +1484,13 @@ msgstr "Como com o Widescreen Fix"
 msgid "Ask"
 msgstr "Perguntar"
 
+msgid ""
+"Asks your router to forward the port to this computer (UPnP),\n"
+"so people join over the internet without setting it up by hand."
+msgstr ""
+"Pede ao seu roteador para redirecionar a porta para este computador (UPnP),\n"
+"para que as pessoas entrem pela internet sem configurar nada à mão."
+
 msgid "Assets are written to modloader/Haumea; original game files stay untouched."
 msgstr "Os arquivos vão para modloader/Haumea; os arquivos originais do jogo não são alterados."
 
@@ -2296,6 +2303,9 @@ msgstr "Código"
 msgid "Code Glass"
 msgstr "Vidro de código"
 
+msgid "Code or password"
+msgstr "Código ou senha"
+
 msgid "Code settings"
 msgstr "Opções de código"
 
@@ -2527,8 +2537,8 @@ msgstr "Não foi possível anexar este objeto a esse alvo."
 msgid "Could not attach to the selected target."
 msgstr "Não foi possível anexar ao alvo selecionado."
 
-msgid "Could not connect to the host."
-msgstr "Não foi possível conectar ao anfitrião."
+msgid "Could not connect to the session."
+msgstr "Não foi possível conectar à sessão."
 
 msgid "Could not connect."
 msgstr "Não foi possível conectar."
@@ -2550,9 +2560,6 @@ msgstr "Não foi possível mover os textdraws: %s"
 #, c-format
 msgid "Could not open %s"
 msgstr "Não foi possível abrir %s"
-
-msgid "Could not open a network socket."
-msgstr "Não foi possível abrir um socket de rede."
 
 msgid "Could not open the script."
 msgstr "Não foi possível abrir o script."
@@ -3154,8 +3161,8 @@ msgstr "Editar na área de trabalho de anexos"
 msgid "Edit in view"
 msgstr "Editar na vista"
 
-msgid "Edit one map together: one of you hosts the open map, the others join it."
-msgstr "Editem um mapa juntos: um de vocês hospeda o mapa aberto e os outros entram nele."
+msgid "Edit one map together: one of you hosts the open map, or a haumea-server keeps it, and the others join."
+msgstr "Editem um mapa juntos: um de vocês hospeda o mapa aberto, ou um haumea-server o mantém, e os outros entram."
 
 msgid "Edit the NODES*.DAT files already in that folder."
 msgstr "Edita os arquivos NODES*.DAT que já estão nessa pasta."
@@ -4501,8 +4508,8 @@ msgstr "Entrar"
 msgid "Joined %s's session"
 msgstr "Entrou na sessão de %s"
 
-msgid "Joining replaces the open map: save it first to keep your changes."
-msgstr "Entrar substitui o mapa aberto: salve-o antes para manter suas alterações."
+msgid "Joining replaces the open map and textdraw file: save them first to keep your changes."
+msgstr "Entrar substitui o mapa e o arquivo de textdraws abertos: salve-os antes para manter as suas mudanças."
 
 msgid "Jump the camera between this model's instances, including other interiors."
 msgstr "Leva a câmera entre as instâncias deste modelo, incluindo outros interiores."
@@ -4882,8 +4889,8 @@ msgstr "Repetir"
 msgid "Loose (data/Paths)"
 msgstr "Arquivos soltos (data/Paths)"
 
-msgid "Lost the connection to the host."
-msgstr "A conexão com o anfitrião caiu."
+msgid "Lost the connection to the session."
+msgstr "A conexão com a sessão caiu."
 
 msgid "Loud hit"
 msgstr "Pancada forte"
@@ -5966,6 +5973,10 @@ msgstr "No chão"
 msgid "On the 640x448 canvas every resolution is scaled to."
 msgstr "Na tela de 640x448 para a qual toda resolução é escalada."
 
+#, c-format
+msgid "On your own network others can still join. Over the internet, forward port %d to this computer, use a VPN such as Tailscale, or run haumea-server."
+msgstr "Na sua própria rede, os outros ainda podem entrar. Pela internet, redirecione a porta %d para este computador, use uma VPN como o Tailscale ou rode o haumea-server."
+
 msgid ""
 "On: it gets louder as the player walks up to it and fades out at\n"
 "the distance. Off: the player hears it everywhere at full volume."
@@ -6093,6 +6104,9 @@ msgstr "Abrir a pasta"
 msgid "Open the log"
 msgstr "Abrir o log"
 
+msgid "Open the port on my router"
+msgstr "Abrir a porta no meu roteador"
+
 msgid "Open workspace"
 msgstr "Abrir workspace"
 
@@ -6105,6 +6119,9 @@ msgstr "Abrindo o mapa"
 
 msgid "Opening model archives"
 msgstr "Abrindo os arquivos de modelos"
+
+msgid "Opening the port on your router..."
+msgstr "Abrindo a porta no seu roteador..."
 
 msgid "Opens an autosaved copy. Use Save As to keep it as your map."
 msgstr "Abre uma cópia salva automaticamente. Use Salvar como para mantê-la como seu mapa."
@@ -6148,10 +6165,12 @@ msgstr "Original"
 
 msgid ""
 "Others join with this computer's address, the port and the session code.\n"
-"Over the internet the port must be forwarded to this computer, or use a VPN such as Tailscale."
+"Over the internet the port must be forwarded to this computer, or use a VPN such as Tailscale.\n"
+"For a session that stays up without you, run haumea-server where your SA-MP server runs."
 msgstr ""
 "Os outros entram com o endereço deste computador, a porta e o código da sessão.\n"
-"Pela internet, a porta precisa ser redirecionada para este computador, ou use uma VPN como o Tailscale."
+"Pela internet, a porta precisa ser redirecionada para este computador, ou use uma VPN como o Tailscale.\n"
+"Para uma sessão que fica no ar sem você, rode o haumea-server onde o seu servidor SA-MP roda."
 
 msgid "Outgoing"
 msgstr "Saída"
@@ -6187,6 +6206,14 @@ msgstr "Contornar objetos selecionados"
 #, c-format
 msgid "Output: %s"
 msgstr "Saída: %s"
+
+#, c-format
+msgid "Over IPv6, others can join at %s when your router lets them in."
+msgstr "Por IPv6, os outros podem entrar em %s quando o seu roteador deixar."
+
+#, c-format
+msgid "Over the internet, others join at %s"
+msgstr "Pela internet, os outros entram em %s"
 
 msgid "PLACE"
 msgstr "COLOCAR"
@@ -7079,6 +7106,9 @@ msgstr "Atualizar"
 msgid "Refresh from map"
 msgstr "Atualizar a partir do mapa"
 
+msgid "Refused: "
+msgstr "Recusado: "
+
 #, c-format
 msgid "Related timed: %s\n"
 msgstr "Relacionado com horário: %s\n"
@@ -7925,9 +7955,6 @@ msgstr "Pacote do servidor"
 msgid "Server: %s"
 msgstr "Servidor: %s"
 
-msgid "Session code"
-msgstr "Código da sessão"
-
 #, c-format
 msgid "Session code: %s"
 msgstr "Código da sessão: %s"
@@ -8718,6 +8745,9 @@ msgstr "Essa pasta não existe."
 msgid "That has no x, y and z in it."
 msgstr "Isso não tem x, y e z."
 
+msgid "That isn't a Haumea session."
+msgstr "Isso não é uma sessão do Haumea."
+
 msgid "That target can't accept the selected objects. Click another target or cancel."
 msgstr "Esse alvo não aceita os objetos selecionados. Clique em outro alvo ou cancele."
 
@@ -8819,17 +8849,8 @@ msgstr "O grupo onde as zonas ficam."
 msgid "The heading it is placed at."
 msgstr "A direção em que é colocado."
 
-msgid "The host closed the connection."
-msgstr "O anfitrião fechou a conexão."
-
-msgid "The host didn't answer."
-msgstr "O anfitrião não respondeu."
-
-msgid "The host ended the session."
-msgstr "O anfitrião encerrou a sessão."
-
-msgid "The host refused: "
-msgstr "O anfitrião recusou: "
+msgid "The host's session code, or the password haumea-server was started with."
+msgstr "O código da sessão do anfitrião, ou a senha com que o haumea-server foi iniciado."
 
 #, c-format
 msgid "The installer stopped (exit code %d)."
@@ -8884,6 +8905,9 @@ msgstr ""
 msgid "The parent was deleted, so this attachment is not exported."
 msgstr "O pai foi excluído, então este anexo não é exportado."
 
+msgid "The password is too long."
+msgstr "A senha é longa demais."
+
 msgid "The path's Pawn variable. NPCs follow it by this name."
 msgstr "A variável Pawn do caminho. Os NPCs o seguem por este nome."
 
@@ -8911,6 +8935,21 @@ msgid ""
 msgstr ""
 "O servidor cria no máximo 1024 gang zones. Use células maiores, menos cores\n"
 "ou zonas streamed."
+
+msgid "The session closed the connection."
+msgstr "A sessão fechou a conexão."
+
+msgid "The session didn't answer."
+msgstr "A sessão não respondeu."
+
+msgid "The session ended."
+msgstr "A sessão terminou."
+
+msgid "The session runs a different Haumea version: update both to the same one."
+msgstr "A sessão roda outra versão do Haumea: atualizem os dois para a mesma."
+
+msgid "The session sent something this version can't read."
+msgstr "A sessão enviou algo que esta versão não consegue ler."
 
 msgid "The sprites it is made of"
 msgstr "Os sprites que a compõem"
@@ -9124,9 +9163,6 @@ msgstr "Alternar a seleção do objeto"
 
 msgid "Tolerance"
 msgstr "Tolerância"
-
-msgid "Too many wrong session codes: no one else can join until you host again"
-msgstr "Códigos de sessão errados demais: ninguém mais pode entrar até você hospedar de novo"
 
 msgid "Tools"
 msgstr "Ferramentas"
@@ -9855,11 +9891,22 @@ msgstr ""
 msgid "Your gamemode includes it and calls _CreateTextDraws and _ShowTextDraws(playerid)."
 msgstr "Seu gamemode o inclui e chama _CreateTextDraws e _ShowTextDraws(playerid)."
 
+#, c-format
+msgid "Your map started the session on %s"
+msgstr "O seu mapa começou a sessão em %s"
+
 msgid "Your maps"
 msgstr "Seus mapas"
 
 msgid "Your name"
 msgstr "Seu nome"
+
+#, c-format
+msgid "Your router didn't open the port (%s)."
+msgstr "O seu roteador não abriu a porta (%s)."
+
+msgid "Your router forwards the port: over the internet, others join at your public address."
+msgstr "O seu roteador redireciona a porta: pela internet, os outros entram pelo seu endereço público."
 
 msgid "Your textdraw changes are lost if you don't save them."
 msgstr "As alterações nos textdraws se perdem se você não salvá-las."

@@ -10351,20 +10351,11 @@ msgstr "地址"
 msgid "Connecting to %s..."
 msgstr "正在连接到 %s..."
 
-msgid "Could not connect to the host."
-msgstr "无法连接到主机。"
-
 msgid "Could not connect."
 msgstr "无法连接。"
 
 msgid "Could not find that address."
 msgstr "找不到该地址。"
-
-msgid "Could not open a network socket."
-msgstr "无法打开网络套接字。"
-
-msgid "Edit one map together: one of you hosts the open map, the others join it."
-msgstr "一起编辑一张地图：一人托管打开的地图，其他人加入。"
 
 msgid "Edit this map together with others: host it, or join someone's."
 msgstr "与他人一起编辑这张地图：托管它，或加入别人的会话。"
@@ -10396,9 +10387,6 @@ msgstr "加入"
 msgid "Joined %s's session"
 msgstr "已加入 %s 的会话"
 
-msgid "Joining replaces the open map: save it first to keep your changes."
-msgstr "加入会替换打开的地图：请先保存以保留你的更改。"
-
 msgid "Leave"
 msgstr "离开"
 
@@ -10408,21 +10396,11 @@ msgstr "已离开多人会话"
 msgid "Look from where they are looking."
 msgstr "从对方的视角查看。"
 
-msgid "Lost the connection to the host."
-msgstr "与主机的连接已断开。"
-
 msgid "Multiplayer edits Pawn maps of San Andreas."
 msgstr "多人编辑适用于 San Andreas 的 Pawn 地图。"
 
 msgid "Multiplayer..."
 msgstr "多人编辑..."
-
-msgid ""
-"Others join with this computer's address, the port and the session code.\n"
-"Over the internet the port must be forwarded to this computer, or use a VPN such as Tailscale."
-msgstr ""
-"其他人使用这台电脑的地址、端口和会话代码加入。\n"
-"通过互联网时，需要将端口转发到这台电脑，或使用 Tailscale 等 VPN。"
 
 msgid "People"
 msgstr "成员"
@@ -10434,27 +10412,12 @@ msgstr "端口 %d 已被占用或不允许使用。"
 msgid "Receiving the map..."
 msgstr "正在接收地图..."
 
-msgid "Session code"
-msgstr "会话代码"
-
 #, c-format
 msgid "Session code: %s"
 msgstr "会话代码：%s"
 
 msgid "Stop hosting"
 msgstr "停止托管"
-
-msgid "The host closed the connection."
-msgstr "主机关闭了连接。"
-
-msgid "The host didn't answer."
-msgstr "主机没有响应。"
-
-msgid "The host ended the session."
-msgstr "主机结束了会话。"
-
-msgid "The host refused: "
-msgstr "主机拒绝了："
 
 #, c-format
 msgid "This game doesn't have model %d, which the session uses"
@@ -10466,5 +10429,84 @@ msgstr "你会保留地图的当前状态；保存即可留一份副本。"
 msgid "Your name"
 msgstr "你的名字"
 
-msgid "Too many wrong session codes: no one else can join until you host again"
-msgstr "错误的会话代码过多：在你重新托管之前，其他人无法加入"
+msgid "Code or password"
+msgstr "代码或密码"
+
+msgid "Could not connect to the session."
+msgstr "无法连接到会话。"
+
+msgid "Edit one map together: one of you hosts the open map, or a haumea-server keeps it, and the others join."
+msgstr "一起编辑一张地图：由一人托管打开的地图，或由 haumea-server 保存，其他人加入。"
+
+msgid "Lost the connection to the session."
+msgstr "与会话的连接已断开。"
+
+msgid ""
+"Others join with this computer's address, the port and the session code.\n"
+"Over the internet the port must be forwarded to this computer, or use a VPN such as Tailscale.\n"
+"For a session that stays up without you, run haumea-server where your SA-MP server runs."
+msgstr ""
+"其他人使用这台电脑的地址、端口和会话代码加入。\n"
+"通过互联网时，需要将端口转发到这台电脑，或使用 Tailscale 等 VPN。\n"
+"若想让会话在你离开后继续运行，请在运行 SA-MP 服务器的机器上运行 haumea-server。"
+
+msgid "Refused: "
+msgstr "被拒绝："
+
+msgid "The host's session code, or the password haumea-server was started with."
+msgstr "主机的会话代码，或启动 haumea-server 时设置的密码。"
+
+msgid "The password is too long."
+msgstr "密码太长。"
+
+msgid "The session closed the connection."
+msgstr "会话关闭了连接。"
+
+msgid "The session didn't answer."
+msgstr "会话没有响应。"
+
+msgid "The session ended."
+msgstr "会话已结束。"
+
+msgid "The session sent something this version can't read."
+msgstr "会话发送了此版本无法读取的内容。"
+
+msgid "Your map started the session on %s"
+msgstr "你的地图在 %s 上开始了会话"
+
+msgid ""
+"Asks your router to forward the port to this computer (UPnP),\n"
+"so people join over the internet without setting it up by hand."
+msgstr ""
+"让路由器把端口转发到这台电脑（UPnP），\n"
+"这样别人无需手动设置即可通过互联网加入。"
+
+msgid "Joining replaces the open map and textdraw file: save them first to keep your changes."
+msgstr "加入会替换打开的地图和文本绘制文件：请先保存以保留你的更改。"
+
+msgid "On your own network others can still join. Over the internet, forward port %d to this computer, use a VPN such as Tailscale, or run haumea-server."
+msgstr "在你自己的网络中，其他人仍可加入。通过互联网时，请将端口 %d 转发到这台电脑、使用 Tailscale 等 VPN，或运行 haumea-server。"
+
+msgid "Open the port on my router"
+msgstr "在我的路由器上打开端口"
+
+msgid "Opening the port on your router..."
+msgstr "正在路由器上打开端口..."
+
+msgid "Over the internet, others join at %s"
+msgstr "通过互联网，其他人在 %s 加入"
+
+msgid "That isn't a Haumea session."
+msgstr "那不是 Haumea 会话。"
+
+msgid "The session runs a different Haumea version: update both to the same one."
+msgstr "该会话运行的是不同版本的 Haumea：请将双方更新到同一版本。"
+
+msgid "Your router didn't open the port (%s)."
+msgstr "你的路由器没有打开端口（%s）。"
+
+msgid "Your router forwards the port: over the internet, others join at your public address."
+msgstr "你的路由器已转发该端口：通过互联网，其他人使用你的公网地址加入。"
+
+msgid "Over IPv6, others can join at %s when your router lets them in."
+msgstr "通过 IPv6，在你的路由器允许时，其他人可以在 %s 加入。"

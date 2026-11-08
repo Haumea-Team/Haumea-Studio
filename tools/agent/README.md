@@ -291,7 +291,12 @@ map icons, NPCs and NPC path points) inside an edit session that
 `finish_edit_session` commits or rolls back. Around them are asset search,
 previews and discovery, keyed scene patches, validation, provenance-bound
 captures, checkpoints and SA-MP object materials (`set_object_material`,
-`set_object_material_text`, `clear_object_material`).
+`set_object_material_text`, `clear_object_material`). `multiplayer_session` joins
+a shared session (another editor's, or a haumea-server's), so several agents
+build one map, each in its own Haumea or several in one: every agent has its
+own edit session (its id goes after an `@` in each request id; set
+`HAUMEA_AGENT_ID` to choose it), and rolling back or undoing only takes back
+that agent's own edits.
 tools/release/AGENT_README.md walks through the map workflow. Tool failures
 are reported with their message, including when the editor is not reachable.
 MCP runs over stdio; Haumea exposes a user-private Unix socket

@@ -863,6 +863,25 @@ ELEMENT_PROPERTIES_DOC = """Properties by kind (all optional; defaults in bracke
 
 
 @mcp.tool()
+def multiplayer_session(action: Literal["join", "host", "leave", "status"], address: str | None = None,
+                        port: int = 7790, password: str | None = None, name: str = "Namaka",
+                        discard_changes: bool = False) -> dict:
+	"""Edit one map with other people and agents, like File > Multiplayer.
+
+	join: the session at address:port (a haumea-server, or an editor hosting) with password
+	(the host's six-letter code or the server's password). The session's map replaces the open
+	one, or the open map seeds an empty server. Waits until joined; state "off" with status
+	says why not. host: shares the open map on port; others join with this computer's address
+	and the returned code. leave: keeps the map as it is. status: state, peers and their
+	selections. Several agents can work in one editor too, each with its own edit session:
+	finish_edit_session(commit=False) and undo only take back this agent's own edits, and what
+	someone else changed last stays. join and host end the edit
+	session: unsaved edits refuse them unless discard_changes drops the edits."""
+	return service.multiplayer(action, address=address, port=port, password=password, name=name,
+	                           discard_changes=discard_changes)
+
+
+@mcp.tool()
 def open_map(path: str, discard_changes: bool = False) -> dict:
 	"""Open a map as the document, like File > Open: Pawn (.pwn/.inc), Texture Studio (.db),
 	MTA:SA (.map) or IPL (.ipl, converted to Pawn calls).

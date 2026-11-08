@@ -1,317 +1,50 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Multiplayer editing (multiplayer.h).
 //
-// The host keeps the session: clients send it their changes, and it applies
-// and relays every change, its own included, to all clients in one order.
-// A change is an element's whole state (ElementHead plus the editor's own
+// A relay keeps the session (mprelay.cpp): this editor's own when hosting,
+// or haumea-server's. Every editor, the host's too, sends it its changes,
+// and it relays every change, the sender's included, to all in one order.
+// A change is an element's whole state (MpElementHead plus the editor's own
 // property, vehicle and material structs), found by comparing each element
 // with what was last sent or received, so every way of editing is covered,
 // undo included, and a new property field travels without changes here.
+// The map's lists (textdraws, area removals, radar art, format) go whole
+// when they change, as channels.
 //
-// Two people changing one element at once: a client ignores the others'
-// changes to an element while the host hasn't echoed its own yet, since the
-// host puts its own after them, so everyone ends with the same state.
-#ifdef _WIN32
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#endif
+// Two people changing one element at once: an editor ignores the others'
+// changes to an element while the relay hasn't echoed its own yet, since the
+// relay puts its own after them, so everyone ends with the same state.
+#include "mpprotocol.h"	// first: winsock2.h before windows.h
+#include "mprelay.h"
 #include "haumea.h"
+#include "upnp.h"
 #include "multiplayer.h"
 #include "radarart.h"
+#include "sapaths.h"
 #include "documentxml.h"
+#include "coordinatepin.h"
+#include "layoutpaths.h"
+#include "textdraws.h"
+#include "workspace.h"
 #include "encoding.h"
 #include "icons.h"
 #include "i18n.h"
-#include "minilzo/minilzo.h"
 
 #include <algorithm>
-#include <chrono>
 #include <map>
 #include <random>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 #include <ctype.h>
-#include <errno.h>
 #include <cmath>
 #include <string.h>
+#include <sys/stat.h>
 
-#ifndef _WIN32
-#include <arpa/inet.h>
-#include <fcntl.h>
-#include <netdb.h>
-#include <netinet/in.h>
-#include <netinet/tcp.h>
-#include <sys/select.h>
-#include <sys/socket.h>
-#include <unistd.h>
-#endif
-
-#ifdef _WIN32
-typedef SOCKET MpSocket;
-static const MpSocket MP_NO_SOCKET = INVALID_SOCKET;
-#else
-typedef int MpSocket;
-static const MpSocket MP_NO_SOCKET = -1;
-#endif
-#ifndef MSG_NOSIGNAL
-#define MSG_NOSIGNAL 0
-#endif
-
-enum {
-	MSG_HELLO = 1,	// client: who it is and the session code
-	MSG_WELCOME,	// host: the client's peer id; the map follows
-	MSG_REJECT,	// host: why not, then it closes
-	MSG_ELEMENT,	// an element's state, with the peer that changed it
-	MSG_PRESENCE,	// a peer's name, camera and selection
-	MSG_PEER_LEFT,
-	MSG_SNAPSHOT_DONE,	// host: the whole map was sent
-	MSG_TEXTDRAWS,	// the map's own (read-only) textdraws, as editor XML
-};
-static const uint8 MSG_COMPRESSED = 0x80;
-static const uint32 MP_MAGIC = 0x504d4d48;	// "HMMP"
-static const uint32 MP_PROTOCOL = 1;
-static const size_t MP_MAX_FRAME = 1 << 20;
-static const size_t MP_MAX_UNPACKED = 8 << 20;
-static const size_t MP_MAX_BACKLOG = 128 << 20;	// unsent bytes before a peer is dropped
-static const int MP_MAX_CLIENTS = 16;
-static const int MP_MAX_WRONG_CODES = 20;	// then joining is off until hosting again
-static const int MP_MAX_SELECTION = 256;
 static const double MP_SEND_INTERVAL = 0.05;
 static const double MP_PRESENCE_INTERVAL = 0.1;
-static const double MP_KEEPALIVE = 1.0;
-static const double MP_TIMEOUT = 30.0;
-static const double MP_CONNECT_TIMEOUT = 10.0;
-enum { MP_NAME_LEN = 32, MP_CODE_LEN = 16 };
-
-static double
-now(void)
-{
-	using namespace std::chrono;
-	return duration<double>(steady_clock::now().time_since_epoch()).count();
-}
-
-/*
- * Sockets
- */
-
-static void
-closeSocket(MpSocket &socket)
-{
-	if(socket == MP_NO_SOCKET) return;
-#ifdef _WIN32
-	closesocket(socket);
-#else
-	close(socket);
-#endif
-	socket = MP_NO_SOCKET;
-}
-
-static bool
-setNonBlocking(MpSocket socket)
-{
-#ifdef _WIN32
-	u_long mode = 1;
-	return ioctlsocket(socket, FIONBIO, &mode) == 0;
-#else
-	int flags = fcntl(socket, F_GETFL, 0);
-	return flags >= 0 && fcntl(socket, F_SETFL, flags | O_NONBLOCK) == 0 &&
-		fcntl(socket, F_SETFD, FD_CLOEXEC) == 0;
-#endif
-}
-
-static bool
-wouldBlock(void)
-{
-#ifdef _WIN32
-	int error = WSAGetLastError();
-	return error == WSAEWOULDBLOCK || error == WSAEINPROGRESS;
-#else
-	return errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR || errno == EINPROGRESS;
-#endif
-}
-
-static bool
-startNetwork(void)
-{
-#ifdef _WIN32
-	static bool started;
-	WSADATA data;
-	if(!started && WSAStartup(MAKEWORD(2, 2), &data) != 0)
-		return false;
-	started = true;
-#endif
-	return true;
-}
-
-static void
-tuneSocket(MpSocket socket)
-{
-	int on = 1;
-	setsockopt(socket, IPPROTO_TCP, TCP_NODELAY, (const char*)&on, sizeof(on));
-#ifdef SO_NOSIGPIPE
-	setsockopt(socket, SOL_SOCKET, SO_NOSIGPIPE, &on, sizeof(on));
-#endif
-}
-
-/*
- * Frames: a u32 size, a type byte, the payload. Large payloads are LZO
- * compressed (the properties are mostly empty text): then the payload is
- * the unpacked size and the packed bytes.
- */
-
-template <typename T> static void
-put(std::string &out, const T &value)
-{
-	out.append((const char*)&value, sizeof(T));
-}
-
-namespace {	// file-local: other files have their own Frame and Reader
-struct Reader
-{
-	const char *at;
-	size_t left;
-	bool ok;
-	Reader(const std::string &data) : at(data.data()), left(data.size()), ok(true) {}
-	bool bytes(void *out, size_t size){
-		if(!ok || left < size)
-			return ok = false;
-		memcpy(out, at, size);
-		at += size;
-		left -= size;
-		return true;
-	}
-	template <typename T> bool get(T *value){ return bytes(value, sizeof(T)); }
-};
-}
-
-static bool
-lzoReady(void)
-{
-	static int ready = -1;
-	if(ready < 0)
-		ready = lzo_init() == LZO_E_OK;
-	return ready == 1;
-}
-
-static std::string
-makeFrame(uint8 type, const std::string &payload)
-{
-	std::string body;
-	if(payload.size() >= 256 && lzoReady()){
-		static std::vector<unsigned char> work(LZO1X_1_MEM_COMPRESS);
-		std::vector<unsigned char> packed(payload.size() + payload.size() / 16 + 64 + 3);
-		lzo_uint size = 0;
-		if(lzo1x_1_compress((const unsigned char*)payload.data(), payload.size(), packed.data(), &size,
-		   work.data()) == LZO_E_OK && size + 4 < payload.size()){
-			type |= MSG_COMPRESSED;
-			put(body, (uint32)payload.size());
-			body.append((const char*)packed.data(), size);
-		}
-	}
-	if(!(type & MSG_COMPRESSED))
-		body = payload;
-	std::string frame;
-	put(frame, (uint32)(body.size() + 1));
-	frame += (char)type;
-	frame += body;
-	return frame;
-}
-
-namespace {
-struct Frame
-{
-	uint8 type;
-	std::string payload;
-};
-}
-
-namespace {
-struct Connection
-{
-	MpSocket socket = MP_NO_SOCKET;
-	std::string in, out;
-	uint32 peer = 0;	// 0 until its hello was accepted
-	char name[MP_NAME_LEN] = {};
-	double heard = 0.0;
-	bool closing = false;	// close once the rest was sent (a rejection)
-};
-}
-
-static bool
-flush(Connection &c)
-{
-	size_t sent = 0;
-	while(sent < c.out.size()){
-		int size = (int)std::min(c.out.size() - sent, (size_t)1 << 20);
-		int n = (int)send(c.socket, c.out.data() + sent, size, MSG_NOSIGNAL);
-		if(n > 0){
-			sent += n;
-			continue;
-		}
-		if(n < 0 && wouldBlock())
-			break;
-		return false;
-	}
-	c.out.erase(0, sent);
-	return c.out.size() <= MP_MAX_BACKLOG;
-}
-
-static bool
-unpack(uint8 type, const char *data, size_t size, Frame *frame)
-{
-	frame->type = type & ~MSG_COMPRESSED;
-	if(!(type & MSG_COMPRESSED)){
-		frame->payload.assign(data, size);
-		return true;
-	}
-	uint32 unpacked;
-	if(size < 4 || !lzoReady())
-		return false;
-	memcpy(&unpacked, data, 4);
-	if(unpacked > MP_MAX_UNPACKED)
-		return false;
-	frame->payload.resize(unpacked);
-	lzo_uint out = unpacked;
-	return lzo1x_decompress_safe((const unsigned char*)data + 4, size - 4,
-		(unsigned char*)&frame->payload[0], &out, nil) == LZO_E_OK && out == unpacked;
-}
-
-// Reads what has arrived; false when the connection is gone or misbehaves.
-static bool
-receive(Connection &c, std::vector<Frame> &frames)
-{
-	char buffer[65536];
-	bool open = true;
-	for(size_t total = 0; total < (32u << 20);){
-		int n = (int)recv(c.socket, buffer, sizeof(buffer), 0);
-		if(n > 0){
-			c.in.append(buffer, n);
-			c.heard = now();
-			total += n;
-			continue;
-		}
-		// Closed: what came before still counts (a rejection's reason).
-		open = n < 0 && wouldBlock();
-		break;
-	}
-	size_t at = 0;
-	while(c.in.size() - at >= 4){
-		uint32 size;
-		memcpy(&size, c.in.data() + at, 4);
-		if(size == 0 || size > MP_MAX_FRAME)
-			return false;
-		if(c.in.size() - at - 4 < size)
-			break;
-		Frame frame;
-		if(!unpack((uint8)c.in[at + 4], c.in.data() + at + 5, size - 1, &frame))
-			return false;
-		frames.push_back(std::move(frame));
-		at += 4 + size;
-	}
-	c.in.erase(0, at);
-	return open;
-}
+static const double MP_CHANNEL_INTERVAL = 0.5;
 
 /*
  * Session state
@@ -328,18 +61,16 @@ struct Peer
 };
 }
 
-static int gState = MP_OFF;
-static MpSocket gListen = MP_NO_SOCKET;
-static std::vector<Connection> gClients;	// hosting
-static Connection gHost;	// joining
-static bool gHostConnected;	// the TCP connection is up (joining)
+static int gState = MP_OFF;	// joining: MP_OFF, MP_CONNECTING or MP_JOINED
+static bool gHosting;	// the relay is this editor's own (mprelay.h)
+static MpConnection gRelay;
+static bool gRelayConnected;	// the TCP connection is up
 static double gConnectStarted;
-static uint32 gSelf;	// our peer id; the host is 1
-static uint32 gNextPeer;
+static uint32 gSelf;	// our peer id, from the relay
 static uint32 gNextElement;
 static char gName[MP_NAME_LEN];
-static char gCode[MP_CODE_LEN];
-static char gHostName[MP_NAME_LEN];
+static char gPassword[MP_PASSWORD_LEN];
+static char gSessionName[MP_NAME_LEN];	// the host's name, or haumea-server's --name
 static char gAddress[256];
 static int gPort;
 static std::string gStatus;	// the last thing that happened, for the window
@@ -347,7 +78,6 @@ static std::map<uint32, Peer> gPeers;	// the others
 static double gLastSend, gLastPresence, gLastPresenceChange, gLastThorough;
 static std::string gLastPresenceState;
 static int gMissingModels;	// elements whose model this game doesn't have
-static int gWrongCodes;
 
 // Elements by the editor's instance id (m_id, never reused) and by their
 // session-wide element id (the creating peer's id in the top bits).
@@ -356,11 +86,14 @@ static std::unordered_map<uint32, int32> gInstanceOf;
 static std::unordered_map<int32, std::string> gBaseline;	// what everyone last had
 static std::unordered_map<int32, int> gPending;	// our changes not echoed yet
 static std::unordered_map<int32, uint32> gSeenChange;	// m_changeSeq when last compared
+static std::unordered_set<int32> gChangedByOthers;	// last changed by someone else
 static double gLastSweep;
 static std::unordered_map<uint32, std::string> gUnresolved;	// waiting for a parent, vehicle or LOD
 static std::unordered_map<std::string, ObjectInst*> gWorldIndex;
-static std::string gTextDrawBaseline;
-static double gLastTextDraws;
+static std::string gChannelBaseline[MP_CHANNEL_COUNT];
+static std::unordered_set<std::string> gHaveFiles;
+static std::string gReceivedModels;	// the session's custom models as they came	// keys the relay has (we sent or got them)
+static double gLastChannels;
 
 static const ImU32 peerColours[] = {
 	IM_COL32(80, 170, 255, 255), IM_COL32(255, 120, 80, 255), IM_COL32(110, 220, 110, 255),
@@ -384,66 +117,43 @@ peerRgba(uint32 peer)
 }
 
 static void
-copyName(char *dst, const char *src)
-{
-	snprintf(dst, MP_NAME_LEN, "%s", src && src[0] ? src : "?");
-	for(char *p = dst; *p; p++)
-		if((unsigned char)*p < 32) *p = ' ';
-}
-
-static void
 resetSession(void)
 {
-	for(Connection &c : gClients)
-		closeSocket(c.socket);
-	gClients.clear();
-	closeSocket(gHost.socket);
-	gHost = Connection();
-	closeSocket(gListen);
-	gHostConnected = false;
+	MpCloseSocket(gRelay.socket);
+	gRelay = MpConnection();
+	if(gHosting){
+		MpRelayStop();
+		UpnpClosePort();
+	}
+	gHosting = false;
+	gRelayConnected = false;
 	gState = MP_OFF;
 	gSelf = 0;
-	gNextPeer = 1;
 	gNextElement = 0;
-	gCode[0] = '\0';
-	gHostName[0] = '\0';
+	gPassword[0] = '\0';
+	gSessionName[0] = '\0';
 	gPeers.clear();
 	gElementOf.clear();
 	gInstanceOf.clear();
 	gBaseline.clear();
 	gPending.clear();
 	gSeenChange.clear();
+	gChangedByOthers.clear();
 	gUnresolved.clear();
 	gWorldIndex.clear();
-	gTextDrawBaseline.clear();
+	for(std::string &baseline : gChannelBaseline)
+		baseline.clear();
+	gHaveFiles.clear();
+	gReceivedModels.clear();
 	gLastPresenceState.clear();
 	gLastThorough = 0.0;
 	gMissingModels = 0;
-	gWrongCodes = 0;
 }
 
 /*
  * Elements
  */
 
-namespace {
-struct ElementHead
-{
-	double degrees[3];	// the map file's own rotation numbers
-	uint32 element, lod, attachParent, npcVehicle;	// element ids, 0 for none
-	int32 model, area;
-	int32 iplIndex, imageIndex, binInstIndex;	// a GTA building: where the game has it
-	uint32 flags, materials, fileLength;
-	float position[3], rotation[4], sourceRotation[4];
-};
-}
-enum {
-	EL_WORLD = 1,
-	EL_DELETED = 2,
-	EL_VEHICLE = 4,
-	EL_SOURCE_DEGREES = 8,
-	EL_ATTACH_PLAYER = 16,
-};
 
 static ObjectInst*
 instanceOf(uint32 element)
@@ -453,13 +163,14 @@ instanceOf(uint32 element)
 }
 
 // Two peers may give one GTA building an id each before they hear of the
-// other's: the lower one is kept, by everyone.
+// other's: the relay keeps the first and sends it back in place of the
+// other, so everyone takes the relay's.
 static uint32
-bindElement(ObjectInst *inst, uint32 element)
+bindElement(ObjectInst *inst, uint32 element, bool fromRelay)
 {
 	gInstanceOf[element] = inst->m_id;
 	auto it = gElementOf.find(inst->m_id);
-	if(it == gElementOf.end() || element < it->second)
+	if(it == gElementOf.end() || fromRelay)
 		gElementOf[inst->m_id] = element;
 	return gElementOf[inst->m_id];
 }
@@ -472,8 +183,8 @@ elementOf(ObjectInst *inst, bool assign)
 		return it->second;
 	if(!assign || gSelf == 0)
 		return 0;
-	gNextElement = (gNextElement + 1) & 0x3fffff;
-	return bindElement(inst, gSelf << 22 | gNextElement);
+	gNextElement = (gNextElement + 1) & MP_ELEMENT_MASK;
+	return bindElement(inst, gSelf << MP_PEER_SHIFT | gNextElement, false);
 }
 
 static std::string
@@ -485,7 +196,7 @@ worldKey(const char *file, int iplIndex, int imageIndex, int binInstIndex)
 }
 
 static ObjectInst*
-findWorldInstance(const std::string &file, const ElementHead &h)
+findWorldInstance(const std::string &file, const MpElementHead &h)
 {
 	if(gWorldIndex.empty())
 		for(CPtrNode *p = instances.first; p; p = p->next){
@@ -516,7 +227,7 @@ isMapElement(ObjectInst *inst, bool thorough)
 static std::string
 encodeElement(ObjectInst *inst, uint32 element)
 {
-	ElementHead h;
+	MpElementHead h;
 	memset(&h, 0, sizeof(h));
 	ObjectPawnProperties props;
 	memcpy(&props, GetObjectPawnProperties(inst), sizeof(props));
@@ -555,16 +266,16 @@ encodeElement(ObjectInst *inst, uint32 element)
 		const ObjectMaterialOverride *m = GetObjectMaterialOverride((const ObjectInst*)inst, slot);
 		if(m && (m->active || m->textEnabled)){
 			h.materials |= 1u << slot;
-			put(materials, *m);
+			MpPut(materials, *m);
 		}
 	}
 	std::string out;
-	put(out, h);
+	MpPut(out, h);
 	if(h.fileLength)
 		out.append(inst->m_file->name, h.fileLength);
-	put(out, props);
+	MpPut(out, props);
 	if(inst->m_isVehicle)
-		put(out, GetVehicleState(inst));
+		MpPut(out, GetVehicleState(inst));
 	return out + materials;
 }
 
@@ -599,8 +310,8 @@ finiteWithin(const float *values, int count, float limit)
 static bool
 applyElement(const std::string &blob)
 {
-	Reader r(blob);
-	ElementHead h;
+	MpReader r(blob);
+	MpElementHead h;
 	std::string file;
 	ObjectPawnProperties props;
 	VehicleState vehicle = {};
@@ -629,14 +340,22 @@ applyElement(const std::string &blob)
 	ObjectInst *inst = instanceOf(h.element);
 	if(inst == nil && world)
 		inst = findWorldInstance(file, h);
+	bool spawned = false;
 	if(inst == nil && !world && !deleted){
 		inst = SpawnDocumentInstance(EditorModelId(h.model), position, rotation);
+		spawned = inst != nil;
 		if(inst == nil && gMissingModels++ == 0)
 			Toast(TOAST_SPAWN, _("This game doesn't have model %d, which the session uses"), h.model);
 	}
 	if(inst == nil)
 		return true;	// a building this game doesn't have, or deleted before we saw it
-	bindElement(inst, h.element);
+	bindElement(inst, h.element, true);
+	// Someone else's change: undoing ours on it would throw theirs away, and
+	// an agent rolling back its own edits leaves it alone.
+	if(spawned || encodeElement(inst, h.element) != blob){
+		UndoForgetInstance(inst);
+		gChangedByOthers.insert(inst->m_id);
+	}
 
 	bool resolved = true;
 	auto reference = [&resolved](uint32 element) -> ObjectInst* {
@@ -688,24 +407,35 @@ applyElement(const std::string &blob)
 static uint32
 blobElement(const std::string &blob)
 {
-	ElementHead h;
-	Reader r(blob);
+	MpElementHead h;
+	MpReader r(blob);
 	return r.get(&h) ? h.element : 0;
 }
 
 static void
 receiveElement(uint32 origin, const std::string &blob)
 {
-	uint32 element = blobElement(blob);
+	MpElementHead h;
+	MpReader r(blob);
+	if(!r.get(&h))
+		return;
+	uint32 element = h.element;
 	ObjectInst *inst = instanceOf(element);
-	if(gState != MP_HOSTING && inst){
+	if(inst == nil && (h.flags & EL_WORLD) && h.fileLength <= 1024){
+		// A building we gave another id: the relay's is the one.
+		std::string file(h.fileLength, '\0');
+		if(h.fileLength) r.bytes(&file[0], h.fileLength);
+		if(r.ok && (inst = findWorldInstance(file, h)) != nil && gElementOf.count(inst->m_id))
+			bindElement(inst, element, true);
+	}
+	if(inst){
 		auto pending = gPending.find(inst->m_id);
 		if(origin == gSelf){
 			if(pending != gPending.end() && --pending->second <= 0)
 				gPending.erase(pending);
 			return;
 		}
-		// Ours comes after it: the host relays in one order.
+		// Ours comes after it: the relay puts everything in one order.
 		if(pending != gPending.end())
 			return;
 	}
@@ -728,29 +458,398 @@ retryUnresolved(void)
 	}
 }
 
-// The map's textdraws change only when a map is opened or they are moved to
-// a textdraw file, so they go as one list.
-static std::string
-mapTextDrawsXml(void)
+/*
+ * Channels: the map's lists, each sent whole when it changes.
+ */
+
+static bool
+readBytes(const std::string &path, std::string *bytes)
 {
-	return EditorXML::Serialize(BuildTextDrawXML(GetMapTextDraws(), {}, PAWN_TEXT_CP1252));
+	FILE *f = fopen(path.c_str(), "rb");
+	if(f == nil)
+		return false;
+	bytes->clear();
+	char buffer[65536];
+	size_t n;
+	while((n = fread(buffer, 1, sizeof(buffer), f)) > 0)
+		bytes->append(buffer, n);
+	fclose(f);
+	return true;
+}
+
+static bool
+writeBytes(const std::string &path, const std::string &bytes)
+{
+	if(!EnsureParentDirectoriesForPath(path.c_str()))
+		return false;
+	std::string temporary = path + ".tmp";
+	FILE *f = fopen(temporary.c_str(), "wb");
+	bool ok = f && fwrite(bytes.data(), 1, bytes.size(), f) == bytes.size();
+	if(f && fclose(f) != 0)
+		ok = false;
+#ifdef _WIN32
+	if(ok)
+		remove(path.c_str());
+#endif
+	if(!ok || rename(temporary.c_str(), path.c_str()) != 0){
+		remove(temporary.c_str());
+		return false;
+	}
+	return true;
+}
+
+// Files the session's channels name, by key, and the session's custom models
+// made of them, in the config folder.
+static std::string
+sessionPath(const char *folder, const std::string &name)
+{
+	return std::string(GetConfigDir()) + "/multiplayer/" + folder + "/" + name;
+}
+
+// A file's key, worked out again only when its size or time changes.
+static std::string
+fileKey(const std::string &path)
+{
+	struct Known { long long size, time; std::string key; };
+	static std::unordered_map<std::string, Known> known;
+	struct stat st;
+	if(stat(path.c_str(), &st) != 0)
+		return "";
+	Known &k = known[path];
+	if(k.key.empty() || k.size != (long long)st.st_size || k.time != (long long)st.st_mtime){
+		std::string bytes;
+		if(!readBytes(path, &bytes))
+			return "";
+		k.size = (long long)st.st_size;
+		k.time = (long long)st.st_mtime;
+		k.key = MpFileKey(bytes.data(), bytes.size());
+	}
+	return k.key;
+}
+
+// Custom models: "file <key> <name>" for each file, then the artconfig.txt lines.
+static std::string
+customModelsState(std::vector<std::pair<std::string, std::string>> *files)
+{
+	std::map<std::string, std::string> paths;
+	std::string list = CustomModelsSessionList(paths);
+	std::string out;
+	for(const auto &file : paths){
+		std::string key = fileKey(file.second);
+		if(key.empty())
+			continue;
+		out += "file " + key + " " + file.first + "\n";
+		if(files)
+			files->emplace_back(key, file.second);
+	}
+	return out + list;
 }
 
 static void
-receiveTextDraws(const std::string &xml)
+applyCustomModels(const std::string &data)
 {
-	EditorXML::Node document;
-	std::vector<TextDraw> textdraws;
-	std::vector<TextDrawGuide> guides;
-	std::string error;
-	if(!EditorXML::Parse(xml, &document, &error) ||
-	   !ReadTextDrawXML(document, true, textdraws, guides, &error)){
-		log("Multiplayer: unreadable textdraws: %s\n", error.c_str());
-		return;
+	std::string list;
+	size_t at = 0;
+	while(at < data.size()){
+		size_t end = data.find('\n', at);
+		std::string line = data.substr(at, end == std::string::npos ? std::string::npos : end - at);
+		at = end == std::string::npos ? data.size() : end + 1;
+		if(line.compare(0, 5, "file ") != 0){
+			list += line + "\n";
+			continue;
+		}
+		size_t space = line.find(' ', 5);
+		if(space == std::string::npos)
+			continue;
+		std::string key = line.substr(5, space - 5), name = line.substr(space + 1);
+		if(name.empty() || name.find_first_of("/\\:") != std::string::npos || name[0] == '.')
+			continue;	// a file name, nothing more
+		std::string bytes, target = sessionPath("models", name);
+		if(fileKey(target) == key || !readBytes(sessionPath("files", key), &bytes))
+			continue;
+		if(!writeBytes(target, bytes))
+			log("Multiplayer: could not write %s\n", target.c_str());
 	}
-	GetMapTextDraws() = std::move(textdraws);
-	BumpChangeSeq();
-	gTextDrawBaseline = mapTextDrawsXml();
+	int added = AddSessionCustomModels(sessionPath("models", "").c_str(), list);
+	if(added > 0)
+		log("Multiplayer: %d custom model(s) from the session\n", added);
+}
+
+static void
+receiveFile(const std::string &payload)
+{
+	std::string key, bytes;
+	if(!MpReadFilePayload(payload, &key, &bytes))
+		return;
+	gHaveFiles.insert(key);
+	if(!writeBytes(sessionPath("files", key), bytes))
+		log("Multiplayer: could not keep the session's file %s\n", key.c_str());
+}
+
+// 3D paths name their objects by document id, which is this editor's own:
+// on the way they name them by element id.
+static void
+layoutPathRefs(EditorXML::Node &root, bool toElements)
+{
+	unsigned next = 0;
+	std::unordered_map<unsigned, ObjectInst*> byDocument;
+	for(CPtrNode *p = instances.first; p; p = p->next){
+		ObjectInst *inst = (ObjectInst*)p->item;
+		next = std::max(next, inst->m_editorDocumentId);
+		if(inst->m_editorDocumentId)
+			byDocument[inst->m_editorDocumentId] = inst;
+	}
+	auto documentId = [&](ObjectInst *inst) {
+		if(inst->m_editorDocumentId == 0)
+			byDocument[inst->m_editorDocumentId = ++next] = inst;
+		return inst->m_editorDocumentId;
+	};
+	if(toElements)
+		// Every placed object, so the paths write theirs.
+		for(CPtrNode *p = instances.first; p; p = p->next){
+			ObjectInst *inst = (ObjectInst*)p->item;
+			if(IsUserMapObject(inst) && !inst->m_isDeleted)
+				documentId(inst);
+		}
+	// An object that isn't here (yet) is left out: the path keeps the rest.
+	for(EditorXML::Node &path : root.children){
+		std::vector<EditorXML::Node> kept;
+		for(EditorXML::Node &object : path.children){
+			double ref = 0;
+			if(object.name == "object" && object.number("ref", &ref)){
+				ObjectInst *inst = nil;
+				if(toElements){
+					auto it = byDocument.find((unsigned)ref);
+					inst = it == byDocument.end() ? nil : it->second;
+				}else
+					inst = instanceOf((uint32)ref);
+				if(inst == nil)
+					continue;
+				object.set("ref", toElements ? elementOf(inst, true) : documentId(inst));
+			}
+			kept.push_back(std::move(object));
+		}
+		path.children = std::move(kept);
+	}
+}
+
+// A Nodes area, worked out again only after node edits; one nobody edited
+// here stays as the session has it (its baseline).
+static bool gNodesStale = true;
+
+static std::string
+nodesState(int area)
+{
+	static uint32 serial;
+	static std::string states[64];
+	static bool shared[64];
+	if(gNodesStale || serial != SAPaths::NodesEditSerial()){
+		gNodesStale = false;
+		serial = SAPaths::NodesEditSerial();
+		for(int i = 0; i < 64; i++){
+			std::vector<uint8> data;
+			shared[i] = SAPaths::GetSharedAreaData(i, data);
+			states[i].assign(data.begin(), data.end());
+		}
+	}
+	return shared[area] ? states[area] : gChannelBaseline[MP_CHANNEL_NODES + area];
+}
+
+static std::string
+channelState(int channel)
+{
+	if(channel >= MP_CHANNEL_NODES)
+		return nodesState(channel - MP_CHANNEL_NODES);
+	std::string out;
+	switch(channel){
+	case MP_CHANNEL_META:
+		MpPut(out, (int32)GetPawnMapFormat());
+		MpPut(out, (int32)GetPawnTextEncoding());
+		break;
+	case MP_CHANNEL_CUSTOM_MODELS:
+		out = customModelsState(nil);
+		break;
+	case MP_CHANNEL_TEXTDRAWS:
+		out = EditorXML::Serialize(BuildTextDrawXML(GetMapTextDraws(), {}, PAWN_TEXT_CP1252));
+		break;
+	case MP_CHANNEL_REMOVALS:
+		for(const PawnAreaRemoval &removal : GetPawnAreaRemovals())
+			MpPut(out, removal);
+		break;
+	case MP_CHANNEL_RADAR_ART:
+		for(const RadarArtLayer &layer : GetRadarArtLayers()){
+			out.append(layer.group, sizeof(layer.group));
+			MpPut(out, (int32)layer.zoneMode);
+			MpPut(out, (uint32)layer.zones.size());
+			for(const RadarArtZone &zone : layer.zones)
+				MpPut(out, zone);
+		}
+		break;
+	case MP_CHANNEL_TEXTDRAW_FILE:
+		MpPut(out, (int32)GetTextDrawCodeTarget());
+		out += EditorXML::Serialize(BuildTextDrawXML(GetTextDraws(), GetTextDrawGuides(), PAWN_TEXT_CP1252));
+		break;
+	case MP_CHANNEL_PINS:
+		out = EditorXML::Serialize(WriteCoordinatePinXML());
+		break;
+	case MP_CHANNEL_LAYOUT_PATHS: {
+		EditorXML::Node root = WriteLayoutPathsXML();
+		layoutPathRefs(root, true);
+		out = EditorXML::Serialize(root);
+		break;
+	}
+	}
+	return out;
+}
+
+static void
+applyChannel(int channel, const std::string &data)
+{
+	MpReader r(data);
+	switch(channel){
+	case MP_CHANNEL_META: {
+		int32 format = 0, encoding = 0;
+		if(r.get(&format) && r.get(&encoding)){
+			SetPawnMapFormat(format);
+			if(encoding == PAWN_TEXT_CP1252 || encoding == PAWN_TEXT_UTF8)
+				SetPawnTextEncoding((PawnTextEncoding)encoding);
+		}
+		break;
+	}
+	case MP_CHANNEL_TEXTDRAWS: {
+		EditorXML::Node document;
+		std::vector<TextDraw> textdraws;
+		std::vector<TextDrawGuide> guides;
+		std::string error;
+		if(!data.empty() && (!EditorXML::Parse(data, &document, &error) ||
+		   !ReadTextDrawXML(document, true, textdraws, guides, &error))){
+			log("Multiplayer: unreadable textdraws: %s\n", error.c_str());
+			return;
+		}
+		GetMapTextDraws() = std::move(textdraws);
+		BumpChangeSeq();
+		break;
+	}
+	case MP_CHANNEL_REMOVALS: {
+		std::vector<PawnAreaRemoval> removals;
+		PawnAreaRemoval removal;
+		while(r.left >= sizeof(removal) && r.get(&removal))
+			if(finiteWithin(&removal.x, 4, 1e6f))
+				removals.push_back(removal);
+		SetPawnAreaRemovals(removals);
+		break;
+	}
+	case MP_CHANNEL_RADAR_ART: {
+		std::vector<RadarArtLayer> layers;
+		while(r.ok && r.left > 0){
+			RadarArtLayer layer;
+			int32 mode = 0;
+			uint32 count = 0;
+			r.bytes(layer.group, sizeof(layer.group));
+			r.get(&mode);
+			r.get(&count);
+			if(!r.ok || count > r.left / sizeof(RadarArtZone))
+				return;
+			layer.group[sizeof(layer.group) - 1] = '\0';
+			layer.zoneMode = mode;
+			layer.zones.resize(count);
+			for(RadarArtZone &zone : layer.zones)
+				r.get(&zone);
+			layers.push_back(std::move(layer));
+		}
+		if(r.ok){
+			SetRadarArtLayers(layers, false);
+			UndoForgetKind(UNDO_RADAR_ART);
+		}
+		break;
+	}
+	case MP_CHANNEL_CUSTOM_MODELS:
+		applyCustomModels(data);
+		gReceivedModels = data;
+		break;
+	case MP_CHANNEL_TEXTDRAW_FILE: {
+		int32 target = 0;
+		EditorXML::Node document;
+		std::vector<TextDraw> textdraws;
+		std::vector<TextDrawGuide> guides;
+		std::string error;
+		if(!r.get(&target) || !EditorXML::Parse(r.rest(), &document, &error) ||
+		   !ReadTextDrawXML(document, true, textdraws, guides, &error)){
+			log("Multiplayer: unreadable textdraw file: %s\n", error.c_str());
+			return;
+		}
+		GetTextDraws() = std::move(textdraws);
+		GetTextDrawGuides() = std::move(guides);
+		if(target == TEXTDRAW_CODE_SAMP || target == TEXTDRAW_CODE_OPENMP)
+			SetTextDrawCodeTarget((TextDrawCodeTarget)target);
+		TextDrawsReplacedByOthers();
+		break;
+	}
+	case MP_CHANNEL_PINS: {
+		EditorXML::Node root;
+		std::string error;
+		if(!EditorXML::Parse(data, &root, &error) || !ReadCoordinatePinXML(root, &error, true))
+			log("Multiplayer: unreadable alignment pins: %s\n", error.c_str());
+		break;
+	}
+	case MP_CHANNEL_LAYOUT_PATHS: {
+		EditorXML::Node root;
+		std::string error;
+		if(EditorXML::Parse(data, &root, &error)){
+			layoutPathRefs(root, false);
+			if(ReadLayoutPathsXML(root, &error, true)){
+				UndoForgetKind(UNDO_LAYOUT_PATHS);
+				break;
+			}
+		}
+		log("Multiplayer: unreadable 3D paths: %s\n", error.c_str());
+		break;
+	}
+	}
+	if(channel >= MP_CHANNEL_NODES){
+		if(SAPaths::SetSharedAreaData(channel - MP_CHANNEL_NODES, std::vector<uint8>(data.begin(), data.end())))
+			UndoForgetKind(UNDO_NODES);
+		gNodesStale = true;
+	}
+	gChannelBaseline[channel] = channelState(channel);
+}
+
+static void
+sendToRelay(uint8 type, const std::string &payload)
+{
+	if(gState == MP_JOINED || gState == MP_CONNECTING)
+		MpQueue(gRelay, MpMakeFrame(type, payload));
+}
+
+// Sends the lists in [first, end) that changed; silent only takes note of them.
+static void
+sendChannels(bool silent, int first = 1, int end = MP_CHANNEL_COUNT)
+{
+	for(int channel = first; channel < end; channel++){
+		std::string state = channelState(channel);
+		if(state == gChannelBaseline[channel])
+			continue;
+		gChannelBaseline[channel] = state;
+		if(silent)
+			continue;
+		if(channel == MP_CHANNEL_CUSTOM_MODELS){
+			// The files first, each once: the relay keeps them for everyone.
+			std::vector<std::pair<std::string, std::string>> files;
+			customModelsState(&files);
+			for(const auto &file : files){
+				std::string bytes;
+				if(gHaveFiles.count(file.first) || !readBytes(file.second, &bytes))
+					continue;
+				if(bytes.size() > MP_MAX_UNPACKED - 64){
+					log("Multiplayer: %s is too big to share\n", file.second.c_str());
+					continue;
+				}
+				sendToRelay(MSG_FILE, MpFilePayload(file.first, bytes));
+				gHaveFiles.insert(file.first);
+			}
+		}
+		sendToRelay(MSG_CHANNEL, MpChannelPayload(gSelf, (uint8)channel, state));
+	}
 }
 
 /*
@@ -758,57 +857,47 @@ receiveTextDraws(const std::string &xml)
  */
 
 static void
-broadcast(const std::string &frame, uint32 except)
-{
-	for(Connection &c : gClients)
-		if(c.peer && c.peer != except && !c.closing)
-			c.out += frame;
-}
-
-static std::string
-elementPayload(uint32 origin, const std::string &blob)
-{
-	std::string payload;
-	put(payload, origin);
-	return payload + blob;
-}
-
-static void
 publishElement(ObjectInst *inst, const std::string &blob)
 {
-	if(gState == MP_HOSTING)
-		broadcast(makeFrame(MSG_ELEMENT, elementPayload(gSelf, blob)), 0);
-	else if(gState == MP_JOINED){
-		gHost.out += makeFrame(MSG_ELEMENT, elementPayload(gSelf, blob));
-		gPending[inst->m_id]++;
-	}
+	sendToRelay(MSG_ELEMENT, MpFromPeer(gSelf, blob));
+	gPending[inst->m_id]++;
+	gChangedByOthers.erase(inst->m_id);
+}
+
+// Sends the element when it changed since it was last sent; silent only
+// takes note of it.
+static void
+noteElement(ObjectInst *inst, bool silent)
+{
+	gSeenChange[inst->m_id] = inst->m_changeSeq;
+	std::string state = encodeElement(inst, elementOf(inst, true));
+	std::string &baseline = gBaseline[inst->m_id];
+	if(state == baseline)
+		return;
+	baseline = state;
+	if(!silent)
+		publishElement(inst, state);
 }
 
 // Sends what changed since the last time; silent only takes note of it.
 static void
 sendChanges(bool silent)
 {
-	bool thorough = now() - gLastThorough > 5.0;
+	bool thorough = MpNow() - gLastThorough > 5.0;
 	if(thorough)
-		gLastThorough = now();
-	if(now() - gLastTextDraws > 0.5 || silent){
-		gLastTextDraws = now();
-		std::string xml = mapTextDrawsXml();
-		if(xml != gTextDrawBaseline){
-			gTextDrawBaseline = xml;
-			std::string frame = silent ? "" : makeFrame(MSG_TEXTDRAWS, elementPayload(gSelf, xml));
-			if(gState == MP_HOSTING)
-				broadcast(frame, 0);
-			else if(gState == MP_JOINED)
-				gHost.out += frame;
-		}
+		gLastThorough = MpNow();
+	// What new elements need goes before them, what refers to them after.
+	bool channels = MpNow() - gLastChannels > MP_CHANNEL_INTERVAL || silent;
+	if(channels){
+		gLastChannels = MpNow();
+		sendChannels(silent, 1, MP_CHANNEL_AFTER_ELEMENTS);
 	}
 	// Encoding every element every time is too slow for big maps: only what
 	// was stamped as changed or is selected (being dragged), and all of them
 	// now and then for edits that don't stamp.
-	bool sweep = silent || now() - gLastSweep > 1.0;
+	bool sweep = silent || MpNow() - gLastSweep > 1.0;
 	if(sweep)
-		gLastSweep = now();
+		gLastSweep = MpNow();
 	for(CPtrNode *p = instances.first; p; p = p->next){
 		ObjectInst *inst = (ObjectInst*)p->item;
 		bool known = gElementOf.count(inst->m_id) != 0;
@@ -817,15 +906,35 @@ sendChanges(bool silent)
 		auto seen = gSeenChange.find(inst->m_id);
 		if(known && !sweep && !inst->m_selected && seen != gSeenChange.end() && seen->second == inst->m_changeSeq)
 			continue;
-		gSeenChange[inst->m_id] = inst->m_changeSeq;
-		std::string state = encodeElement(inst, elementOf(inst, true));
-		std::string &baseline = gBaseline[inst->m_id];
-		if(state == baseline)
-			continue;
-		baseline = state;
-		if(!silent)
-			publishElement(inst, state);
+		noteElement(inst, silent);
 	}
+	if(channels)
+		sendChannels(silent, MP_CHANNEL_AFTER_ELEMENTS);
+}
+
+// Into an empty session: the whole map, in its order, then every list.
+static void
+seedSession(void)
+{
+	gBaseline.clear();
+	gSeenChange.clear();
+	for(std::string &baseline : gChannelBaseline)
+		baseline = "\x01";	// never a list's state: all of them go
+	sendChannels(false, 1, MP_CHANNEL_AFTER_ELEMENTS);
+	// In the order they were made, which the joining editors make them in
+	// too: Pawn is written in the instance list's order.
+	std::vector<ObjectInst*> elements;
+	for(CPtrNode *p = instances.first; p; p = p->next){
+		ObjectInst *inst = (ObjectInst*)p->item;
+		if(isMapElement(inst, true))
+			elements.push_back(inst);
+	}
+	std::sort(elements.begin(), elements.end(), [](ObjectInst *a, ObjectInst *b) { return a->m_id < b->m_id; });
+	for(ObjectInst *inst : elements)
+		noteElement(inst, false);
+	sendChannels(false, MP_CHANNEL_AFTER_ELEMENTS);
+	gLastThorough = gLastSweep = gLastChannels = MpNow();
+	sendToRelay(MSG_SEED_DONE, "");
 }
 
 static std::string
@@ -833,21 +942,21 @@ presencePayload(uint32 peer, const char *name, const rw::V3d &camera, const rw::
 	const std::vector<uint32> &selection)
 {
 	std::string payload;
-	put(payload, peer);
+	MpPut(payload, peer);
 	payload.append(name, MP_NAME_LEN);
-	put(payload, camera);
-	put(payload, target);
-	put(payload, (int32)area);
-	put(payload, (uint32)selection.size());
+	MpPut(payload, camera);
+	MpPut(payload, target);
+	MpPut(payload, (int32)area);
+	MpPut(payload, (uint32)selection.size());
 	for(uint32 element : selection)
-		put(payload, element);
+		MpPut(payload, element);
 	return payload;
 }
 
 static bool
 readPresence(const std::string &payload, Peer *peer)
 {
-	Reader r(payload);
+	MpReader r(payload);
 	uint32 count = 0;
 	int32 area = 0;
 	r.get(&peer->id);
@@ -861,7 +970,7 @@ readPresence(const std::string &payload, Peer *peer)
 	char name[MP_NAME_LEN];
 	memcpy(name, peer->name, MP_NAME_LEN);
 	name[MP_NAME_LEN - 1] = '\0';
-	copyName(peer->name, name);
+	MpCopyName(peer->name, name);
 	peer->area = area;
 	peer->selection.resize(count);
 	for(uint32 &element : peer->selection)
@@ -882,7 +991,7 @@ ownPresence(void)
 static void
 sendPresence(void)
 {
-	double t = now();
+	double t = MpNow();
 	if(t - gLastPresence < MP_PRESENCE_INTERVAL)
 		return;
 	std::string payload = ownPresence();
@@ -890,286 +999,175 @@ sendPresence(void)
 		return;
 	gLastPresence = gLastPresenceChange = t;
 	gLastPresenceState = payload;
-	if(gState == MP_HOSTING)
-		broadcast(makeFrame(MSG_PRESENCE, payload), 0);
-	else if(gState == MP_JOINED)
-		gHost.out += makeFrame(MSG_PRESENCE, payload);
+	sendToRelay(MSG_PRESENCE, payload);
 }
 
 /*
- * Hosting
+ * Joining: a relay, our own when hosting
  */
 
 static void
-reject(Connection &c, const char *reason)
+relayLog(const char *line)
 {
-	c.out += makeFrame(MSG_REJECT, reason);
-	c.closing = true;
+	log("Multiplayer relay: %s\n", line);
 }
 
-static void
-welcome(Connection &c, const Frame &hello)
+namespace {
+struct Candidate
 {
-	Reader r(hello.payload);
-	uint32 magic = 0, protocol = 0, propsSize = 0, materialSize = 0, vehicleSize = 0;
-	int32 game = -1;
-	char code[MP_CODE_LEN], name[MP_NAME_LEN];
-	r.get(&magic); r.get(&protocol); r.get(&propsSize); r.get(&materialSize); r.get(&vehicleSize);
-	r.get(&game);
-	r.bytes(code, sizeof(code));
-	r.bytes(name, sizeof(name));
-	if(!r.ok || magic != MP_MAGIC){
-		reject(c, "not a Haumea session");
-		return;
-	}
-	code[MP_CODE_LEN - 1] = '\0';
-	name[MP_NAME_LEN - 1] = '\0';
-	if(protocol != MP_PROTOCOL || propsSize != sizeof(ObjectPawnProperties) ||
-	   materialSize != sizeof(ObjectMaterialOverride) || vehicleSize != sizeof(VehicleState)){
-		reject(c, "a different Haumea version: update both to the same one");
-		return;
-	}
-	if(game != (int32)params.map){
-		reject(c, "the host edits a different game");
-		return;
-	}
-	bool same = strlen(code) == strlen(gCode);
-	for(int i = 0; same && code[i]; i++)
-		same = toupper((unsigned char)code[i]) == gCode[i];
-	if(gWrongCodes >= MP_MAX_WRONG_CODES){
-		reject(c, "too many wrong codes: the host has to host again");
-		return;
-	}
-	if(!same){
-		if(++gWrongCodes == MP_MAX_WRONG_CODES)
-			Toast(TOAST_SAVE, _("Too many wrong session codes: no one else can join until you host again"));
-		reject(c, "wrong session code");
-		return;
-	}
-	int joined = 0;
-	for(const Connection &other : gClients)
-		joined += other.peer != 0;
-	if(joined >= MP_MAX_CLIENTS){
-		reject(c, "the session is full");
-		return;
-	}
-	c.peer = ++gNextPeer;
-	copyName(c.name, name);
-	std::string payload;
-	put(payload, c.peer);
-	payload.append(gName, MP_NAME_LEN);
-	put(payload, (int32)GetPawnMapFormat());
-	c.out += makeFrame(MSG_WELCOME, payload);
-	// The map as everyone has it, then who is here.
-	gLastTextDraws = 0.0;
-	sendChanges(false);
-	// In the order they were made, which the joined map is made in too:
-	// Pawn is written in the instance list's order.
-	std::vector<int32> ids;
-	for(const auto &known : gBaseline)
-		ids.push_back(known.first);
-	std::sort(ids.begin(), ids.end());
-	for(int32 id : ids){
-		ObjectInst *inst = GetInstanceByID(id);
-		const std::string &state = gBaseline[id];
-		if(inst && !state.empty() && !(inst->m_isDeleted && IsUserMapObject(inst)))
-			c.out += makeFrame(MSG_ELEMENT, elementPayload(gSelf, state));
-	}
-	c.out += makeFrame(MSG_TEXTDRAWS, elementPayload(gSelf, gTextDrawBaseline));
-	c.out += makeFrame(MSG_PRESENCE, ownPresence());
-	for(const auto &peer : gPeers)
-		c.out += makeFrame(MSG_PRESENCE, presencePayload(peer.second.id, peer.second.name,
-			peer.second.camera, peer.second.target, peer.second.area, peer.second.selection));
-	c.out += makeFrame(MSG_SNAPSHOT_DONE, "");
-	// Listed for the others before its first presence arrives; no area: not
-	// drawn until then.
-	Peer peer = {};
-	peer.id = c.peer;
-	memcpy(peer.name, c.name, MP_NAME_LEN);
-	peer.area = -1;
-	gPeers[c.peer] = peer;
-	broadcast(makeFrame(MSG_PRESENCE, presencePayload(peer.id, peer.name, peer.camera, peer.target, -1, {})),
-		c.peer);
-	ToastFor(TOAST_SAVE, 4.0f, _("%s joined the session"), c.name);
+	sockaddr_storage address;
+	socklen_t length;
+};
 }
+static std::vector<Candidate> gCandidates;	// addresses left to try
+static double gCandidateStarted;
+static const double MP_CANDIDATE_TIMEOUT = 4.0;	// then the next address
 
-static void
-dropClient(size_t index, bool announce)
+// Starts connecting to the next address; false when none is left.
+static bool
+connectNext(void)
 {
-	Connection &c = gClients[index];
-	if(c.peer){
-		gPeers.erase(c.peer);
-		std::string payload;
-		put(payload, c.peer);
-		broadcast(makeFrame(MSG_PEER_LEFT, payload), c.peer);
-		if(announce)
-			ToastFor(TOAST_SAVE, 4.0f, _("%s left the session"), c.name);
-	}
-	closeSocket(c.socket);
-	gClients.erase(gClients.begin() + index);
-}
-
-static void
-updateHost(void)
-{
-	for(;;){
-		MpSocket socket = accept(gListen, nil, nil);
-		if(socket == MP_NO_SOCKET)
-			break;
-		if(gClients.size() >= 2 * MP_MAX_CLIENTS || !setNonBlocking(socket)){
-			closeSocket(socket);
-			continue;
+	MpCloseSocket(gRelay.socket);
+	while(!gCandidates.empty()){
+		Candidate c = gCandidates.front();
+		gCandidates.erase(gCandidates.begin());
+		gRelay.socket = socket(c.address.ss_family, SOCK_STREAM, IPPROTO_TCP);
+		if(gRelay.socket != MP_NO_SOCKET && MpSetNonBlocking(gRelay.socket) &&
+		   (connect(gRelay.socket, (sockaddr*)&c.address, c.length) == 0 || MpWouldBlock())){
+			MpTuneSocket(gRelay.socket);
+			gCandidateStarted = MpNow();
+			return true;
 		}
-		tuneSocket(socket);
-		Connection c;
-		c.socket = socket;
-		c.heard = now();
-		gClients.push_back(c);
+		MpCloseSocket(gRelay.socket);
 	}
-	for(size_t i = 0; i < gClients.size();){
-		Connection &c = gClients[i];
-		std::vector<Frame> frames;
-		bool alive = receive(c, frames);
-		for(const Frame &frame : frames){
-			if(!alive || c.closing)
-				break;
-			if(c.peer == 0){
-				if(frame.type == MSG_HELLO)
-					welcome(c, frame);
-				else
-					alive = false;
-				continue;
-			}
-			if(frame.type == MSG_ELEMENT && frame.payload.size() > 4){
-				std::string blob = frame.payload.substr(4);
-				receiveElement(c.peer, blob);
-				broadcast(makeFrame(MSG_ELEMENT, elementPayload(c.peer, blob)), 0);
-			}else if(frame.type == MSG_TEXTDRAWS && frame.payload.size() > 4){
-				receiveTextDraws(frame.payload.substr(4));
-				broadcast(makeFrame(MSG_TEXTDRAWS, frame.payload), c.peer);
-			}else if(frame.type == MSG_PRESENCE){
-				Peer peer;
-				if(readPresence(frame.payload, &peer)){
-					peer.id = c.peer;	// a peer speaks only for itself
-					memcpy(peer.name, c.name, MP_NAME_LEN);
-					gPeers[c.peer] = peer;
-					broadcast(makeFrame(MSG_PRESENCE, presencePayload(peer.id, peer.name, peer.camera,
-						peer.target, peer.area, peer.selection)), c.peer);
-				}
-			}
-		}
-		double silence = now() - c.heard;
-		if(!alive || !flush(c) || silence > MP_TIMEOUT || (c.peer == 0 && silence > MP_CONNECT_TIMEOUT) ||
-		   (c.closing && c.out.empty()))
-			dropClient(i, alive || c.peer);
-		else
-			i++;
+	return false;
+}
+
+static bool
+joinRelay(const char *address, int port, const char *password, const char *name, std::string *error)
+{
+	if(!isSA() || IsIplMapDocumentOpen()){
+		*error = _("Multiplayer edits Pawn maps of San Andreas.");
+		return false;
 	}
+	if(password == nil || strlen(password) >= MP_PASSWORD_LEN){
+		*error = _("The password is too long.");
+		return false;
+	}
+	// Every address the name has, IPv6 and IPv4, tried in the order the
+	// system prefers until one answers.
+	char service[16];
+	snprintf(service, sizeof(service), "%d", port);
+	addrinfo hints = {}, *found = nil;
+	hints.ai_family = AF_UNSPEC;
+	hints.ai_socktype = SOCK_STREAM;
+	std::string host = address;
+	if(host.size() > 2 && host.front() == '[' && host.back() == ']')
+		host = host.substr(1, host.size() - 2);	// [2001:db8::1]
+	if(!MpStartNetwork() || getaddrinfo(host.c_str(), service, &hints, &found) != 0 || found == nil){
+		*error = _("Could not find that address.");
+		return false;
+	}
+	gRelay = MpConnection();
+	gCandidates.clear();
+	for(addrinfo *a = found; a; a = a->ai_next){
+		Candidate c = {};
+		memcpy(&c.address, a->ai_addr, std::min((size_t)a->ai_addrlen, sizeof(c.address)));
+		c.length = (socklen_t)a->ai_addrlen;
+		gCandidates.push_back(c);
+	}
+	freeaddrinfo(found);
+	if(!connectNext()){
+		*error = _("Could not connect.");
+		return false;
+	}
+	snprintf(gAddress, sizeof(gAddress), "%s", address);
+	snprintf(gPassword, sizeof(gPassword), "%s", password);
+	MpCopyName(gName, name);
+	gPort = port;
+	gState = MP_CONNECTING;
+	gConnectStarted = gRelay.heard = MpNow();
+	// The relay speaks first (MSG_CHALLENGE).
+	gStatus.clear();
+	return true;
 }
 
 bool
-MultiplayerHost(int port, const char *name, std::string *error)
+MultiplayerJoin(const char *address, int port, const char *password, const char *name, std::string *error)
 {
-	if(gState != MP_OFF)
+	if(gState != MP_OFF || gHosting)
+		MultiplayerLeave();
+	return joinRelay(address, port, password, name, error);
+}
+
+// This computer's public IPv6 address, if it has one: what a route to the
+// internet starts from (connecting a UDP socket sends nothing).
+static std::string
+publicIpv6(void)
+{
+	MpSocket s = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP);
+	if(s == MP_NO_SOCKET)
+		return "";
+	sockaddr_in6 to = {};
+	to.sin6_family = AF_INET6;
+	to.sin6_port = htons(53);
+	inet_pton(AF_INET6, "2001:4860:4860::8888", &to.sin6_addr);
+	sockaddr_in6 local = {};
+	socklen_t length = sizeof(local);
+	char text[64] = "";
+	if(connect(s, (sockaddr*)&to, sizeof(to)) == 0 && getsockname(s, (sockaddr*)&local, &length) == 0 &&
+	   (local.sin6_addr.s6_addr[0] & 0xe0) == 0x20)	// global unicast, 2000::/3
+		inet_ntop(AF_INET6, &local.sin6_addr, text, sizeof(text));
+	MpCloseSocket(s);
+	return text;
+}
+static std::string gIpv6;	// while hosting
+
+bool
+MultiplayerHost(int port, const char *name, std::string *error, bool openRouterPort)
+{
+	if(gState != MP_OFF || gHosting)
 		MultiplayerLeave();
 	resetSession();
 	if(!isSA() || IsIplMapDocumentOpen()){
 		*error = _("Multiplayer edits Pawn maps of San Andreas.");
 		return false;
 	}
-	if(!startNetwork() || (gListen = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == MP_NO_SOCKET){
-		*error = _("Could not open a network socket.");
-		return false;
-	}
-	int on = 1;
-#ifdef _WIN32
-	setsockopt(gListen, SOL_SOCKET, SO_EXCLUSIVEADDRUSE, (const char*)&on, sizeof(on));
-#else
-	setsockopt(gListen, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
-#endif
-	sockaddr_in address = {};
-	address.sin_family = AF_INET;
-	address.sin_addr.s_addr = htonl(INADDR_ANY);
-	address.sin_port = htons((unsigned short)port);
-	if(!setNonBlocking(gListen) || bind(gListen, (sockaddr*)&address, sizeof(address)) != 0 ||
-	   listen(gListen, 16) != 0){
-		closeSocket(gListen);
+	static const char letters[] = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+	std::random_device random;
+	char code[7];
+	for(int i = 0; i < 6; i++)
+		code[i] = letters[random() % (sizeof(letters) - 1)];
+	code[6] = '\0';
+	MpRelayOptions options;
+	options.port = port;
+	options.password = code;
+	options.passwordIgnoresCase = true;
+	MpCopyName(gName, name);
+	options.name = gName;
+	options.log = relayLog;
+	std::string relayError;
+	if(!MpRelayStart(options, &relayError)){
 		char text[128];
 		snprintf(text, sizeof(text), _("Port %d is in use or not allowed."), port);
 		*error = text;
 		return false;
 	}
-	socklen_t length = sizeof(address);
-	gPort = getsockname(gListen, (sockaddr*)&address, &length) == 0 ? ntohs(address.sin_port) : port;
-	static const char letters[] = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-	std::random_device random;
-	for(int i = 0; i < 6; i++)
-		gCode[i] = letters[random() % (sizeof(letters) - 1)];
-	gCode[6] = '\0';
-	copyName(gName, name);
-	gSelf = 1;
-	gState = MP_HOSTING;
-	sendChanges(true);
-	gStatus.clear();
-	log("Multiplayer: hosting on port %d\n", gPort);
-	return true;
-}
-
-/*
- * Joining
- */
-
-bool
-MultiplayerJoin(const char *address, int port, const char *code, const char *name, std::string *error)
-{
-	if(gState != MP_OFF)
-		MultiplayerLeave();
-	resetSession();
-	if(!isSA() || IsIplMapDocumentOpen()){
-		*error = _("Multiplayer edits Pawn maps of San Andreas.");
+	gHosting = true;
+	// Our own map seeds our own relay, as the first editor into haumea-server's does.
+	if(!joinRelay("127.0.0.1", MpRelayPort(), code, name, error)){
+		resetSession();
 		return false;
 	}
-	char service[16];
-	snprintf(service, sizeof(service), "%d", port);
-	addrinfo hints = {}, *found = nil;
-	hints.ai_family = AF_INET;
-	hints.ai_socktype = SOCK_STREAM;
-	if(!startNetwork() || getaddrinfo(address, service, &hints, &found) != 0 || found == nil){
-		*error = _("Could not find that address.");
-		return false;
-	}
-	gHost.socket = socket(found->ai_family, found->ai_socktype, found->ai_protocol);
-	bool started = gHost.socket != MP_NO_SOCKET && setNonBlocking(gHost.socket) &&
-		(connect(gHost.socket, found->ai_addr, (int)found->ai_addrlen) == 0 || wouldBlock());
-	freeaddrinfo(found);
-	if(!started){
-		closeSocket(gHost.socket);
-		*error = _("Could not connect.");
-		return false;
-	}
-	tuneSocket(gHost.socket);
-	snprintf(gAddress, sizeof(gAddress), "%s", address);
-	snprintf(gCode, sizeof(gCode), "%s", code ? code : "");
-	copyName(gName, name);
-	gPort = port;
-	gState = MP_CONNECTING;
-	gConnectStarted = gHost.heard = now();
-	std::string hello;
-	put(hello, MP_MAGIC);
-	put(hello, MP_PROTOCOL);
-	put(hello, (uint32)sizeof(ObjectPawnProperties));
-	put(hello, (uint32)sizeof(ObjectMaterialOverride));
-	put(hello, (uint32)sizeof(VehicleState));
-	put(hello, (int32)params.map);
-	hello.append(gCode, MP_CODE_LEN);
-	hello.append(gName, MP_NAME_LEN);
-	gHost.out += makeFrame(MSG_HELLO, hello);
-	gStatus.clear();
+	if(openRouterPort)
+		UpnpOpenPort(MpRelayPort());
+	gIpv6 = publicIpv6();
+	log("Multiplayer: hosting on port %d\n", MpRelayPort());
 	return true;
 }
 
 static void
-lostHost(const char *why)
+lostRelay(const char *why)
 {
 	gStatus = why;
 	ToastFor(TOAST_SAVE, 6.0f, "%s", why);
@@ -1177,7 +1175,8 @@ lostHost(const char *why)
 	resetSession();
 }
 
-static bool
+// 1 connected, 0 not yet, -1 refused or unreachable.
+static int
 socketConnected(MpSocket socket)
 {
 	fd_set writable, failed;
@@ -1187,58 +1186,132 @@ socketConnected(MpSocket socket)
 	FD_SET(socket, &failed);
 	timeval zero = {0, 0};
 	if(select((int)socket + 1, nil, &writable, &failed, &zero) <= 0)
-		return false;
+		return 0;
 	int error = 0;
 	socklen_t length = sizeof(error);
 	getsockopt(socket, SOL_SOCKET, SO_ERROR, (char*)&error, &length);
-	if(error != 0 || FD_ISSET(socket, &failed)){
-		lostHost(_("Could not connect to the host."));
-		return false;
+	return error != 0 || FD_ISSET(socket, &failed) ? -1 : 1;
+}
+
+static void
+welcomed(const MpFrame &frame)
+{
+	MpReader r(frame.payload);
+	char name[MP_NAME_LEN];
+	uint32 counted = 0;
+	char seed = 0;
+	if(!r.get(&gSelf) || !r.get(&counted) || !r.get(&seed) || !r.bytes(name, sizeof(name)) ||
+	   gSelf == 0 || gSelf > MP_MAX_PEER_ID){
+		lostRelay(_("The session sent something this version can't read."));
+		return;
 	}
-	return true;
+	name[MP_NAME_LEN - 1] = '\0';
+	MpCopyName(gSessionName, name);
+	gNextElement = counted;
+	gWorldIndex.clear();
+	if(seed){
+		// An empty session: ours becomes it.
+		seedSession();
+		gState = MP_JOINED;
+		if(!gHosting)
+			Toast(TOAST_SAVE, _("Your map started the session on %s"), gSessionName);
+		log("Multiplayer: seeded %s:%d as peer %u\n", gAddress, gPort, gSelf);
+		return;
+	}
+	// The session's map replaces ours, and its textdraw file ours (untitled:
+	// saving it never writes over our own file).
+	NewPawnMapDocument();
+	NewTextDrawFile();
+	ResetUndoHistory();
+}
+
+// The relay's key and password salt: ours back, then everything is sealed,
+// our hello first.
+static void
+challenged(const MpFrame &frame)
+{
+	MpReader r(frame.payload);
+	uint32 magic = 0, protocol = 0;
+	uint8_t salt[MP_SALT_LEN], relayKey[MP_KEY_LEN], passwordKey[MP_KEY_LEN];
+	char caseless = 0;
+	r.get(&magic);
+	r.get(&protocol);
+	r.bytes(salt, sizeof(salt));
+	r.bytes(relayKey, sizeof(relayKey));
+	r.get(&caseless);
+	if(!r.ok || magic != MP_MAGIC){
+		lostRelay(_("That isn't a Haumea session."));
+		return;
+	}
+	if(protocol != MP_PROTOCOL){
+		lostRelay(_("The session runs a different Haumea version: update both to the same one."));
+		return;
+	}
+	std::string password = gPassword;
+	if(caseless)
+		for(char &ch : password)
+			ch = (char)toupper((unsigned char)ch);
+	MpPasswordKey(password, salt, passwordKey);
+	MpNewKeyPair(gRelay);
+	sendToRelay(MSG_KEY, std::string((const char*)gRelay.publicKey, MP_KEY_LEN));
+	MpSeal(gRelay, false, relayKey, gRelay.publicKey, passwordKey);
+	crypto_wipe(passwordKey, sizeof(passwordKey));
+	std::string hello;
+	MpPut(hello, MP_MAGIC);
+	MpPut(hello, MP_PROTOCOL);
+	MpPut(hello, (uint32)sizeof(ObjectPawnProperties));
+	MpPut(hello, (uint32)sizeof(ObjectMaterialOverride));
+	MpPut(hello, (uint32)sizeof(VehicleState));
+	MpPut(hello, (int32)params.map);
+	hello.append(gName, MP_NAME_LEN);
+	sendToRelay(MSG_HELLO, hello);
 }
 
 static void
 updateClient(void)
 {
-	if(!gHostConnected){
-		if(now() - gConnectStarted > MP_CONNECT_TIMEOUT){
-			lostHost(_("The host didn't answer."));
+	if(!gRelayConnected){
+		int connected = socketConnected(gRelay.socket);
+		if(connected < 0 || MpNow() - gCandidateStarted > MP_CANDIDATE_TIMEOUT){
+			// This address doesn't answer: the next one, if any.
+			if(!connectNext()){
+				lostRelay(connected < 0 ? _("Could not connect to the session.") : _("The session didn't answer."));
+				return;
+			}
+			gConnectStarted = gRelay.heard = MpNow();
 			return;
 		}
-		if(!socketConnected(gHost.socket))
+		if(connected == 0){
+			if(MpNow() - gConnectStarted > MP_CONNECT_TIMEOUT)
+				lostRelay(_("The session didn't answer."));
 			return;
-		gHostConnected = true;
-		gHost.heard = now();
+		}
+		gRelayConnected = true;
+		gRelay.heard = MpNow();
 	}
-	std::vector<Frame> frames;
-	bool alive = receive(gHost, frames);
-	for(const Frame &frame : frames){
+	std::vector<MpFrame> frames;
+	bool alive = MpReceive(gRelay, frames);
+	for(const MpFrame &frame : frames){
+		if(gState == MP_OFF)
+			return;
 		switch(frame.type){
 		case MSG_REJECT:
-			lostHost((std::string(_("The host refused: ")) + frame.payload.substr(0, 200)).c_str());
+			lostRelay((std::string(_("Refused: ")) + frame.payload.substr(0, 200)).c_str());
 			return;
-		case MSG_WELCOME: {
-			Reader r(frame.payload);
-			char name[MP_NAME_LEN];
-			int32 format = -1;
-			if(r.get(&gSelf) && r.bytes(name, sizeof(name)) && r.get(&format)){
-				name[MP_NAME_LEN - 1] = '\0';
-				copyName(gHostName, name);
-				// The host's map replaces ours.
-				NewPawnMapDocument();
-				ResetUndoHistory();
-				SetPawnMapFormat(format);
-				gWorldIndex.clear();
-			}
+		case MSG_CHALLENGE:
+			if(!gRelay.sealed)
+				challenged(frame);
 			break;
-		}
-		case MSG_TEXTDRAWS:
-			if(gSelf && frame.payload.size() > 4){
+		case MSG_WELCOME:
+			welcomed(frame);
+			break;
+		case MSG_CHANNEL:
+			if(gSelf && frame.payload.size() >= 5){
 				uint32 origin;
 				memcpy(&origin, frame.payload.data(), 4);
-				if(origin != gSelf)
-					receiveTextDraws(frame.payload.substr(4));
+				uint8 channel = (uint8)frame.payload[4];
+				if(origin != gSelf && channel > 0 && channel < MP_CHANNEL_COUNT)
+					applyChannel(channel, frame.payload.substr(5));
 			}
 			break;
 		case MSG_ELEMENT:
@@ -1257,9 +1330,13 @@ updateClient(void)
 			}
 			break;
 		}
+		case MSG_FILE:
+			if(gSelf)
+				receiveFile(frame.payload);
+			break;
 		case MSG_PEER_LEFT: {
 			uint32 peer;
-			Reader r(frame.payload);
+			MpReader r(frame.payload);
 			if(r.get(&peer) && gPeers.count(peer)){
 				ToastFor(TOAST_SAVE, 4.0f, _("%s left the session"), gPeers[peer].name);
 				gPeers.erase(peer);
@@ -1270,19 +1347,22 @@ updateClient(void)
 			if(gSelf && gState == MP_CONNECTING){
 				retryUnresolved();
 				sendChanges(true);
+				// Our own custom models, beyond the session's, go to everyone.
+				gChannelBaseline[MP_CHANNEL_CUSTOM_MODELS] = gReceivedModels;
+				gChangedByOthers.clear();
 				gState = MP_JOINED;
-				Toast(TOAST_SAVE, _("Joined %s's session"), gHostName);
+				Toast(TOAST_SAVE, _("Joined %s's session"), gSessionName);
 				log("Multiplayer: joined %s:%d as peer %u\n", gAddress, gPort, gSelf);
 			}
 			break;
 		}
 	}
 	if(!alive){
-		lostHost(gState == MP_JOINED ? _("The host ended the session.") : _("The host closed the connection."));
+		lostRelay(gState == MP_JOINED ? _("The session ended.") : _("The session closed the connection."));
 		return;
 	}
-	if(!flush(gHost) || now() - gHost.heard > MP_TIMEOUT)
-		lostHost(_("Lost the connection to the host."));
+	if(!MpFlush(gRelay) || MpNow() - gRelay.heard > MP_TIMEOUT)
+		lostRelay(_("Lost the connection to the session."));
 }
 
 /*
@@ -1292,10 +1372,9 @@ updateClient(void)
 void
 MultiplayerLeave(void)
 {
-	if(gState == MP_HOSTING)
-		for(Connection &c : gClients)
-			flush(c);
 	if(gState != MP_OFF)
+		MpFlush(gRelay);
+	if(gState != MP_OFF || gHosting)
 		log("Multiplayer: left the session\n");
 	resetSession();
 }
@@ -1303,34 +1382,42 @@ MultiplayerLeave(void)
 void
 MultiplayerUpdate(void)
 {
+	if(gHosting)
+		MpRelayUpdate();
 	if(gState == MP_OFF)
 		return;
-	if(gState == MP_HOSTING)
-		updateHost();
-	else
-		updateClient();
-	if(gState != MP_HOSTING && gState != MP_JOINED)
+	updateClient();
+	if(gState != MP_JOINED)
 		return;
 	if(!gUnresolved.empty())
 		retryUnresolved();
-	if(now() - gLastSend >= MP_SEND_INTERVAL){
-		gLastSend = now();
+	if(MpNow() - gLastSend >= MP_SEND_INTERVAL){
+		gLastSend = MpNow();
 		sendChanges(false);
 	}
 	sendPresence();
-	if(gState == MP_HOSTING){
-		for(size_t i = 0; i < gClients.size();)
-			if(!flush(gClients[i]))
-				dropClient(i, true);
-			else
-				i++;
-	}else if(!flush(gHost))
-		lostHost(_("Lost the connection to the host."));
+	if(!MpFlush(gRelay))
+		lostRelay(_("Lost the connection to the session."));
+	else if(gHosting)
+		MpRelayUpdate();	// what we just sent, to the others this frame
 }
 
-int GetMultiplayerState(void) { return gState; }
-int GetMultiplayerPort(void) { return gPort; }
-const char *GetMultiplayerCode(void) { return gState == MP_HOSTING ? gCode : ""; }
+bool
+MultiplayerChangedByOthers(const ObjectInst *inst)
+{
+	return gState == MP_JOINED && gChangedByOthers.count(inst->m_id) != 0;
+}
+
+int
+GetMultiplayerState(void)
+{
+	if(gHosting && gState != MP_OFF)
+		return MP_HOSTING;
+	return gState;
+}
+
+int GetMultiplayerPort(void) { return gHosting ? MpRelayPort() : gPort; }
+const char *GetMultiplayerCode(void) { return gHosting ? gPassword : ""; }
 int GetMultiplayerPeerCount(void) { return (int)gPeers.size(); }
 
 static bool
@@ -1347,7 +1434,7 @@ projectPoint(const rw::V3d &point, ImVec2 *out)
 void
 MultiplayerOverlay(bool enabled)
 {
-	if(!enabled || (gState != MP_HOSTING && gState != MP_JOINED) || gPeers.empty())
+	if(!enabled || gState != MP_JOINED || gPeers.empty())
 		return;
 #ifdef IMGUI_HAS_VIEWPORT
 	ImDrawList *draw = ImGui::GetBackgroundDrawList(ImGui::GetMainViewport());
@@ -1428,13 +1515,14 @@ DrawMultiplayerWindow(bool *open)
 {
 	if(open == nil || !*open)
 		return;
-	static char name[MP_NAME_LEN], address[256] = "127.0.0.1", code[MP_CODE_LEN];
+	static char name[MP_NAME_LEN], address[256] = "127.0.0.1", code[MP_PASSWORD_LEN];
 	static int hostPort = MP_DEFAULT_PORT, joinPort = MP_DEFAULT_PORT;
+	static bool openRouterPort = true;
 	static std::string error;
 	if(name[0] == '\0'){
 		const char *user = getenv("USER");
 		if(user == nil) user = getenv("USERNAME");
-		copyName(name, user ? user : "Mapper");
+		MpCopyName(name, user ? user : "Mapper");
 	}
 	ImGui::SetNextWindowSize(ImVec2(ImGui::GetFontSize() * 26.0f, 0.0f), ImGuiCond_FirstUseEver);
 	if(!ImGui::Begin(ICON_FA_USER " Multiplayer###multiplayer", open)){
@@ -1442,21 +1530,26 @@ DrawMultiplayerWindow(bool *open)
 		return;
 	}
 	float field = ImGui::GetFontSize() * 12.0f;
-	switch(gState){
+	switch(GetMultiplayerState()){
 	case MP_OFF:
-		ImGui::TextWrapped(_("Edit one map together: one of you hosts the open map, the others join it."));
+		ImGui::TextWrapped(_("Edit one map together: one of you hosts the open map, or a haumea-server keeps it, "
+			"and the others join."));
 		ImGui::SetNextItemWidth(field);
 		ImGui::InputText(_("Your name"), name, sizeof(name));
 		ImGui::SeparatorText(_("Host"));
 		ImGui::SetNextItemWidth(field);
 		ImGui::InputInt(_("Port##host"), &hostPort);
 		hostPort = clamp(hostPort, 1, 65535);
+		ImGui::Checkbox(_("Open the port on my router"), &openRouterPort);
+		ImGui::SetItemTooltip(_("Asks your router to forward the port to this computer (UPnP),\n"
+			"so people join over the internet without setting it up by hand."));
 		if(ImGui::Button(_("Host this map"))){
 			error.clear();
-			MultiplayerHost(hostPort, name, &error);
+			MultiplayerHost(hostPort, name, &error, openRouterPort);
 		}
 		ImGui::SetItemTooltip(_("Others join with this computer's address, the port and the session code.\n"
-			"Over the internet the port must be forwarded to this computer, or use a VPN such as Tailscale."));
+			"Over the internet the port must be forwarded to this computer, or use a VPN such as Tailscale.\n"
+			"For a session that stays up without you, run haumea-server where your SA-MP server runs."));
 		ImGui::SeparatorText(_("Join"));
 		ImGui::SetNextItemWidth(field);
 		ImGui::InputText(_("Address"), address, sizeof(address));
@@ -1464,10 +1557,11 @@ DrawMultiplayerWindow(bool *open)
 		ImGui::InputInt(_("Port##join"), &joinPort);
 		joinPort = clamp(joinPort, 1, 65535);
 		ImGui::SetNextItemWidth(field);
-		ImGui::InputText(_("Session code"), code, sizeof(code), ImGuiInputTextFlags_CharsUppercase);
-		if(PawnMapHasUnsavedChanges())
+		ImGui::InputText(_("Code or password"), code, sizeof(code), ImGuiInputTextFlags_Password);
+		ImGui::SetItemTooltip(_("The host's session code, or the password haumea-server was started with."));
+		if(PawnMapHasUnsavedChanges() || TextDrawFileHasUnsavedChanges())
 			ImGui::TextColored(UiSemanticColor(UI_COLOR_WARNING),
-				_("Joining replaces the open map: save it first to keep your changes."));
+				_("Joining replaces the open map and textdraw file: save them first to keep your changes."));
 		ImGui::BeginDisabled(address[0] == '\0' || code[0] == '\0');
 		if(ImGui::Button(_("Join")) && address[0] && code[0]){
 			error.clear();
@@ -1476,11 +1570,41 @@ DrawMultiplayerWindow(bool *open)
 		ImGui::EndDisabled();
 		break;
 	case MP_HOSTING:
-		ImGui::Text(_("Hosting on port %d"), gPort);
-		ImGui::Text(_("Session code: %s"), gCode);
+		ImGui::Text(_("Hosting on port %d"), MpRelayPort());
+		ImGui::Text(_("Session code: %s"), gPassword);
 		ImGui::SameLine();
 		if(ImGui::SmallButton(_("Copy")))
-			ImGui::SetClipboardText(gCode);
+			ImGui::SetClipboardText(gPassword);
+		switch(GetUpnpState()){
+		case UPNP_WORKING:
+			ImGui::TextDisabled(_("Opening the port on your router..."));
+			break;
+		case UPNP_OPEN: {
+			std::string external = UpnpExternalAddress();
+			if(external.empty())
+				ImGui::TextWrapped(_("Your router forwards the port: over the internet, others join at your "
+					"public address."));
+			else{
+				ImGui::Text(_("Over the internet, others join at %s"), external.c_str());
+				ImGui::SameLine();
+				if(ImGui::SmallButton(_("Copy##address")))
+					ImGui::SetClipboardText(external.c_str());
+			}
+			break;
+		}
+		case UPNP_FAILED:
+			ImGui::TextColored(UiSemanticColor(UI_COLOR_WARNING), _("Your router didn't open the port (%s)."),
+				UpnpError().c_str());
+			ImGui::TextWrapped(_("On your own network others can still join. Over the internet, forward port %d "
+				"to this computer, use a VPN such as Tailscale, or run haumea-server."), MpRelayPort());
+			break;
+		}
+		if(!gIpv6.empty()){
+			ImGui::TextWrapped(_("Over IPv6, others can join at %s when your router lets them in."), gIpv6.c_str());
+			ImGui::SameLine();
+			if(ImGui::SmallButton(_("Copy##ipv6")))
+				ImGui::SetClipboardText(gIpv6.c_str());
+		}
 		peerList();
 		ImGui::Spacing();
 		if(ImGui::Button(_("Stop hosting")))
@@ -1488,12 +1612,12 @@ DrawMultiplayerWindow(bool *open)
 		ImGui::SetItemTooltip(_("Everyone keeps the map as it is now."));
 		break;
 	case MP_CONNECTING:
-		ImGui::Text(gHostConnected ? _("Receiving the map...") : _("Connecting to %s..."), gAddress);
+		ImGui::Text(gRelayConnected ? _("Receiving the map...") : _("Connecting to %s..."), gAddress);
 		if(ImGui::Button(_("Cancel")))
 			MultiplayerLeave();
 		break;
 	case MP_JOINED:
-		ImGui::Text(_("In %s's session"), gHostName);
+		ImGui::Text(_("In %s's session"), gSessionName);
 		peerList();
 		ImGui::Spacing();
 		if(ImGui::Button(_("Leave")))
@@ -1522,8 +1646,13 @@ MultiplayerStatusJson(void)
 	};
 	char head[256];
 	snprintf(head, sizeof(head), "\"state\":\"%s\",\"port\":%d,\"self\":%u,\"elements\":%d,\"code\":",
-		states[gState], gPort, gSelf, (int)gElementOf.size());
-	std::string json = head + text(GetMultiplayerCode()) + ",\"status\":" + text(gStatus.c_str()) +
+		states[GetMultiplayerState()], GetMultiplayerPort(), gSelf, (int)gElementOf.size());
+	static const char *upnpStates[] = { "off", "working", "open", "failed" };
+	std::string json = head + text(GetMultiplayerCode()) + ",\"session\":" + text(gSessionName) +
+		",\"ipv6\":" + text(gHosting ? gIpv6.c_str() : "") +
+		",\"upnp\":{\"state\":\"" + upnpStates[GetUpnpState()] + "\",\"external\":" +
+		text(UpnpExternalAddress().c_str()) + ",\"error\":" + text(UpnpError().c_str()) + "}" +
+		",\"status\":" + text(gStatus.c_str()) +
 		",\"peers\":[";
 	bool first = true;
 	for(const auto &it : gPeers){

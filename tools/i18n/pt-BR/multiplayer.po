@@ -23,24 +23,12 @@ msgid "Connecting to %s..."
 msgstr "Conectando a %s..."
 
 #: tools/haumea/multiplayer.cpp
-msgid "Could not connect to the host."
-msgstr "Não foi possível conectar ao anfitrião."
-
-#: tools/haumea/multiplayer.cpp
 msgid "Could not connect."
 msgstr "Não foi possível conectar."
 
 #: tools/haumea/multiplayer.cpp
 msgid "Could not find that address."
 msgstr "Não foi possível encontrar esse endereço."
-
-#: tools/haumea/multiplayer.cpp
-msgid "Could not open a network socket."
-msgstr "Não foi possível abrir um socket de rede."
-
-#: tools/haumea/multiplayer.cpp
-msgid "Edit one map together: one of you hosts the open map, the others join it."
-msgstr "Editem um mapa juntos: um de vocês hospeda o mapa aberto e os outros entram nele."
 
 #: tools/haumea/multiplayer.cpp
 msgid "Edit this map together with others: host it, or join someone's."
@@ -79,10 +67,6 @@ msgid "Joined %s's session"
 msgstr "Entrou na sessão de %s"
 
 #: tools/haumea/multiplayer.cpp
-msgid "Joining replaces the open map: save it first to keep your changes."
-msgstr "Entrar substitui o mapa aberto: salve-o antes para manter suas alterações."
-
-#: tools/haumea/multiplayer.cpp
 msgid "Leave"
 msgstr "Sair"
 
@@ -95,20 +79,12 @@ msgid "Look from where they are looking."
 msgstr "Olhar de onde a pessoa está olhando."
 
 #: tools/haumea/multiplayer.cpp
-msgid "Lost the connection to the host."
-msgstr "A conexão com o anfitrião caiu."
-
-#: tools/haumea/multiplayer.cpp
 msgid "Multiplayer edits Pawn maps of San Andreas."
 msgstr "O multiplayer edita mapas Pawn do San Andreas."
 
 #: tools/haumea/multiplayer.cpp
 msgid "Multiplayer..."
 msgstr "Multiplayer..."
-
-#: tools/haumea/multiplayer.cpp
-msgid "Others join with this computer's address, the port and the session code.\nOver the internet the port must be forwarded to this computer, or use a VPN such as Tailscale."
-msgstr "Os outros entram com o endereço deste computador, a porta e o código da sessão.\nPela internet, a porta precisa ser redirecionada para este computador, ou use uma VPN como o Tailscale."
 
 #: tools/haumea/multiplayer.cpp
 msgid "People"
@@ -123,32 +99,12 @@ msgid "Receiving the map..."
 msgstr "Recebendo o mapa..."
 
 #: tools/haumea/multiplayer.cpp
-msgid "Session code"
-msgstr "Código da sessão"
-
-#: tools/haumea/multiplayer.cpp
 msgid "Session code: %s"
 msgstr "Código da sessão: %s"
 
 #: tools/haumea/multiplayer.cpp
 msgid "Stop hosting"
 msgstr "Parar de hospedar"
-
-#: tools/haumea/multiplayer.cpp
-msgid "The host closed the connection."
-msgstr "O anfitrião fechou a conexão."
-
-#: tools/haumea/multiplayer.cpp
-msgid "The host didn't answer."
-msgstr "O anfitrião não respondeu."
-
-#: tools/haumea/multiplayer.cpp
-msgid "The host ended the session."
-msgstr "O anfitrião encerrou a sessão."
-
-#: tools/haumea/multiplayer.cpp
-msgid "The host refused: "
-msgstr "O anfitrião recusou: "
 
 #: tools/haumea/multiplayer.cpp
 msgid "This game doesn't have model %d, which the session uses"
@@ -163,6 +119,101 @@ msgid "Your name"
 msgstr "Seu nome"
 
 #: tools/haumea/multiplayer.cpp
-msgid "Too many wrong session codes: no one else can join until you host again"
-msgstr "Códigos de sessão errados demais: ninguém mais pode entrar até você hospedar de novo"
+msgid "Code or password"
+msgstr "Código ou senha"
 
+#: tools/haumea/multiplayer.cpp
+msgid "Could not connect to the session."
+msgstr "Não foi possível conectar à sessão."
+
+#: tools/haumea/multiplayer.cpp
+msgid "Edit one map together: one of you hosts the open map, or a haumea-server keeps it, and the others join."
+msgstr "Editem um mapa juntos: um de vocês hospeda o mapa aberto, ou um haumea-server o mantém, e os outros entram."
+
+#: tools/haumea/multiplayer.cpp
+msgid "Lost the connection to the session."
+msgstr "A conexão com a sessão caiu."
+
+#: tools/haumea/multiplayer.cpp
+msgid "Others join with this computer's address, the port and the session code.\nOver the internet the port must be forwarded to this computer, or use a VPN such as Tailscale.\nFor a session that stays up without you, run haumea-server where your SA-MP server runs."
+msgstr "Os outros entram com o endereço deste computador, a porta e o código da sessão.\nPela internet, a porta precisa ser redirecionada para este computador, ou use uma VPN como o Tailscale.\nPara uma sessão que fica no ar sem você, rode o haumea-server onde o seu servidor SA-MP roda."
+
+#: tools/haumea/multiplayer.cpp
+msgid "Refused: "
+msgstr "Recusado: "
+
+#: tools/haumea/multiplayer.cpp
+msgid "The host's session code, or the password haumea-server was started with."
+msgstr "O código da sessão do anfitrião, ou a senha com que o haumea-server foi iniciado."
+
+#: tools/haumea/multiplayer.cpp
+msgid "The password is too long."
+msgstr "A senha é longa demais."
+
+#: tools/haumea/multiplayer.cpp
+msgid "The session closed the connection."
+msgstr "A sessão fechou a conexão."
+
+#: tools/haumea/multiplayer.cpp
+msgid "The session didn't answer."
+msgstr "A sessão não respondeu."
+
+#: tools/haumea/multiplayer.cpp
+msgid "The session ended."
+msgstr "A sessão terminou."
+
+#: tools/haumea/multiplayer.cpp
+msgid "The session sent something this version can't read."
+msgstr "A sessão enviou algo que esta versão não consegue ler."
+
+#: tools/haumea/multiplayer.cpp
+msgid "Your map started the session on %s"
+msgstr "O seu mapa começou a sessão em %s"
+
+#: tools/haumea/multiplayer.cpp
+msgid ""
+"Asks your router to forward the port to this computer (UPnP),\n"
+"so people join over the internet without setting it up by hand."
+msgstr ""
+"Pede ao seu roteador para redirecionar a porta para este computador (UPnP),\n"
+"para que as pessoas entrem pela internet sem configurar nada à mão."
+
+#: tools/haumea/multiplayer.cpp
+msgid "Joining replaces the open map and textdraw file: save them first to keep your changes."
+msgstr "Entrar substitui o mapa e o arquivo de textdraws abertos: salve-os antes para manter as suas mudanças."
+
+#: tools/haumea/multiplayer.cpp
+msgid "On your own network others can still join. Over the internet, forward port %d to this computer, use a VPN such as Tailscale, or run haumea-server."
+msgstr "Na sua própria rede, os outros ainda podem entrar. Pela internet, redirecione a porta %d para este computador, use uma VPN como o Tailscale ou rode o haumea-server."
+
+#: tools/haumea/multiplayer.cpp
+msgid "Open the port on my router"
+msgstr "Abrir a porta no meu roteador"
+
+#: tools/haumea/multiplayer.cpp
+msgid "Opening the port on your router..."
+msgstr "Abrindo a porta no seu roteador..."
+
+#: tools/haumea/multiplayer.cpp
+msgid "Over the internet, others join at %s"
+msgstr "Pela internet, os outros entram em %s"
+
+#: tools/haumea/multiplayer.cpp
+msgid "That isn't a Haumea session."
+msgstr "Isso não é uma sessão do Haumea."
+
+#: tools/haumea/multiplayer.cpp
+msgid "The session runs a different Haumea version: update both to the same one."
+msgstr "A sessão roda outra versão do Haumea: atualizem os dois para a mesma."
+
+#: tools/haumea/multiplayer.cpp
+msgid "Your router didn't open the port (%s)."
+msgstr "O seu roteador não abriu a porta (%s)."
+
+#: tools/haumea/multiplayer.cpp
+msgid "Your router forwards the port: over the internet, others join at your public address."
+msgstr "O seu roteador redireciona a porta: pela internet, os outros entram pelo seu endereço público."
+
+#: tools/haumea/multiplayer.cpp
+msgid "Over IPv6, others can join at %s when your router lets them in."
+msgstr "Por IPv6, os outros podem entrar em %s quando o seu roteador deixar."

@@ -5359,6 +5359,18 @@ previewTransformPanelPosition(ObjectInst *inst)
 		rejectInvalidTransformValues(gTransformPanel.position, gTransformPanel.validPosition);
 		return;
 	}
+	// A GTA building's own coordinate typed as Pawn writes it (six decimals)
+	// is its own float, not the nearest one to the text (13.648438 for the
+	// IPL's 13.6484375): putting it back is no edit at all.
+	if(!gTransformPanel.relative && IsPawnWorldObject(inst))
+		for(int i = 0; i < 3; i++){
+			float original = (&inst->m_origTranslation.x)[i];
+			char typed[48], own[48];
+			snprintf(typed, sizeof(typed), "%.6f", (&pos.x)[i]);
+			snprintf(own, sizeof(own), "%.6f", original);
+			if(strcmp(typed, own) == 0)
+				(&pos.x)[i] = original;
+		}
 	PreviewObjectTransformTargets(inst, gTransformPanel.transforms, pos,
 		gTransformPanel.startLeaderRot, UNDO_TRANSFORM_POS);
 	copyTransformValues(gTransformPanel.validPosition, gTransformPanel.position);

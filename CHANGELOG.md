@@ -42,6 +42,15 @@
 - Edit one map together: **File → Multiplayer...** hosts the open map, and others join it
   with the address, port and session code. Changes to every element, removed GTA buildings
   and the map's textdraws show up for everyone, with each person's camera and selection.
+- `haumea-server` keeps a session on a machine that stays up (the SA-MP server's, say), with a
+  password, and in a state file across restarts; the first editor in sends its map. Hosting from
+  the editor asks the router to forward the port (UPnP) and shows a public IPv6 address when there
+  is one; the server listens on IPv6 and IPv4 and journals every change, so a crash loses nothing.
+  Connections are encrypted (Monocypher).
+- Area removals, radar art, the TextDraw editor's file, alignment pins, 3D paths, the Nodes tool's
+  NPC nodes and 0.3.DL custom models (their files included) travel too. Undo skips steps on what someone else changed since.
+- Several agents build in one session, in one editor or several: each has its own edit session,
+  and rolling back or undoing only takes back its own edits (Namaka's `multiplayer_session`).
 
 ### TextDraw editing and previews
 
@@ -74,6 +83,8 @@ shortcut. The new build fixes subsequent restarts.
 
 ### Fixes and polish
 
+- Typing a GTA building's own coordinate back into Object Info, as it is shown, no longer counts
+  as an edit (the game's 13.6484375 is written 13.648438).
 - Windows code generation uses the user's temporary folder, fixing Pawn and TextDraw
   generation failures that required running the editor as administrator.
 - Linux self-updates launch the newly installed executable rather than the old rollback copy.

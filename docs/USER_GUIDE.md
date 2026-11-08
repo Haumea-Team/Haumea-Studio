@@ -433,23 +433,58 @@ On 64-bit Linux, open.mp's server and compiler need the 32-bit C library: see
 Several people can edit one map at the same time. **File → Multiplayer...** opens the panel:
 
 - **Host this map**: shares the map that is open. The panel shows the port (7790 unless you change
-  it) and a six-letter **session code**.
-- **Join**: type the host's address, the port and the code. Joining replaces the map you have
-  open with the host's, so save yours first.
+  it) and a six-letter **session code**. With **Open the port on my router** (on by default) Haumea
+  asks your router to forward the port (UPnP) and shows the address people join at over the
+  internet.
+- **Join**: type the address, the port and the host's code (or the server's password, below).
+  Joining replaces the map and the TextDraw file you have open with the session's, so save yours
+  first.
 
 Everyone sees each other's changes as they happen: objects, vehicles, every SA-MP element and
-its settings, materials, attachments, removed or moved GTA buildings and the map's own textdraws.
-Undo works on your own steps. Each person's camera shows as a coloured dot with their name, and
-what they have selected gets a box in their colour; **Go to** looks from where they are looking.
+its settings, groups and locks, materials, attachments, removed or moved GTA buildings, area
+removals, radar art, the map's textdraws, the TextDraw editor's file, alignment pins, 3D paths, the
+Nodes tool's NPC nodes and 0.3.DL custom models (their DFF and TXD files go to everyone who doesn't have them). Undo works on
+your own steps; a step on something someone else changed since is skipped, so it never throws their
+change away. Each person's camera shows as a coloured dot with their name, and what they have
+selected gets a box in their colour; **Go to** looks from where they are looking.
 
 Each person saves their own copy with **File → Save**. Opening or starting another map leaves a
 session you joined; when the host opens one, it replaces everyone's. **Stop hosting** or
-**Leave** keeps the map as it is. Radar art, alignment pins, 3D paths, the Nodes tool and
-textdraw files stay on each computer.
+**Leave** keeps the map as it is. Each person saves the Nodes tool's files with its own **Save**.
 
 Everyone needs the same Haumea version and the same game. On one network, join with the host's
-local address (for example `192.168.1.20`). Over the internet the host has to forward the port to
-their computer, or you can all use a VPN such as Tailscale. Only people with the code can join.
+local address (for example `192.168.1.20`). Over the internet, the router has to forward the port:
+Haumea asks it to, and when your router doesn't do UPnP, forward the port by hand, use a VPN such as
+Tailscale, or run haumea-server (below). When your computer has a public IPv6 address (common even
+behind carrier-grade NAT), the panel shows it too: others join at it when the router lets them in.
+The connection is encrypted, and only people with the code can join.
+
+### A session that stays up: haumea-server
+
+`haumea-server` keeps a session on a machine that is always on, such as the one that runs your
+SA-MP or open.mp server, so nobody has to keep Haumea open to host. It needs no game and no screen:
+
+```sh
+haumea-server --port 7790 --password "something long" --state crew.hmps
+```
+
+Open that TCP port in the machine's firewall, then everyone joins with its address, the port and
+the password. The first person into an empty session sends their open map, and it becomes the
+session's; everyone after gets the session's. With `--state` the session, custom model files
+included, is kept in that file, every change written as it comes (in `crew.hmps.log` until the next
+save), and comes back when the server restarts, even after it crashed or was killed.
+It listens on IPv6 and IPv4 at once. `haumea-server --help`
+lists the rest (`--bind`, `--name`, `--max-clients`). Five wrong passwords from one address make it
+wait ten minutes.
+
+Every connection is encrypted (X25519 and XChaCha20-Poly1305, from Monocypher), with keys bound to
+the password through Argon2: someone watching the traffic sees neither the map nor anything to try
+passwords on. Someone who can sit in the middle of the connection could still try guesses against
+one join, so pick a password nobody can guess.
+
+Namaka joins sessions too (`multiplayer_session`): several agents can build in one session, each in
+its own Haumea or several in one. Each agent has its own edit session; rolling it back or undoing
+only takes back that agent's edits, and what someone else changed last stays as they left it.
 
 ## Saving
 

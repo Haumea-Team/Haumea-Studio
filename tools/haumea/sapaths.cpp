@@ -192,6 +192,7 @@ static AreaData gAreas[NUM_PATH_AREAS];
 static AreaData gUndoBaseline[NUM_PATH_AREAS];
 static bool gUndoBaselineValid;
 static uint32 gNodesEditSerial, gNodesRecordedSerial;
+static bool gAreaFromSession[NUM_PATH_AREAS];	// multiplayer: taken from the session
 static bool gLoadAttempted;
 static bool gLoadSucceeded;
 static bool gLoadFailed;
@@ -5071,6 +5072,7 @@ Reset(void)
 	gLastLoadFailurePath[0] = '\0';
 	gLastLoadFailureReason[0] = '\0';
 	gFolderSourceDir[0] = '\0';
+	memset(gAreaFromSession, 0, sizeof(gAreaFromSession));
 	gBlockedCrossAreaNodeMove = false;
 	gBlockedCrossAreaNaviMove = false;
 }
@@ -8106,6 +8108,50 @@ NodesFingerprint(void)
 			hash = (hash ^ b) * 1099511628211ULL;
 	}
 	return hash;
+}
+
+uint32
+NodesEditSerial(void)
+{
+	return gNodesEditSerial;
+}
+
+// Multiplayer: an area edited here (unsaved) or taken from the session goes
+// to the others; one nobody touched never replaces theirs.
+bool
+GetSharedAreaData(int areaId, std::vector<uint8> &data)
+{
+	if(areaId < 0 || areaId >= NUM_PATH_AREAS || !gLoadSucceeded)
+		return false;
+	AreaData &area = gAreas[areaId];
+	if(!area.loaded || !(area.dirty || gAreaFromSession[areaId]))
+		return false;
+	buildAreaFileData(area, data);
+	return true;
+}
+
+bool
+SetSharedAreaData(int areaId, const std::vector<uint8> &data)
+{
+	EnsureLoaded();
+	if(areaId < 0 || areaId >= NUM_PATH_AREAS || !gLoadSucceeded)
+		return false;
+	AreaData parsed;
+	char reason[64];
+	if(!parseAreaData(areaId, data, "multiplayer session", nil, &parsed, nil, reason, sizeof(reason))){
+		log("SAPaths: the session's area %d: %s\n", areaId, reason);
+		return false;
+	}
+	gAreas[areaId] = std::move(parsed);
+	gAreas[areaId].dirty = true;	// not in any file here yet
+	gAreaFromSession[areaId] = true;
+	gUndoBaseline[areaId] = gAreas[areaId];	// someone else's edit: not an undo step here
+	afterStructureChange(NodeAddress{ 0xFFFF, 0xFFFF });
+	hoveredNode = nil;
+	selectedNode = nil;
+	gSelectedLinkIndex = -1;
+	gNodesRecordedSerial = gNodesEditSerial;
+	return true;
 }
 
 void

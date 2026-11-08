@@ -3202,6 +3202,13 @@ insideRemovalSphere(const ObjectInst *inst, float x, float y, float z, float rad
 	return dx*dx + dy*dy + dz*dz <= radius*radius;
 }
 
+void
+SetPawnAreaRemovals(const std::vector<PawnAreaRemoval> &removals)
+{
+	gAreaRemovals = removals;
+	BumpChangeSeq();
+}
+
 bool
 InsidePawnAreaRemoval(const ObjectInst *inst)
 {
@@ -6290,6 +6297,74 @@ pushUndo(UndoAction *a)
 	undoPos = undoCount;
 	if(undoCoalesceStart > undoCount - 1)
 		undoCoalesceStart = undoCount - 1;
+}
+
+// Takes out the steps forget() empties (it may also trim them), keeping the
+// rest in order.
+template <typename Forget> static void
+forgetUndoSteps(Forget forget)
+{
+	int kept = 0, keptBeforePos = 0;
+	for(int i = 0; i < undoCount; i++){
+		if(forget(undoStack[i]))
+			continue;
+		if(i < undoPos)
+			keptBeforePos++;
+		if(kept != i)
+			undoStack[kept] = std::move(undoStack[i]);
+		kept++;
+	}
+	for(int i = kept; i < undoCount; i++)
+		undoStack[i] = UndoAction();
+	undoCount = kept;
+	undoPos = keptBeforePos;
+	undoCoalesceWidget = 0;	// its indices may have moved
+}
+
+// Someone else changed inst (multiplayer): a step that would put it back
+// would throw their change away, so the steps lose it, and a step left with
+// nothing to do goes.
+void
+UndoForgetInstance(ObjectInst *inst)
+{
+	auto drop = [inst](std::vector<ObjectInst*> &list) {
+		list.erase(std::remove(list.begin(), list.end(), inst), list.end());
+		return (int)list.size();
+	};
+	forgetUndoSteps([&](UndoAction &a) {
+		switch(a.type){
+		case UNDO_MOVE:
+			if(a.lodInst == inst)
+				a.lodInst = nil;
+			return a.inst == inst;
+		case UNDO_ROTATE:
+		case UNDO_MATERIAL:
+		case UNDO_PROPERTIES:
+		case UNDO_VEHICLE:
+		case UNDO_MODEL_ID:
+			return a.inst == inst;
+		case UNDO_DELETE:
+			return (a.numDeleted = drop(a.deletedInsts)) == 0;
+		case UNDO_PASTE:
+			return (a.numPasted = drop(a.pastedInsts)) == 0;
+		case UNDO_WORLD_CONVERSION:
+			return drop(a.convertedWorldObjects) == 0;
+		case UNDO_TRANSFORM_BATCH:
+			a.transforms.erase(std::remove_if(a.transforms.begin(), a.transforms.end(),
+				[inst](const UndoTransform &t) { return t.inst == inst; }), a.transforms.end());
+			a.numTransforms = (int)a.transforms.size();
+			return a.numTransforms == 0;
+		}
+		return false;
+	});
+}
+
+// Someone else replaced a whole list (radar art, 3D paths): its steps are
+// snapshots of it, which would throw their change away.
+void
+UndoForgetKind(int type)
+{
+	forgetUndoSteps([type](UndoAction &a) { return a.type == type; });
 }
 
 void

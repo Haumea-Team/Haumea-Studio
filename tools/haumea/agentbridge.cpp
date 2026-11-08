@@ -9,6 +9,7 @@
 #include "trains.h"
 #include "agentbridge.h"
 #include "multiplayer.h"
+#include "sapaths.h"
 #include "areas.h"
 #include "categories.h"
 #include "objfilters.h"
@@ -186,12 +187,6 @@ struct AgentSceneSnapshot
 	uint16 vehicleMods[VEHICLE_MOD_SLOTS];
 };
 static bool gAgentSessionActive;
-
-bool
-AgentBridgeSessionActive(void)
-{
-	return gAgentSessionActive;
-}
 static std::string gAgentSessionId;
 static std::vector<AgentSceneSnapshot> gAgentSessionSnapshot;
 static std::vector<TextDraw> gAgentTextDrawSnapshot;	// rollback restores the textdraws too
@@ -200,6 +195,77 @@ static unsigned int gAgentTextDrawSeq;	// their change count then: untouched, ro
 // They are tracked separately so rollback never treats unrelated world objects
 // as agent-created scene content.
 static std::vector<AgentSceneSnapshot> gAgentScopedWorldSnapshot;
+
+// Several agents in one editor: a request names its agent after an '@' in
+// its request id (older editors just echo it back), and each agent has its
+// own scratch session, swapped into the globals above while its requests
+// run. What an agent's requests change is noted as its, so rolling back or
+// undoing leaves what another agent changed since alone.
+namespace {
+struct AgentSession
+{
+	bool active = false;
+	std::string id;
+	std::vector<AgentSceneSnapshot> snapshot, scopedWorld;
+	std::vector<TextDraw> textDraws;
+	unsigned int textDrawSeq = 0;
+};
+}
+static std::map<std::string, AgentSession> gOtherAgentSessions;	// by agent, all but the loaded one
+static std::string gLoadedAgent;	// whose session the globals hold
+static std::unordered_map<int32, std::string> gLastAgentEdit;	// instance -> the agent that changed it last
+static std::string gLastTextDrawAgent;	// the agent that changed the textdraw file last
+
+bool
+AgentBridgeSessionActive(void)
+{
+	if(gAgentSessionActive)
+		return true;
+	for(const auto &other : gOtherAgentSessions)
+		if(other.second.active)
+			return true;
+	return false;
+}
+
+static void
+loadAgentSession(const std::string &agent)
+{
+	if(agent == gLoadedAgent)
+		return;
+	AgentSession &stored = gOtherAgentSessions[gLoadedAgent];
+	stored.active = gAgentSessionActive;
+	stored.id = std::move(gAgentSessionId);
+	stored.snapshot = std::move(gAgentSessionSnapshot);
+	stored.scopedWorld = std::move(gAgentScopedWorldSnapshot);
+	stored.textDraws = std::move(gAgentTextDrawSnapshot);
+	stored.textDrawSeq = gAgentTextDrawSeq;
+	AgentSession next = std::move(gOtherAgentSessions[agent]);
+	gOtherAgentSessions.erase(agent);
+	gAgentSessionActive = next.active;
+	gAgentSessionId = std::move(next.id);
+	gAgentSessionSnapshot = std::move(next.snapshot);
+	gAgentScopedWorldSnapshot = std::move(next.scopedWorld);
+	gAgentTextDrawSnapshot = std::move(next.textDraws);
+	gAgentTextDrawSeq = next.textDrawSeq;
+	gLoadedAgent = agent;
+}
+
+// Another agent changed it after this one: it stays as they left it.
+static bool
+changedByAnotherAgent(const ObjectInst *inst)
+{
+	auto it = gLastAgentEdit.find(inst->m_id);
+	return it != gLastAgentEdit.end() && it->second != gLoadedAgent;
+}
+
+static bool
+otherAgentEditing(void)
+{
+	for(const auto &other : gOtherAgentSessions)
+		if(other.second.active)
+			return true;
+	return false;
+}
 
 static std::string
 jsonEscape(const char *text)
@@ -1267,9 +1333,11 @@ rollbackAgentSession(void)
 	for(size_t i = 0; i < gAgentSessionSnapshot.size(); i++)
 		snapshots[gAgentSessionSnapshot[i].id] = gAgentSessionSnapshot[i];
 
+	// In a multiplayer session, what someone else changed last stays theirs:
+	// only this editor's own edits are rolled back.
 	for(CPtrNode *p = instances.first; p; p = p->next){
 		ObjectInst *inst = (ObjectInst*)p->item;
-		if(!isAgentSceneInstance(inst))
+		if(!isAgentSceneInstance(inst) || MultiplayerChangedByOthers(inst) || changedByAnotherAgent(inst))
 			continue;
 		auto found = snapshots.find(inst->m_id);
 		if(found == snapshots.end()){
@@ -1290,7 +1358,7 @@ rollbackAgentSession(void)
 	for(size_t i = 0; i < gAgentScopedWorldSnapshot.size(); i++){
 		const AgentSceneSnapshot &snapshot = gAgentScopedWorldSnapshot[i];
 		ObjectInst *inst = GetInstanceByID(snapshot.id);
-		if(inst == nil)
+		if(inst == nil || MultiplayerChangedByOthers(inst) || changedByAnotherAgent(inst))
 			continue;
 		if(agentMapMode() && inst->m_isDeleted != snapshot.deleted){
 			// Removed through the Pawn map's normal delete.
@@ -1308,7 +1376,7 @@ rollbackAgentSession(void)
 	}
 	// Edited or saved during the session: back to the snapshot, which then
 	// differs from what is on disk.
-	if(TextDrawsChangeSeq() != gAgentTextDrawSeq){
+	if(TextDrawsChangeSeq() != gAgentTextDrawSeq && (gLastTextDrawAgent.empty() || gLastTextDrawAgent == gLoadedAgent)){
 		GetTextDraws() = gAgentTextDrawSnapshot;
 		TextDrawsChanged();
 	}
@@ -4991,8 +5059,8 @@ handleRequest(const std::vector<std::string> &lines)
 		writeResponse(requestId, true, agentMapStatusJson());
 		return;
 	}
-	// Multiplayer editing: host [port [name]], join address port code [name],
-	// leave, status.
+	// Multiplayer editing: host [port [name [upnp]]], join address port code
+	// [name], leave, status.
 	if(command == "multiplayer_host" || command == "multiplayer_join"){
 		bool host = command == "multiplayer_host";
 		int port = MP_DEFAULT_PORT;
@@ -5008,13 +5076,49 @@ handleRequest(const std::vector<std::string> &lines)
 		size_t nameField = host ? 3 : 5;
 		const char *name = lines.size() > nameField ? lines[nameField].c_str() : "Namaka";
 		std::string error;
-		bool ok = host ? MultiplayerHost(port, name, &error) :
+		bool upnp = !(host && lines.size() > 4 && lines[4] == "0");
+		bool ok = host ? MultiplayerHost(port, name, &error, upnp) :
 			MultiplayerJoin(lines[2].c_str(), port, lines[4].c_str(), name, &error);
 		if(!ok){
 			writeError(requestId, error.c_str());
 			return;
 		}
 		writeResponse(requestId, true, MultiplayerStatusJson());
+		return;
+	}
+	// The Nodes tool (open.mp NPC nodes): nodes_add x y z [vehicle], and
+	// nodes_status: a fingerprint of every area, and the edited ones.
+	if(command == "nodes_add"){
+		rw::V3d pos;
+		int vehicle = 1;
+		if(lines.size() < 5 || !parseFloat(lines[2], &pos.x) || !parseFloat(lines[3], &pos.y) ||
+		   !parseFloat(lines[4], &pos.z) || (lines.size() > 5 && !parseInt(lines[5], &vehicle))){
+			writeError(requestId, "nodes_add requires x y z [vehicle 0/1]");
+			return;
+		}
+		SAPaths::EnsureLoaded();
+		const char *reason = nil;
+		SAPaths::Node *node = SAPaths::NodesLoaded() ? SAPaths::AddNode(pos, vehicle != 0, nil, &reason) : nil;
+		int area = -1, point = -1;
+		bool isVehicle = false;
+		rw::V3d at;
+		if(node == nil || !SAPaths::GetNodeInfo(node, &area, &point, &isVehicle, &at)){
+			writeError(requestId, reason ? reason : "the node files aren't loaded");
+			return;
+		}
+		char body[128];
+		snprintf(body, sizeof(body), "\"area\":%d,\"point\":%d,\"vehicle\":%s", area, point,
+			isVehicle ? "true" : "false");
+		writeResponse(requestId, true, body);
+		return;
+	}
+	if(command == "nodes_status"){
+		SAPaths::EnsureLoaded();
+		char body[160];
+		snprintf(body, sizeof(body), "\"loaded\":%s,\"fingerprint\":\"%016llx\",\"edited_areas\":%d",
+			SAPaths::NodesLoaded() ? "true" : "false", (unsigned long long)SAPaths::NodesFingerprint(),
+			SAPaths::GetDirtyAreaCount());
+		writeResponse(requestId, true, body);
 		return;
 	}
 	if(command == "multiplayer_leave"){
@@ -5142,6 +5246,12 @@ handleRequest(const std::vector<std::string> &lines)
 	if(command == "undo" || command == "redo"){
 		// undo [steps]: the editor's own undo history, so the user's edits count too.
 		if(!requireAgentSession(requestId)) return;
+		if(otherAgentEditing()){
+			// One history for everyone: its last step may be another agent's.
+			writeError(requestId, "another agent is editing this map too: finish_edit_session(commit=False) "
+				"takes back only your edits");
+			return;
+		}
 		int steps = 1;
 		if(lines.size() > 2 && (!parseInt(lines[2], &steps) || steps < 1 || steps > 100)){
 			writeError(requestId, "steps must be 1-100");
@@ -5325,7 +5435,20 @@ AgentBridgeUpdate(void)
 	std::vector<std::string> lines;
 	if(readRequest(lines)){
 		gRequestFailed = false;
+		size_t at = lines.size() >= 2 ? lines[0].find('@') : std::string::npos;
+		std::string agent = at == std::string::npos ? "" : lines[0].substr(at + 1);
+		loadAgentSession(agent);
+		uint32 before = GetLatestChangeSeq();
+		unsigned int textDrawsBefore = TextDrawsChangeSeq();
 		handleRequest(lines);
+		if(GetLatestChangeSeq() != before)
+			for(CPtrNode *p = instances.first; p; p = p->next){
+				ObjectInst *inst = (ObjectInst*)p->item;
+				if(inst->m_changeSeq > before)
+					gLastAgentEdit[inst->m_id] = agent;
+			}
+		if(TextDrawsChangeSeq() != textDrawsBefore)
+			gLastTextDrawAgent = agent;
 		if(!gRequestFailed && lines.size() >= 2)
 			agentcastNote(lines);
 	}

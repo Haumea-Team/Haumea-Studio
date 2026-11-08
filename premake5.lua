@@ -337,7 +337,7 @@ project "haumea"
 		symbols "On"
 	filter {}
 	includedirs { "tools/haumea" }
-	files { "tools/haumea/minilzo/minilzo.c" }
+	files { "tools/haumea/minilzo/minilzo.c", "tools/haumea/monocypher/monocypher.c" }
 	-- The build number and commit, as open.mp does it (tools/release/gen_buildinfo.py):
 	-- remade every build, rewritten only when they change, so only versionutil follows.
 	-- These lines come before the configs set OBJDIR, so a rule on
@@ -360,6 +360,20 @@ project "haumea"
 		links { "pthread" }
 	filter {}
 	removeplatforms { "*null" }
+	removeplatforms { "ps2" }
+
+-- A multiplayer session on its own (tools/haumea/mprelay.h): no game, no
+-- window, nothing of librw, so it runs on a bare server.
+project "haumea-server"
+	kind "ConsoleApp"
+	cppdialect "C++14"
+	targetdir (Bindir)
+	files { "tools/haumea-server/*.cpp", "tools/haumea/mprelay.cpp", "tools/haumea/mprelay.h",
+	        "tools/haumea/mpprotocol.h", "tools/haumea/minilzo/minilzo.c", "tools/haumea/monocypher/monocypher.c" }
+	includedirs { "tools/haumea" }
+	filter { "system:windows" }
+		links { "ws2_32" }
+	filter {}
 	removeplatforms { "ps2" }
 
 project "gtaclumpview"
