@@ -5261,7 +5261,8 @@ handleRequest(const std::vector<std::string> &lines)
 	// multiplayer_load_for_everyone <path> [admin password].
 	if(command == "multiplayer_load_for_everyone"){
 		std::string error;
-		if(lines.size() < 3 || !MultiplayerLoadForEveryone(lines[2].c_str(), lines.size() > 3 ? lines[3].c_str() : "", &error)){
+		// "" for an empty map.
+		if(lines.size() < 3 || !MultiplayerLoadForEveryone(lines[2].empty() ? nil : lines[2].c_str(), lines.size() > 3 ? lines[3].c_str() : "", &error)){
 			writeError(requestId, error.empty() ? "multiplayer_load_for_everyone requires a path" : error.c_str());
 			return;
 		}
@@ -5270,8 +5271,10 @@ handleRequest(const std::vector<std::string> &lines)
 	}
 	// multiplayer_enter <room> [room password]: from the lobby.
 	if(command == "multiplayer_enter"){
-		if(lines.size() < 3 || !MultiplayerEnterRoom(lines[2].c_str(), lines.size() > 3 ? lines[3].c_str() : "")){
-			writeError(requestId, "not in a server's lobby, or no room given");
+		// multiplayer_enter <room> [room password] [empty]: "" for the lobby; "empty": a new room starts empty.
+		if(lines.size() < 3 || !MultiplayerEnterRoom(lines[2].c_str(), lines.size() > 3 ? lines[3].c_str() : "",
+			lines.size() > 4 && lines[4] == "empty")){
+			writeError(requestId, "not on a server with rooms, or already there");
 			return;
 		}
 		writeResponse(requestId, true, MultiplayerStatusJson());

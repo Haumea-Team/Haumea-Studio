@@ -41,7 +41,9 @@ bool MultiplayerHost(int port, const char *name, std::string *error, bool openRo
 // haumea-server's password.
 bool MultiplayerJoin(const char *address, int port, const char *password, const char *name, std::string *error);
 bool MultiplayerJoinWith(const MultiplayerJoinRequest &join, std::string *error);
-bool MultiplayerEnterRoom(const char *room, const char *roomPassword);	// from the lobby
+// From the lobby or a room: a room by name ("" back to the lobby); a room
+// this makes starts with the open map, or an empty one.
+bool MultiplayerEnterRoom(const char *room, const char *roomPassword, bool emptyMap = false);
 // An admin action (MP_ADMIN_*); the reply comes in MultiplayerStatusJson's admin_reply.
 bool MultiplayerAdmin(int op, const char *a = "", const char *b = "", const char *c = "");
 // A token for this account's agents: "" while it's being asked for.
@@ -68,6 +70,6 @@ bool MultiplayerSay(const char *text);
 std::string MultiplayerChatJson(unsigned int since);
 // The open map was saved to path: a relay that keeps maps gets it too.
 void MultiplayerMapSaved(const char *path);
-// Opens the map at path and makes it the session's, for everyone.
+// Opens the map at path and makes it the session's, for everyone (nil: an empty map).
 bool MultiplayerLoadForEveryone(const char *path, const char *adminPassword, std::string *error);
 bool MultiplayerReplacingMap(void);	// opening a map now doesn't leave the session

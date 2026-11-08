@@ -186,6 +186,29 @@ class AccountTests(base.EditorsMixin, unittest.TestCase):
         self.assertEqual(s['state'], 'off')
         self.assertIn('agents', s['status'])
 
+        # Bia moves between rooms without signing in again: side to main, the lobby, a new empty room.
+        self.assertTrue(bia.command('multiplayer_enter', 'main').get('ok'))
+        s = base.wait_for(lambda: (lambda s: s if s['state'] == 'joined' and s['room'] == 'main' else None)(self.status(bia)),
+                          'Bia in main')
+        self.assertIsNotNone(self.find(bia, 1611.0, -1890.0), 'main\'s map')
+        self.assertTrue(bia.command('multiplayer_enter', '').get('ok'))
+        s = base.wait_for(lambda: (lambda s: s if s['state'] == 'lobby' else None)(self.status(bia)), 'the lobby')
+        self.assertIn('main', [r['name'] for r in s['lobby']])
+        self.assertTrue(bia.command('multiplayer_enter', 'scratch', '', 'empty').get('ok'))
+        base.wait_for(lambda: (lambda s: s if s['state'] == 'joined' and s['room'] == 'scratch' else None)(self.status(bia)),
+                      'room scratch')
+        self.assertIsNone(self.find(bia, 1611.0, -1890.0), 'a new empty room has a map in it')
+        self.assertTrue(bia.command('session_begin').get('ok'))
+        self.assertTrue(bia.command('place_element', 'object', 1337, 1750.0, -1750.0, 13.5, 0, 0).get('ok'))
+        self.assertTrue(bia.command('session_commit').get('ok'))
+        base.wait_for(lambda: self.find(bia, 1750.0, -1750.0), 'the object in scratch')
+        # A new empty map for everyone in the room.
+        self.assertTrue(bia.command('multiplayer_load_for_everyone', '').get('ok'))
+        base.wait_for(lambda: self.status(bia)['state'] == 'joined' and self.find(bia, 1750.0, -1750.0) is None,
+                      'the empty map')
+        self.assertEqual(self.status(bia)['room'], 'scratch')
+        bia.command('multiplayer_enter', 'side')
+
         # Ping, measured both ways.
         base.wait_for(lambda: self.status(ana)['ping'] >= 0 and all(p['ping'] >= 0 for p in self.status(ana)['peers']),
                       'the pings')
@@ -194,7 +217,8 @@ class AccountTests(base.EditorsMixin, unittest.TestCase):
         # The log: who came, the chat, what admins did.
         log = (self.state / 'log.txt').read_text()
         for line in ('[Info] Ana joined room main', '[chat] [main] Cid: looks good', 'Ana (owner) made Bia a admin',
-                     'Bia (admin) locked room side', 'Bia (admin) removed Cid from room side', 'refused 127.0.0.1'):
+                     'Bia (admin) locked room side', 'Bia (admin) removed Cid from room side', 'refused 127.0.0.1',
+                     'Bia (peer', 'left room side', 'Bia made room scratch'):
             self.assertIn(line.replace('a admin', 'a admin'), log)
 
         # A restart keeps the accounts, rooms and roles.
