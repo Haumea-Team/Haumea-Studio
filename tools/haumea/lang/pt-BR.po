@@ -1346,6 +1346,9 @@ msgstr "Todos (%d)"
 msgid "All IDE files"
 msgstr "Todos os arquivos IDE"
 
+msgid "All brush settings"
+msgstr "Todas as configurações do pincel"
+
 msgid "All kinds"
 msgstr "Todos os tipos"
 
@@ -1925,6 +1928,9 @@ msgstr "Procurar..."
 msgid "Brush"
 msgstr "Pincel"
 
+msgid "Brush disc size. 0 = single object under cursor."
+msgstr "Tamanho do disco do pincel. 0 = um único objeto sob o cursor."
+
 msgid ""
 "Brush disc size. 0 = single object under cursor.\n"
 "When > 0, each click scatters Count objects inside this radius."
@@ -2329,6 +2335,9 @@ msgstr "Clique nos nós para selecioná-los; W move o nó selecionado."
 
 msgid "Click object"
 msgstr "Clicar no objeto"
+
+msgid "Click objects to select them, drag them to move along the ground."
+msgstr "Clique nos objetos para selecioná-los; arraste-os para movê-los pelo chão."
 
 msgid "Click on an image layer to take its colour"
 msgstr "Clique numa camada de imagem para pegar a cor dela"
@@ -2775,6 +2784,9 @@ msgstr "Quantidade"
 msgid "Count / click"
 msgstr "Quantidade / clique"
 
+msgid "Count:"
+msgstr "Quantidade:"
+
 msgid "Country rifle"
 msgstr "Rifle de caça"
 
@@ -3142,6 +3154,12 @@ msgstr "Arraste a barra de título de um painel para encaixá-lo ao lado da vist
 
 msgid "Drag it onto a ruler to remove it"
 msgstr "Arraste até uma régua para remover"
+
+msgid "Drag the arrows on the selected object."
+msgstr "Arraste as setas no objeto selecionado."
+
+msgid "Drag the rings on the selected object."
+msgstr "Arraste os anéis no objeto selecionado."
 
 msgid "Drag to adjust. Double-click to enter an exact value."
 msgstr "Arraste para ajustar. Clique duas vezes para digitar um valor exato."
@@ -5263,6 +5281,9 @@ msgstr "Map icons"
 msgid "Map object"
 msgstr "Objeto do mapa"
 
+msgid "Map tools"
+msgstr "Ferramentas do mapa"
+
 msgid "Map: place a marker"
 msgstr "Mapa: colocar um marcador"
 
@@ -5531,6 +5552,9 @@ msgstr "Mais faixas misturam mais suavemente. Cada faixa é um textdraw."
 msgid "More display and snapping options"
 msgstr "Mais opções de exibição e ajuste"
 
+msgid "More options"
+msgstr "Mais opções"
+
 msgid "Motor, stopping"
 msgstr "Motor parando"
 
@@ -5542,14 +5566,6 @@ msgstr "Roda do mouse"
 
 msgid "Move"
 msgstr "Mover"
-
-#, c-format
-msgid ""
-"Move (%s)\n"
-"Drag the arrows on the selected object."
-msgstr ""
-"Mover (%s)\n"
-"Arraste as setas no objeto selecionado."
 
 msgid "Move by"
 msgstr "Mover por"
@@ -6170,6 +6186,9 @@ msgstr ""
 "São as faixas do 'lado esquerdo' / do trânsito em sentido oposto.\n"
 "Use 0 para vias de mão única."
 
+msgid "Number of objects scattered per click when Radius > 0."
+msgstr "Número de objetos espalhados por clique quando o Raio > 0."
+
 msgid ""
 "Number of objects scattered per click when Radius > 0.\n"
 "Capped at 128 to keep a single click undoable as one step."
@@ -6459,6 +6478,10 @@ msgstr "Abrindo os arquivos de modelos"
 msgid "Opening the port on your router..."
 msgstr "Abrindo a porta no seu roteador..."
 
+#, c-format
+msgid "Opens %s in the Tools panel. Right-click or hold for the others."
+msgstr "Abre %s no painel Ferramentas. Clique com o botão direito ou segure para ver as outras."
+
 msgid "Opens an autosaved copy. Use Save As to keep it as your map."
 msgstr "Abre uma cópia salva automaticamente. Use Salvar como para mantê-la como seu mapa."
 
@@ -6563,6 +6586,9 @@ msgstr "Página %d de %d (%d modelos)"
 
 msgid "Paint continuously using spacing/delay settings"
 msgstr "Pintar continuamente usando as configurações de espaçamento/atraso"
+
+msgid "Paint copies of the Object Browser's object onto the world. Its settings are on the options bar."
+msgstr "Pinta cópias do objeto do Navegador de objetos no mundo. As configurações ficam na barra de opções."
 
 msgid "Paint selected object on surface"
 msgstr "Pintar o objeto selecionado na superfície"
@@ -6779,6 +6805,9 @@ msgstr "Pegar de uma imagem"
 
 msgid "Pick points"
 msgstr "Escolher pontos"
+
+msgid "Pick the object to paint in the Object Browser first."
+msgstr "Primeiro escolha no Navegador de objetos o objeto a pintar."
 
 msgid "Pick the recordings folder first"
 msgstr "Escolha a pasta de gravações primeiro"
@@ -7352,6 +7381,9 @@ msgstr "Raio"
 msgid "Radius (m)"
 msgstr "Raio (m)"
 
+msgid "Radius:"
+msgstr "Raio:"
+
 msgid "Rain (0.3.7-R2)"
 msgstr "Chuva (0.3.7-R2)"
 
@@ -7461,10 +7493,6 @@ msgstr "Seleção por retângulo limitada a %d objeto(s)"
 
 msgid "Redo"
 msgstr "Refazer"
-
-#, c-format
-msgid "Redo (%s)"
-msgstr "Refazer (%s)"
 
 msgid "Reference ID"
 msgstr "ID de referência"
@@ -7810,14 +7838,6 @@ msgstr "Salas, contas e papéis vêm com o haumea-server; hospedar daqui é um m
 
 msgid "Rotate"
 msgstr "Girar"
-
-#, c-format
-msgid ""
-"Rotate (%s)\n"
-"Drag the rings on the selected object."
-msgstr ""
-"Girar (%s)\n"
-"Arraste os anéis no objeto selecionado."
 
 msgid "Rotate gizmo"
 msgstr "Gizmo de girar"
@@ -8221,13 +8241,6 @@ msgstr "Segmentos"
 
 msgid "Select"
 msgstr "Selecionar"
-
-msgid ""
-"Select\n"
-"Click objects to select them, drag them to move along the ground."
-msgstr ""
-"Selecionar\n"
-"Clique nos objetos para selecioná-los; arraste-os para movê-los pelo chão."
 
 msgid "Select TXD..."
 msgstr "Selecionar TXD..."
@@ -8789,6 +8802,9 @@ msgstr "Espaçamento (m)"
 
 msgid "Spacing by"
 msgstr "Espaçar por"
+
+msgid "Spacing:"
+msgstr "Espaçamento:"
 
 msgid "Spawn"
 msgstr "Criação"
@@ -9864,10 +9880,6 @@ msgstr "Restaurar objeto excluído"
 
 msgid "Undo"
 msgstr "Desfazer"
-
-#, c-format
-msgid "Undo (%s)"
-msgstr "Desfazer (%s)"
 
 msgid "Undo / Redo"
 msgstr "Desfazer / Refazer"

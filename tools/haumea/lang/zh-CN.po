@@ -5027,14 +5027,6 @@ msgstr "鼠标滚轮"
 msgid "Move"
 msgstr "移动"
 
-#, c-format
-msgid ""
-"Move (%s)\n"
-"Drag the arrows on the selected object."
-msgstr ""
-"移动 (%s)\n"
-"拖动所选物体上的箭头。"
-
 msgid "Move by"
 msgstr "移动量"
 
@@ -6769,10 +6761,6 @@ msgstr "矩形选择上限为 %d 个物体"
 msgid "Redo"
 msgstr "重做"
 
-#, c-format
-msgid "Redo (%s)"
-msgstr "重做 (%s)"
-
 msgid "Reference ID"
 msgstr "参考 ID"
 
@@ -7050,14 +7038,6 @@ msgstr "屋顶"
 
 msgid "Rotate"
 msgstr "旋转"
-
-#, c-format
-msgid ""
-"Rotate (%s)\n"
-"Drag the rings on the selected object."
-msgstr ""
-"旋转 (%s)\n"
-"拖动所选物体上的圆环。"
 
 msgid "Rotate gizmo"
 msgstr "旋转 gizmo"
@@ -7430,13 +7410,6 @@ msgstr "分段"
 
 msgid "Select"
 msgstr "选择"
-
-msgid ""
-"Select\n"
-"Click objects to select them, drag them to move along the ground."
-msgstr ""
-"选择\n"
-"点击物体将其选中，拖动可使其沿地面移动。"
 
 msgid "Select TXD..."
 msgstr "选择 TXD..."
@@ -8891,10 +8864,6 @@ msgstr "恢复删除的物体"
 
 msgid "Undo"
 msgstr "撤销"
-
-#, c-format
-msgid "Undo (%s)"
-msgstr "撤销 (%s)"
 
 msgid "Undo / Redo"
 msgstr "撤销 / 重做"
@@ -11113,3 +11082,45 @@ msgstr "是"
 
 msgid "Multiplayer"
 msgstr "多人编辑"
+
+msgid "All brush settings"
+msgstr "全部笔刷设置"
+
+msgid "Brush disc size. 0 = single object under cursor."
+msgstr "笔刷圆盘大小。0 = 光标下的单个物体。"
+
+msgid "Click objects to select them, drag them to move along the ground."
+msgstr "点击物体以选中，拖动它们沿地面移动。"
+
+msgid "Count:"
+msgstr "数量："
+
+msgid "Drag the arrows on the selected object."
+msgstr "拖动所选物体上的箭头。"
+
+msgid "Drag the rings on the selected object."
+msgstr "拖动所选物体上的圆环。"
+
+msgid "Map tools"
+msgstr "地图工具"
+
+msgid "More options"
+msgstr "更多选项"
+
+msgid "Number of objects scattered per click when Radius > 0."
+msgstr "半径 > 0 时每次点击散布的物体数量。"
+
+msgid "Opens %s in the Tools panel. Right-click or hold for the others."
+msgstr "在“工具”面板中打开%s。右键单击或按住以查看其他工具。"
+
+msgid "Paint copies of the Object Browser's object onto the world. Its settings are on the options bar."
+msgstr "将物体浏览器中的物体复制绘制到世界中。设置位于选项栏。"
+
+msgid "Pick the object to paint in the Object Browser first."
+msgstr "请先在物体浏览器中选择要绘制的物体。"
+
+msgid "Radius:"
+msgstr "半径："
+
+msgid "Spacing:"
+msgstr "间距："

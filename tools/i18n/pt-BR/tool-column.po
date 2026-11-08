@@ -1,0 +1,45 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+
+msgid "All brush settings"
+msgstr "Todas as configurações do pincel"
+
+msgid "Brush disc size. 0 = single object under cursor."
+msgstr "Tamanho do disco do pincel. 0 = um único objeto sob o cursor."
+
+msgid "Click objects to select them, drag them to move along the ground."
+msgstr "Clique nos objetos para selecioná-los; arraste-os para movê-los pelo chão."
+
+msgid "Count:"
+msgstr "Quantidade:"
+
+msgid "Drag the arrows on the selected object."
+msgstr "Arraste as setas no objeto selecionado."
+
+msgid "Drag the rings on the selected object."
+msgstr "Arraste os anéis no objeto selecionado."
+
+msgid "Map tools"
+msgstr "Ferramentas do mapa"
+
+msgid "More options"
+msgstr "Mais opções"
+
+msgid "Number of objects scattered per click when Radius > 0."
+msgstr "Número de objetos espalhados por clique quando o Raio > 0."
+
+msgid "Opens %s in the Tools panel. Right-click or hold for the others."
+msgstr "Abre %s no painel Ferramentas. Clique com o botão direito ou segure para ver as outras."
+
+msgid "Paint copies of the Object Browser's object onto the world. Its settings are on the options bar."
+msgstr "Pinta cópias do objeto do Navegador de objetos no mundo. As configurações ficam na barra de opções."
+
+msgid "Pick the object to paint in the Object Browser first."
+msgstr "Primeiro escolha no Navegador de objetos o objeto a pintar."
+
+msgid "Radius:"
+msgstr "Raio:"
+
+msgid "Spacing:"
+msgstr "Espaçamento:"

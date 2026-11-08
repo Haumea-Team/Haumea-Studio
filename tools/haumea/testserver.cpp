@@ -1384,7 +1384,7 @@ TestServerWindow(bool *open, int pawnFormat)
 		}
 	}
 	ImGui::SeparatorText(_("Server log"));
-	ImGui::BeginChild("##testserverlog", ImVec2(0, 0), ImGuiChildFlags_Borders,
+	ImGui::BeginChild("##testserverlog", UiFillRest(UiListMinHeight()), ImGuiChildFlags_Borders,
 		ImGuiWindowFlags_HorizontalScrollbar);
 	ImGuiListClipper clipper;
 	clipper.Begin((int)gTsLog.size());

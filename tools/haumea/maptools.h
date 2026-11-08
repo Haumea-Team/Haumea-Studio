@@ -100,5 +100,10 @@ bool MapToolsHandleViewportClick(void);
 // The Tools window's sections.
 void MapToolsPanel(void);
 void MapToolsMorePanel(void);	// the specialised tools, after the brush
+// Opens one section of the Tools panel ("Array", "Coordinate pin"...: its English
+// name) and scrolls to it the next time the panel draws.
+void MapToolsOpenSection(const char *name);
+// A section header of the Tools panel that MapToolsOpenSection can open.
+bool MapToolsHeader(const char *name, int flags = 0);
 rw::V3d MapToolsSelectionCentre();
 int MapToolsCenterParent(std::string *error);

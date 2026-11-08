@@ -1296,6 +1296,29 @@ lineSection(void)
 			drawBox(model, positions[i], MakeObjectRotationDegrees(degrees[i]), { 90, 200, 255, 220 });
 }
 
+
+static const char *gOpenSection;
+
+void
+MapToolsOpenSection(const char *name)
+{
+	gOpenSection = name;
+}
+
+bool
+MapToolsHeader(const char *name, int flags)
+{
+	bool asked = gOpenSection && strcmp(gOpenSection, name) == 0;
+	if(asked)
+		ImGui::SetNextItemOpen(true);
+	bool open = ImGui::CollapsingHeader(L(name), flags);
+	if(asked){
+		ImGui::SetScrollHereY(0.0f);
+		gOpenSection = nil;
+	}
+	return open;
+}
+
 void
 MapToolsPanel(void)
 {
@@ -1303,13 +1326,13 @@ MapToolsPanel(void)
 	std::vector<ObjectInst*> objs = selectedObjects();
 	bool lineOpen = false;
 	// The everyday tools first; the specialised ones below "More".
-	if(ImGui::CollapsingHeader(L("Array")))
+	if(MapToolsHeader(N_("Array")))
 		arraySection(objs);
-	if(ImGui::CollapsingHeader(L("Mirror")))
+	if(MapToolsHeader(N_("Mirror")))
 		mirrorSection(objs);
-	if(ImGui::CollapsingHeader(L("Align & distribute")))
+	if(MapToolsHeader(N_("Align & distribute")))
 		alignSection(objs);
-	if(ImGui::CollapsingHeader(L("Along a line"), gPicking ? ImGuiTreeNodeFlags_DefaultOpen : 0)){
+	if(MapToolsHeader(N_("Along a line"), gPicking ? ImGuiTreeNodeFlags_DefaultOpen : 0)){
 		lineOpen = true;
 		lineSection();
 	}
@@ -1323,25 +1346,25 @@ MapToolsMorePanel(void)
 {
 	std::vector<ObjectInst*> objs = selectedObjects();
 	ImGui::SeparatorText(_("More"));
-	if(ImGui::CollapsingHeader(L("Duplicate offset"), gCloneOffset.enabled ? ImGuiTreeNodeFlags_DefaultOpen : 0))
+	if(MapToolsHeader(N_("Duplicate offset"), gCloneOffset.enabled ? ImGuiTreeNodeFlags_DefaultOpen : 0))
 		cloneOffsetSection();
-	if(ImGui::CollapsingHeader(L("Drop & copy as Pawn")))
+	if(MapToolsHeader(N_("Drop & copy as Pawn")))
 		dropSection(objs);
-	if(ImGui::CollapsingHeader(L("Coordinate pin"))){
+	if(MapToolsHeader(N_("Coordinate pin"))){
 		CoordinatePinPanel();
 		if(CoordinatePinOwnsMouse()) gPicking = false;
 	}
-	if(ImGui::CollapsingHeader(L("Paths & curves"))){
+	if(MapToolsHeader(N_("Paths & curves"))){
 		ImGui::PushID("layout_paths");
 		LayoutPathsPanel();
 		ImGui::PopID();
 	}
-	if(ImGui::CollapsingHeader(L("Duplicate cleanup"))){
+	if(MapToolsHeader(N_("Duplicate cleanup"))){
 		ImGui::PushID("duplicate_cleanup");
 		MapCleanupPanel();
 		ImGui::PopID();
 	}
-	if(ImGui::CollapsingHeader(L("Pivot"))){
+	if(MapToolsHeader(N_("Pivot"))){
 		ImGui::PushID("mapping_pivot");
 		const char *pivots[]={_("Active object"),_("Selection centre"),_("Individual origins"),_("Custom point")};
 		ImGui::Combo(L("Pivot mode"),&gGizmoPivot,pivots,4);

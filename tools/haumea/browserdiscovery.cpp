@@ -133,7 +133,7 @@ void instancesPanel()
 	}
 	ImGui::SetItemTooltip(_("Select all instances of this model in the current scope."));
 	ImGui::EndDisabled();
-	ImGui::BeginChild("##instance_locations", ImVec2(0, 0), ImGuiChildFlags_Borders);
+	ImGui::BeginChild("##instance_locations", UiFillRest(UiListMinHeight()), ImGuiChildFlags_Borders);
 	clipper.Begin((int)members.size());
 	while(clipper.Step()) for(int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++){
 		ObjectInst *inst = members[i];
