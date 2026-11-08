@@ -220,6 +220,10 @@ msgid "%d hidden"
 msgstr "%d ocultos"
 
 #, c-format
+msgid "%d in"
+msgstr "%d dentro"
+
+#, c-format
 msgid "%d in map"
 msgstr "%d no mapa"
 
@@ -1139,6 +1143,9 @@ msgstr "Acelerar o voo"
 msgid "Account"
 msgstr "Conta"
 
+msgid "Accounts"
+msgstr "Contas"
+
 msgid "Action"
 msgstr "Ação"
 
@@ -1702,6 +1709,9 @@ msgstr "Voltar aos modelos"
 #, c-format
 msgid "Back to the default: %s%s%s"
 msgstr "Voltar ao padrão: %s%s%s"
+
+msgid "Back to the list of rooms, still signed in."
+msgstr "De volta à lista de salas, ainda conectado."
 
 msgid "Backface culling"
 msgstr "Culling de faces traseiras"
@@ -2926,6 +2936,10 @@ msgstr "Excluir nó"
 msgid "Delete path"
 msgstr "Excluir caminho"
 
+#, c-format
+msgid "Delete room %s? The server keeps its files aside."
+msgstr "Excluir a sala %s? O servidor guarda os arquivos à parte."
+
 msgid "Delete selection"
 msgstr "Excluir seleção"
 
@@ -3388,6 +3402,12 @@ msgstr "Cada comando e sua tecla (%s). Mude-os em Preferências > Atalhos."
 
 msgid "Every interior at once"
 msgstr "Todos os interiores de uma vez"
+
+msgid "Everyone here gets an empty map."
+msgstr "Todos aqui recebem um mapa vazio."
+
+msgid "Everyone here gets an empty map; the server keeps a copy of this one."
+msgstr "Todos aqui recebem um mapa vazio; o servidor guarda uma cópia deste."
 
 msgid "Everyone keeps the map as it is now."
 msgstr "Todos ficam com o mapa como está agora."
@@ -4054,6 +4074,9 @@ msgstr "Ir para coordenadas"
 msgid "Go to Coordinates..."
 msgstr "Ir para coordenadas..."
 
+msgid "Go to another room: its map replaces yours here."
+msgstr "Ir para outra sala: o mapa dela substitui o seu aqui."
+
 msgid "Go to coordinates (pasted x, y, z)"
 msgstr "Ir para coordenadas (x, y, z coladas)"
 
@@ -4663,6 +4686,9 @@ msgstr "Convidar como"
 msgid "Invite code"
 msgstr "Código de convite"
 
+msgid "Invite someone"
+msgstr "Convidar alguém"
+
 msgid "Invulnerable"
 msgstr "Invulnerável"
 
@@ -5045,6 +5071,9 @@ msgstr "Carregando texturas e clima"
 
 msgid "Loading vehicles"
 msgstr "Carregando veículos"
+
+msgid "Lobby"
+msgstr "Saguão"
 
 msgid "Local"
 msgstr "Local"
@@ -5784,6 +5813,9 @@ msgstr "Novo mapa"
 msgid "New artboard"
 msgstr "Nova prancheta"
 
+msgid "New empty map for everyone"
+msgstr "Novo mapa vazio para todos"
+
 msgid ""
 "New features before everyone else, and sometimes new bugs.\n"
 "You get the newest of Beta and Production."
@@ -5808,6 +5840,9 @@ msgstr "Novos objetos ficam sobre o objeto sob o cursor."
 
 msgid "New path"
 msgstr "Novo caminho"
+
+msgid "New room..."
+msgstr "Nova sala..."
 
 msgid "New script"
 msgstr "Novo script"
@@ -6244,6 +6279,9 @@ msgstr ""
 msgid "Off: world X, Y and Z. On: the first selected object's axes."
 msgstr "Desligado: X, Y e Z do mundo. Ligado: os eixos do primeiro objeto selecionado."
 
+msgid "Off: your open map becomes the new room's."
+msgstr "Desligado: seu mapa aberto vira o da nova sala."
+
 msgid "Offer it again"
 msgstr "Oferecer de novo"
 
@@ -6297,6 +6335,9 @@ msgstr "Uma distância para todos os objetos, independentemente do modelo, clima
 
 msgid "One message per line; {RRGGBB} changes the colour."
 msgstr "Uma mensagem por linha; {RRGGBB} muda a cor."
+
+msgid "Only an empty room can be deleted."
+msgstr "Só uma sala vazia pode ser excluída."
 
 msgid ""
 "Only for a server whose players' clients draw UTF-8 text:\n"
@@ -7764,6 +7805,9 @@ msgstr "Senha da sala"
 msgid "Rooms"
 msgstr "Salas"
 
+msgid "Rooms, accounts and roles come with haumea-server; hosting from here is one map, one code."
+msgstr "Salas, contas e papéis vêm com o haumea-server; hospedar daqui é um mapa, um código."
+
 msgid "Rotate"
 msgstr "Girar"
 
@@ -8443,6 +8487,9 @@ msgstr "Mostrar teclas pressionadas"
 msgid "Show Radar"
 msgstr "Mostrar radar"
 
+msgid "Show accounts"
+msgstr "Mostrar contas"
+
 msgid "Show activity on Discord"
 msgstr "Mostrar atividade no Discord"
 
@@ -8819,6 +8866,9 @@ msgstr "Começar a rota no NPC"
 
 msgid "Start with a category."
 msgstr "Comece por uma categoria."
+
+msgid "Start with an empty map"
+msgstr "Começar com um mapa vazio"
 
 msgid "Starting"
 msgstr "Iniciando"
@@ -9446,6 +9496,9 @@ msgstr "Os prefabs do workspace são compartilhados com todos que mapeiam para e
 msgid "The workspace's prefabs folder"
 msgstr "A pasta de prefabs do workspace"
 
+msgid "Their role on the whole server (right-click someone under People for this room only)."
+msgstr "O papel no servidor todo (clique com o botão direito em alguém em Pessoas para só esta sala)."
+
 msgid "Theme"
 msgstr "Tema"
 
@@ -9535,6 +9588,9 @@ msgstr "Esta versão não tem download para esta plataforma."
 
 msgid "This release has no notes."
 msgstr "Esta versão não tem notas."
+
+msgid "This room"
+msgstr "Esta sala"
 
 msgid "This run's log. The one before is haumea.previous.log."
 msgstr "O log desta execução. O anterior é haumea.previous.log."
@@ -10369,6 +10425,9 @@ msgstr ""
 msgid "Yellow marks the search results. Your editing selection stays independent."
 msgstr "Amarelo indica os resultados da busca. A seleção para edição é independente."
 
+msgid "Yes"
+msgstr "Sim"
+
 msgid "Yes, send it"
 msgstr "Sim, enviar"
 
@@ -11070,62 +11129,3 @@ msgstr "|  Modelos personalizados: %d"
 
 msgid "~n~ new line, ~r~ ~g~ ~b~ ~y~ ~p~ ~w~ ~l~ colours, ~h~ lighter, _ blank"
 msgstr "~n~ nova linha, ~r~ ~g~ ~b~ ~y~ ~p~ ~w~ ~l~ cores, ~h~ mais claro, _ espaço"
-
-#, c-format
-msgid "%d in"
-msgstr "%d dentro"
-
-msgid "Accounts"
-msgstr "Contas"
-
-msgid "Back to the list of rooms, still signed in."
-msgstr "De volta à lista de salas, ainda conectado."
-
-#, c-format
-msgid "Delete room %s? The server keeps its files aside."
-msgstr "Excluir a sala %s? O servidor guarda os arquivos à parte."
-
-msgid "Everyone here gets an empty map."
-msgstr "Todos aqui recebem um mapa vazio."
-
-msgid "Everyone here gets an empty map; the server keeps a copy of this one."
-msgstr "Todos aqui recebem um mapa vazio; o servidor guarda uma cópia deste."
-
-msgid "Go to another room: its map replaces yours here."
-msgstr "Ir para outra sala: o mapa dela substitui o seu aqui."
-
-msgid "Invite someone"
-msgstr "Convidar alguém"
-
-msgid "Lobby"
-msgstr "Saguão"
-
-msgid "New empty map for everyone"
-msgstr "Novo mapa vazio para todos"
-
-msgid "New room..."
-msgstr "Nova sala..."
-
-msgid "Off: your open map becomes the new room's."
-msgstr "Desligado: seu mapa aberto vira o da nova sala."
-
-msgid "Only an empty room can be deleted."
-msgstr "Só uma sala vazia pode ser excluída."
-
-msgid "Rooms, accounts and roles come with haumea-server; hosting from here is one map, one code."
-msgstr "Salas, contas e papéis vêm com o haumea-server; hospedar daqui é um mapa, um código."
-
-msgid "Show accounts"
-msgstr "Mostrar contas"
-
-msgid "Start with an empty map"
-msgstr "Começar com um mapa vazio"
-
-msgid "Their role on the whole server (right-click someone under People for this room only)."
-msgstr "O papel no servidor todo (clique com o botão direito em alguém em Pessoas para só esta sala)."
-
-msgid "This room"
-msgstr "Esta sala"
-
-msgid "Yes"
-msgstr "Sim"
