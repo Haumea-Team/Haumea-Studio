@@ -54,6 +54,12 @@ const ShortcutDef defs[SC_NUM_ACTIONS] = {
 	{ { "focus_selection", N_("Transform"), N_("Focus the camera on the selection"), SHORTCUT_EDITOR, false }, { { ImGuiKey_F, 0 } } },
 	{ { "go_to_coordinates", N_("Transform"), N_("Go to coordinates (pasted x, y, z)"), SHORTCUT_EDITOR, false }, { { ImGuiKey_J, CTRL } } },
 	{ { "copy_camera_position", N_("Transform"), N_("Copy the camera position"), SHORTCUT_EDITOR, false }, { } },
+	{ { "nudge_left", N_("Transform"), N_("Nudge the selection left (as the camera looks)"), SHORTCUT_VIEWPORT, true }, { { ImGuiKey_LeftArrow, 0 } } },
+	{ { "nudge_right", N_("Transform"), N_("Nudge the selection right (as the camera looks)"), SHORTCUT_VIEWPORT, true }, { { ImGuiKey_RightArrow, 0 } } },
+	{ { "nudge_forward", N_("Transform"), N_("Nudge the selection forward (as the camera looks)"), SHORTCUT_VIEWPORT, true }, { { ImGuiKey_UpArrow, 0 } } },
+	{ { "nudge_back", N_("Transform"), N_("Nudge the selection back (as the camera looks)"), SHORTCUT_VIEWPORT, true }, { { ImGuiKey_DownArrow, 0 } } },
+	{ { "nudge_up", N_("Transform"), N_("Nudge the selection up"), SHORTCUT_VIEWPORT, true }, { { ImGuiKey_UpArrow, ALT } } },
+	{ { "nudge_down", N_("Transform"), N_("Nudge the selection down"), SHORTCUT_VIEWPORT, true }, { { ImGuiKey_DownArrow, ALT } } },
 
 	{ { "outline_objects", N_("View"), N_("Outline every map object"), SHORTCUT_EDITOR, false }, { { ImGuiKey_O, 0 } } },
 	{ { "viewer_camera", N_("View"), N_("Viewer camera (longer draw distance)"), SHORTCUT_EDITOR, false }, { { ImGuiKey_C, 0 } } },

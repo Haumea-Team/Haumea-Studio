@@ -1302,6 +1302,31 @@ MapToolsPanel(void)
 	gPanelFrame = ImGui::GetFrameCount();
 	std::vector<ObjectInst*> objs = selectedObjects();
 	bool lineOpen = false;
+	// The everyday tools first; the specialised ones below "More".
+	if(ImGui::CollapsingHeader(L("Array")))
+		arraySection(objs);
+	if(ImGui::CollapsingHeader(L("Mirror")))
+		mirrorSection(objs);
+	if(ImGui::CollapsingHeader(L("Align & distribute")))
+		alignSection(objs);
+	if(ImGui::CollapsingHeader(L("Along a line"), gPicking ? ImGuiTreeNodeFlags_DefaultOpen : 0)){
+		lineOpen = true;
+		lineSection();
+	}
+	if(!lineOpen)
+		gPicking = false;	// no picking behind a closed section
+}
+
+// The specialised tools, under a "More" divider below the everyday ones.
+void
+MapToolsMorePanel(void)
+{
+	std::vector<ObjectInst*> objs = selectedObjects();
+	ImGui::SeparatorText(_("More"));
+	if(ImGui::CollapsingHeader(L("Duplicate offset"), gCloneOffset.enabled ? ImGuiTreeNodeFlags_DefaultOpen : 0))
+		cloneOffsetSection();
+	if(ImGui::CollapsingHeader(L("Drop & copy as Pawn")))
+		dropSection(objs);
 	if(ImGui::CollapsingHeader(L("Coordinate pin"))){
 		CoordinatePinPanel();
 		if(CoordinatePinOwnsMouse()) gPicking = false;
@@ -1333,20 +1358,4 @@ MapToolsPanel(void)
 		ImGui::SetItemTooltip(_("Moves the attachment root to its family's bounding-box centre while keeping every child's world position and rotation."));
 		ImGui::PopID();
 	}
-	if(ImGui::CollapsingHeader(L("Array")))
-		arraySection(objs);
-	if(ImGui::CollapsingHeader(L("Mirror")))
-		mirrorSection(objs);
-	if(ImGui::CollapsingHeader(L("Duplicate offset"), gCloneOffset.enabled ? ImGuiTreeNodeFlags_DefaultOpen : 0))
-		cloneOffsetSection();
-	if(ImGui::CollapsingHeader(L("Align & distribute")))
-		alignSection(objs);
-	if(ImGui::CollapsingHeader(L("Drop & copy as Pawn")))
-		dropSection(objs);
-	if(ImGui::CollapsingHeader(L("Along a line"), gPicking ? ImGuiTreeNodeFlags_DefaultOpen : 0)){
-		lineOpen = true;
-		lineSection();
-	}
-	if(!lineOpen)
-		gPicking = false;	// no picking behind a closed section
 }

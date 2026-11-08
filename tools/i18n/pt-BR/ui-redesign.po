@@ -1,0 +1,45 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+
+msgid "People (skins)"
+msgstr "Pessoas (skins)"
+
+msgid "Players see at most 1250 m (400 m inside interiors): objects further away only show in the editor."
+msgstr "Os jogadores veem no máximo 1250 m (400 m dentro de interiores): objetos mais longe só aparecem no editor."
+
+msgid "%d skins"
+msgstr "%d skins"
+
+msgid "%d vehicles"
+msgstr "%d veículos"
+
+msgid "History"
+msgstr "Histórico"
+
+msgid "Nudge the selection left (as the camera looks)"
+msgstr "Empurrar a seleção para a esquerda (como a câmera olha)"
+
+msgid "Nudge the selection right (as the camera looks)"
+msgstr "Empurrar a seleção para a direita (como a câmera olha)"
+
+msgid "Nudge the selection forward (as the camera looks)"
+msgstr "Empurrar a seleção para a frente (como a câmera olha)"
+
+msgid "Nudge the selection back (as the camera looks)"
+msgstr "Empurrar a seleção para trás (como a câmera olha)"
+
+msgid "Nudge the selection up"
+msgstr "Empurrar a seleção para cima"
+
+msgid "Nudge the selection down"
+msgstr "Empurrar a seleção para baixo"
+
+msgid "Centered"
+msgstr "Centralizado"
+
+msgid "Write coordinates relative to the export's centre (its lowest point for height),\nso the code can be placed anywhere by adding a position. Removed GTA buildings keep their real coordinates."
+msgstr "Grava as coordenadas relativas ao centro da exportação (o ponto mais baixo para a altura),\npara o código poder ser colocado em qualquer lugar somando uma posição. Prédios do GTA removidos mantêm as coordenadas reais."
+
+msgid "Coordinates are relative to %.2f, %.2f, %.2f"
+msgstr "As coordenadas são relativas a %.2f, %.2f, %.2f"

@@ -26,6 +26,9 @@ wait 5
 assert objects == 4
 shortcut window_view
 wait 5
+# Debug drawing sits under View's Advanced fold.
+click_item 'View' 'Advanced'
+wait 3
 click_item 'View' 'Object bounds'
 assert view.bounds == 1
 wait 3

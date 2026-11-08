@@ -208,11 +208,6 @@ msgstr "%s já usa este nome."
 msgid "%s isn't next to the editor. It ships with every release, and is in the source at https://github.com/itsneufox/Haumea-Studio."
 msgstr "%s não está junto do editor. Ele vem com toda versão e está no código-fonte em https://github.com/itsneufox/Haumea-Studio."
 
-#: tools/haumea/gui.cpp:12112
-#, c-format
-msgid "%s%s  |  Objects: %d%s  |  %.0f FPS"
-msgstr "%s%s  |  Objetos: %d%s  |  %.0f FPS"
-
 #: tools/haumea/gui.cpp:10083
 #, c-format
 msgid "%s, %d instance(s)"

@@ -264,6 +264,7 @@ InteriorsWindow(bool *open)
 		ImGui::End();
 		return;
 	}
+	UiFitItemsToPanel();
 	if(!gInteriorsLoaded)
 		loadInteriors();
 	static char filter[64];

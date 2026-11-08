@@ -228,6 +228,10 @@ msgid "%d in the map (read-only)"
 msgstr "%d no mapa (somente leitura)"
 
 #, c-format
+msgid "%d in, you'd be a %s"
+msgstr "%d dentro, você seria %s"
+
+#, c-format
 msgid "%d item(s) are set to show only inside a dynamic area, but native code shows them everywhere. Save as Streamer code."
 msgstr "%d item(ns) estão configurados para aparecer só dentro de uma área dinâmica, mas o código nativo os mostra em todo lugar. Salve como código Streamer."
 
@@ -250,6 +254,10 @@ msgstr "%d linha(s) de material, anexo ou interior se referiam a objetos que for
 #, c-format
 msgid "%d models | %d instances"
 msgstr "%d modelos | %d instâncias"
+
+#, c-format
+msgid "%d ms"
+msgstr "%d ms"
 
 #, c-format
 msgid "%d object(s) explode when shot or hit (object.dat), such as barrels and petrol pumps. Each player can blow them up on their own screen."
@@ -360,6 +368,10 @@ msgid "%d similar models"
 msgstr "%d modelos semelhantes"
 
 #, c-format
+msgid "%d skins"
+msgstr "%d skins"
+
+#, c-format
 msgid "%d text(s) with accents or symbols are saved as UTF-8, but SA-MP and open.mp clients draw Windows-1252, so they show garbled (\"Ã§\" for \"ç\"). Save As > Windows-1252 fixes it."
 msgstr "%d texto(s) com acentos ou símbolos são salvos em UTF-8, mas os clientes SA-MP e open.mp desenham em Windows-1252, então aparecem embaralhados (\"Ã§\" no lugar de \"ç\"). Salvar como > Windows-1252 resolve."
 
@@ -386,6 +398,10 @@ msgstr "%d árvore(s) ou palmeira(s) inclinadas em X ou Y: o jogo as balança co
 #, c-format
 msgid "%d vehicle ids (%d of them for trains, 4 each), over the limit of %d."
 msgstr "%d IDs de veículo (%d deles para trens, 4 cada), acima do limite de %d."
+
+#, c-format
+msgid "%d vehicles"
+msgstr "%d veículos"
 
 #, c-format
 msgid "%d vehicles, %d actors streamed  |  virtual world %d, interior %d"
@@ -580,6 +596,10 @@ msgid "%s is attached to an object that was deleted."
 msgstr "%s está preso a um objeto que foi excluído."
 
 #, c-format
+msgid "%s is loading another map for everyone..."
+msgstr "%s está carregando outro mapa para todos..."
+
+#, c-format
 msgid "%s is set to show only inside area \"%s\", which is not in the map: it is written without one and shows everywhere."
 msgstr "%s está configurado para aparecer só dentro da área \"%s\", que não está no mapa: é escrito sem ela e aparece em todo lugar."
 
@@ -650,10 +670,6 @@ msgstr "%s anda pelo arquivo de nodes %d, que não está no workspace (%s). O op
 #, c-format
 msgid "%s won't be offered again."
 msgstr "%s não será oferecida de novo."
-
-#, c-format
-msgid "%s%s  |  Objects: %d%s  |  %.0f FPS"
-msgstr "%s%s  |  Objetos: %d%s  |  %.0f FPS"
 
 #, c-format
 msgid "%s's group has %s, which Windows-1252 (what SA-MP and open.mp clients draw) doesn't have: it is saved as '?'."
@@ -1030,6 +1046,9 @@ msgstr "8  Some sem efeito"
 msgid "8 - Unknown"
 msgstr "8 - Desconhecido"
 
+msgid "8 characters or more. You sign in with it from now on; the invite is used up."
+msgstr "8 caracteres ou mais. Você entra com ela daqui em diante; o convite é usado."
+
 msgid "9  Automatic (normal, finish at the end)"
 msgstr "9  Automático (normal, chegada no fim)"
 
@@ -1054,6 +1073,9 @@ msgstr ""
 
 msgid "A driver recording: the NPC must be in a vehicle"
 msgstr "Uma gravação de motorista: o NPC precisa estar em um veículo"
+
+msgid "A favourite: kept, at the top. Click to make it a recent one."
+msgstr "Um favorito: fica guardado, no topo. Clique para torná-lo um recente."
 
 #, c-format
 msgid ""
@@ -1086,6 +1108,9 @@ msgstr "Um jogador vê no máximo 1024 gang zones. Use células maiores ou menos
 msgid "A polygon needs at least 3 corners."
 msgstr "Um polígono precisa de pelo menos 3 cantos."
 
+msgid "A server with accounts: your name and password there."
+msgstr "Um servidor com contas: seu nome e senha nele."
+
 msgid "A texture contains"
 msgstr "Uma textura contém"
 
@@ -1099,6 +1124,9 @@ msgstr "Um bonde: sem vagões."
 msgid "A vehicle colour, 0-255. -1 picks one at random when it spawns."
 msgstr "Uma cor de veículo, 0-255. -1 escolhe uma aleatória quando ele aparece."
 
+msgid "AI agents here"
+msgstr "Agentes de IA aqui"
+
 msgid "AK-47"
 msgstr "AK-47"
 
@@ -1107,6 +1135,9 @@ msgstr "Absoluto"
 
 msgid "Accelerate fly movement"
 msgstr "Acelerar o voo"
+
+msgid "Account"
+msgstr "Conta"
 
 msgid "Action"
 msgstr "Ação"
@@ -1225,6 +1256,12 @@ msgstr "Adiciona a este mapa os objetos, texturas e prédios removidos de outro 
 
 msgid "Adjust FOV zoom"
 msgstr "Ajustar o zoom do FOV"
+
+msgid "Admin"
+msgstr "Administração"
+
+msgid "Admin password"
+msgstr "Senha de administrador"
 
 msgid "Adrenaline"
 msgstr "Adrenalina"
@@ -1363,6 +1400,9 @@ msgstr "Ammu-Nation"
 
 msgid "Ammu-Nation interior (0.3.7-R2)"
 msgstr "Interior da Ammu-Nation (0.3.7-R2)"
+
+msgid "An AI agent (Namaka), not a person."
+msgstr "Um agente de IA (Namaka), não uma pessoa."
 
 #, c-format
 msgid ""
@@ -2013,6 +2053,9 @@ msgstr "Centralizar objeto pai"
 msgid "Center the target and fit it in view."
 msgstr "Centraliza o alvo e ajusta seu tamanho à visualização."
 
+msgid "Centered"
+msgstr "Centralizado"
+
 msgid "Centre"
 msgstr "Centro"
 
@@ -2122,6 +2165,15 @@ msgstr "Escolher TXD..."
 
 msgid "Choose a TXD, preview its textures, then click one to assign it to this material slot."
 msgstr "Escolha um TXD, veja as texturas dele e clique em uma para atribuí-la a este slot de material."
+
+msgid "Choose a name"
+msgstr "Escolha um nome"
+
+msgid "Choose a password"
+msgstr "Escolha uma senha"
+
+msgid "Choose a password of 8 characters or more."
+msgstr "Escolha uma senha de 8 caracteres ou mais."
 
 msgid "Choose a separate script file. Saving the map regenerates its Pawn file."
 msgstr "Escolha um arquivo de script separado. Salvar o mapa gera novamente o arquivo Pawn dele."
@@ -2460,6 +2512,10 @@ msgid "Coordinate pin"
 msgstr "Pin de coordenadas"
 
 #, c-format
+msgid "Coordinates are relative to %.2f, %.2f, %.2f"
+msgstr "As coordenadas são relativas a %.2f, %.2f, %.2f"
+
+#, c-format
 msgid "Copied %d instance(s) | %s: paste at camera | %s: paste in place"
 msgstr "%d instância(s) copiada(s) | %s: colar na câmera | %s: colar no lugar"
 
@@ -2626,6 +2682,9 @@ msgstr "Não foi possível mover os textdraws: %s"
 msgid "Could not open %s"
 msgstr "Não foi possível abrir %s"
 
+msgid "Could not open that map: you left the session with the map you had."
+msgstr "Não foi possível abrir esse mapa: você saiu da sessão com o mapa que tinha."
+
 msgid "Could not open the script."
 msgstr "Não foi possível abrir o script."
 
@@ -2648,6 +2707,9 @@ msgstr "Não foi possível salvar os textdraws: %s"
 
 msgid "Could not start omp-server"
 msgstr "Não foi possível iniciar o omp-server"
+
+msgid "Could not start the shell."
+msgstr "Não foi possível iniciar o shell."
 
 #, c-format
 msgid "Could not write %s"
@@ -2835,6 +2897,9 @@ msgstr "Encontro: comida"
 
 msgid "Dawn"
 msgstr "Amanhecer"
+
+msgid "Days"
+msgstr "Dias"
 
 msgid "Dead End"
 msgstr "Sem saída"
@@ -3024,6 +3089,9 @@ msgstr "Tamanho dos pontos"
 
 msgid "Dots"
 msgstr "Pontos"
+
+msgid "Double-click: look from where they were when they wrote this."
+msgstr "Clique duas vezes: veja de onde a pessoa estava quando escreveu isto."
 
 msgid "Down"
 msgstr "Descer"
@@ -3727,6 +3795,9 @@ msgstr "Área ocupada"
 msgid "Footprint (m²)"
 msgstr "Área ocupada (m²)"
 
+msgid "For a locked room (admins don't need it)."
+msgstr "Para uma sala trancada (administradores não precisam)."
+
 #, c-format
 msgid ""
 "For any other MCP client: add this to its mcpServers.\n"
@@ -3747,6 +3818,9 @@ msgstr "Para as ruas do jogo, escolha \"Andar pelos nós\" (Janelas > Nós, %s).
 
 msgid "For the layout and the presets: the board's guides go first."
 msgstr "Para o layout e as predefinições: as guias da prancheta são removidas antes."
+
+msgid "Forget it"
+msgstr "Esquecer"
 
 #, c-format
 msgid "Frame %d  %.1f km/h  Health %.0f  Armour %.0f  Weapon %d"
@@ -4119,6 +4193,9 @@ msgstr "Haumea Studio é software livre sob a Licença Pública Geral GNU, vers�
 msgid "Haumea can't find its own folder."
 msgstr "O Haumea não encontra a própria pasta."
 
+msgid "Haumea remembers it, and won't join if another server answers here later."
+msgstr "O Haumea a lembra e não entra se outro servidor responder aqui depois."
+
 msgid "Haumea starts listening for Namaka from its next start."
 msgstr "O Haumea começa a escutar o Namaka na próxima vez que abrir."
 
@@ -4227,6 +4304,9 @@ msgstr "Destacar resultados"
 
 msgid "Highway"
 msgstr "Rodovia"
+
+msgid "History"
+msgstr "Histórico"
 
 msgid "Hit"
 msgstr "Pancada"
@@ -4465,6 +4545,10 @@ msgstr "Em unidades da tela: 0 a 640 na horizontal, 0 a 448 na vertical."
 msgid "In game: SetPlayerTime(playerid, %d, %d); SetPlayerWeather(playerid, %d);"
 msgstr "No jogo: SetPlayerTime(playerid, %d, %d); SetPlayerWeather(playerid, %d);"
 
+#, c-format
+msgid "In room %s on %s, as %s"
+msgstr "Na sala %s em %s, como %s"
+
 msgid "In the open map"
 msgstr "No mapa aberto"
 
@@ -4573,6 +4657,12 @@ msgstr "Na pasta qawno/include (ou pawno/include) do workspace, onde o pawncc o 
 msgid "Invalid or too long Pawn map path"
 msgstr "Caminho do mapa Pawn inválido ou longo demais"
 
+msgid "Invite as"
+msgstr "Convidar como"
+
+msgid "Invite code"
+msgstr "Código de convite"
+
 msgid "Invulnerable"
 msgstr "Invulnerável"
 
@@ -4607,6 +4697,12 @@ msgstr "Toca quando um jogador chega a esta distância."
 msgid "It runs one way with an angle over 180 and the other way up to 180. Dragging slides it along the track (hold Alt to move it freely)."
 msgstr "Ele anda num sentido com ângulo acima de 180 e no outro até 180. Arrastar o desliza pelo trilho (segure Alt para movê-lo livremente)."
 
+msgid "Its account's: the server knows it from the agent's token."
+msgstr "Da conta dele: o servidor sabe pelo token do agente."
+
+msgid "Its password is kept on this computer."
+msgstr "A senha dele fica guardada neste computador."
+
 msgid "Its player name, shown over its head and in the player list."
 msgstr "O nome de jogador dele, mostrado sobre a cabeça e na lista de jogadores."
 
@@ -4638,6 +4734,9 @@ msgstr "Katana"
 msgid "Keep dragged objects on the ground surface."
 msgstr "Manter os objetos arrastados na superfície do chão."
 
+msgid "Keep it as a favourite"
+msgstr "Guardar como favorito"
+
 msgid "Keep original"
 msgstr "Manter o original"
 
@@ -4658,6 +4757,9 @@ msgstr "Mantém separados os objetos com configurações, texturas ou variáveis
 
 msgid "Keeps the objects where they are and stops the path moving them."
 msgstr "Mantém os objetos onde estão e impede que o caminho os mova."
+
+msgid "Kept in your Haumea settings on this computer, for servers you star."
+msgstr "Guardada nas configurações do Haumea neste computador, para os servidores que você marcar com estrela."
 
 msgid "Key"
 msgstr "Tecla"
@@ -4925,6 +5027,9 @@ msgstr "Escutando o Namaka em %s"
 msgid "Load"
 msgstr "Carregar"
 
+msgid "Load a map for everyone..."
+msgstr "Carregar um mapa para todos..."
+
 msgid "Load prefab in front of camera"
 msgstr "Carregar prefab na frente da câmera"
 
@@ -4961,6 +5066,9 @@ msgstr "Travar guias"
 
 msgid "Lock or unlock the group"
 msgstr "Travar ou destravar o grupo"
+
+msgid "Lock this room"
+msgstr "Trancar esta sala"
 
 msgid "Locked"
 msgstr "Travado"
@@ -5047,8 +5155,22 @@ msgstr "Madd Dogg"
 msgid "Main"
 msgstr "Principal"
 
+#, c-format
+msgid "Make a %s everywhere"
+msgstr "Tornar %s em todo lugar"
+
+#, c-format
+msgid "Make a %s here"
+msgstr "Tornar %s aqui"
+
 msgid "Make an NPC walk a route"
 msgstr "Faço um NPC andar por uma rota"
+
+msgid "Make an invite code"
+msgstr "Criar um código de convite"
+
+msgid "Make room"
+msgstr "Criar sala"
 
 msgid "Make the layout"
 msgstr "Criar o layout"
@@ -5095,6 +5217,9 @@ msgstr "Código do mapa"
 
 msgid "Map elements"
 msgstr "Elementos do mapa"
+
+msgid "Map for everyone"
+msgstr "Mapa para todos"
 
 msgid "Map icon"
 msgstr "Map icon"
@@ -5833,6 +5958,9 @@ msgstr "Nenhum mapa recente"
 msgid "No reciprocal link found (one-way connection)."
 msgstr "Nenhuma ligação recíproca encontrada (conexão de mão única)."
 
+msgid "No rooms yet."
+msgstr "Ainda não há salas."
+
 msgid "No server TXDs found."
 msgstr "Nenhum TXD encontrado no servidor."
 
@@ -5966,6 +6094,24 @@ msgstr "Nada foi importado."
 
 msgid "Notifications"
 msgstr "Notificações"
+
+msgid "Nudge the selection back (as the camera looks)"
+msgstr "Empurrar a seleção para trás (como a câmera olha)"
+
+msgid "Nudge the selection down"
+msgstr "Empurrar a seleção para baixo"
+
+msgid "Nudge the selection forward (as the camera looks)"
+msgstr "Empurrar a seleção para a frente (como a câmera olha)"
+
+msgid "Nudge the selection left (as the camera looks)"
+msgstr "Empurrar a seleção para a esquerda (como a câmera olha)"
+
+msgid "Nudge the selection right (as the camera looks)"
+msgstr "Empurrar a seleção para a direita (como a câmera olha)"
+
+msgid "Nudge the selection up"
+msgstr "Empurrar a seleção para cima"
 
 msgid "Number"
 msgstr "Quantidade"
@@ -6435,6 +6581,9 @@ msgstr ""
 "Partes dos objetos abaixo da superfície da água (a base larga de uma\n"
 "rocha, as pernas de um píer) não são desenhadas, pois o radar mostra a água ali."
 
+msgid "Password"
+msgstr "Senha"
+
 msgid "Paste"
 msgstr "Colar"
 
@@ -6491,6 +6640,9 @@ msgstr "Pausar"
 msgid "Pawn map saving is only supported for GTA San Andreas"
 msgstr "Salvar mapas Pawn só é suportado no GTA San Andreas"
 
+msgid "Pawn maps"
+msgstr "Mapas Pawn"
+
 msgid ""
 "Pawn variable for this object, e.g. bank_door. Leave empty and Haumea\n"
 "names it only when materials or attachments need a handle."
@@ -6541,6 +6693,9 @@ msgstr ""
 
 msgid "People"
 msgstr "Pessoas"
+
+msgid "People (skins)"
+msgstr "Pessoas (skins)"
 
 msgid "Per player"
 msgstr "Por jogador"
@@ -6761,6 +6916,9 @@ msgstr "PlayerPlaySound. Qualquer ID de data/AudioEvents.txt do jogo funciona."
 
 msgid "Players can click it while SelectTextDraw is on (OnPlayerClickTextDraw)."
 msgstr "Os jogadores podem clicar nele enquanto SelectTextDraw está ativo (OnPlayerClickTextDraw)."
+
+msgid "Players see at most 1250 m (400 m inside interiors): objects further away only show in the editor."
+msgstr "Os jogadores veem no máximo 1250 m (400 m dentro de interiores): objetos mais longe só aparecem no editor."
 
 #, c-format
 msgid "Plays %s / %s"
@@ -7309,6 +7467,9 @@ msgstr "Recarregar caminhos do SA"
 msgid "Reload map"
 msgstr "Recarregar mapa"
 
+msgid "Remember the password for favourites"
+msgstr "Lembrar a senha dos favoritos"
+
 msgid "Remove"
 msgstr "Remover"
 
@@ -7327,6 +7488,9 @@ msgstr "Remover dos favoritos"
 
 msgid "Remove from recent"
 msgstr "Remover dos recentes"
+
+msgid "Remove from the room"
+msgstr "Remover da sala"
 
 msgid "Remove last"
 msgstr "Remover último"
@@ -7398,6 +7562,13 @@ msgstr "Substitua este documento pelo código gerado do mapa. Edições manuais 
 
 msgid "Replace this group's zones"
 msgstr "Substituir as zonas deste grupo"
+
+msgid ""
+"Replaces the session's map with one from a file, for everyone in it.\n"
+"Unsaved work in the session is lost; the server keeps a copy of the session as it was."
+msgstr ""
+"Substitui o mapa da sessão por um de um arquivo, para todos nela.\n"
+"O trabalho não salvo na sessão é perdido; o servidor guarda uma cópia da sessão como estava."
 
 msgid "Replay particles"
 msgstr "Reiniciar partículas"
@@ -7481,8 +7652,8 @@ msgstr "Restaura o FOV padrão da câmera (70°)."
 msgid "Restored"
 msgstr "Restaurados"
 
-msgid "Restores the browser on the left and Object Info on the right."
-msgstr "Restaura o navegador à esquerda e as informações do objeto à direita."
+msgid "Restores the panels to one column on the right: the browser above Object Info."
+msgstr "Restaura os painéis numa coluna à direita: o navegador acima das informações do objeto."
 
 msgid "Return to map"
 msgstr "Voltar ao mapa"
@@ -7580,6 +7751,15 @@ msgstr "Voltou para %s: reinicie o Haumea para usá-la"
 
 msgid "Rooftop"
 msgstr "Terraço"
+
+msgid "Room"
+msgstr "Sala"
+
+msgid "Room password"
+msgstr "Senha da sala"
+
+msgid "Rooms"
+msgstr "Salas"
 
 msgid "Rotate"
 msgstr "Girar"
@@ -7916,6 +8096,9 @@ msgstr "Cano serrado"
 msgid "Sawn-off shotgun"
 msgstr "Escopeta de cano serrado"
 
+msgid "Say something (@name to mention someone)"
+msgstr "Diga algo (@nome para mencionar alguém)"
+
 msgid "Scale"
 msgstr "Escala"
 
@@ -8129,6 +8312,9 @@ msgstr "Enviar um ping diário de uso"
 msgid "Send a report?"
 msgstr "Enviar um relatório?"
 
+msgid "Send it to them privately: it makes one account."
+msgstr "Envie em particular: ele cria uma conta."
+
 msgid "Sending..."
 msgstr "Enviando..."
 
@@ -8140,6 +8326,10 @@ msgstr "Servidor"
 
 msgid "Server TXDs"
 msgstr "TXDs do servidor"
+
+#, c-format
+msgid "Server fingerprint: %s"
+msgstr "Impressão digital do servidor: %s"
 
 msgid "Server folder"
 msgstr "Pasta do servidor"
@@ -8159,6 +8349,12 @@ msgstr "Pacote do servidor"
 #, c-format
 msgid "Server: %s"
 msgstr "Servidor: %s"
+
+msgid "Servers"
+msgstr "Servidores"
+
+msgid "Session code"
+msgstr "Código da sessão"
 
 #, c-format
 msgid "Session code: %s"
@@ -8348,6 +8544,10 @@ msgstr "Mostra para onde as cópias vão antes de aplicar."
 msgid "Side offset"
 msgstr "Deslocamento lateral"
 
+#, c-format
+msgid "Signed in to %s"
+msgstr "Conectado a %s"
+
 msgid "Signs and statues"
 msgstr "Placas e estátuas"
 
@@ -8489,6 +8689,9 @@ msgstr ""
 msgid "Some characters cannot be saved as Windows-1252. Choose UTF-8."
 msgstr "Alguns caracteres não podem ser salvos em Windows-1252. Escolha UTF-8."
 
+msgid "Someone hosting from Haumea, or a server with one password for everyone."
+msgstr "Alguém hospedando pelo Haumea, ou um servidor com uma senha para todos."
+
 msgid "Something went wrong: click for the Log"
 msgstr "Algo deu errado: clique para ver o Log"
 
@@ -8595,6 +8798,9 @@ msgstr "Iniciar pincel"
 
 msgid "Start a map for my server"
 msgstr "Começo um mapa para o meu servidor"
+
+msgid "Start again"
+msgstr "Iniciar de novo"
 
 msgid "Start again from the game's own nodes."
 msgstr "Recomeça a partir dos nós do próprio jogo."
@@ -8839,6 +9045,9 @@ msgstr "Gás lacrimogêneo"
 msgid "Tec-9"
 msgstr "Tec-9"
 
+msgid "Terminal"
+msgstr "Terminal"
+
 msgid "Test in game"
 msgstr "Testar no jogo"
 
@@ -9042,6 +9251,9 @@ msgstr "Os campos mostram o último clicado."
 msgid "The first selected object goes where you click."
 msgstr "O primeiro objeto selecionado vai para onde você clica."
 
+msgid "The first time on a server with accounts: the code you were sent makes your account."
+msgstr "A primeira vez em um servidor com contas: o código que você recebeu cria sua conta."
+
 msgid "The game object whose settings the new model takes (19379 is a common choice)."
 msgstr "O objeto do jogo cujas configurações o novo modelo herda (19379 é uma escolha comum)."
 
@@ -9153,12 +9365,21 @@ msgstr "Não foi possível carregar o TXD do servidor selecionado."
 msgid "The selection contains read-only reference objects."
 msgstr "A seleção contém objetos de referência que não podem ser editados."
 
+msgid "The server keeps a copy of the map whenever it's saved."
+msgstr "O servidor guarda uma cópia do mapa sempre que ele é salvo."
+
 msgid ""
 "The server makes at most 1024 gang zones. Use bigger cells, fewer colours,\n"
 "or streamed zones."
 msgstr ""
 "O servidor cria no máximo 1024 gang zones. Use células maiores, menos cores\n"
 "ou zonas streamed."
+
+msgid "The server only lets who knows it load another map for everyone."
+msgstr "O servidor só deixa quem a conhece carregar outro mapa para todos."
+
+msgid "The server's signature didn't check out: something may be between you and it. Not joined."
+msgstr "A assinatura do servidor não confere: pode haver algo entre você e ele. Não entrou."
 
 msgid "The session closed the connection."
 msgstr "A sessão fechou a conexão."
@@ -9172,6 +9393,10 @@ msgstr "A sessão terminou."
 msgid "The session sent something this version can't read."
 msgstr "A sessão enviou algo que esta versão não consegue ler."
 
+#, c-format
+msgid "The shell closed (exit code %d)."
+msgstr "O shell foi encerrado (código de saída %d)."
+
 msgid "The sprites it is made of"
 msgstr "Os sprites que a compõem"
 
@@ -9180,6 +9405,9 @@ msgstr "A tela inicial: workspaces, seus mapas e a pasta do jogo."
 
 msgid "The stretch of the path that gets objects, from its first point to its last."
 msgstr "O trecho do caminho que recebe objetos, do primeiro ao último ponto."
+
+msgid "The terminal needs Windows 10 version 1809 or later."
+msgstr "O terminal requer o Windows 10 versão 1809 ou posterior."
 
 msgid "The tested releases everyone gets."
 msgstr "As versões testadas que todo mundo recebe."
@@ -9307,6 +9535,19 @@ msgstr "Esta versão não tem notas."
 
 msgid "This run's log. The one before is haumea.previous.log."
 msgstr "O log desta execução. O anterior é haumea.previous.log."
+
+#, c-format
+msgid "This server isn't the one you joined before (its fingerprint was %s, now %s). Something may be between you and it. If its owner set it up again, forget it in Servers and join again."
+msgstr "Este servidor não é o que você entrou antes (a impressão digital era %s, agora %s). Pode haver algo entre você e ele. Se o dono o reinstalou, esqueça-o em Servidores e entre de novo."
+
+msgid "This session doesn't let a map replace its own."
+msgstr "Esta sessão não deixa um mapa substituir o dela."
+
+msgid "This session is newer than your Haumea: update Haumea."
+msgstr "Esta sessão é mais nova que o seu Haumea: atualize o Haumea."
+
+msgid "This session's server or host is older than your Haumea: it needs updating."
+msgstr "O servidor ou anfitrião desta sessão é mais antigo que o seu Haumea: precisa ser atualizado."
 
 msgid "Throw a satchel"
 msgstr "Arremessar uma carga explosiva"
@@ -9601,6 +9842,9 @@ msgstr "Desligar"
 msgid "Unlinked the nodes"
 msgstr "Nós desligados"
 
+msgid "Unlock"
+msgstr "Destrancar"
+
 msgid "Unpin"
 msgstr "Desafixar"
 
@@ -9709,6 +9953,9 @@ msgstr "Usar este workspace"
 
 msgid "User guide"
 msgstr "Guia do usuário"
+
+msgid "Uses"
+msgstr "Usos"
 
 #, c-format
 msgid "Using provided COL: %s"
@@ -9977,6 +10224,9 @@ msgstr "Enquanto o Namaka trabalha no editor, uma linha sobre a vista 3D diz o q
 msgid "White square"
 msgstr "Quadrado branco"
 
+msgid "Whose it says it is: without accounts nothing proves it."
+msgstr "De quem ele diz ser: sem contas, nada o comprova."
+
 msgid "Widescreen Fix"
 msgstr "Widescreen Fix"
 
@@ -10056,6 +10306,13 @@ msgstr ""
 "Arredondada para passos de 0,125 unidade (1/8). Os nós não podem cruzar os limites das áreas."
 
 msgid ""
+"Write coordinates relative to the export's centre (its lowest point for height),\n"
+"so the code can be placed anywhere by adding a position. Removed GTA buildings keep their real coordinates."
+msgstr ""
+"Grava as coordenadas relativas ao centro da exportação (o ponto mais baixo para a altura),\n"
+"para o código poder ser colocado em qualquer lugar somando uma posição. Prédios do GTA removidos mantêm as coordenadas reais."
+
+msgid ""
 "Writes a copy of the open map to the autosave folder in Haumea's config\n"
 "folder while it has unsaved changes. File > Recover Autosave opens them.\n"
 "The map file itself is only written by Save."
@@ -10123,6 +10380,12 @@ msgstr "Você fica com o mapa como está agora; salve-o para manter uma cópia."
 msgid "You'll move to Production with the next production release newer than %s."
 msgstr "Você vai passar para a Produção na próxima versão de produção mais nova que %s."
 
+msgid "You're a viewer here: you can look around and chat."
+msgstr "Você é observador aqui: pode olhar e conversar."
+
+msgid "Your account's name on this server: 2-31 letters, digits, _ - or ."
+msgstr "O nome da sua conta neste servidor: 2-31 letras, dígitos, _ - ou ."
+
 msgid "Your changes are lost if you don't save them."
 msgstr "Suas alterações serão perdidas se você não salvá-las."
 
@@ -10140,6 +10403,10 @@ msgid "Your gamemode includes it and calls _CreateTextDraws and _ShowTextDraws(p
 msgstr "Seu gamemode o inclui e chama _CreateTextDraws e _ShowTextDraws(playerid)."
 
 #, c-format
+msgid "Your map is now everyone's in %s"
+msgstr "Seu mapa agora é o de todos em %s"
+
+#, c-format
 msgid "Your map started the session on %s"
 msgstr "O seu mapa começou a sessão em %s"
 
@@ -10148,6 +10415,12 @@ msgstr "Seus mapas"
 
 msgid "Your name"
 msgstr "Seu nome"
+
+msgid "Your open map becomes the new room's."
+msgstr "Seu mapa aberto vira o da nova sala."
+
+msgid "Your own shell, inside Haumea: run any AI assistant, a server or anything else."
+msgstr "Seu próprio shell, dentro do Haumea: execute qualquer assistente de IA, um servidor ou qualquer outra coisa."
 
 #, c-format
 msgid "Your router didn't open the port (%s)."
@@ -10204,6 +10477,9 @@ msgstr "um sprite precisa do texto como TXD:textura."
 msgid "actors"
 msgstr "atores"
 
+msgid "admin"
+msgstr "administrador"
+
 msgid "all"
 msgstr "todas"
 
@@ -10233,6 +10509,12 @@ msgstr "traseiro direito"
 
 msgid "box"
 msgstr "caixa"
+
+msgid "builder"
+msgstr "construtor"
+
+msgid "builders"
+msgstr "construtores"
 
 #, c-format
 msgid "can't create %s"
@@ -10342,6 +10624,9 @@ msgstr "editando textdraws"
 msgid "empty text can crash 0.3.7 clients; use \"_\" for nothing."
 msgstr "texto vazio pode travar clientes 0.3.7; use \"_\" para nada."
 
+msgid "empty: pick from the list"
+msgstr "vazio: escolha da lista"
+
 msgid "fit to at least one zone"
 msgstr "ajuste para pelo menos uma zona"
 
@@ -10439,6 +10724,9 @@ msgstr "dê nome ao grupo onde as zonas ficam"
 msgid "new path name"
 msgstr "nome do novo caminho"
 
+msgid "new room's name"
+msgstr "nome da nova sala"
+
 msgid "no"
 msgstr "não"
 
@@ -10481,6 +10769,9 @@ msgstr "nenhuma: checkpoints simples"
 
 msgid "not a loose modloader file"
 msgstr "não é um arquivo solto do modloader"
+
+msgid "not allowed"
+msgstr "não permitidos"
 
 msgid "nothing to run yet; use Test in game first"
 msgstr "nada para rodar ainda; use Testar no jogo antes"
@@ -10553,6 +10844,9 @@ msgstr "abrindo um mapa"
 
 msgid "other sound"
 msgstr "outro som"
+
+msgid "owner"
+msgstr "dono"
 
 msgid "per player"
 msgstr "por jogador"
@@ -10745,6 +11039,16 @@ msgid "vehicle nodes link only to vehicle nodes, ped nodes to ped nodes"
 msgstr "nós de veículo só se ligam a nós de veículo, e de pedestre a de pedestre"
 
 #, c-format
+msgid "via %s"
+msgstr "via %s"
+
+msgid "viewer"
+msgstr "observador"
+
+msgid "viewers"
+msgstr "observadores"
+
+#, c-format
 msgid "walks NODES%d.DAT from point %d"
 msgstr "anda pelo NODES%d.DAT a partir do ponto %d"
 
@@ -10766,258 +11070,3 @@ msgstr "|  Modelos personalizados: %d"
 
 msgid "~n~ new line, ~r~ ~g~ ~b~ ~y~ ~p~ ~w~ ~l~ colours, ~h~ lighter, _ blank"
 msgstr "~n~ nova linha, ~r~ ~g~ ~b~ ~y~ ~p~ ~w~ ~l~ cores, ~h~ mais claro, _ espaço"
-
-msgid "Could not start the shell."
-msgstr "Não foi possível iniciar o shell."
-
-msgid "Start again"
-msgstr "Iniciar de novo"
-
-msgid "Terminal"
-msgstr "Terminal"
-
-#, c-format
-msgid "The shell closed (exit code %d)."
-msgstr "O shell foi encerrado (código de saída %d)."
-
-msgid "The terminal needs Windows 10 version 1809 or later."
-msgstr "O terminal requer o Windows 10 versão 1809 ou posterior."
-
-msgid "Your own shell, inside Haumea: run any AI assistant, a server or anything else."
-msgstr "Seu próprio shell, dentro do Haumea: execute qualquer assistente de IA, um servidor ou qualquer outra coisa."
-
-#, c-format
-msgid "%s is loading another map for everyone..."
-msgstr "%s está carregando outro mapa para todos..."
-
-#, c-format
-msgid "Your map is now everyone's in %s"
-msgstr "Seu mapa agora é o de todos em %s"
-
-msgid "This session doesn't let a map replace its own."
-msgstr "Esta sessão não deixa um mapa substituir o dela."
-
-msgid "Could not open that map: you left the session with the map you had."
-msgstr "Não foi possível abrir esse mapa: você saiu da sessão com o mapa que tinha."
-
-msgid "An AI agent (Namaka), not a person."
-msgstr "Um agente de IA (Namaka), não uma pessoa."
-
-msgid "Double-click: look from where they were when they wrote this."
-msgstr "Clique duas vezes: veja de onde a pessoa estava quando escreveu isto."
-
-msgid "Say something (@name to mention someone)"
-msgstr "Diga algo (@nome para mencionar alguém)"
-
-msgid "Admin password"
-msgstr "Senha de administrador"
-
-msgid "The server only lets who knows it load another map for everyone."
-msgstr "O servidor só deixa quem a conhece carregar outro mapa para todos."
-
-msgid "Load a map for everyone..."
-msgstr "Carregar um mapa para todos..."
-
-msgid "Map for everyone"
-msgstr "Mapa para todos"
-
-msgid "Pawn maps"
-msgstr "Mapas Pawn"
-
-msgid "Replaces the session's map with one from a file, for everyone in it.\nUnsaved work in the session is lost; the server keeps a copy of the session as it was."
-msgstr "Substitui o mapa da sessão por um de um arquivo, para todos nela.\nO trabalho não salvo na sessão é perdido; o servidor guarda uma cópia da sessão como estava."
-
-msgid "Servers"
-msgstr "Servidores"
-
-msgid "A favourite: kept, at the top. Click to make it a recent one."
-msgstr "Um favorito: fica guardado, no topo. Clique para torná-lo um recente."
-
-msgid "Keep it as a favourite"
-msgstr "Guardar como favorito"
-
-msgid "Its password is kept on this computer."
-msgstr "A senha dele fica guardada neste computador."
-
-msgid "Forget it"
-msgstr "Esquecer"
-
-msgid "Remember the password for favourites"
-msgstr "Lembrar a senha dos favoritos"
-
-msgid "Kept in your Haumea settings on this computer, for servers you star."
-msgstr "Guardada nas configurações do Haumea neste computador, para os servidores que você marcar com estrela."
-
-msgid "The server keeps a copy of the map whenever it's saved."
-msgstr "O servidor guarda uma cópia do mapa sempre que ele é salvo."
-
-#, c-format
-msgid "%d in, you'd be a %s"
-msgstr "%d dentro, você seria %s"
-
-#, c-format
-msgid "%d ms"
-msgstr "%d ms"
-
-msgid "8 characters or more. You sign in with it from now on; the invite is used up."
-msgstr "8 caracteres ou mais. Você entra com ela daqui em diante; o convite é usado."
-
-msgid "A server with accounts: your name and password there."
-msgstr "Um servidor com contas: seu nome e senha nele."
-
-msgid "AI agents here"
-msgstr "Agentes de IA aqui"
-
-msgid "Account"
-msgstr "Conta"
-
-msgid "Admin"
-msgstr "Administração"
-
-msgid "Choose a name"
-msgstr "Escolha um nome"
-
-msgid "Choose a password"
-msgstr "Escolha uma senha"
-
-msgid "Choose a password of 8 characters or more."
-msgstr "Escolha uma senha de 8 caracteres ou mais."
-
-msgid "Days"
-msgstr "Dias"
-
-msgid "For a locked room (admins don't need it)."
-msgstr "Para uma sala trancada (administradores não precisam)."
-
-msgid "Haumea remembers it, and won't join if another server answers here later."
-msgstr "O Haumea a lembra e não entra se outro servidor responder aqui depois."
-
-#, c-format
-msgid "In room %s on %s, as %s"
-msgstr "Na sala %s em %s, como %s"
-
-msgid "Invite as"
-msgstr "Convidar como"
-
-msgid "Invite code"
-msgstr "Código de convite"
-
-msgid "Its account's: the server knows it from the agent's token."
-msgstr "Da conta dele: o servidor sabe pelo token do agente."
-
-msgid "Lock this room"
-msgstr "Trancar esta sala"
-
-#, c-format
-msgid "Make a %s everywhere"
-msgstr "Tornar %s em todo lugar"
-
-#, c-format
-msgid "Make a %s here"
-msgstr "Tornar %s aqui"
-
-msgid "Make an invite code"
-msgstr "Criar um código de convite"
-
-msgid "Make room"
-msgstr "Criar sala"
-
-msgid "No rooms yet."
-msgstr "Ainda não há salas."
-
-msgid "Password"
-msgstr "Senha"
-
-msgid "Remove from the room"
-msgstr "Remover da sala"
-
-msgid "Room"
-msgstr "Sala"
-
-msgid "Room password"
-msgstr "Senha da sala"
-
-msgid "Rooms"
-msgstr "Salas"
-
-msgid "Send it to them privately: it makes one account."
-msgstr "Envie em particular: ele cria uma conta."
-
-#, c-format
-msgid "Server fingerprint: %s"
-msgstr "Impressão digital do servidor: %s"
-
-msgid "Session code"
-msgstr "Código da sessão"
-
-#, c-format
-msgid "Signed in to %s"
-msgstr "Conectado a %s"
-
-msgid "Someone hosting from Haumea, or a server with one password for everyone."
-msgstr "Alguém hospedando pelo Haumea, ou um servidor com uma senha para todos."
-
-msgid "The first time on a server with accounts: the code you were sent makes your account."
-msgstr "A primeira vez em um servidor com contas: o código que você recebeu cria sua conta."
-
-msgid "The server's signature didn't check out: something may be between you and it. Not joined."
-msgstr "A assinatura do servidor não confere: pode haver algo entre você e ele. Não entrou."
-
-#, c-format
-msgid "This server isn't the one you joined before (its fingerprint was %s, now %s). Something may be between you and it. If its owner set it up again, forget it in Servers and join again."
-msgstr "Este servidor não é o que você entrou antes (a impressão digital era %s, agora %s). Pode haver algo entre você e ele. Se o dono o reinstalou, esqueça-o em Servidores e entre de novo."
-
-msgid "Unlock"
-msgstr "Destrancar"
-
-msgid "Uses"
-msgstr "Usos"
-
-msgid "Whose it says it is: without accounts nothing proves it."
-msgstr "De quem ele diz ser: sem contas, nada o comprova."
-
-msgid "You're a viewer here: you can look around and chat."
-msgstr "Você é observador aqui: pode olhar e conversar."
-
-msgid "Your account's name on this server: 2-31 letters, digits, _ - or ."
-msgstr "O nome da sua conta neste servidor: 2-31 letras, dígitos, _ - ou ."
-
-msgid "Your open map becomes the new room's."
-msgstr "Seu mapa aberto vira o da nova sala."
-
-msgid "admin"
-msgstr "administrador"
-
-msgid "builder"
-msgstr "construtor"
-
-msgid "builders"
-msgstr "construtores"
-
-msgid "empty: pick from the list"
-msgstr "vazio: escolha da lista"
-
-msgid "new room's name"
-msgstr "nome da nova sala"
-
-msgid "not allowed"
-msgstr "não permitidos"
-
-msgid "owner"
-msgstr "dono"
-
-#, c-format
-msgid "via %s"
-msgstr "via %s"
-
-msgid "viewer"
-msgstr "observador"
-
-msgid "viewers"
-msgstr "observadores"
-
-msgid "This session's server or host is older than your Haumea: it needs updating."
-msgstr "O servidor ou anfitrião desta sessão é mais antigo que o seu Haumea: precisa ser atualizado."
-
-msgid "This session is newer than your Haumea: update Haumea."
-msgstr "Esta sessão é mais nova que o seu Haumea: atualize o Haumea."

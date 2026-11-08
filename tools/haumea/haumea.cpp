@@ -78,6 +78,8 @@ float gObjectSnapDistance = 0.5f;
 
 // Rect-select (marquee selection)
 bool gRectSelectActive = false;
+bool gObjectDragActive = false;	// the Select tool is dragging (or may drag) the selection
+static float sObjectDragHeight, sObjectDragHeading;	// wheel and Alt+wheel during the drag
 static bool sRectSelectDragging = false;
 static float sRectStartX, sRectStartY;
 static const float RECT_SELECT_THRESHOLD_SQ = 25.0f;	// 5px squared
@@ -1798,6 +1800,83 @@ handleBrushTool(void)
 	// LMB released — end stroke.
 	if(!CPad::IsMButtonDown(1))
 		sBrushHasLastPaint = false;
+}
+
+// --- Select tool: drag the selection itself ---
+//
+// Press on an object that is already selected and drag: the selection slides
+// along the ground (or objects) under the cursor. While dragging, the wheel
+// raises or lowers it by the move step and Alt+wheel turns it by the rotate
+// step. One undo step, like a gizmo drag.
+static void
+updateObjectDragEarly(void)
+{
+	static bool armed, dragging;
+	static float startX, startY;
+	static ObjectInst *leader;
+	static rw::V3d startHit, startLeaderPos;
+	static rw::Quat startLeaderRot;
+	static std::vector<UndoTransform> transforms;
+	auto stop = [&](void){
+		armed = dragging = false;
+		gObjectDragActive = false;
+		leader = nil;
+		transforms.clear();
+	};
+	bool toolFree = !gGizmoEnabled && !gPlaceMode && !gBrushMode && !gPrefabPlaceMode &&
+		!AttachmentTargetPickActive() && !CoordinatePinOwnsMouse() && !LayoutPathsOwnsMouse() && !MapToolsPickingLine();
+	if(!toolFree){
+		if(dragging && !transforms.empty()){
+			CommitObjectTransformTargets(transforms);
+		}
+		stop();
+		return;
+	}
+	ImGuiIO &io = ImGui::GetIO();
+	if(!armed && !io.WantCaptureMouse && selection.first && CPad::IsMButtonJustDown(1) &&
+	   !CPad::IsShiftDown() && !CPad::IsCtrlDown() && !CPad::IsAltDown()){
+		ObjectInst *hit = GetInstanceByID(pick());
+		if(hit && hit->m_selected && !hit->m_isDeleted && IsPawnObjectEditable(hit)){
+			armed = true;
+			leader = hit;
+			startX = (float)CPad::newMouseState.x;
+			startY = (float)CPad::newMouseState.y;
+			gObjectDragActive = true;	// keeps the camera off the button
+		}
+	}
+	if(!armed)
+		return;
+	if(!CPad::IsMButtonDown(1)){
+		// Released: a drag is committed; a plain click stays a click.
+		if(dragging)
+			CommitObjectTransformTargets(transforms);
+		stop();
+		return;
+	}
+	if(!dragging){
+		float dx = (float)CPad::newMouseState.x - startX, dy = (float)CPad::newMouseState.y - startY;
+		float tolerance = 6.0f*GetUiScale();
+		if(dx*dx + dy*dy <= tolerance*tolerance)
+			return;
+		if(!CaptureObjectTransformTargets(leader, true, transforms)){
+			stop();
+			return;
+		}
+		rw::V3d n;
+		GetPlacementSurfaceHit(&startHit, &n);
+		startLeaderPos = leader->m_translation;
+		startLeaderRot = NormalizeQuatOrIdentity(leader->m_rotation);
+		sObjectDragHeight = sObjectDragHeading = 0.0f;
+		dragging = true;
+	}
+	rw::V3d hit, n;
+	GetPlacementSurfaceHit(&hit, &n);
+	rw::V3d pos = add(startLeaderPos, sub(hit, startHit));
+	pos.z += sObjectDragHeight;
+	rw::Quat rot = sObjectDragHeading != 0.0f ?
+		ApplyObjectRotationDelta(startLeaderRot, rw::makeV3d(0.0f, 0.0f, sObjectDragHeading), true) : startLeaderRot;
+	PreviewObjectTransformTargets(leader, transforms, pos, rot,
+		UNDO_TRANSFORM_POS | (sObjectDragHeading != 0.0f ? UNDO_TRANSFORM_ROT : 0));
 }
 
 // --- Rect-select (marquee selection) ---
@@ -3567,6 +3646,7 @@ Draw(void)
 	bool noMapEditing = InTextDrawMode();
 	if(!noMapEditing){
 		updateRectSelectEarly();
+		updateObjectDragEarly();
 		TheCamera.Process();
 	}
 	AgentBridgeUpdate();
@@ -3626,7 +3706,12 @@ Draw(void)
 		}
 		if(io.MouseWheel != 0.0f && io.KeyMods == ImGuiMod_Ctrl)
 			StepUiScale(io.MouseWheel > 0.0f ? 1.0f : -1.0f);
-		else if(gPrefabPlaceMode && !io.WantCaptureMouse && io.MouseWheel != 0.0f)
+		else if(gObjectDragActive && io.MouseWheel != 0.0f){
+			// Dragging the selection: the wheel lifts it, Alt+wheel turns it.
+			float dir = io.MouseWheel > 0.0f ? 1.0f : -1.0f;
+			if(io.KeyAlt) sObjectDragHeading += dir * (gGizmoSnapAngle > 0.0f ? gGizmoSnapAngle : 15.0f);
+			else sObjectDragHeight += dir * (gGizmoSnapTranslate > 0.0f ? gGizmoSnapTranslate : 1.0f);
+		}else if(gPrefabPlaceMode && !io.WantCaptureMouse && io.MouseWheel != 0.0f)
 			gPrefabPlaceHeading += (io.MouseWheel > 0.0f ? 1.0f : -1.0f) * (io.KeyShift ? 5.0f : 15.0f);
 		else if(!io.WantCaptureMouse && io.MouseWheel != 0.0f && !noMapEditing){
 			TheCamera.m_fov = ClampCameraFov(TheCamera.m_fov - io.MouseWheel * gFovWheelStep);

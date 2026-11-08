@@ -5,8 +5,8 @@ msgstr ""
 msgid "Advanced"
 msgstr "Avançado"
 
-msgid "Restores the browser on the left and Object Info on the right."
-msgstr "Restaura o navegador à esquerda e as informações do objeto à direita."
+msgid "Restores the panels to one column on the right: the browser above Object Info."
+msgstr "Restaura os painéis numa coluna à direita: o navegador acima das informações do objeto."
 
 msgid "Step snapping"
 msgstr "Ajustar por incrementos"

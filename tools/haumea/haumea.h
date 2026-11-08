@@ -116,6 +116,7 @@ const char *GetUiThemeName(int theme);	// in the UI's language
 bool UiThemeIsLight(void);	// dark text on a light background
 rw::RGBA UiThemePreviewBackground(void);	// behind model previews and thumbnails
 ImVec4 UiSemanticColor(int color);
+ImVec4 UiAccentFill(void);	// filled accent background for white text
 void SetupFonts(void);
 bool GetEditorRootDirectory(char *dir, size_t size);
 bool GetGameRootDirectory(char *dir, size_t size);
@@ -746,6 +747,7 @@ extern bool gObjectSnapMode;
 extern float gObjectSnapDistance;
 
 // Rect-select (marquee selection)
+extern bool gObjectDragActive;	// the Select tool holds LMB on the selection (blocks camera)
 extern bool gRectSelectActive;	// true when LMB is consumed by rect-select (blocks camera)
 
 // Practical cap for expensive selection operations. The selection list itself
@@ -768,6 +770,13 @@ enum UndoType {
 	UNDO_RADAR_ART,	// the radar art layers (radarart.cpp)
 	UNDO_LAYOUT_PATHS,
 };
+
+struct UndoHistoryStep {
+	int type;	// UndoType of its first action
+	int objects;	// how many objects it touched (deletes, pastes, batches)
+};
+int GetUndoHistory(std::vector<UndoHistoryStep> &steps);
+void GoToUndoStep(int done);
 
 enum UndoTransformFlags {
 	UNDO_TRANSFORM_POS = 1,
@@ -1122,6 +1131,8 @@ void ToastFor(ToastCategory cat, float duration, const char *fmt, ...);
 // A small rounded pill for what only some servers have ("open.mp only",
 // "streamer only", "0.3.DL"); the tooltip says why. Same look in every panel.
 void UiBadge(const char *text, const char *tooltip = nil);
+// After Begin: fields leave their labels room at any panel width, text wraps.
+void UiFitItemsToPanel(void);
 // ImGui::Combo over a table of N_() names, drawn in the user's language.
 bool UiCombo(const char *label, int *current, const char *const *items, int count);
 // Right-click in the 3D view: Map Objects' menu for inst (selecting it first

@@ -227,8 +227,10 @@ class SemanticZone(BaseModel):
 def haumea_status() -> dict:
 	"""Start here: the open map (path, format, unsaved changes, element count, and
 	area_removals: its RemoveBuildingForPlayer model -1 spheres, which remove every world
-	building inside them), whether an edit session is open, the map's extent and the live
-	camera's target (a good spot to build)."""
+	building inside them), whether an edit session is open, the map's extent, the live
+	camera's target (a good spot to build) and multiplayer: whether the user's editor is in
+	a multiplayer session (state, role, room and the other people in it); null when it isn't.
+	multiplayer_session(action="status") has the full details."""
 	try:
 		bounds = service.engine("scene_bounds")
 	except HaumeaError:
@@ -239,6 +241,21 @@ def haumea_status() -> dict:
 		session.update(active=hidden.get("active"), session_id=hidden.get("session_id"))
 	camera = service.engine("camera_context").get("camera", {})
 	capabilities = service.engine("capabilities")
+	# The user's editor may be in a multiplayer session: say so up front, so
+	# "the map" is understood as the shared one.
+	try:
+		mp = service.engine("multiplayer_status")
+	except HaumeaError:
+		mp = None
+	multiplayer = None
+	if mp and mp.get("state") not in (None, "off"):
+		peers = [p for p in mp.get("peers") or [] if isinstance(p, dict) and p.get("id") != mp.get("self")]
+		multiplayer = {key: value for key, value in {
+			"state": mp.get("state"),
+			"role": mp.get("role"),
+			"room": mp.get("room"),
+			"others": [p.get("name", "?") + (" (agent)" if p.get("agent") else "") for p in peers],
+		}.items() if value not in (None, "", [])}
 	return {
 		"map": session.get("map"),
 		"session": {"active": session.get("active"), "name": session.get("session_id") or None},
@@ -246,6 +263,7 @@ def haumea_status() -> dict:
 		"camera_target": camera.get("target"),
 		"element_kinds": capabilities.get("element_kinds"),
 		"build_id": capabilities.get("build_id"),
+		"multiplayer": multiplayer,
 	}
 
 

@@ -1948,6 +1948,30 @@ UiScriptTick(void)
 			itemWait++;
 			return;
 		}
+		// An item scrolled out of its panel's view would be clicked through
+		// to whatever is there instead: scroll it into view first, as a
+		// person would. A few frames at most.
+		if(next.type == Step::ITEM && itemWait < 60){
+			const UiItem *target = findItem(next.window, next.label, next.nth ? next.nth : 1);
+			// Only up and down: a row a few pixels too wide can't be scrolled to.
+			if(target && (target->bb.Min.y < target->clip.Min.y - 0.5f || target->bb.Max.y > target->clip.Max.y + 0.5f)){
+				ImGuiContext &g = *GImGui;
+				for(int i = 0; i < g.Windows.Size; i++){
+					ImGuiWindow *w = g.Windows[i];
+					if(!w->WasActive || (w->Name != target->windowName && w->Name != target->rootWindowName))
+						continue;
+					float below = target->bb.Max.y - target->clip.Max.y;
+					float above = target->clip.Min.y - target->bb.Min.y;
+					float margin = ImGui::GetFrameHeight();
+					if(below > 0.0f)
+						ImGui::SetScrollY(w, std::min(w->Scroll.y + below + margin, w->ScrollMax.y));
+					else if(above > 0.0f)
+						ImGui::SetScrollY(w, std::max(w->Scroll.y - above - margin, 0.0f));
+				}
+				itemWait++;
+				return;
+			}
+		}
 		itemWait = 0;
 		if(!runStep(gSteps[gStep])){
 			gSteps.clear();

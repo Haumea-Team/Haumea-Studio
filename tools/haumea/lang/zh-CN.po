@@ -596,10 +596,6 @@ msgid "%s won't be offered again."
 msgstr "%s 将不再提供。"
 
 #, c-format
-msgid "%s%s  |  Objects: %d%s  |  %.0f FPS"
-msgstr "%s%s  |  物体：%d%s  |  %.0f FPS"
-
-#, c-format
 msgid "%s's group has %s, which Windows-1252 (what SA-MP and open.mp clients draw) doesn't have: it is saved as '?'."
 msgstr "%s 的组包含 %s，而 Windows-1252（SA-MP 和 open.mp 客户端绘制时使用的编码）不支持该字符：它会被保存为 '?'。"
 
@@ -6976,8 +6972,8 @@ msgstr "恢复默认相机 FOV（70°）。"
 msgid "Restored"
 msgstr "已恢复"
 
-msgid "Restores the browser on the left and Object Info on the right."
-msgstr "恢复左侧浏览器和右侧物体信息面板。"
+msgid "Restores the panels to one column on the right: the browser above Object Info."
+msgstr "将面板恢复为右侧一列：浏览器在物体信息上方。"
 
 msgid "Return to the editor."
 msgstr "返回编辑器。"
@@ -10758,6 +10754,48 @@ msgstr "OpenGL 无法在此电脑上启动，因此自动模式使用 Direct3D 9
 
 msgid "Restart Haumea to switch renderers."
 msgstr "重新启动 Haumea 以切换渲染器。"
+
+msgid "People (skins)"
+msgstr "人物（皮肤）"
+
+msgid "Players see at most 1250 m (400 m inside interiors): objects further away only show in the editor."
+msgstr "玩家最多只能看到 1250 米（室内为 400 米）：更远的物体只在编辑器中显示。"
+
+msgid "%d skins"
+msgstr "%d 个皮肤"
+
+msgid "%d vehicles"
+msgstr "%d 辆载具"
+
+msgid "History"
+msgstr "历史记录"
+
+msgid "Nudge the selection left (as the camera looks)"
+msgstr "将所选向左微移（按相机朝向）"
+
+msgid "Nudge the selection right (as the camera looks)"
+msgstr "将所选向右微移（按相机朝向）"
+
+msgid "Nudge the selection forward (as the camera looks)"
+msgstr "将所选向前微移（按相机朝向）"
+
+msgid "Nudge the selection back (as the camera looks)"
+msgstr "将所选向后微移（按相机朝向）"
+
+msgid "Nudge the selection up"
+msgstr "将所选向上微移"
+
+msgid "Nudge the selection down"
+msgstr "将所选向下微移"
+
+msgid "Centered"
+msgstr "居中"
+
+msgid "Write coordinates relative to the export's centre (its lowest point for height),\nso the code can be placed anywhere by adding a position. Removed GTA buildings keep their real coordinates."
+msgstr "坐标相对于导出内容的中心写出（高度取最低点），\n加上一个位置即可放在任何地方。已移除的 GTA 建筑保留真实坐标。"
+
+msgid "Coordinates are relative to %.2f, %.2f, %.2f"
+msgstr "坐标相对于 %.2f, %.2f, %.2f"
 
 msgid "Could not start the shell."
 msgstr "无法启动 Shell。"

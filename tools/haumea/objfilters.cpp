@@ -715,7 +715,10 @@ uiObjectFiltersPanel(void)
 		snprintf(header, sizeof(header), ICON_FA_FILTER " %s###object_filters", _("Filters"));
 	else
 		snprintf(header, sizeof(header), ICON_FA_FILTER " %s (%d)###object_filters", _("Filters"), (int)chips.size());
+	// Filters that hide models show it on the header itself.
+	if(!chips.empty()) ImGui::PushStyleColor(ImGuiCol_Text, UiSemanticColor(UI_COLOR_WARNING));
 	bool open = ImGui::CollapsingHeader(header);
+	if(!chips.empty()) ImGui::PopStyleColor();
 
 	// What is on, always in view: click a chip to remove it.
 	if(!chips.empty()){

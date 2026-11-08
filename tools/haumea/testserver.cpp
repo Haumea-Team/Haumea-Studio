@@ -1337,6 +1337,7 @@ TestServerWindow(bool *open, int pawnFormat)
 		ImGui::End();
 		return;
 	}
+	UiFitItemsToPanel();
 	tsLoadSettings();
 	// The status stays English for the agent; it is translated here.
 	char status[256];
