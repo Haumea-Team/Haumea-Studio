@@ -14000,7 +14000,8 @@ uiWorkspaceNavigation(void)
 			}
 		}
 		if(i == 1 || i == 2){
-			ImVec2 anchor((ImGui::GetItemRectMin().x + ImGui::GetItemRectMax().x) * 0.5f, ImGui::GetItemRectMax().y);
+			// The button's top-right corner: where its "new" dot sits.
+			ImVec2 anchor(ImGui::GetItemRectMax().x, ImGui::GetItemRectMin().y);
 			if(i == 1){
 				gTextDrawsHintAnchor = anchor;
 				ImGui::SetItemTooltip(_("TextDraw mode: edit the textdraw file on a canvas instead of the world."));
@@ -14014,65 +14015,30 @@ uiWorkspaceNavigation(void)
 }
 
 
+// A new editor (TextDraws, Code) gets a small yellow dot on its button's
+// corner until it is first opened: a badge, so it never covers the bars.
 static void
-uiNewWorkspaceHint(const char *window, const char *dismiss, ImVec2 anchor, bool &visible, float offset)
+uiNewWorkspaceDot(ImVec2 corner)
 {
-	if(!visible) return;
 	static double appeared = -1.0;
 	if(appeared < 0.0) appeared = ImGui::GetTime();
-	const double age = ImGui::GetTime() - appeared;
-	// Five small jumps, then settle. The hint remains until used or dismissed.
-	float jump = age < 6.0 ? std::abs(std::sin(age * 3.141592653589793 / 1.2)) * 4.0f : 0.0f;
-	KeepNextEditorOverlayOnMainWindow();
-	ImGui::SetNextWindowPos(ImVec2(anchor.x + offset, anchor.y + 12.0f - jump),
-		ImGuiCond_Always, ImVec2(0.5f, 0.0f));
-	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(10.0f, 6.0f));
-	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 12.0f);
-	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
-	const ImU32 yellow = IM_COL32(255, 213, 79, 255);
-	ImGui::PushStyleColor(ImGuiCol_WindowBg, yellow);
-	ImGui::Begin(window, nil, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize |
-		ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav |
-		ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoDocking);
-	ImGui::TextColored(ImVec4(0.20f, 0.14f, 0.02f, 1.0f), "%s", _("New!"));
-	ImGui::SameLine(0.0f, 6.0f);
-	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0.0f, 0.0f));
-	ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.20f, 0.14f, 0.02f, 0.60f));
-	ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
-	ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.20f, 0.14f, 0.02f, 0.10f));
-	ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.20f, 0.14f, 0.02f, 0.18f));
-	if(ImGui::SmallButton(dismiss)){
-		visible = false;
-		saveSaveSettings();
-	}
-	ImGui::PopStyleColor(4);
-	ImGui::PopStyleVar();
-	ImGui::SetItemTooltip("%s", _("Dismiss"));
-	ImVec2 pos = ImGui::GetWindowPos(), size = ImGui::GetWindowSize();
-	ImDrawList *shadow = ImGui::GetBackgroundDrawList();
-	shadow->AddRectFilled(ImVec2(pos.x + 1, pos.y + 2), ImVec2(pos.x + size.x + 1, pos.y + size.y + 2),
-		IM_COL32(0, 0, 0, 45), 12.0f);
-	ImVec2 tip(anchor.x, anchor.y + 2.0f);
-	ImVec2 left(tip.x - 5.0f, pos.y + 3.0f), right(tip.x + 5.0f, pos.y + 3.0f);
-	ImGui::GetForegroundDrawList()->AddTriangleFilled(tip, right, left, yellow);
-	ImGui::End();
-	ImGui::PopStyleColor();
-	ImGui::PopStyleVar(3);
+	double age = ImGui::GetTime() - appeared;
+	// A few pulses, then it stays still.
+	float pulse = age < 6.0 ? 0.5f + 0.5f*(float)std::sin(age * 3.141592653589793 * 1.5) : 1.0f;
+	float r = ImGui::GetFontSize() * 0.22f;
+	ImVec2 c(corner.x - r - 1.0f, corner.y + r + 1.0f);
+	ImDrawList *draw = ImGui::GetForegroundDrawList();
+	draw->AddCircleFilled(c, r + 1.5f, ImGui::GetColorU32(ImGuiCol_MenuBarBg));
+	draw->AddCircleFilled(c, r, IM_COL32(255, 213, 79, (int)(155 + 100*pulse)));
 }
-
 
 static void
 uiWorkspaceNewHints(void)
 {
-	if((!gShowTextDrawsHint && !gShowCodeHint) || !isSA() || InTextDrawMode() || InPawnIdeMode() || StartScreenOpen() ||
-	   ImGui::GetIO().AppFocusLost || ImGui::IsPopupOpen((ImGuiID)0, ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel))
+	if((!gShowTextDrawsHint && !gShowCodeHint) || !isSA() || InTextDrawMode() || InPawnIdeMode() || StartScreenOpen())
 		return;
-	// Spread the balloons slightly when the buttons are close, keeping both
-	// tails anchored to their own workspace without overlapping the labels.
-	float width = ImGui::CalcTextSize(_("New!")).x + ImGui::CalcTextSize(ICON_FA_XMARK).x + 26.0f;
-	float offset = std::max(0.0f, (width + 12.0f - (gCodeHintAnchor.x - gTextDrawsHintAnchor.x)) * 0.5f);
-	uiNewWorkspaceHint("###TextDrawsNew", ICON_FA_XMARK "###DismissTextDrawsHint", gTextDrawsHintAnchor, gShowTextDrawsHint, -offset);
-	uiNewWorkspaceHint("###CodeNew", ICON_FA_XMARK "###DismissCodeHint", gCodeHintAnchor, gShowCodeHint, offset);
+	if(gShowTextDrawsHint) uiNewWorkspaceDot(gTextDrawsHintAnchor);
+	if(gShowCodeHint) uiNewWorkspaceDot(gCodeHintAnchor);
 }
 
 

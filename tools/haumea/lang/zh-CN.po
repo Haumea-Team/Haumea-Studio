@@ -5302,9 +5302,6 @@ msgstr "新建 textdraw"
 msgid "New workspace"
 msgstr "新建 workspace"
 
-msgid "New!"
-msgstr "新！"
-
 msgid ""
 "Newer builds draw text outlines as a soft ring that grows with the\n"
 "screen (ReplaceTextShadowWithOutline). Off: the game's own sharp edge, a few\n"

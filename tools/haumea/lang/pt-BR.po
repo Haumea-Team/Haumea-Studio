@@ -5872,9 +5872,6 @@ msgstr "Novos textdraws"
 msgid "New workspace"
 msgstr "Novo workspace"
 
-msgid "New!"
-msgstr "Novo!"
-
 msgid ""
 "Newer builds draw text outlines as a soft ring that grows with the\n"
 "screen (ReplaceTextShadowWithOutline). Off: the game's own sharp edge, a few\n"
