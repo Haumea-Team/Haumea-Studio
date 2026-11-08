@@ -88,7 +88,7 @@
   changed). **Load a map for everyone** replaces the session's map; `--admin-password` limits who may.
 - Servers with accounts, invites, roles (owner, admin, builder, viewer) and rooms: sign in from the
   Join panel, pick a room from the lobby, manage people from the People list and the Admin section.
-  haumea-server is now its own project (github.com/itsneufox/haumea-server).
+  haumea-server is now its own project (github.com/Haumea-Team/Haumea-Server).
 - The server proves who it is: Haumea remembers its fingerprint and refuses another one later.
 - Everyone's ping shows beside their name; an AI agent shows whose it is ("via ...").
 - Namaka joins the session your editor is in by itself (with a token from your account on a server
