@@ -375,6 +375,24 @@ jobs:
           path: haumea/tools/haumea/tests/pawn/.toolchain
           key: pawn-toolchain-${{ hashFiles('haumea/tools/haumea/tests/pawn/fetch_toolchain.sh') }}
 
+      # The multiplayer and crash report tests use the two servers, which are
+      # their own repos: beside this checkout, where the tests look for them.
+      - name: Checkout haumea-server
+        uses: actions/checkout@v4
+        with:
+          repository: Haumea-Team/Haumea-Server
+          path: haumea-server
+
+      - name: Build haumea-server
+        working-directory: haumea-server
+        run: make
+
+      - name: Checkout haumea-telemetry
+        uses: actions/checkout@v4
+        with:
+          repository: Haumea-Team/Haumea-Telemetry
+          path: haumea-telemetry
+
       # No GTA files on the runner: run_all.sh makes a synthetic game folder
       # (tests/fixture/make_game.py), then runs the unit tests, the editor's
       # Pawn round trip (checked against tests/pawn/expected) and compiles
