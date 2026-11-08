@@ -7993,6 +7993,9 @@ uiDockSpace(void)
 	ImGuiID map = ImHashStr("HaumeaDockSpace");
 	ImGuiID textdraws = ImHashStr("HaumeaTextDrawDockSpace");
 	bool editingTextDraws = InTextDrawMode();
+	// A panel that is closed never asks for its label, which is what moves an
+	// old layout's settings to its ### ID; History is new and often closed.
+	LI(ICON_FA_CLOCK_ROTATE_LEFT, "History");
 	if(!editingTextDraws && (gResetPanelLayout || ImGui::DockBuilderGetNode(map) == nil))
 		uiBuildDefaultDockLayout(map);
 	if(editingTextDraws && (gResetPanelLayout || ImGui::DockBuilderGetNode(textdraws) == nil)){
