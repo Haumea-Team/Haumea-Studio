@@ -302,6 +302,8 @@ project "haumea"
 	cppdialect "C++17"
 	files { "vendor/imgui-texteditor/TextEditor.cpp", "vendor/imgui-texteditor/TextEditor.h" }
 	includedirs { "vendor/imgui-texteditor", path.join(Librw, "skeleton/imgui") }
+	files { "vendor/libvterm/src/*.c" }
+	includedirs { "vendor/libvterm/include" }
 	kind "WindowedApp"
 	targetname "haumea"
 	characterset ("MBCS")
@@ -360,20 +362,6 @@ project "haumea"
 		links { "pthread" }
 	filter {}
 	removeplatforms { "*null" }
-	removeplatforms { "ps2" }
-
--- A multiplayer session on its own (tools/haumea/mprelay.h): no game, no
--- window, nothing of librw, so it runs on a bare server.
-project "haumea-server"
-	kind "ConsoleApp"
-	cppdialect "C++14"
-	targetdir (Bindir)
-	files { "tools/haumea-server/*.cpp", "tools/haumea/mprelay.cpp", "tools/haumea/mprelay.h",
-	        "tools/haumea/mpprotocol.h", "tools/haumea/minilzo/minilzo.c", "tools/haumea/monocypher/monocypher.c" }
-	includedirs { "tools/haumea" }
-	filter { "system:windows" }
-		links { "ws2_32" }
-	filter {}
 	removeplatforms { "ps2" }
 
 project "gtaclumpview"

@@ -16,7 +16,21 @@ struct MpRelayOptions
 	std::string name = "Haumea server";	// shown to the editors as whose session it is
 	std::string statePath;	// "" keeps the session in memory only
 	int maxClients = 32;
-	void (*log)(const char *line) = nullptr;
+	// Keeping the map as Pawn: every save lands in mapsDir (the latest, and a
+	// dated copy) and in mapOut (one file, e.g. the game server's), and every
+	// autosaveSeconds an editor in the session is asked for one when it changed.
+	std::string mapsDir, mapOut;
+	double autosaveSeconds = 0.0;
+	// Replacing the session's map: allowed unless replace is off; with an
+	// admin password, only to who gives it.
+	bool allowReplace = true;
+	std::string adminPassword;
+	void (*log)(const char *line) = nullptr;	// "[Info] ...", "[Warning] ..."
+	// A server with accounts and rooms (haumea-server): its state folder. Empty:
+	// one room, one code or password, as an editor hosting has it.
+	std::string stateDir;
+	std::string mapOutRoom = "main";	// with rooms, the one mapOut is for
+	bool logChat = true, logConnections = true;
 };
 
 bool MpRelayStart(const MpRelayOptions &options, std::string *error);

@@ -72,7 +72,50 @@ enum {
 	MSG_FILE,	// a file a channel names (a custom model's DFF or TXD): its key, then its bytes
 	MSG_CHALLENGE,	// relay, plain: magic, protocol, password salt, its X25519 key, whether the password ignores case
 	MSG_KEY,	// editor, plain: its X25519 key; sealed from here on
+	MSG_CHAT,	// editor: what it says; relay: who said it, when and from where (peer 0: the session itself)
+	MSG_MAP_FILE,	// editor: the map as Pawn, for a relay that keeps it (--maps-dir, --map-out)
+	MSG_SAVE_REQUEST,	// relay: send the map as Pawn now (its autosave)
+	MSG_REPLACE,	// editor: its own map becomes everyone's (with the admin password, if the relay has one)
+	MSG_RESET,	// relay: the session's map is being replaced: the new one follows
+	// Protocol 5: accounts, rooms, roles, the server's identity, ping.
+	MSG_LOGIN,	// editor, plain, first: how it signs in (MP_LOGIN_*), under what name, a nonce
+	MSG_ROOMS,	// relay: the rooms there are, to one in the lobby
+	MSG_ENTER,	// editor in the lobby: a room to go into (and its lock's password)
+	MSG_ADMIN,	// editor: an admin action (MP_ADMIN_*)
+	MSG_ADMIN_REPLY,	// relay: how it went, and what it made (an invite's code)
+	MSG_NOTICE,	// relay: something to tell this editor (a viewer's edit wasn't kept)
+	MSG_PING,	// editor: any bytes; the relay sends them straight back
+	MSG_PONG,
 };
+// How an editor signs in (MSG_LOGIN).
+enum {
+	MP_LOGIN_CODE,	// the session's code or the server's one password (an editor hosting)
+	MP_LOGIN_ACCOUNT,	// an account's name and password
+	MP_LOGIN_INVITE,	// an invite: its id as the name, its secret as the password; names an account
+	MP_LOGIN_AGENT,	// an agent token an account got for its agents (MP_ADMIN_AGENT_TOKEN)
+};
+enum {
+	MP_ADMIN_INVITE = 1,	// role, uses, days: the code
+	MP_ADMIN_SET_ROLE,	// account, role ("" for none: back to its own), room ("" for everywhere)
+	MP_ADMIN_KICK,	// peer
+	MP_ADMIN_LOCK,	// password ("" unlocks): this room
+	MP_ADMIN_DELETE_ROOM,	// room
+	MP_ADMIN_USERS,	// the accounts, a line each
+	MP_ADMIN_AGENTS,	// what agents may do in this room: "builder", "viewer" or "none"
+	MP_ADMIN_AGENT_TOKEN,	// a token for this account's agents (a day, at most its own role)
+	MP_ADMIN_ROOMS,	// the room list again
+};
+static const size_t MP_NONCE_LEN = 16;
+static const char MP_IDENTITY_CONTEXT[] = "HMMP-ID1";	// what the server signs, before the rest
+// What a relay offers, in MSG_WELCOME after the session's name.
+enum {
+	MP_OFFERS_MAPS = 1,	// keeps the map as Pawn when it's saved
+	MP_OFFERS_REPLACE = 2,	// lets a map replace the session's
+	MP_REPLACE_NEEDS_ADMIN = 4,	// only with the admin password
+};
+static const size_t MP_MAX_CHAT = 1000;	// bytes of one message
+static const int MP_CHAT_HISTORY = 200;	// messages a joining editor gets
+static const size_t MP_MAX_MAP_FILE = 64 << 20;
 // The map's own lists, each sent whole when it changes.
 // Joining editors get the ones before MP_CHANNEL_AFTER_ELEMENTS before the
 // elements, which need them.
@@ -91,7 +134,7 @@ enum {
 };
 static const uint8_t MSG_COMPRESSED = 0x80;
 static const uint32_t MP_MAGIC = 0x504d4d48;	// "HMMP"
-static const uint32_t MP_PROTOCOL = 3;
+static const uint32_t MP_PROTOCOL = 5;
 static const size_t MP_MAX_FRAME = 48 << 20;	// a big DFF
 static const size_t MP_MAX_UNPACKED = 64 << 20;
 static const size_t MP_MAX_BACKLOG = 256 << 20;	// unsent bytes before a peer is dropped

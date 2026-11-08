@@ -118,7 +118,7 @@ jobs:
       - name: Build Haumea Studio
         shell: cmd
         working-directory: haumea/build
-        run: msbuild librwgta.sln /p:Configuration=Release /p:Platform=win-amd64-gl3 /t:librwgta;haumea;haumea-server /m
+        run: msbuild librwgta.sln /p:Configuration=Release /p:Platform=win-amd64-gl3 /t:librwgta;haumea /m
 
       - name: Build Haumea Studio (Direct3D 9)
         shell: cmd
@@ -139,7 +139,6 @@ jobs:
           $bundle = Join-Path $env:GITHUB_WORKSPACE "dist\haumea-windows-gl3"
           New-Item -ItemType Directory -Force -Path $bundle | Out-Null
           Copy-Item "haumea\bin\win-amd64-gl3\Release\haumea.exe" $bundle
-          Copy-Item "haumea\bin\win-amd64-gl3\Release\haumea-server.exe" $bundle
           Copy-Item "haumea\bin\win-amd64-d3d9\Release\haumea.exe" (Join-Path $bundle "haumea-d3d9.exe")
           $fonts = Join-Path $bundle "fonts"
           New-Item -ItemType Directory -Force -Path $fonts | Out-Null
@@ -224,7 +223,7 @@ jobs:
 
       - name: Build Haumea Studio
         working-directory: haumea/build
-        run: make config=release_linux-amd64-gl3 librwgta haumea haumea-server "-j$(nproc)"
+        run: make config=release_linux-amd64-gl3 librwgta haumea "-j$(nproc)"
 
       - name: Check the build number and commit (Linux)
         working-directory: haumea
@@ -244,13 +243,6 @@ jobs:
         with:
           name: haumea-linux-gl3
           path: haumea/bin/linux-amd64-gl3/Release/haumea
-
-      - name: Upload haumea-server (Linux)
-        uses: actions/upload-artifact@v4
-        with:
-          name: haumea-server-linux
-          path: haumea/bin/linux-amd64-gl3/Release/haumea-server
-          if-no-files-found: error
 
       - name: Upload the Linux symbols
         uses: actions/upload-artifact@v4
@@ -528,7 +520,7 @@ jobs:
     runs-on: ubuntu-24.04
     env:
       # Bump this when MCP tools are added or removed on purpose.
-      AGENT_MCP_TOOLS: 84
+      AGENT_MCP_TOOLS: 90
       BUNDLE: Haumea-Namaka-linux-x86_64
 
     steps:
@@ -702,7 +694,7 @@ jobs:
     needs: build-macos
     runs-on: macos-latest
     env:
-      AGENT_MCP_TOOLS: 84
+      AGENT_MCP_TOOLS: 90
       BUNDLE: Haumea-Namaka-macos-arm64
     steps:
       - uses: actions/checkout@v4
@@ -972,7 +964,7 @@ jobs:
             --engine dist/macos/haumea \
             --namaka dist/namaka/haumea-namaka-macos-arm64/Haumea-Namaka-macos-arm64.zip \
             --stage dist/macos-bundle --output dist/release
-          # The symbols for crash reports (tools/server/symbols.py reads this zip);
+          # The symbols for crash reports (tools/telemetry/symbols.py reads this zip);
           # not part of any bundle.
           python3 haumea/tools/release/make_symbols.py \
             "dist/release/haumea-symbols-${{ needs.build-windows.outputs.version }}.zip" \

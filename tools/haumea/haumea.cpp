@@ -3571,6 +3571,9 @@ Draw(void)
 	}
 	AgentBridgeUpdate();
 	MultiplayerUpdate();
+	// A background worker with nothing to do draws nothing: nobody sees it.
+	if(AgentBridgeWorkerResting())
+		return;
 	TelemetryUpdate();
 	CrashReportsUpdate();
 	{

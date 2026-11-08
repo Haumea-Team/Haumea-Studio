@@ -46,8 +46,10 @@ BINARY = os.environ.get('HAUMEA_BINARY') or next(iter(sorted(
 XVFB = shutil.which('xvfb-run')
 GAME_DIR = os.environ.get('HAUMEA_GAME_DIR')
 FIXTURE = HERE / 'fixtures' / 'every_element.pwn'
-SERVER = os.environ.get('HAUMEA_SERVER_BINARY') or next(iter(sorted(
-    glob.glob(str(ROOT / 'bin' / '*' / 'Release' / 'haumea-server')))), None)
+# haumea-server is its own repo now: HAUMEA_SERVER_BINARY, or its build beside this checkout.
+SERVER = os.environ.get('HAUMEA_SERVER_BINARY') or next(iter(
+    p for p in (str(d / 'haumea-server' / 'build' / 'haumea-server') for d in (ROOT.parent, ROOT.parent.parent))
+    if os.path.isfile(p)), None)
 
 
 def wait_for(condition, what, timeout=30):
@@ -85,7 +87,7 @@ class EditorsMixin:
             shutil.rmtree(cls.tmp, ignore_errors=True)
 
     @classmethod
-    def editor(cls, name, extra_env=None):
+    def editor(cls, name, extra_env=None, extra_args=()):
         from haumea_ipc import HaumeaClient
         work = cls.tmp / name
         work.mkdir()
@@ -95,7 +97,7 @@ class EditorsMixin:
         socket = cls.tmp / (name + '.sock')
         log = open(work / 'out.txt', 'w')
         process = subprocess.Popen([XVFB, '-a', '-s', '-screen 0 1280x800x24', BINARY, '--game', cls.game,
-                                    '--agent-socket', str(socket)],
+                                    '--agent-socket', str(socket), *extra_args],
                                    cwd=work, env=env, stdout=log, stderr=subprocess.STDOUT,
                                    start_new_session=True)
         cls.editors.append((process, log))
@@ -218,6 +220,22 @@ class MultiplayerTests(EditorsMixin, unittest.TestCase):
         actor = self.find(guest, 1607.0, -1900.0)
         self.assertTrue(guest.command('delete', actor['instance_id']).get('ok'))
         wait_for(lambda: self.find(host, 1607.0, -1900.0) is None, 'the deletion on the host')
+
+        # An object's MoveObject travels, and a race's settings reach every
+        # checkpoint of the race on the other side (one undo step, several elements).
+        mover = self.find(guest, 1590.0, -1930.0)
+        self.assertTrue(guest.command('properties', mover['instance_id'], 'move_offset=[0, 0, 3]',
+                                      'move_speed=2').get('ok'))
+        wait_for(lambda: (self.find(host, 1590.0, -1930.0) or {}).get('properties', {}).get('move_speed') == 2,
+                 'the object\'s movement on the host')
+        def race(client):
+            return [i['properties'] for i in self.items(client) if i['properties'].get('race')]
+        checkpoint = next(i for i in self.items(host) if i['properties'].get('race'))
+        self.assertTrue(host.command('properties', checkpoint['instance_id'], 'race_mode=circuit', 'race_laps=3',
+                                     'race_playable=true').get('ok'))
+        wait_for(lambda: (lambda r: len(r) == 3 and all(p['race_mode'] == 'circuit' and p.get('race_laps') == 3 and
+                                                        p['race_playable'] for p in r))(race(guest)),
+                 'the race settings on the guest')
 
         # A GTA building deleted on one side is removed on the other.
         def pool(client):
@@ -378,7 +396,8 @@ def free_port():
         return s.getsockname()[1]
 
 
-@unittest.skipUnless(BINARY and XVFB and sys.platform.startswith('linux'), 'needs the editor and xvfb-run on Linux')
+@unittest.skipUnless(BINARY and SERVER and XVFB and sys.platform.startswith('linux'),
+                     'needs the editor, haumea-server (its own repo: build it, or set HAUMEA_SERVER_BINARY) and xvfb-run')
 class ServerTests(EditorsMixin, unittest.TestCase):
     PASSWORD = 'Mapping Crew 7'
 
@@ -386,20 +405,6 @@ class ServerTests(EditorsMixin, unittest.TestCase):
     def setUpClass(cls):
         cls.startEditors()
         cls.server_binary = SERVER
-        if not cls.server_binary:
-            # Not built by this checkout's makefiles: from its sources.
-            cc = shutil.which('cc') or shutil.which('gcc')
-            cxx = shutil.which('c++') or shutil.which('g++')
-            if not cc or not cxx:
-                raise unittest.SkipTest('no haumea-server and no compiler to build it')
-            haumea = ROOT / 'tools' / 'haumea'
-            objects = []
-            for source in (haumea / 'minilzo' / 'minilzo.c', haumea / 'monocypher' / 'monocypher.c'):
-                objects.append(str(cls.tmp / (source.stem + '.o')))
-                subprocess.run([cc, '-O2', '-c', str(source), '-o', objects[-1]], check=True)
-            cls.server_binary = str(cls.tmp / 'haumea-server')
-            subprocess.run([cxx, '-std=c++14', '-O2', '-I', str(haumea), str(ROOT / 'tools' / 'haumea-server' / 'main.cpp'),
-                            str(haumea / 'mprelay.cpp')] + objects + ['-o', cls.server_binary], check=True)
         cls.server = None
         cls.port = free_port()
         cls.state = cls.tmp / 'session.hmps'

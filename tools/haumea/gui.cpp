@@ -12,6 +12,7 @@
 #include "textdraws.h"
 #include "namaka.h"
 #include "multiplayer.h"
+#include "terminal.h"
 #include "samp_loader.h"
 #include "autocol.h"
 #include "modloader.h"
@@ -98,6 +99,7 @@ static bool showTestServerWindow;
 static bool showInteriorsWindow;
 static bool showNamakaWindow;
 static bool showMultiplayerWindow;
+static bool showTerminalWindow;
 static bool gPanelSnap = true;
 static bool gResetPanelLayout;
 static bool gSaNodeJustSelected;
@@ -838,7 +840,7 @@ ShowEditorWindow(void)
 {
 #if defined(LIBRW_GLFW)
 	GLFWwindow *window = getEditorGlfwWindow();
-	if(window && !glfwGetWindowAttrib(window, GLFW_VISIBLE))
+	if(window && !IsBackgroundWorker() && !glfwGetWindowAttrib(window, GLFW_VISIBLE))
 		glfwShowWindow(window);
 #endif
 }
@@ -3117,6 +3119,9 @@ uiMainmenu(void)
 					OpenAttachmentWorkspace(target, false);
 				}
 			}
+			if(ImGui::MenuItem(L("Terminal"), ShortcutLabel(SC_WINDOW_TERMINAL), showTerminalWindow))
+				showTerminalWindow ^= 1;
+			ImGui::SetItemTooltip(_("Your own shell, inside Haumea: run any AI assistant, a server or anything else."));
 			if(isSA() && ImGui::BeginMenu(L("Game tools"))){
 				if(isSA() && ImGui::MenuItem(TI(ICON_FA_LOCATION_DOT, "Nodes (open.mp only)"), ShortcutLabel(SC_WINDOW_NODES), showNodesWindow)) { showNodesWindow ^= 1; }
 				if(isSA() && ImGui::MenuItem(TI(ICON_FA_GAMEPAD, "Test server"), nil, showTestServerWindow)) { showTestServerWindow ^= 1; }
@@ -3776,6 +3781,8 @@ static void
 leaveJoinedSession(bool connecting)
 {
 	int session = GetMultiplayerState();
+	if(MultiplayerReplacingMap())
+		return;	// this map becomes the session's
 	if(session == MP_JOINED || (connecting && session == MP_CONNECTING)){
 		MultiplayerLeave();
 		Toast(TOAST_SAVE, _("Left the multiplayer session"));
@@ -4054,6 +4061,7 @@ savePawnMap(void)
 	gPawnLastSavedChangeSeq = GetLatestChangeSeq();
 	addRecentMap(gPawnSavePath);
 	saveSaveSettings();
+	MultiplayerMapSaved(gPawnSavePath);	// a session's server that keeps maps gets it too
 	Toast(TOAST_SAVE, skipped > 0 ? _("Saved %s: %d object operation(s) (some unsupported objects skipped)") :
 	      _("Saved %s: %d object operation(s)"), pathFilename(gPawnSavePath), saved);
 	uiMapCheckBefore("saving");
@@ -13726,6 +13734,7 @@ uiRunShortcut(int action)
 		if(isSA())
 			showNodesWindow ^= 1;
 		break;
+	case SC_WINDOW_TERMINAL: showTerminalWindow ^= 1; break;
 	case SC_WINDOW_SHORTCUTS: showShortcutsWindow ^= 1; break;
 	case SC_WINDOW_LOG: showLogWindow ^= 1; break;
 	case SC_WINDOW_PREFERENCES: showPreferencesWindow ^= 1; break;
@@ -14045,6 +14054,19 @@ gui(void)
 	uiWorkspaceNewHints();
 	DrawNamakaWindow(&showNamakaWindow);	// also runs the updater's queued Namaka update
 	DrawMultiplayerWindow(&showMultiplayerWindow);
+	{
+		// A new shell starts beside the open map, else in the home folder.
+		std::string folder = gPawnSavePath;
+		size_t slash = folder.find_last_of("/\\");
+		folder = slash == std::string::npos ? std::string() : folder.substr(0, slash);
+		if(folder.empty()){
+			const char *home = getenv("USERPROFILE");
+			if(home == nil)
+				home = getenv("HOME");
+			folder = home ? home : "";
+		}
+		DrawTerminalWindow(&showTerminalWindow, folder.c_str());
+	}
 
 
 
@@ -14221,6 +14243,15 @@ NewPawnMapDocument(void)
 {
 	leaveJoinedSession(false);
 	newPawnMap();
+}
+
+// The open map as Pawn in its own format, to path, leaving its own path and
+// saved state alone (a session's server autosave).
+bool
+ExportOpenPawnMap(const char *path)
+{
+	int skipped = 0;
+	return path && ExportPawnCode(path, (PawnCodeFormat)gPawnSaveFormat, false, &skipped) >= 0;
 }
 
 bool

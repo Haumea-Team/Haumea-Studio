@@ -903,6 +903,13 @@ releaseObjectMaterialOverrides(ObjectInst *inst)
 	inst->m_materialOverrides = nil;
 }
 
+uint32
+NextRwObjectSerial(void)
+{
+	static uint32 serial;
+	return ++serial;
+}
+
 ObjectInst::~ObjectInst()
 {
 	releaseObjectMaterialOverrides(this);
@@ -2935,6 +2942,7 @@ ObjectInst::CreateRwObject(void)
 		atomic->setFrame(f);
 		f->transform(&m_matrix, rw::COMBINEREPLACE);
 		m_rwObject = atomic;
+		m_rwObjectSerial = NextRwObjectSerial();
 	}else if(obj->m_type == ObjectDef::CLUMP){
 		if(obj->m_clump == nil)
 			return nil;
@@ -2943,6 +2951,7 @@ ObjectInst::CreateRwObject(void)
 		f->transform(&m_matrix, rw::COMBINEREPLACE);
 		SetupAnimatedClump(this, clump);
 		m_rwObject = clump;
+		m_rwObjectSerial = NextRwObjectSerial();
 		if(m_isVehicle){
 			SAPaths::PrepareEditorVehicleVisuals(clump);
 			AddEditorVehicleComponents(clump, m_vehicleMods);
@@ -2992,6 +3001,7 @@ ObjectInst::RefreshVehicleUpgrades(void)
 		return;
 	((rw::Clump*)m_rwObject)->destroy();
 	m_rwObject = nil;
+	m_rwObjectSerial = NextRwObjectSerial();
 	CreateRwObject();
 }
 
@@ -3564,6 +3574,7 @@ destroyInstanceRwObject(ObjectInst *inst, ObjectDef *obj)
 	}else
 		((rw::Clump*)inst->m_rwObject)->destroy();
 	inst->m_rwObject = nil;
+	inst->m_rwObjectSerial = NextRwObjectSerial();
 }
 
 ObjectInst*

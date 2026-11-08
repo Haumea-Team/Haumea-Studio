@@ -82,6 +82,8 @@ void ApplyEditorVehiclePlate(rw::Clump *clump, const char *plateText);
 void AddEditorVehicleComponents(rw::Clump *clump, const uint16 *mods);
 void ApplyEditorVehiclePaintjob(rw::Clump *clump, int vehicleModel, int paintjob);
 
+uint32 NextRwObjectSerial(void);	// objectinst.cpp
+
 struct ObjectInst;
 
 #include "sapaths.h"
@@ -1419,6 +1421,10 @@ struct ObjectInst
 	int m_area;
 
 	void *m_rwObject;
+	// Changes with every m_rwObject made or destroyed, never repeating: what
+	// holds on to parts of the model (anim.cpp) checks it, as a new model can
+	// sit where a freed one was and look the same by its address.
+	uint32 m_rwObjectSerial = 0;
 	bool m_isBigBuilding;
 	uint16 m_scanCode;
 
@@ -1552,6 +1558,7 @@ bool OpenPawnMapFile(const char *path);
 int MergeMapFile(const char *path, int *skipped);
 void NewPawnMapDocument(void);
 bool SavePawnMapTo(const char *path, int format);
+bool ExportOpenPawnMap(const char *path);	// a copy to path; the map keeps its own path
 const char *GetPawnMapPath(void);	// empty while untitled
 const std::vector<std::string> &GetRecentMapPaths(void);	// File > Open Recent, newest first
 void SaveEditorSettings(void);
@@ -1940,6 +1947,7 @@ void RenderDebugLines(void);
 void SplashProgress(float progress, const char *status);
 void SplashKeepAlive(void);
 extern ImFont *gCodeFont;
+extern ImFont *gTerminalFont;	// the same face, with what terminals print beyond Latin
 extern ImFont *gTitleFont;
 void RenderLinesNow(const rw::V3d *points, int numPoints, rw::RGBA col);
 // Selected objects that move (MoveObject): a line to where they go, a ghost

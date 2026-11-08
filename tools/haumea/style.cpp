@@ -8,6 +8,7 @@
 #include <cstdio>
 
 ImFont *gCodeFont;
+ImFont *gTerminalFont;
 ImFont *gTitleFont;	// large Inter for the splash screen title
 
 // Accent colors — used for highlights, active elements and selection.
@@ -543,6 +544,12 @@ SetupFonts(void)
   }
  }
  gCodeFont = mono.empty() ? io.Fonts->AddFontDefault() : io.Fonts->AddFontFromFileTTF(mono.c_str(), fontSize);
+ // Latin, Greek, Cyrillic, punctuation, arrows, maths and shapes. Line drawing
+ // isn't here: the terminal draws it itself, so it joins up (terminal.cpp).
+ static const ImWchar terminalRanges[] = {
+  0x0020, 0x02FF, 0x0370, 0x04FF, 0x2000, 0x20CF, 0x2100, 0x22FF, 0x25A0, 0x25FF, 0,
+ };
+ gTerminalFont = mono.empty() ? gCodeFont : io.Fonts->AddFontFromFileTTF(mono.c_str(), fontSize, nullptr, terminalRanges);
 
 	// --- Title font: the splash wordmark. Baked large because the backend
 	// cannot render fonts at new sizes, so it is only ever scaled down; only

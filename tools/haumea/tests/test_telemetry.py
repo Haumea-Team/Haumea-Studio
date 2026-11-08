@@ -3,7 +3,7 @@
 Each case starts the editor on the synthetic game with a short UI script and
 its own config folder, and points it with HAUMEA_TELEMETRY_URL at a server on
 127.0.0.1 (which also lets this automated run send). A counting server records
-every request; one case uses the real receiving server, tools/server/haumea_server.py,
+every request; one case uses the real receiving server, haumea-telemetry's haumea_telemetry.py,
 with a private database, as deployed.
 - Never asked, or asked and no: nothing is sent and no ID is made.
 - Yes: one POST of exactly the four fields; the ID and the day are kept; a
@@ -38,7 +38,15 @@ from haumea_test_env import editor_env  # noqa: E402
 BINARY = os.environ.get('HAUMEA_BINARY') or next(iter(sorted(
     glob.glob(str(ROOT / 'bin' / '*' / 'Release' / 'haumea')))), None)
 XVFB = shutil.which('xvfb-run')
-SERVER = ROOT / 'tools' / 'server' / 'haumea_server.py'
+# The receiving server is its own repo (haumea-telemetry): HAUMEA_TELEMETRY_DIR, or beside this checkout.
+def _telemetry_dir():
+    places = [Path(os.environ['HAUMEA_TELEMETRY_DIR'])] if os.environ.get('HAUMEA_TELEMETRY_DIR') else []
+    places += [ROOT.parent / 'haumea-telemetry', ROOT.parent.parent / 'haumea-telemetry']
+    return next((p for p in places if (p / 'haumea_telemetry.py').exists()), None)
+
+
+TELEMETRY_DIR = _telemetry_dir()
+SERVER = TELEMETRY_DIR / 'haumea_telemetry.py' if TELEMETRY_DIR else None
 
 
 def free_port():
@@ -217,6 +225,7 @@ class TelemetryTests(unittest.TestCase):
         self.assertEqual(len(server.bodies), 1)	# sent at start, while it was on
         self.assertEqual(self.state(), {'consent': 'no'})
 
+    @unittest.skipUnless(SERVER, 'needs haumea-telemetry (its own repo) beside this checkout')
     def test_real_server_takes_the_ping(self):
         port = free_port()
         db = self.work / 'server.db'

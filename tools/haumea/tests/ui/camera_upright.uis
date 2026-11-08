@@ -1,0 +1,40 @@
+# Looking up or down stops short of straight up or down: the picture never
+# turns upside down, however far the mouse goes (it used to roll over).
+open "$UI_FIXTURES/ui_map.pwn"
+camera 2000 -1700 40 2000 -1650 40
+wait 5
+move 640 400
+hold right
+move 640 380
+move 640 300
+move 640 100
+move 640 -400
+move 640 -1200
+move 640 -2400
+wait 3
+release right
+wait 3
+assert camera_up.z > 0
+assert camera_pitch > 85
+assert camera_pitch < 89.5
+move 640 400
+hold right
+move 640 900
+move 640 1800
+move 640 3200
+move 640 5200
+wait 3
+release right
+wait 3
+assert camera_up.z > 0
+assert camera_pitch < -85
+assert camera_pitch > -89.5
+# Turning sideways while looking straight down keeps it upright too.
+move 640 400
+hold right
+move 1200 400
+move 2400 400
+wait 3
+release right
+wait 3
+assert camera_up.z > 0

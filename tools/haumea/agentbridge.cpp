@@ -9,6 +9,9 @@
 #include "trains.h"
 #include "agentbridge.h"
 #include "multiplayer.h"
+bool GetEditorExecutablePath(char *path, size_t size);	// main.cpp
+bool GetHaumeaDataDirectory(char *path, size_t size);	// main.cpp
+#include <thread>
 #include "sapaths.h"
 #include "areas.h"
 #include "categories.h"
@@ -5062,6 +5065,8 @@ handleRequest(const std::vector<std::string> &lines)
 			rw::V3d{ 0.0f, 1.0f, 0.0f } : rw::V3d{ 0.0f, 0.0f, 1.0f };
 		pose.fov = values[6];
 		applyCameraPose(pose);
+		if(IsBackgroundWorker())
+			MultiplayerSetPresencePose(pose.position, pose.target);
 		gAgentCameraRevision++;
 		writeResponse(requestId, true, std::string("\"result\":\"camera_set\",\"camera_revision\":") +
 			std::to_string(gAgentCameraRevision));
@@ -5120,6 +5125,8 @@ handleRequest(const std::vector<std::string> &lines)
 		gAgentCaptureRestorePose = currentCameraPose();
 		gAgentCaptureRestore = true;
 		applyCameraPose(requested);
+		if(IsBackgroundWorker())
+			MultiplayerSetPresencePose(requested.position, requested.target);
 		gAgentCameraRevision++;
 		gAgentCapturePose = currentCameraPose();
 		gAgentCaptureCameraRevision = gAgentCameraRevision;
@@ -5149,8 +5156,35 @@ handleRequest(const std::vector<std::string> &lines)
 		const char *name = lines.size() > nameField ? lines[nameField].c_str() : "Namaka";
 		std::string error;
 		bool upnp = !(host && lines.size() > 4 && lines[4] == "0");
-		bool ok = host ? MultiplayerHost(port, name, &error, upnp) :
-			MultiplayerJoin(lines[2].c_str(), port, lines[4].c_str(), name, &error);
+		bool thisComputerOnly = host && lines.size() > 5 && lines[5] == "local";
+		// multiplayer_join address port password name [code|account|invite|agent] [account] [room]
+		// [room password] [new name] [new password]
+		auto field = [&](size_t i){ return lines.size() > i ? lines[i] : std::string(); };
+		static const char *kinds[] = { "code", "account", "invite", "agent" };
+		int kind = 0;
+		for(int k = 0; k < 4; k++)
+			if(field(6) == kinds[k])
+				kind = k;
+		bool ok;
+		if(host)
+			ok = MultiplayerHost(port, name, &error, upnp, thisComputerOnly);
+		else if(kind == 0 && field(8).empty() && field(12).empty())
+			ok = MultiplayerJoin(lines[2].c_str(), port, lines[4].c_str(), name, &error);
+		else{
+			MultiplayerJoinRequest join;
+			join.address = lines[2];
+			join.port = port;
+			join.password = lines[4];
+			join.name = name;
+			join.kind = kind;
+			join.account = field(7);
+			join.room = field(8);
+			join.roomPassword = field(9);
+			join.newName = field(10);
+			join.newPassword = field(11);
+			join.owner = field(12);
+			ok = MultiplayerJoinWith(join, &error);
+		}
 		if(!ok){
 			writeError(requestId, error.c_str());
 			return;
@@ -5191,6 +5225,86 @@ handleRequest(const std::vector<std::string> &lines)
 			SAPaths::NodesLoaded() ? "true" : "false", (unsigned long long)SAPaths::NodesFingerprint(),
 			SAPaths::GetDirtyAreaCount());
 		writeResponse(requestId, true, body);
+		return;
+	}
+	// What starting a background worker needs: this editor's program and game.
+	if(command == "editor_info"){
+		char executable[1024] = "";
+		GetEditorExecutablePath(executable, sizeof(executable));
+		char dataDir[1024] = "";
+		GetHaumeaDataDirectory(dataDir, sizeof(dataDir));
+		std::string body = "\"executable\":\"" + jsonEscape(executable) + "\",\"game\":\"" + jsonEscape(GetGameDir()) +
+			"\",\"data_dir\":\"" + jsonEscape(dataDir) + "\",\"background\":" + (IsBackgroundWorker() ? "true" : "false") +
+#ifdef LIBRW_GLFW
+			",\"can_hide_window\":true";
+#else
+			",\"can_hide_window\":false";	// the Direct3D 9 build's window always shows
+#endif
+		writeResponse(requestId, true, body);
+		return;
+	}
+	// The session's chat: multiplayer_chat <text> says it; multiplayer_chat_read
+	// [since] lists the messages after that one (and "last", to read on from).
+	if(command == "multiplayer_chat"){
+		std::string text;
+		for(size_t i = 2; i < lines.size(); i++)
+			text += (i > 2 ? " " : "") + lines[i];
+		if(!MultiplayerSay(text.c_str())){
+			writeError(requestId, GetMultiplayerState() == MP_JOINED || GetMultiplayerState() == MP_HOSTING ?
+				"nothing to say" : "not in a multiplayer session");
+			return;
+		}
+		writeResponse(requestId, true, "\"said\":true");
+		return;
+	}
+	// Tests only (no Namaka tool: an agent mustn't swap everyone's map):
+	// multiplayer_load_for_everyone <path> [admin password].
+	if(command == "multiplayer_load_for_everyone"){
+		std::string error;
+		if(lines.size() < 3 || !MultiplayerLoadForEveryone(lines[2].c_str(), lines.size() > 3 ? lines[3].c_str() : "", &error)){
+			writeError(requestId, error.empty() ? "multiplayer_load_for_everyone requires a path" : error.c_str());
+			return;
+		}
+		writeResponse(requestId, true, MultiplayerStatusJson());
+		return;
+	}
+	// multiplayer_enter <room> [room password]: from the lobby.
+	if(command == "multiplayer_enter"){
+		if(lines.size() < 3 || !MultiplayerEnterRoom(lines[2].c_str(), lines.size() > 3 ? lines[3].c_str() : "")){
+			writeError(requestId, "not in a server's lobby, or no room given");
+			return;
+		}
+		writeResponse(requestId, true, MultiplayerStatusJson());
+		return;
+	}
+	// multiplayer_admin <op number> [a] [b] [c]: the reply shows in multiplayer_status's admin_reply.
+	if(command == "multiplayer_admin"){
+		int op = 0;
+		if(lines.size() < 3 || !parseInt(lines[2], &op) ||
+		   !MultiplayerAdmin(op, lines.size() > 3 ? lines[3].c_str() : "", lines.size() > 4 ? lines[4].c_str() : "",
+			lines.size() > 5 ? lines[5].c_str() : "")){
+			writeError(requestId, "not on a server, or no action given");
+			return;
+		}
+		writeResponse(requestId, true, "\"sent\":true");
+		return;
+	}
+	// A token our agents join with ("" while it's being asked for: ask again).
+	if(command == "multiplayer_join_info"){
+		writeResponse(requestId, true, MultiplayerJoinInfoJson());
+		return;
+	}
+	if(command == "multiplayer_agent_token"){
+		writeResponse(requestId, true, "\"token\":\"" + jsonEscape(MultiplayerAgentToken().c_str()) + "\"");
+		return;
+	}
+	if(command == "multiplayer_chat_read"){
+		int since = 0;
+		if(lines.size() > 2 && !lines[2].empty() && !parseInt(lines[2], &since)){
+			writeError(requestId, "invalid since");
+			return;
+		}
+		writeResponse(requestId, true, MultiplayerChatJson((unsigned int)std::max(since, 0)));
 		return;
 	}
 	if(command == "multiplayer_leave"){
@@ -5360,6 +5474,8 @@ updateCameraFly(void)
 		rw::V3d d = rw::normalize(rw::sub(pose.target, pose.position));
 		pose.up = fabsf(d.z) > 0.995f ? rw::V3d{ 0.0f, 1.0f, 0.0f } : rw::V3d{ 0.0f, 0.0f, 1.0f };
 		applyCameraPose(pose);
+		if(IsBackgroundWorker())
+			MultiplayerSetPresencePose(pose.position, pose.target);
 		if(t < 1.0f)
 			return;
 	}
@@ -5494,11 +5610,54 @@ agentcastNote(const std::vector<std::string> &lines)
 	KeycastAgentAction(text, key);
 }
 
+// A background worker (--background): a hidden editor that an agent drives.
+// No one sees it, so it renders slowly and goes away by itself: when the
+// session it joined ends, or when no agent has asked anything for a while
+// (its MCP server died without stopping it).
+static const double WORKER_IDLE_QUIT = 60 * 60.0;
+static const double WORKER_BUSY_TIME = 2.0;
+static double gWorkerLastRequest;
+static bool gWorkerWasInSession;
+
+static double
+workerNow(void)
+{
+	using namespace std::chrono;
+	return duration<double>(steady_clock::now().time_since_epoch()).count();
+}
+
+static void
+backgroundWorkerTick(void)
+{
+	if(!IsBackgroundWorker())
+		return;
+	double now = workerNow();
+	if(gWorkerLastRequest == 0.0 || gAgentCapturePending || gAgentCameraFlyPending)
+		gWorkerLastRequest = now;
+	int state = GetMultiplayerState();
+	if(state != MP_OFF)
+		gWorkerWasInSession = true;
+	if((gWorkerWasInSession && state == MP_OFF) || now - gWorkerLastRequest > WORKER_IDLE_QUIT){
+		log("Background worker: nothing left to do, quitting\n");
+		sk::globals.quit = 1;
+		return;
+	}
+	std::this_thread::sleep_for(std::chrono::milliseconds(now - gWorkerLastRequest < WORKER_BUSY_TIME ? 30 : 100));
+}
+
+bool
+AgentBridgeWorkerResting(void)
+{
+	return IsBackgroundWorker() && !gAgentCapturePending && !gAgentCameraFlyPending &&
+		workerNow() - gWorkerLastRequest > WORKER_BUSY_TIME;
+}
+
 void
 AgentBridgeUpdate(void)
 {
 	if(!gAgentBridgeInitialized)
 		initializeBridge();
+	backgroundWorkerTick();
 	trackLiveCamera();
 	if(gAgentCameraFlyPending)
 		updateCameraFly();
@@ -5512,12 +5671,17 @@ AgentBridgeUpdate(void)
 		loadAgentSession(agent);
 		uint32 before = GetLatestChangeSeq();
 		unsigned int textDrawsBefore = TextDrawsChangeSeq();
+		gWorkerLastRequest = workerNow();
 		handleRequest(lines);
 		if(GetLatestChangeSeq() != before)
 			for(CPtrNode *p = instances.first; p; p = p->next){
 				ObjectInst *inst = (ObjectInst*)p->item;
-				if(inst->m_changeSeq > before)
+				if(inst->m_changeSeq > before){
 					gLastAgentEdit[inst->m_id] = agent;
+					// Its marker goes to what it just changed, looking down at it.
+					if(IsBackgroundWorker() && !inst->m_isDeleted)
+						MultiplayerSetPresencePose(rw::add(inst->m_translation, rw::V3d{ -8.0f, -8.0f, 6.0f }), inst->m_translation);
+				}
 			}
 		if(TextDrawsChangeSeq() != textDrawsBefore)
 			gLastTextDrawAgent = agent;

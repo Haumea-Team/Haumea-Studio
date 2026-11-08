@@ -217,3 +217,259 @@ msgstr "O seu roteador redireciona a porta: pela internet, os outros entram pelo
 #: tools/haumea/multiplayer.cpp
 msgid "Over IPv6, others can join at %s when your router lets them in."
 msgstr "Por IPv6, os outros podem entrar em %s quando o seu roteador deixar."
+
+msgid "Could not start the shell."
+msgstr "Não foi possível iniciar o shell."
+
+msgid "Start again"
+msgstr "Iniciar de novo"
+
+msgid "Terminal"
+msgstr "Terminal"
+
+#, c-format
+msgid "The shell closed (exit code %d)."
+msgstr "O shell foi encerrado (código de saída %d)."
+
+msgid "The terminal needs Windows 10 version 1809 or later."
+msgstr "O terminal requer o Windows 10 versão 1809 ou posterior."
+
+msgid "Your own shell, inside Haumea: run any AI assistant, a server or anything else."
+msgstr "Seu próprio shell, dentro do Haumea: execute qualquer assistente de IA, um servidor ou qualquer outra coisa."
+
+#, c-format
+msgid "%s is loading another map for everyone..."
+msgstr "%s está carregando outro mapa para todos..."
+
+#, c-format
+msgid "Your map is now everyone's in %s"
+msgstr "Seu mapa agora é o de todos em %s"
+
+msgid "This session doesn't let a map replace its own."
+msgstr "Esta sessão não deixa um mapa substituir o dela."
+
+msgid "Could not open that map: you left the session with the map you had."
+msgstr "Não foi possível abrir esse mapa: você saiu da sessão com o mapa que tinha."
+
+msgid "An AI agent (Namaka), not a person."
+msgstr "Um agente de IA (Namaka), não uma pessoa."
+
+msgid "Chat"
+msgstr "Chat"
+
+msgid "Double-click: look from where they were when they wrote this."
+msgstr "Clique duas vezes: veja de onde a pessoa estava quando escreveu isto."
+
+msgid "Say something (@name to mention someone)"
+msgstr "Diga algo (@nome para mencionar alguém)"
+
+msgid "Send"
+msgstr "Enviar"
+
+msgid "Admin password"
+msgstr "Senha de administrador"
+
+msgid "The server only lets who knows it load another map for everyone."
+msgstr "O servidor só deixa quem a conhece carregar outro mapa para todos."
+
+msgid "Load a map for everyone..."
+msgstr "Carregar um mapa para todos..."
+
+msgid "Map for everyone"
+msgstr "Mapa para todos"
+
+msgid "Pawn maps"
+msgstr "Mapas Pawn"
+
+msgid "Replaces the session's map with one from a file, for everyone in it.\nUnsaved work in the session is lost; the server keeps a copy of the session as it was."
+msgstr "Substitui o mapa da sessão por um de um arquivo, para todos nela.\nO trabalho não salvo na sessão é perdido; o servidor guarda uma cópia da sessão como estava."
+
+msgid "Servers"
+msgstr "Servidores"
+
+msgid "A favourite: kept, at the top. Click to make it a recent one."
+msgstr "Um favorito: fica guardado, no topo. Clique para torná-lo um recente."
+
+msgid "Keep it as a favourite"
+msgstr "Guardar como favorito"
+
+msgid "Its password is kept on this computer."
+msgstr "A senha dele fica guardada neste computador."
+
+msgid "Forget it"
+msgstr "Esquecer"
+
+msgid "Remember the password for favourites"
+msgstr "Lembrar a senha dos favoritos"
+
+msgid "Kept in your Haumea settings on this computer, for servers you star."
+msgstr "Guardada nas configurações do Haumea neste computador, para os servidores que você marcar com estrela."
+
+msgid "The server keeps a copy of the map whenever it's saved."
+msgstr "O servidor guarda uma cópia do mapa sempre que ele é salvo."
+
+#, c-format
+msgid "%d in, you'd be a %s"
+msgstr "%d dentro, você seria %s"
+
+#, c-format
+msgid "%d ms"
+msgstr "%d ms"
+
+msgid "8 characters or more. You sign in with it from now on; the invite is used up."
+msgstr "8 caracteres ou mais. Você entra com ela daqui em diante; o convite é usado."
+
+msgid "A server with accounts: your name and password there."
+msgstr "Um servidor com contas: seu nome e senha nele."
+
+msgid "AI agents here"
+msgstr "Agentes de IA aqui"
+
+msgid "Account"
+msgstr "Conta"
+
+msgid "Admin"
+msgstr "Administração"
+
+msgid "Choose a name"
+msgstr "Escolha um nome"
+
+msgid "Choose a password"
+msgstr "Escolha uma senha"
+
+msgid "Choose a password of 8 characters or more."
+msgstr "Escolha uma senha de 8 caracteres ou mais."
+
+msgid "Days"
+msgstr "Dias"
+
+msgid "For a locked room (admins don't need it)."
+msgstr "Para uma sala trancada (administradores não precisam)."
+
+msgid "Haumea remembers it, and won't join if another server answers here later."
+msgstr "O Haumea a lembra e não entra se outro servidor responder aqui depois."
+
+#, c-format
+msgid "In room %s on %s, as %s"
+msgstr "Na sala %s em %s, como %s"
+
+msgid "Invite as"
+msgstr "Convidar como"
+
+msgid "Invite code"
+msgstr "Código de convite"
+
+msgid "Its account's: the server knows it from the agent's token."
+msgstr "Da conta dele: o servidor sabe pelo token do agente."
+
+msgid "Lock this room"
+msgstr "Trancar esta sala"
+
+#, c-format
+msgid "Make a %s everywhere"
+msgstr "Tornar %s em todo lugar"
+
+#, c-format
+msgid "Make a %s here"
+msgstr "Tornar %s aqui"
+
+msgid "Make an invite code"
+msgstr "Criar um código de convite"
+
+msgid "Make room"
+msgstr "Criar sala"
+
+msgid "No rooms yet."
+msgstr "Ainda não há salas."
+
+msgid "Password"
+msgstr "Senha"
+
+msgid "Remove from the room"
+msgstr "Remover da sala"
+
+msgid "Room"
+msgstr "Sala"
+
+msgid "Room password"
+msgstr "Senha da sala"
+
+msgid "Rooms"
+msgstr "Salas"
+
+msgid "Send it to them privately: it makes one account."
+msgstr "Envie em particular: ele cria uma conta."
+
+#, c-format
+msgid "Server fingerprint: %s"
+msgstr "Impressão digital do servidor: %s"
+
+msgid "Session code"
+msgstr "Código da sessão"
+
+#, c-format
+msgid "Signed in to %s"
+msgstr "Conectado a %s"
+
+msgid "Someone hosting from Haumea, or a server with one password for everyone."
+msgstr "Alguém hospedando pelo Haumea, ou um servidor com uma senha para todos."
+
+msgid "The first time on a server with accounts: the code you were sent makes your account."
+msgstr "A primeira vez em um servidor com contas: o código que você recebeu cria sua conta."
+
+msgid "The server's signature didn't check out: something may be between you and it. Not joined."
+msgstr "A assinatura do servidor não confere: pode haver algo entre você e ele. Não entrou."
+
+#, c-format
+msgid "This server isn't the one you joined before (its fingerprint was %s, now %s). Something may be between you and it. If its owner set it up again, forget it in Servers and join again."
+msgstr "Este servidor não é o que você entrou antes (a impressão digital era %s, agora %s). Pode haver algo entre você e ele. Se o dono o reinstalou, esqueça-o em Servidores e entre de novo."
+
+msgid "Unlock"
+msgstr "Destrancar"
+
+msgid "Uses"
+msgstr "Usos"
+
+msgid "Whose it says it is: without accounts nothing proves it."
+msgstr "De quem ele diz ser: sem contas, nada o comprova."
+
+msgid "You're a viewer here: you can look around and chat."
+msgstr "Você é observador aqui: pode olhar e conversar."
+
+msgid "Your account's name on this server: 2-31 letters, digits, _ - or ."
+msgstr "O nome da sua conta neste servidor: 2-31 letras, dígitos, _ - ou ."
+
+msgid "Your open map becomes the new room's."
+msgstr "Seu mapa aberto vira o da nova sala."
+
+msgid "admin"
+msgstr "administrador"
+
+msgid "builder"
+msgstr "construtor"
+
+msgid "builders"
+msgstr "construtores"
+
+msgid "empty: pick from the list"
+msgstr "vazio: escolha da lista"
+
+msgid "new room's name"
+msgstr "nome da nova sala"
+
+msgid "not allowed"
+msgstr "não permitidos"
+
+msgid "owner"
+msgstr "dono"
+
+#, c-format
+msgid "via %s"
+msgstr "via %s"
+
+msgid "viewer"
+msgstr "observador"
+
+msgid "viewers"
+msgstr "observadores"
+

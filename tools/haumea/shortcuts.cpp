@@ -83,6 +83,7 @@ const ShortcutDef defs[SC_NUM_ACTIONS] = {
 	{ { "window_pawn_code", N_("Windows"), N_("Code"), SHORTCUT_EDITOR, false }, { { ImGuiKey_9, CTRL } } },
 	{ { "window_textures", N_("Windows"), N_("Texture Browser"), SHORTCUT_EDITOR, false }, { { ImGuiKey_T, CTRL } } },
 	{ { "window_nodes", N_("Windows"), N_("Nodes (open.mp)"), SHORTCUT_EDITOR, false }, { { ImGuiKey_F3, 0 } } },
+	{ { "window_terminal", N_("Windows"), N_("Terminal"), SHORTCUT_EDITOR, false }, { { ImGuiKey_GraveAccent, CTRL } } },
 	{ { "window_shortcuts", N_("Windows"), N_("Keyboard Shortcuts"), SHORTCUT_EDITOR, false }, { { ImGuiKey_F1, 0 } } },
 	{ { "window_log", N_("Windows"), N_("Log"), SHORTCUT_EDITOR, false }, { { ImGuiKey_F12, 0 } } },
 	{ { "window_preferences", N_("Windows"), N_("Preferences"), SHORTCUT_EDITOR, false }, { { ImGuiKey_Comma, CTRL } } },

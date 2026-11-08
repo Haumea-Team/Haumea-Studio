@@ -113,6 +113,7 @@ class HaumeaService:
 		self.discovery_dir = Path(discovery_dir)
 		self.state_dir = Path(state_dir)
 		self._stable_keys_by_instance: dict[int, str] = {}
+		self.is_worker = False	# a background Namaka (namaka_team.py)
 
 	@property
 	def vibe(self):
@@ -688,6 +689,10 @@ class HaumeaService:
 		committed = None
 		if self.client.command("session_status").get("active"):
 			committed = self.client.command("session_commit").get("committed_session")
+		if self.is_worker:
+			# Its edits are already in the session; the map's file is the user's.
+			return {"committed_session": committed, "saved": False,
+			        "note": "edits kept in the session: call save_map without namaka to write the map's file"}
 		result = self.engine("save", [target, format or "", text_encoding or ""])
 		if committed:
 			result["committed_session"] = committed

@@ -1,0 +1,62 @@
+# A real shell in a panel, with nothing about any one program: it evaluates what
+# is typed, keeps it from the editor's shortcuts, handles Ctrl+C, a full-screen
+# program, 24-bit colour, bracketed paste and resizing, and starts again after exit.
+open "$UI_FIXTURES/ui_map.pwn"
+shortcut window_terminal
+wait 30
+wait_until terminal_lacks 'NO SUCH TEXT'
+# Runs what is typed: the sum exists only if a program computed it.
+type "expr 40 + 2"
+key Enter
+wait_until terminal_contains '42'
+# Keys go to the shell, not the editor: W and S don't fly, Ctrl+1 and Del do nothing to the map.
+mark_camera
+hold W
+wait 20
+release W
+key Backspace
+assert camera_moved < 0.01
+# Ctrl+C stops a program and the shell lives on.
+type "sleep 100"
+key Enter
+wait 20
+key Ctrl+C
+wait 20
+type "expr 500 + 55"
+key Enter
+wait_until terminal_contains '555'
+# A full-screen program: the alternate screen comes and goes, and what was there returns.
+type "sh $UI_FIXTURES/terminal_fullscreen.sh"
+key Enter
+wait_until terminal_contains 'FULLSCREEN'
+assert terminal_lacks '555'
+wait_until terminal_lacks 'FULLSCREEN'
+assert terminal_contains '555'
+# Bracketed paste: a program that asked sees the markers, so the text isn't run line by line.
+type "sh $UI_FIXTURES/terminal_paste.sh"
+key Enter
+wait 20
+clipboard "pasted-1"
+wait 3
+key Ctrl+Shift+V
+wait 10
+key Enter
+wait_until terminal_contains '^[[200~pasted-1^[[201~'
+key Ctrl+C
+wait 20
+# Colours, styles and letters beyond ASCII reach the screen.
+type "sh $UI_FIXTURES/terminal_colour.sh"
+key Enter
+wait_until terminal_contains 'TRUECOLOUR'
+assert terminal_contains 'café ✓'
+wait 10
+grab "$UI_CONFIG_DIR/terminal.png"
+# The shell ends: the panel says so, and starts another.
+type "exit 3"
+key Enter
+wait_until item 'Terminal' 'Start again'
+click_item 'Terminal' 'Start again'
+wait 20
+type "expr 700 + 77"
+key Enter
+wait_until terminal_contains '777'

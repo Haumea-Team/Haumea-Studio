@@ -80,7 +80,7 @@ ResolveEditorExecutablePath(char *path, size_t size)
 // Keep the launch location before the updater moves the running executable.
 // On Linux /proc/self/exe follows that move into .haumea-previous/files;
 // resolving it again would relaunch the old version from the backup folder.
-static bool
+bool
 GetEditorExecutablePath(char *path, size_t size)
 {
 	static const std::string launchPath = []{
