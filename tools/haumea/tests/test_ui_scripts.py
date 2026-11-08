@@ -187,6 +187,9 @@ def run_script(name):
         env.pop('HAUMEA_GAME_DIR', None)	# no game folder known
     else:
         args[1:1] = ['--game', game, '--workspace', str(server)]
+    if name == 'terminal.uis':
+        # A shell that starts plainly in an empty HOME (zsh opens its new-user wizard there).
+        env['SHELL'] = shutil.which('bash') or '/bin/sh'
     if name in ('startscreen_launch.uis', 'rc_smoke.uis'):
         # Scripts skip it otherwise. It only shows the screen; settings still go to
         # editor_env's private config, like every script's.
