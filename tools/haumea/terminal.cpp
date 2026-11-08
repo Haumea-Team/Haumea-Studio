@@ -5,6 +5,9 @@
 #include "terminal.h"
 #include "imgui_internal.h"
 
+#ifdef small
+#undef small	// rpcndr.h (through windows.h) defines it as char; vterm.h has a field by that name
+#endif
 #include <vterm.h>
 
 #include <algorithm>
