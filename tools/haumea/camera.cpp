@@ -73,7 +73,7 @@ CCamera::Process(void)
 	int lookButton = gCameraLookButton;
 	if(gBrushMode && lookButton == 1)
 		lookButton = 3;
-	bool lookBlockedByTool = gRectSelectActive;
+	bool lookBlockedByTool = gRectSelectActive || gObjectDragActive;
 	// Arm on press, then start looking only after a small drag or a fly key.
 	// Locking the cursor immediately made ordinary right-clicks unreliable.
 	static bool looking, lookArmed;

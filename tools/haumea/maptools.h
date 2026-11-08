@@ -99,5 +99,6 @@ void ResetMapToolsLine();
 bool MapToolsHandleViewportClick(void);
 // The Tools window's sections.
 void MapToolsPanel(void);
+void MapToolsMorePanel(void);	// the specialised tools, after the brush
 rw::V3d MapToolsSelectionCentre();
 int MapToolsCenterParent(std::string *error);

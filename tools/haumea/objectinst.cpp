@@ -6372,6 +6372,46 @@ MapHasUndoHistory(void)
 	return undoCount > 0;
 }
 
+// The history as the steps Undo takes (a group is one step), oldest first;
+// returns how many of them are done (the rest can be redone).
+int
+GetUndoHistory(std::vector<UndoHistoryStep> &steps)
+{
+	steps.clear();
+	int done = 0;
+	for(int i = 0; i < undoCount; i++){
+		const UndoAction &a = undoStack[i];
+		int objects = a.type == UNDO_DELETE ? a.numDeleted : a.type == UNDO_PASTE ? a.numPasted :
+			a.type == UNDO_TRANSFORM_BATCH ? a.numTransforms : 1;
+		// A batch that only moved (or only turned) things says so.
+		int type = a.type;
+		if(type == UNDO_TRANSFORM_BATCH){
+			int flags = 0;
+			for(const UndoTransform &t : a.transforms)
+				flags |= t.flags;
+			if(flags == UNDO_TRANSFORM_POS) type = UNDO_MOVE;
+			else if(flags == UNDO_TRANSFORM_ROT) type = UNDO_ROTATE;
+		}
+		if(i > 0 && a.group != 0 && a.group == undoStack[i-1].group)
+			steps.back().objects += objects;
+		else
+			steps.push_back({ type, objects });
+		if(i < undoPos)
+			done = (int)steps.size();
+	}
+	return done;
+}
+
+// Undo or redo until `done` steps of GetUndoHistory are done.
+void
+GoToUndoStep(int done)
+{
+	std::vector<UndoHistoryStep> steps;
+	int now = GetUndoHistory(steps);
+	for(; now > done; now--) Undo();
+	for(; now < done; now++) Redo();
+}
+
 static void
 pushUndo(UndoAction *a)
 {

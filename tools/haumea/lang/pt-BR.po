@@ -356,6 +356,10 @@ msgid "%d similar models"
 msgstr "%d modelos semelhantes"
 
 #, c-format
+msgid "%d skins"
+msgstr "%d skins"
+
+#, c-format
 msgid "%d text(s) with accents or symbols are saved as UTF-8, but SA-MP and open.mp clients draw Windows-1252, so they show garbled (\"Ã§\" for \"ç\"). Save As > Windows-1252 fixes it."
 msgstr "%d texto(s) com acentos ou símbolos são salvos em UTF-8, mas os clientes SA-MP e open.mp desenham em Windows-1252, então aparecem embaralhados (\"Ã§\" no lugar de \"ç\"). Salvar como > Windows-1252 resolve."
 
@@ -382,6 +386,10 @@ msgstr "%d árvore(s) ou palmeira(s) inclinadas em X ou Y: o jogo as balança co
 #, c-format
 msgid "%d vehicle ids (%d of them for trains, 4 each), over the limit of %d."
 msgstr "%d IDs de veículo (%d deles para trens, 4 cada), acima do limite de %d."
+
+#, c-format
+msgid "%d vehicles"
+msgstr "%d veículos"
 
 #, c-format
 msgid "%d vehicles, %d actors streamed  |  virtual world %d, interior %d"
@@ -634,10 +642,6 @@ msgstr "%s anda pelo arquivo de nodes %d, que não está no workspace (%s). O op
 #, c-format
 msgid "%s won't be offered again."
 msgstr "%s não será oferecida de novo."
-
-#, c-format
-msgid "%s%s  |  Objects: %d%s  |  %.0f FPS"
-msgstr "%s%s  |  Objetos: %d%s  |  %.0f FPS"
 
 #, c-format
 msgid "%s's group has %s, which Windows-1252 (what SA-MP and open.mp clients draw) doesn't have: it is saved as '?'."
@@ -1987,6 +1991,9 @@ msgstr "Centralizar objeto pai"
 msgid "Center the target and fit it in view."
 msgstr "Centraliza o alvo e ajusta seu tamanho à visualização."
 
+msgid "Centered"
+msgstr "Centralizado"
+
 msgid "Centre"
 msgstr "Centro"
 
@@ -2425,6 +2432,10 @@ msgstr "Converter em objeto do mapa"
 
 msgid "Coordinate pin"
 msgstr "Pin de coordenadas"
+
+#, c-format
+msgid "Coordinates are relative to %.2f, %.2f, %.2f"
+msgstr "As coordenadas são relativas a %.2f, %.2f, %.2f"
 
 #, c-format
 msgid "Copied %d instance(s) | %s: paste at camera | %s: paste in place"
@@ -4174,6 +4185,9 @@ msgstr "Destacar resultados"
 msgid "Highway"
 msgstr "Rodovia"
 
+msgid "History"
+msgstr "Histórico"
+
 msgid "Hit"
 msgstr "Pancada"
 
@@ -5871,6 +5885,24 @@ msgstr "Nada foi importado."
 msgid "Notifications"
 msgstr "Notificações"
 
+msgid "Nudge the selection back (as the camera looks)"
+msgstr "Empurrar a seleção para trás (como a câmera olha)"
+
+msgid "Nudge the selection down"
+msgstr "Empurrar a seleção para baixo"
+
+msgid "Nudge the selection forward (as the camera looks)"
+msgstr "Empurrar a seleção para a frente (como a câmera olha)"
+
+msgid "Nudge the selection left (as the camera looks)"
+msgstr "Empurrar a seleção para a esquerda (como a câmera olha)"
+
+msgid "Nudge the selection right (as the camera looks)"
+msgstr "Empurrar a seleção para a direita (como a câmera olha)"
+
+msgid "Nudge the selection up"
+msgstr "Empurrar a seleção para cima"
+
 msgid "Number"
 msgstr "Quantidade"
 
@@ -6416,6 +6448,9 @@ msgstr ""
 "Os pedestres não passeiam até este nó.\n"
 "Impede que pedestres ociosos andem por aqui."
 
+msgid "People (skins)"
+msgstr "Pessoas (skins)"
+
 msgid "Per player"
 msgstr "Por jogador"
 
@@ -6635,6 +6670,9 @@ msgstr "PlayerPlaySound. Qualquer ID de data/AudioEvents.txt do jogo funciona."
 
 msgid "Players can click it while SelectTextDraw is on (OnPlayerClickTextDraw)."
 msgstr "Os jogadores podem clicar nele enquanto SelectTextDraw está ativo (OnPlayerClickTextDraw)."
+
+msgid "Players see at most 1250 m (400 m inside interiors): objects further away only show in the editor."
+msgstr "Os jogadores veem no máximo 1250 m (400 m dentro de interiores): objetos mais longe só aparecem no editor."
 
 #, c-format
 msgid "Plays %s / %s"
@@ -7345,8 +7383,8 @@ msgstr "Restaura o FOV padrão da câmera (70°)."
 msgid "Restored"
 msgstr "Restaurados"
 
-msgid "Restores the browser on the left and Object Info on the right."
-msgstr "Restaura o navegador à esquerda e as informações do objeto à direita."
+msgid "Restores the panels to one column on the right: the browser above Object Info."
+msgstr "Restaura os painéis numa coluna à direita: o navegador acima das informações do objeto."
 
 msgid "Return to map"
 msgstr "Voltar ao mapa"
@@ -9886,6 +9924,13 @@ msgstr ""
 "Posição deste nó no mundo.\n"
 "Arraste para mover, ou use o gizmo de mover (tecla W) na viewport.\n"
 "Arredondada para passos de 0,125 unidade (1/8). Os nós não podem cruzar os limites das áreas."
+
+msgid ""
+"Write coordinates relative to the export's centre (its lowest point for height),\n"
+"so the code can be placed anywhere by adding a position. Removed GTA buildings keep their real coordinates."
+msgstr ""
+"Grava as coordenadas relativas ao centro da exportação (o ponto mais baixo para a altura),\n"
+"para o código poder ser colocado em qualquer lugar somando uma posição. Prédios do GTA removidos mantêm as coordenadas reais."
 
 msgid ""
 "Writes a copy of the open map to the autosave folder in Haumea's config\n"

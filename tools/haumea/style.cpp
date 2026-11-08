@@ -12,12 +12,15 @@ ImFont *gTitleFont;	// large Inter for the splash screen title
 
 // Accent colors — used for highlights, active elements and selection.
 static int gUiTheme = UI_THEME_DARK;
-static const ImVec4 kDarkAccent       = ImVec4(0.02f, 0.78f, 0.78f, 1.00f);
-static const ImVec4 kDarkAccentHover  = ImVec4(0.39f, 0.86f, 0.76f, 1.00f);
-static const ImVec4 kDarkAccentActive = ImVec4(0.20f, 0.64f, 0.56f, 1.00f);
-static const ImVec4 kLightAccent       = ImVec4(0.00f, 0.43f, 0.48f, 1.00f);
-static const ImVec4 kLightAccentHover  = ImVec4(0.04f, 0.34f, 0.31f, 1.00f);
-static const ImVec4 kLightAccentActive = ImVec4(0.06f, 0.31f, 0.29f, 1.00f);
+static ImVec4 gAccentFill;	// a filled button or tool that is on, under white text
+// Graphite and blue, like a creative suite: the colour stays on what is
+// active or selected, everything else is neutral grey.
+static const ImVec4 kDarkAccent       = ImVec4(0.231f, 0.557f, 0.918f, 1.00f);	// #3B8EEA
+static const ImVec4 kDarkAccentHover  = ImVec4(0.420f, 0.678f, 0.957f, 1.00f);
+static const ImVec4 kDarkAccentActive = ImVec4(0.102f, 0.420f, 0.820f, 1.00f);	// #1A6BD1
+static const ImVec4 kLightAccent       = ImVec4(0.078f, 0.451f, 0.902f, 1.00f);	// #1473E6
+static const ImVec4 kLightAccentHover  = ImVec4(0.051f, 0.400f, 0.816f, 1.00f);
+static const ImVec4 kLightAccentActive = ImVec4(0.035f, 0.353f, 0.729f, 1.00f);
 
 // More themes, each from seven colours (0xRRGGBB): the window, panels,
 // controls, borders, text, secondary text and the accent. Dark and Light
@@ -127,7 +130,7 @@ UiThemePreviewBackground(void)
 	const UiPalette *p = currentPalette();
 	if(p)
 		return rw::RGBA{ (uint8)(p->control >> 16), (uint8)(p->control >> 8), (uint8)p->control, 255 };
-	return gUiTheme == UI_THEME_LIGHT ? rw::RGBA{ 235, 239, 244, 255 } : rw::RGBA{ 31, 41, 48, 255 };
+	return gUiTheme == UI_THEME_LIGHT ? rw::RGBA{ 240, 240, 240, 255 } : rw::RGBA{ 35, 35, 35, 255 };
 }
 
 // A palette's colours over the whole style, after SetupStyle's own.
@@ -139,6 +142,7 @@ applyPalette(ImVec4 *c, const UiPalette &p)
 	ImVec4 accent = paletteColour(p.accent);
 	ImVec4 accentHover = mixColour(accent, text, 0.25f);
 	ImVec4 accentActive = mixColour(accent, window, 0.30f);
+	gAccentFill = luminance(accent) > 0.45f ? mixColour(accent, ImVec4(0, 0, 0, 1), 0.35f) : accent;
 	bool light = luminance(window) > 0.5f;
 	ImVec4 shade = light ? ImVec4(0, 0, 0, 1) : ImVec4(1, 1, 1, 1);
 
@@ -192,6 +196,12 @@ applyPalette(ImVec4 *c, const UiPalette &p)
 }
 
 ImVec4
+UiAccentFill(void)
+{
+	return gAccentFill;
+}
+
+ImVec4
 UiSemanticColor(int color)
 {
 	bool light = UiThemeIsLight();
@@ -220,31 +230,38 @@ SetupStyle(void)
 	ImVec4 accent = light ? kLightAccent : kDarkAccent;
 	ImVec4 accentHover = light ? kLightAccentHover : kDarkAccentHover;
 	ImVec4 accentActive = light ? kLightAccentActive : kDarkAccentActive;
+	gAccentFill = accentActive;
 
-	// ---- Geometry ----
-	style.WindowRounding    = 8.0f;
-	style.ChildRounding     = 6.0f;
-	style.FrameRounding     = 6.0f;
-	style.PopupRounding     = 6.0f;
-	style.ScrollbarRounding = 7.0f;
-	style.GrabRounding      = 4.0f;
-	style.TabRounding       = 4.0f;
+	// ---- Geometry: compact and square, like a creative suite ----
+	style.WindowRounding    = 3.0f;
+	style.ChildRounding     = 3.0f;
+	style.FrameRounding     = 3.0f;
+	style.PopupRounding     = 4.0f;
+	style.ScrollbarRounding = 6.0f;
+	style.GrabRounding      = 2.0f;
+	style.TabRounding       = 0.0f;
 
-	style.WindowPadding     = ImVec2(16, 14);
-	style.FramePadding      = ImVec2(8, 5);
-	style.ItemSpacing       = ImVec2(8, 6);
-	style.ItemInnerSpacing  = ImVec2(6, 4);
-	style.ScrollbarSize     = 12.0f;
-	style.GrabMinSize       = 10.0f;
-	style.WindowBorderSize  = 0.0f;
-	style.ChildBorderSize   = 0.0f;
+	style.WindowPadding     = ImVec2(10, 9);
+	style.FramePadding      = ImVec2(7, 4);
+	style.ItemSpacing       = ImVec2(6, 5);
+	style.ItemInnerSpacing  = ImVec2(5, 4);
+	style.IndentSpacing     = 14.0f;
+	style.ScrollbarSize     = 10.0f;
+	style.GrabMinSize       = 9.0f;
+	style.WindowBorderSize  = 1.0f;
+	style.ChildBorderSize   = 1.0f;
 	style.PopupBorderSize   = 1.0f;
-	style.FrameBorderSize   = 0.0f;
+	style.FrameBorderSize   = 1.0f;
 	style.TabBorderSize     = 0.0f;
-	style.TabBarBorderSize  = 0.0f;
+	style.TabBarBorderSize  = 1.0f;
 	style.TabBarOverlineSize = 0.0f;
+#ifdef IMGUI_HAS_DOCK
+	style.DockingSeparatorSize = 1.0f;
+#endif
 
 	style.WindowTitleAlign  = ImVec2(0.0f, 0.5f);
+	// No collapse arrow at the start of title bars and tab strips.
+	style.WindowMenuButtonPosition = ImGuiDir_None;
 
 #ifdef IMGUI_HAS_DOCK
 	// Panels dock by dragging their title bar onto the edges of the
@@ -254,97 +271,91 @@ SetupStyle(void)
 #endif
 	style.SeparatorTextAlign = ImVec2(0.0f, 0.5f);
 	style.SeparatorTextPadding = ImVec2(0.0f, 4.0f);
-	style.SeparatorTextBorderSize = 0.0f;
+	style.SeparatorTextBorderSize = 1.0f;
 
 	// ---- Colors ----
 	ImVec4 *c = style.Colors;
+	// Every grey below is one of these: the app's frame (menus, bars),
+	// panels, input wells, raised controls, lines and text.
+	auto grey = [](float v, float a = 1.0f) { return ImVec4(v, v, v, a); };
+	ImVec4 chrome  = light ? grey(0.875f) : grey(0.118f);	// #DFDFDF / #1E1E1E
+	ImVec4 bar     = light ? grey(0.910f) : grey(0.149f);	// tab strips and side bars
+	ImVec4 panel   = light ? grey(0.953f) : grey(0.173f);	// #F3F3F3 / #2C2C2C
+	ImVec4 well    = light ? grey(1.000f) : grey(0.110f);	// #FFFFFF / #1C1C1C
+	ImVec4 raised  = light ? grey(0.890f) : grey(0.220f);	// #E3E3E3 / #383838
+	ImVec4 line    = light ? grey(0.780f) : grey(0.220f);
+	ImVec4 divider = light ? grey(0.700f) : grey(0.067f);	// between panels
+	ImVec4 text    = light ? grey(0.150f) : grey(0.840f);
+	ImVec4 muted   = light ? grey(0.380f) : grey(0.580f);
 
-	// Backgrounds
-	c[ImGuiCol_WindowBg]             = light ? ImVec4(0.96f, 0.97f, 0.98f, 1.00f) : ImVec4(0.075f, 0.095f, 0.115f, 1.00f);
-	c[ImGuiCol_ChildBg]              = light ? ImVec4(0.93f, 0.95f, 0.96f, 0.00f) : ImVec4(0.090f, 0.105f, 0.125f, 0.00f);
-	c[ImGuiCol_PopupBg]              = light ? ImVec4(0.99f, 0.995f, 1.00f, 1.00f) : ImVec4(0.105f, 0.122f, 0.145f, 0.98f);
+	c[ImGuiCol_WindowBg]             = panel;
+	c[ImGuiCol_ChildBg]              = ImVec4(0, 0, 0, 0);
+	c[ImGuiCol_PopupBg]              = light ? grey(0.985f) : grey(0.165f, 0.99f);
+	c[ImGuiCol_Border]               = line;
+	c[ImGuiCol_BorderShadow]         = ImVec4(0, 0, 0, 0);
+	c[ImGuiCol_Text]                 = text;
+	c[ImGuiCol_TextDisabled]         = muted;
 
-	// Borders
-	c[ImGuiCol_Border]               = light ? ImVec4(0.70f, 0.76f, 0.77f, 0.85f) : ImVec4(0.24f, 0.29f, 0.33f, 0.45f);
-	c[ImGuiCol_BorderShadow]         = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+	c[ImGuiCol_FrameBg]              = well;
+	c[ImGuiCol_FrameBgHovered]       = light ? grey(0.970f) : grey(0.140f);
+	c[ImGuiCol_FrameBgActive]        = light ? grey(0.940f) : grey(0.090f);
 
-	// Text
-	c[ImGuiCol_Text]                 = light ? ImVec4(0.13f, 0.16f, 0.17f, 1.00f) : ImVec4(0.93f, 0.95f, 0.96f, 1.00f);
-	c[ImGuiCol_TextDisabled]         = light ? ImVec4(0.40f, 0.46f, 0.47f, 1.00f) : ImVec4(0.59f, 0.65f, 0.69f, 1.00f);
+	// Floating panels' title bars and the docked panels' tab strips.
+	c[ImGuiCol_TitleBg]              = bar;
+	c[ImGuiCol_TitleBgActive]        = bar;
+	c[ImGuiCol_TitleBgCollapsed]     = ImVec4(bar.x, bar.y, bar.z, 0.85f);
+	c[ImGuiCol_MenuBarBg]            = chrome;
 
-	// Frames (input boxes, sliders, checkboxes)
-	c[ImGuiCol_FrameBg]              = light ? ImVec4(0.88f, 0.91f, 0.92f, 1.00f) : ImVec4(0.13f, 0.15f, 0.18f, 1.00f);
-	c[ImGuiCol_FrameBgHovered]       = light ? ImVec4(0.83f, 0.88f, 0.89f, 1.00f) : ImVec4(0.18f, 0.21f, 0.24f, 1.00f);
-	c[ImGuiCol_FrameBgActive]        = light ? ImVec4(0.78f, 0.84f, 0.84f, 1.00f) : ImVec4(0.22f, 0.26f, 0.29f, 1.00f);
+	c[ImGuiCol_ScrollbarBg]          = ImVec4(0, 0, 0, 0);
+	c[ImGuiCol_ScrollbarGrab]        = light ? grey(0.720f) : grey(0.300f);
+	c[ImGuiCol_ScrollbarGrabHovered] = light ? grey(0.620f) : grey(0.380f);
+	c[ImGuiCol_ScrollbarGrabActive]  = light ? grey(0.540f) : grey(0.460f);
 
-	// Title bar
-	c[ImGuiCol_TitleBg]              = light ? ImVec4(0.90f, 0.93f, 0.94f, 1.00f) : ImVec4(0.065f, 0.075f, 0.09f, 1.00f);
-	c[ImGuiCol_TitleBgActive]        = light ? ImVec4(0.86f, 0.91f, 0.91f, 1.00f) : ImVec4(0.10f, 0.13f, 0.15f, 1.00f);
-	c[ImGuiCol_TitleBgCollapsed]     = light ? ImVec4(0.90f, 0.93f, 0.94f, 0.70f) : ImVec4(0.065f, 0.075f, 0.09f, 0.70f);
-
-	// Menu bar
-	c[ImGuiCol_MenuBarBg]            = light ? ImVec4(0.91f, 0.94f, 0.95f, 1.00f) : ImVec4(0.09f, 0.105f, 0.125f, 1.00f);
-
-	// Scrollbar
-	c[ImGuiCol_ScrollbarBg]          = light ? ImVec4(0.90f, 0.93f, 0.94f, 0.80f) : ImVec4(0.08f, 0.095f, 0.11f, 0.80f);
-	c[ImGuiCol_ScrollbarGrab]        = light ? ImVec4(0.68f, 0.73f, 0.74f, 1.00f) : ImVec4(0.24f, 0.29f, 0.32f, 1.00f);
-	c[ImGuiCol_ScrollbarGrabHovered] = light ? ImVec4(0.58f, 0.66f, 0.67f, 1.00f) : ImVec4(0.34f, 0.41f, 0.43f, 1.00f);
-	c[ImGuiCol_ScrollbarGrabActive]  = light ? ImVec4(0.45f, 0.60f, 0.59f, 1.00f) : ImVec4(0.42f, 0.52f, 0.51f, 1.00f);
-
-	// Checkbox / Radio mark
 	c[ImGuiCol_CheckMark]            = accent;
-
-	// Slider
-	c[ImGuiCol_SliderGrab]           = light ? ImVec4(0.50f, 0.58f, 0.59f, 1.00f) : ImVec4(0.37f, 0.46f, 0.48f, 1.00f);
+	c[ImGuiCol_SliderGrab]           = light ? grey(0.550f) : grey(0.480f);
 	c[ImGuiCol_SliderGrabActive]     = accent;
 
-	// Buttons
-	c[ImGuiCol_Button]               = light ? ImVec4(0.88f, 0.91f, 0.92f, 1.00f) : ImVec4(0.14f, 0.17f, 0.19f, 1.00f);
-	c[ImGuiCol_ButtonHovered]        = light ? ImVec4(0.81f, 0.87f, 0.88f, 1.00f) : ImVec4(0.20f, 0.25f, 0.27f, 1.00f);
-	c[ImGuiCol_ButtonActive]         = accentActive;
+	c[ImGuiCol_Button]               = raised;
+	c[ImGuiCol_ButtonHovered]        = light ? grey(0.840f) : grey(0.275f);
+	c[ImGuiCol_ButtonActive]         = light ? grey(0.790f) : grey(0.320f);
 
-	// Headers (collapsing headers, selectable, menu items)
-	c[ImGuiCol_Header]               = light ? ImVec4(0.85f, 0.90f, 0.90f, 1.00f) : ImVec4(0.14f, 0.18f, 0.19f, 1.00f);
-	c[ImGuiCol_HeaderHovered]        = light ? ImVec4(0.78f, 0.86f, 0.86f, 1.00f) : ImVec4(0.21f, 0.28f, 0.28f, 1.00f);
-	c[ImGuiCol_HeaderActive]         = accentActive;
+	// Collapsing headers are flat section bars; selected rows take the accent.
+	c[ImGuiCol_Header]               = light ? grey(0.900f) : grey(0.205f);
+	c[ImGuiCol_HeaderHovered]        = light ? grey(0.860f) : grey(0.250f);
+	c[ImGuiCol_HeaderActive]         = ImVec4(accent.x, accent.y, accent.z, 0.45f);
 
-	// Separators
-	c[ImGuiCol_Separator]            = light ? ImVec4(0.77f, 0.81f, 0.82f, 1.00f) : ImVec4(0.22f, 0.27f, 0.29f, 1.00f);
+	c[ImGuiCol_Separator]            = divider;
 	c[ImGuiCol_SeparatorHovered]     = accentHover;
 	c[ImGuiCol_SeparatorActive]      = accent;
 
-	// Resize grip
-	c[ImGuiCol_ResizeGrip]           = light ? ImVec4(0.45f, 0.65f, 0.61f, 0.40f) : ImVec4(0.22f, 0.32f, 0.31f, 0.40f);
+	c[ImGuiCol_ResizeGrip]           = ImVec4(0, 0, 0, 0);
 	c[ImGuiCol_ResizeGripHovered]    = accentHover;
 	c[ImGuiCol_ResizeGripActive]     = accent;
 
-	// Tabs
-	c[ImGuiCol_Tab]                  = light ? ImVec4(0.90f, 0.93f, 0.94f, 1.00f) : ImVec4(0.105f, 0.13f, 0.15f, 1.00f);
-	c[ImGuiCol_TabHovered]           = light ? ImVec4(0.82f, 0.89f, 0.89f, 1.00f) : ImVec4(0.18f, 0.24f, 0.25f, 1.00f);
-	c[ImGuiCol_TabSelected]          = light ? ImVec4(0.82f, 0.89f, 0.89f, 1.00f) : ImVec4(0.15f, 0.22f, 0.22f, 1.00f);
+	// Tabs: the open one is the panel's own colour, the rest sink into the strip.
+	c[ImGuiCol_Tab]                  = bar;
+	c[ImGuiCol_TabHovered]           = light ? grey(0.930f) : grey(0.205f);
+	c[ImGuiCol_TabSelected]          = panel;
+	c[ImGuiCol_TabDimmed]            = bar;
+	c[ImGuiCol_TabDimmedSelected]    = panel;
+	c[ImGuiCol_TabSelectedOverline]  = accent;
+	c[ImGuiCol_TabDimmedSelectedOverline] = ImVec4(0, 0, 0, 0);
+#ifdef IMGUI_HAS_DOCK
+	c[ImGuiCol_DockingPreview]       = ImVec4(accent.x, accent.y, accent.z, 0.40f);
+	c[ImGuiCol_DockingEmptyBg]       = chrome;
+#endif
 
-	c[ImGuiCol_TabDimmed] = c[ImGuiCol_Tab];
-	c[ImGuiCol_TabDimmedSelected] = c[ImGuiCol_TabSelected];
-	c[ImGuiCol_TabSelectedOverline] = accent;
-	c[ImGuiCol_TabDimmedSelectedOverline] = accent;
+	c[ImGuiCol_TableHeaderBg]        = light ? grey(0.900f) : grey(0.205f);
+	c[ImGuiCol_TableBorderStrong]    = line;
+	c[ImGuiCol_TableBorderLight]     = light ? grey(0.850f) : grey(0.190f);
+	c[ImGuiCol_TableRowBg]           = ImVec4(0, 0, 0, 0);
+	c[ImGuiCol_TableRowBgAlt]        = light ? ImVec4(0, 0, 0, 0.025f) : ImVec4(1, 1, 1, 0.025f);
 
-	// Table
-	c[ImGuiCol_TableHeaderBg]        = light ? ImVec4(0.90f, 0.93f, 0.94f, 1.00f) : ImVec4(0.11f, 0.14f, 0.16f, 1.00f);
-	c[ImGuiCol_TableBorderStrong]    = light ? ImVec4(0.75f, 0.80f, 0.81f, 1.00f) : ImVec4(0.22f, 0.27f, 0.29f, 1.00f);
-	c[ImGuiCol_TableBorderLight]     = light ? ImVec4(0.81f, 0.85f, 0.86f, 1.00f) : ImVec4(0.17f, 0.21f, 0.23f, 1.00f);
-	c[ImGuiCol_TableRowBg]           = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
-	c[ImGuiCol_TableRowBgAlt]        = light ? ImVec4(0.0f, 0.0f, 0.0f, 0.025f) : ImVec4(1.00f, 1.00f, 1.00f, 0.03f);
-
-	// Selection / Drag-drop
-	c[ImGuiCol_TextSelectedBg]       = ImVec4(accent.x, accent.y, accent.z, 0.25f);
+	c[ImGuiCol_TextSelectedBg]       = ImVec4(accent.x, accent.y, accent.z, 0.35f);
 	c[ImGuiCol_DragDropTarget]       = accent;
-
-	// Nav highlight
 	c[ImGuiCol_NavHighlight]         = accent;
-	c[ImGuiCol_NavWindowingHighlight]= light ? ImVec4(0.10f, 0.15f, 0.16f, 0.55f) : ImVec4(1.00f, 1.00f, 1.00f, 0.70f);
-	c[ImGuiCol_NavWindowingDimBg]    = light ? ImVec4(0.20f, 0.24f, 0.25f, 0.14f) : ImVec4(0.80f, 0.80f, 0.80f, 0.20f);
-
-	// Modal dimming
+	c[ImGuiCol_NavWindowingHighlight]= light ? ImVec4(0.10f, 0.10f, 0.10f, 0.55f) : ImVec4(1, 1, 1, 0.70f);
+	c[ImGuiCol_NavWindowingDimBg]    = light ? ImVec4(0.20f, 0.20f, 0.20f, 0.14f) : ImVec4(0.80f, 0.80f, 0.80f, 0.20f);
 	c[ImGuiCol_ModalWindowDimBg]     = ImVec4(0.00f, 0.00f, 0.00f, light ? 0.32f : 0.55f);
 
 	if(const UiPalette *palette = currentPalette())
@@ -378,6 +389,12 @@ SetupFonts(void)
 		0xf023, 0xf023, // lock
 		0xf028, 0xf028, // volume-high
 		0xf03a, 0xf03a, // list
+		0xf03d, 0xf03e, // video, image
+		0xf05b, 0xf05b, // crosshairs
+		0xf063, 0xf063, // arrow-down
+		0xf0ae, 0xf0b0, // list-check, filter
+		0xf0d7, 0xf0d7, // caret-down
+		0xf120, 0xf120, // terminal
 		0xf043, 0xf043, // droplet
 		0xf047, 0xf047, // arrows-up-down-left-right
 		0xf04b, 0xf04b, // play

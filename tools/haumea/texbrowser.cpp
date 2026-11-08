@@ -671,6 +671,7 @@ DrawTextureBrowserWindow(bool *open)
 		ImGui::End();
 		return;
 	}
+	UiFitItemsToPanel();
 	loadLists();
 	bool indexed = indexStep(64);
 	targetBar();

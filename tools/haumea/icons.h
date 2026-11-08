@@ -66,3 +66,9 @@
 #define ICON_FA_EYE_SLASH       "\xef\x81\xb0"  // f070
 #define ICON_FA_CHECK           "\xef\x80\x8c"  // f00c
 #define ICON_FA_TRIANGLE_EXCLAMATION "\xef\x81\xb1"  // f071
+#define ICON_FA_ARROW_DOWN      "\xef\x81\xa3"  // f063
+#define ICON_FA_CROSSHAIRS      "\xef\x81\x9b"  // f05b
+#define ICON_FA_IMAGE           "\xef\x80\xbe"  // f03e
+#define ICON_FA_LIST_CHECK      "\xef\x82\xae"  // f0ae
+#define ICON_FA_TERMINAL        "\xef\x84\xa0"  // f120
+#define ICON_FA_CARET_DOWN      "\xef\x83\x97"  // f0d7
