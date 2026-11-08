@@ -176,7 +176,7 @@ jobs:
           if-no-files-found: error
 
   build-linux:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04  # the oldest glibc we ship for; the Wine check runs this build on 24.04 too
 
     steps:
       - name: Checkout Haumea Studio
