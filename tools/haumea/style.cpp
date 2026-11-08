@@ -464,19 +464,20 @@ SetupFonts(void)
 		I18nCatalogCodepoints(codepoints);
 		// Text the user types (group names, notes) is in no catalog, so an East
 		// Asian catalog also gets the common Chinese set. Only characters past
-		// Latin Extended-A need baking: the defaults cover the rest, which is
-		// why a catalog that only uses them changes nothing here.
+		// Latin-1 need baking: the default range stops at U+00FF, so Polish,
+		// Romanian and Turkish letters (Latin Extended-A, U+0100..U+017F) need
+		// it too.
 		for(unsigned int cp : codepoints)
 			if(cp >= 0x2E80)
 				eastAsian = true;
 		std::vector<unsigned int> baked;
 		for(unsigned int cp : codepoints)
-			if(cp >= 0x180)
+			if(cp >= 0x100)
 				baked.push_back(cp);
 		if(eastAsian){
 			for(const ImWchar *r = io.Fonts->GetGlyphRangesChineseSimplifiedCommon(); r[0]; r += 2)
 				for(unsigned int c = r[0]; c <= r[1]; c++)
-					if(c >= 0x180)
+					if(c >= 0x100)
 						baked.push_back(c);
 		}
 		std::sort(baked.begin(), baked.end());
