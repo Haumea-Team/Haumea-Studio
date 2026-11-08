@@ -461,7 +461,7 @@ The connection is encrypted, and only people with the code can join.
 
 ### A server that stays up: haumea-server
 
-[haumea-server](https://github.com/itsneufox/haumea-server) (its own project) keeps sessions on a
+[haumea-server](https://github.com/Haumea-Team/Haumea-Server) (its own project) keeps sessions on a
 machine that is always on, such as the one that runs your SA-MP or open.mp server, so nobody has to
 keep Haumea open to host. It needs no game and no screen, and has:
 

@@ -357,7 +357,7 @@ quando o roteador deixa. A conexão é criptografada, e só entra quem tem o có
 
 ### Um servidor sempre ligado: haumea-server
 
-O [haumea-server](https://github.com/itsneufox/haumea-server) (um projeto próprio) mantém sessões em uma
+O [haumea-server](https://github.com/Haumea-Team/Haumea-Server) (um projeto próprio) mantém sessões em uma
 máquina sempre ligada, como a que roda seu servidor SA-MP ou open.mp, para ninguém precisar deixar o
 Haumea aberto hospedando. Não precisa do jogo nem de tela, e tem:
 
