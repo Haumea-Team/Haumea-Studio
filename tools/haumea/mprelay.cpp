@@ -1579,7 +1579,7 @@ admin(Client &c, const std::string &payload)
 		uint32_t peer = (uint32_t)atoi(a.c_str());
 		for(Client &other : gClients)
 			if(other.peer == peer && other.room == gRoom && !other.closing){
-				int theirs = std::max(other.role, roleIn(other.account, room));
+				int theirs = (std::max)(other.role, roleIn(other.account, room));
 				if(theirs >= actor && actor < MP_ROLE_OWNER){
 					adminReply(c, false, "you can't remove someone with your role or above");
 					return;
