@@ -256,7 +256,17 @@ CCamera::update(void)
 			if(length(dir) < 0.0001f)
 				dir = m_at;
 			m_at = normalize(dir);
-			f->matrix.lookAt(m_at, m_up);
+			// A view set straight up or down (Go to Coordinates, a saved camera) has
+			// no horizon to lean on: take the up from the last heading, never flip.
+			V3d lookUp = m_up;
+			if(fabsf(m_at.z) > 0.9999f){
+				lookUp = { m_localup.x, m_localup.y, 0.0f };
+				if(length(lookUp) < 1e-4f)
+					lookUp = { 0.0f, 1.0f, 0.0f };
+				else
+					lookUp = normalize(lookUp);
+			}
+			f->matrix.lookAt(m_at, lookUp);
 			f->matrix.pos = m_position;
 			f->updateObjects();
 		}

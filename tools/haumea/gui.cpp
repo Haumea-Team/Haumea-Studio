@@ -861,8 +861,8 @@ SetEditorWindowDecorated(bool decorated)
 #endif
 }
 
-void
-UpdateEditorWindowState(void)
+static void
+sampleEditorWindowState(void)
 {
 #if defined(LIBRW_GLFW)
 	// Remember the normal size and position, and whether it is maximized;
@@ -910,6 +910,41 @@ UpdateEditorWindowState(void)
 		}
 	}
 #endif
+}
+
+// Called every frame. Besides sampling where the window is, it writes the
+// settings file a moment after the window stopped moving or resizing, so the
+// next start opens it in the same place and size even if nothing else in the
+// settings ever changed (and after a crash or a kill).
+void
+UpdateEditorWindowState(void)
+{
+	static bool haveLast;
+	static int lastX, lastY, lastW, lastH;
+	static bool lastMax, lastValid, pending;
+	static std::chrono::steady_clock::time_point changedAt;
+	sampleEditorWindowState();
+	if(!gSavedWindowPlacementApplied)
+		return;
+	bool same = haveLast && lastX == gSavedWindowX && lastY == gSavedWindowY &&
+		lastW == gSavedWindowWidth && lastH == gSavedWindowHeight &&
+		lastMax == gSavedWindowMaximized && lastValid == gSavedWindowPlacementValid;
+	if(!haveLast){
+		// The first sample is what was just loaded: nothing to write yet.
+		haveLast = true;
+		same = false;
+		pending = false;
+	}else if(!same){
+		pending = true;
+		changedAt = std::chrono::steady_clock::now();
+	}
+	lastX = gSavedWindowX; lastY = gSavedWindowY;
+	lastW = gSavedWindowWidth; lastH = gSavedWindowHeight;
+	lastMax = gSavedWindowMaximized; lastValid = gSavedWindowPlacementValid;
+	if(pending && std::chrono::steady_clock::now() - changedAt > std::chrono::milliseconds(800)){
+		pending = false;
+		saveSaveSettings();
+	}
 }
 
 static void
@@ -3286,7 +3321,8 @@ uiMenuBarRight(void)
 		switcher += ImGui::CalcTextSize(l, nil, true).x;
 	float actions = 0.0f;
 	if(mapActions)
-		actions = ImGui::GetFrameHeight() + ImGui::CalcTextSize(TI(ICON_FA_PLAY, "Test in game"), nil, true).x +
+		actions = ImGui::CalcTextSize(TI(ICON_FA_FLOPPY_DISK, "Save"), nil, true).x + style.FramePadding.x*2.0f +
+			ImGui::CalcTextSize(TI(ICON_FA_PLAY, "Test in game"), nil, true).x +
 			style.FramePadding.x*2.0f + style.ItemSpacing.x*3.0f + 6.0f;
 	float x = ImGui::GetWindowContentRegionMax().x - switcher - actions - style.ItemSpacing.x;
 	if(x > ImGui::GetCursorPosX())
@@ -3304,8 +3340,22 @@ uiMenuBarRight(void)
 	ImGui::Dummy(ImVec2(4.0f, 0.0f));
 	char tip[96];
 	snprintf(tip, sizeof(tip), "%s (%s)", _(GetShortcutInfo(SC_SAVE_MAP)->name), ShortcutLabel(SC_SAVE_MAP));
-	if(uiToolbarButton(ICON_FA_FLOPPY_DISK "##menu_save", false, tip, true, ImVec2(h, h)))
+	// A labelled Save, lit amber while there is something unsaved, so it is
+	// plain how to keep the work.
+	bool dirty = mapHasUnsavedChanges();
+	if(dirty){
+		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.86f, 0.55f, 0.10f, 1.0f));
+		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.95f, 0.63f, 0.18f, 1.0f));
+		ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.76f, 0.47f, 0.06f, 1.0f));
+		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.08f, 0.06f, 0.02f, 1.0f));
+	}
+	if(ImGui::Button(TI(ICON_FA_FLOPPY_DISK, "Save")))
 		savePawnMap();
+	if(dirty)
+		ImGui::PopStyleColor(4);
+	ImGui::SetItemTooltip("%s
+%s", tip, dirty ? _("This map has unsaved changes.") : _("All changes are saved."));
+	ImGui::SameLine();
 	ImVec4 fill = UiAccentFill();
 	ImGui::PushStyleColor(ImGuiCol_Button, fill);
 	ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(fill.x*1.12f, fill.y*1.12f, fill.z*1.12f, 1.0f));
@@ -4162,6 +4212,7 @@ performMapAction(int action, const char *path)
 		break;
 	}
 	case MAP_ACTION_QUIT:
+		saveSaveSettings();	// remembers the window's place and size
 		sk::globals.quit = 1;
 		break;
 	}
@@ -6385,6 +6436,38 @@ uiMaterialTextureStatus(const ObjectMaterialOverride &material, char *buf, size_
 	return CheckMaterialTexture(material, buf, size, true) == MATERIAL_TEXTURE_OK;
 }
 
+// A texture as a framed square, large when hovered, so a slot shows what it
+// looks like and not only its name. Returns true when it was drawn.
+static void
+uiTexturePreviewBox(const char *caption, rw::Texture *tex, const char *name, float side)
+{
+	ImGui::BeginGroup();
+	ImVec2 pos = ImGui::GetCursorScreenPos();
+	ImGui::InvisibleButton(caption, ImVec2(side, side));
+	bool hovered = ImGui::IsItemHovered();
+	ImDrawList *dl = ImGui::GetWindowDrawList();
+	dl->AddRectFilled(pos, ImVec2(pos.x + side, pos.y + side), IM_COL32(60, 60, 66, 255), 4.0f);
+	if(tex)
+		dl->AddImageRounded((ImTextureID)tex, pos, ImVec2(pos.x + side, pos.y + side),
+			ImVec2(0, 0), ImVec2(1, 1), IM_COL32_WHITE, 4.0f);
+	else{
+		ImVec2 ts = ImGui::CalcTextSize("?");
+		dl->AddText(ImVec2(pos.x + (side - ts.x)*0.5f, pos.y + (side - ts.y)*0.5f), IM_COL32(150, 150, 158, 255), "?");
+	}
+	dl->AddRect(pos, ImVec2(pos.x + side, pos.y + side), hovered ? IM_COL32(255, 220, 60, 255) : IM_COL32(20, 20, 24, 255),
+		4.0f, 0, hovered ? 2.0f : 1.0f);
+	ImGui::EndGroup();
+	if(hovered){
+		ImGui::BeginTooltip();
+		if(tex)
+			ImGui::Image((ImTextureID)tex, ImVec2(256, 256));
+		ImGui::TextUnformatted(name && name[0] ? name : _("untextured"));
+		if(tex)
+			ImGui::TextDisabled("%d x %d", tex->raster ? tex->raster->width : 0, tex->raster ? tex->raster->height : 0);
+		ImGui::EndTooltip();
+	}
+}
+
 static void
 uiStatusLine(bool ok, const char *text)
 {
@@ -6591,6 +6674,25 @@ uiMaterialInfo(ObjectInst *inst)
 			changed = true;
 		}
 
+		// What the slot looks like now: the model's own texture and, when it is
+		// replaced, the chosen one.
+		{
+			float side = ImGui::GetFontSize()*3.6f;
+			uiTexturePreviewBox("##orig_tex", base ? base->texture : nil, baseName, side);
+			if(mode == UI_MATERIAL_TEXTURE && edited.hasTexture){
+				rw::Texture *chosen = nil;
+				if(edited.sourceModel > 0 && edited.txdName[0] && edited.textureName[0]){
+					int txdSlot = FindTxdSlot(edited.txdName);
+					if(txdSlot >= 0)
+						chosen = FindTextureInTxd(txdSlot, edited.textureName);
+				}
+				ImGui::SameLine();
+				ImGui::AlignTextToFramePadding();
+				ImGui::TextDisabled("->");
+				ImGui::SameLine();
+				uiTexturePreviewBox("##new_tex", chosen, edited.sourceModel == 0 ? _("blank white") : edited.textureName, side);
+			}
+		}
 		if(mode == UI_MATERIAL_TEXTURE){
 			if(ImGui::Button(_("Browse textures...")))
 				uiOpenMaterialTexturePopup(inst, slot);
@@ -7503,7 +7605,7 @@ saveSaveSettings(void)
 
 	sanitizeAutosaveSettings();
 	sanitizeCustomImportSettings();
-	UpdateEditorWindowState();
+	sampleEditorWindowState();
 	normalizePersistentSettings();
 	f = fopenHaumeaDataWrite("savesettings.txt");
 	if(f == nil)
