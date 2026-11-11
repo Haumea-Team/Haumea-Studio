@@ -2766,9 +2766,11 @@ setMaterialPipeline(rw::Atomic *atomic, bool privateCopy)
 {
 	if(atomic == nil || atomic->geometry == nil)
 		return;
-	// Only a private copy can lose its prelighting; the shared base geometry
-	// stays with the building pipeline that instanced it.
-	bool lit = privateCopy && !(atomic->geometry->flags & rw::Geometry::PRELIT);
+	// Only a private copy can lose its prelighting; a shared base geometry
+	// keeps the pipeline it was set up with (ObjectDef: lit when the model has
+	// no prelighting at all, the building pipeline otherwise).
+	bool unlitModel = !(atomic->geometry->flags & rw::Geometry::PRELIT);
+	bool lit = privateCopy ? unlitModel : unlitModel && atomic->renderCB == LitObjectRenderCB;
 	if(lit && atomic->renderCB != LitObjectRenderCB){
 		atomic->pipeline = nil;
 		gta::setPipelineID(atomic, 0);

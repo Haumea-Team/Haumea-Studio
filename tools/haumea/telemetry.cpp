@@ -464,7 +464,11 @@ TelemetryDrawConsent(void)
 		return;
 	gQuestionShown = true;
 	ImGui::Spacing();
-	ImGui::BeginChild("##telemetry_question", ImVec2(0, 0), ImGuiChildFlags_Borders | ImGuiChildFlags_AutoResizeY);
+	// A quiet card tinted with the accent, not a box that shouts.
+	ImVec4 accent = ImGui::GetStyleColorVec4(ImGuiCol_CheckMark);
+	ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(accent.x, accent.y, accent.z, 0.10f));
+	ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 6.0f);
+	ImGui::BeginChild("##telemetry_question", ImVec2(0, 0), ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_AlwaysUseWindowPadding);
 	ImGui::TextWrapped(_("Help count Haumea Studio's users? Once a day it would send a random install ID, "
 		"the version, the channel and the operating system: nothing about you, your computer or your maps."));
 	if(ImGui::Button(_("Yes, send it")))
@@ -478,6 +482,8 @@ TelemetryDrawConsent(void)
 	ImGui::SameLine();
 	ImGui::TextDisabled(_("Preferences > Privacy changes it later."));
 	ImGui::EndChild();
+	ImGui::PopStyleVar();
+	ImGui::PopStyleColor();
 }
 
 void

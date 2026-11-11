@@ -283,9 +283,9 @@ SetupStyle(void)
 	// Cool, slightly blue greys: each layer a step lighter than the one under it.
 	ImVec4 chrome  = light ? rgb(0xE6E8EE) : rgb(0x14151A);	// menus and bars
 	ImVec4 bar     = light ? rgb(0xEDEFF4) : rgb(0x191B21);	// tab strips and side bars
-	ImVec4 panel   = light ? rgb(0xF6F7FA) : rgb(0x1F2128);	// panels
-	ImVec4 well    = light ? rgb(0xFFFFFF) : rgb(0x15171C);	// input wells
-	ImVec4 raised  = light ? rgb(0xE4E7EE) : rgb(0x2A2D37);	// buttons
+	ImVec4 panel   = light ? rgb(0xF3F4F7) : rgb(0x1F2128);	// panels
+	ImVec4 well    = light ? rgb(0xFFFFFF) : rgb(0x2B2E38);	// input wells: a step above the panel
+	ImVec4 raised  = light ? rgb(0xE2E5EC) : rgb(0x323643);	// buttons
 	ImVec4 line    = light ? rgb(0xD2D6E0) : rgb(0x2D303B);
 	ImVec4 divider = light ? rgb(0xC4C9D6) : rgb(0x0E0F13);	// between panels
 	ImVec4 text    = light ? rgb(0x1B1E27) : rgb(0xE4E6EC);
@@ -374,7 +374,7 @@ void
 SetupFonts(void)
 {
 	ImGuiIO &io = ImGui::GetIO();
-	float fontSize = 15.0f;
+	float fontSize = 16.0f;
 
 	// Only bake the exact icons used by Haumea. Packing the entire private-use
 	// area creates a very large atlas, which can fail on some D3D9 GPUs during

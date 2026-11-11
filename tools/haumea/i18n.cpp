@@ -570,10 +570,9 @@ uiLanguagePreferences(void)
 			if(l.code == current)
 				shown = l.name;
 	}
-	ImGui::AlignTextToFramePadding();
-	ImGui::TextUnformatted(_("Language"));
-	ImGui::SameLine();
-	if(ImGui::BeginCombo("##language", shown.c_str())){
+	// Its name beside it, like every other field of the page.
+	std::string label = std::string(_("Language")) + "###language";
+	if(ImGui::BeginCombo(label.c_str(), shown.c_str())){
 		if(ImGui::Selectable(_("Auto"), current == "auto"))
 			{ I18nSetLanguage("auto"); changed = true; }
 		if(ImGui::Selectable("English", current == "en"))

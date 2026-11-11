@@ -440,7 +440,6 @@ KeycastPreferences(void)
 		gAgent.clear();
 	if(gShowKeys || gShowAgent){
 		const char *corners[NUM_CORNERS] = { _("Bottom"), _("Bottom left"), _("Bottom right"), _("Top left"), _("Top right") };
-		ImGui::SetNextItemWidth(ImGui::GetFontSize() * 9.0f);
 		changed |= ImGui::Combo(L("Where"), &gCorner, corners, NUM_CORNERS);
 		ImGui::SetItemTooltip("%s", _("Where in the 3D view the pressed keys and Namaka's actions show."));
 	}

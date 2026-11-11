@@ -43,7 +43,7 @@ const ShortcutDef defs[SC_NUM_ACTIONS] = {
 	{ { "delete", N_("Edit"), N_("Delete selection"), SHORTCUT_EDITOR, false }, { { ImGuiKey_Delete, 0 }, { ImGuiKey_Backspace, 0 } } },
 	{ { "rename", N_("Edit"), N_("Rename the selected object's variable (Map Objects)"), SHORTCUT_PANEL, false }, { { ImGuiKey_F2, 0 } } },
 	{ { "group_selection", N_("Edit"), N_("Put the selection in a group"), SHORTCUT_EDITOR, false }, { { ImGuiKey_G, CTRL } } },
-	{ { "cancel", N_("Edit"), N_("Leave place, prefab, brush, path or TextDraw mode"), SHORTCUT_EDITOR, false }, { { ImGuiKey_Escape, 0 } } },
+	{ { "cancel", N_("Edit"), N_("Leave place, prefab, brush, path or TextDraw mode; otherwise deselect"), SHORTCUT_EDITOR, false }, { { ImGuiKey_Escape, 0 } } },
 
 	{ { "gizmo_move", N_("Transform"), N_("Move gizmo"), SHORTCUT_EDITOR, false }, { { ImGuiKey_W, 0 } } },
 	{ { "gizmo_rotate", N_("Transform"), N_("Rotate gizmo"), SHORTCUT_EDITOR, false }, { { ImGuiKey_E, 0 }, { ImGuiKey_Q, 0 } } },

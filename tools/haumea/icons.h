@@ -10,7 +10,7 @@
 #define ICON_FA_GAMEPAD         "\xef\x84\x9b"  // f11b
 #define ICON_FA_VIDEO           "\xef\x80\xbd"  // f03d
 #define ICON_FA_FOLDER_OPEN     "\xef\x81\xbc"  // f07c
-#define ICON_FA_FILE_IMPORT     "\xef\x95\xab"  // f56f
+#define ICON_FA_FILE_IMPORT     "\xef\x95\xaf"  // f56f
 #define ICON_FA_FILE_EXPORT     "\xef\x95\xae"  // f56e
 #define ICON_FA_CUBE            "\xef\x86\xb2"  // f1b2
 #define ICON_FA_RIGHT_FROM_BRACKET "\xef\x8b\xb5" // f2f5

@@ -11129,3 +11129,30 @@ msgstr "|  Modelos personalizados: %d"
 
 msgid "~n~ new line, ~r~ ~g~ ~b~ ~y~ ~p~ ~w~ ~l~ colours, ~h~ lighter, _ blank"
 msgstr "~n~ nova linha, ~r~ ~g~ ~b~ ~y~ ~p~ ~w~ ~l~ cores, ~h~ mais claro, _ espaço"
+
+msgid "To ground"
+msgstr "No chão"
+
+msgid "Outlines"
+msgstr "Contornos"
+
+msgid "This map has unsaved changes."
+msgstr "Este mapa tem alterações não salvas."
+
+msgid "All changes are saved."
+msgstr "Todas as alterações estão salvas."
+
+msgid "blank white"
+msgstr "branco liso"
+
+msgid "Dragging a copy (Alt+drag)"
+msgstr "Arrastando uma cópia (Alt+arrastar)"
+
+msgid "Not applied yet: confirm to use this folder (Haumea restarts to load it)."
+msgstr "Ainda não aplicado: confirme para usar esta pasta (o Haumea reinicia para carregá-la)."
+
+msgid "Confirm and use this game folder"
+msgstr "Confirmar e usar esta pasta do jogo"
+
+msgid "Leave place, prefab, brush, path or TextDraw mode; otherwise deselect"
+msgstr "Sair do modo de colocar, prefab, pincel, caminho ou TextDraw; senão, tira a seleção"
