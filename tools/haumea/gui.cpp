@@ -3353,8 +3353,7 @@ uiMenuBarRight(void)
 		savePawnMap();
 	if(dirty)
 		ImGui::PopStyleColor(4);
-	ImGui::SetItemTooltip("%s
-%s", tip, dirty ? _("This map has unsaved changes.") : _("All changes are saved."));
+	ImGui::SetItemTooltip("%s\n%s", tip, dirty ? _("This map has unsaved changes.") : _("All changes are saved."));
 	ImGui::SameLine();
 	ImVec4 fill = UiAccentFill();
 	ImGui::PushStyleColor(ImGuiCol_Button, fill);

@@ -469,7 +469,7 @@ MpFlush(MpConnection &c)
 {
 	size_t sent = 0;
 	while(sent < c.out.size()){
-		int size = (int)std::min(c.out.size() - sent, (size_t)1 << 20);
+		int size = (int)(std::min)(c.out.size() - sent, (size_t)1 << 20);
 		int n = (int)send(c.socket, c.out.data() + sent, size, MSG_NOSIGNAL);
 		if(n > 0){
 			sent += n;
