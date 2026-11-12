@@ -1031,3 +1031,33 @@ uiWorkspaceSettings(void)
 	ImGui::PopID();
 	return changedGame;
 }
+
+// The user's Documents folder (wherever Windows keeps it, OneDrive included;
+// XDG_DOCUMENTS_DIR or ~/Documents elsewhere), with a "Haumea Studio" folder
+// in it for the exports, so they are easy to find afterwards.
+bool
+GetUserDocumentsPath(char *dst, size_t size, const char *name)
+{
+	std::string docs;
+#ifdef _WIN32
+	char personal[MAX_PATH] = {};
+	if(SHGetFolderPathA(nil, CSIDL_PERSONAL | CSIDL_FLAG_CREATE, nil, 0, personal) == S_OK && personal[0])
+		docs = personal;
+	else if(const char *profile = getenv("USERPROFILE"))
+		docs = std::string(profile) + "\\Documents";
+#else
+	if(const char *xdg = getenv("XDG_DOCUMENTS_DIR"))
+		docs = xdg;
+	else if(const char *home = getenv("HOME"))
+		docs = std::string(home) + "/Documents";
+#endif
+	if(docs.empty())
+		return GetHaumeaDataPath(dst, size, name);
+	char dir[1024], probe[1100];
+	if(!BuildPath(dir, sizeof(dir), docs.c_str(), "Haumea Studio") ||
+	   !BuildPath(probe, sizeof(probe), dir, "x") || !EnsureParentDirectoriesForPath(probe))
+		return GetHaumeaDataPath(dst, size, name);
+	if(name == nil || name[0] == '\0')
+		return snprintf(dst, size, "%s", dir) < (int)size;
+	return BuildPath(dst, size, dir, name);
+}

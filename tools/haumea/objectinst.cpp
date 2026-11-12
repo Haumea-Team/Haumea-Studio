@@ -1636,7 +1636,7 @@ IsValidPawnObjectName(const char *name)
 		"new", "static", "stock", "public", "const", "if", "else", "for", "while",
 		"do", "return", "break", "continue", "switch", "case", "default", "goto",
 		"sizeof", "tagof", "enum", "native", "forward", "operator", "char", "defined",
-		"playerid", "tmpobjid",
+		"playerid", "tmpobjid", "objectid",
 	};
 	for(size_t i = 0; i < sizeof(reserved)/sizeof(reserved[0]); i++)
 		if(strcmp(name, reserved[i]) == 0)
@@ -8562,6 +8562,9 @@ vehicleNeedsHandle(const ObjectInst *inst)
 	return false;
 }
 
+// The variable shared by the objects that need one only for their materials.
+#define PAWN_SHARED_OBJECT_HANDLE "objectid"
+
 static void
 pawnWriteObjectCall(FILE *f, const ObjectInst *inst, PawnCodeFormat format,
 	const char *handle)
@@ -8615,7 +8618,7 @@ pawnWriteObjectCall(FILE *f, const ObjectInst *inst, PawnCodeFormat format,
 		return;
 	}
 	if(handle && handle[0])
-		fprintf(f, "\tnew %s = ", handle);
+		fprintf(f, strcmp(handle, PAWN_SHARED_OBJECT_HANDLE) == 0 ? "\t%s = " : "\tnew %s = ", handle);
 	else
 		fputs("\t", f);
 	const ObjectPawnProperties *properties = GetObjectPawnProperties(inst);
@@ -9140,6 +9143,11 @@ pawnWriteCode(FILE *f, const char *path, PawnCodeFormat format, bool selectedOnl
 			else if(kind == SAMP_ELEMENT_NPC)
 				snprintf(handle, sizeof(handle), "%s_npc_%d", prefix, generatedHandles++);
 			else if(kind == SAMP_ELEMENT_OBJECT && !inst->m_isVehicle && !IsPlayerAttachedObject(inst) &&
+				!needsHandle.count(inst) && !properties->name[0] && HasObjectMaterialOverrides(inst))
+				// Only its own material calls use it, right after: one shared
+				// "objectid", declared once at the top of the function.
+				strncpy(handle, PAWN_SHARED_OBJECT_HANDLE, sizeof(handle)-1);
+			else if(kind == SAMP_ELEMENT_OBJECT && !inst->m_isVehicle && !IsPlayerAttachedObject(inst) &&
 				(HasObjectMaterialOverrides(inst) || needsHandle.count(inst) || properties->name[0]))
 				snprintf(handle, sizeof(handle), "%s_obj_%d", prefix, generatedHandles++);
 			if(handle[0]){
@@ -9208,6 +9216,13 @@ pawnWriteCode(FILE *f, const char *path, PawnCodeFormat format, bool selectedOnl
 		pawnWriteStreamedZoneHelpers(f, prefix, (int)streamedZones.size(), zoneGrid);
 
 	fprintf(f, "stock %s_CreateObjects()\n{\n", prefix);
+	// The objects that only need a variable for their own materials share one.
+	bool sharedHandle = false;
+	for(std::unordered_map<const ObjectInst*, std::string>::const_iterator it = handles.begin(); it != handles.end(); ++it)
+		if(it->second == PAWN_SHARED_OBJECT_HANDLE)
+			sharedHandle = true;
+	if(sharedHandle)
+		fprintf(f, "\tnew %s;\n\n", PAWN_SHARED_OBJECT_HANDLE);
 	// Dynamic areas first (streamer only): items name them as their areaid.
 	gPawnAreaHandles.clear();
 	std::vector<ObjectInst*> areas;
@@ -9317,6 +9332,7 @@ pawnWriteCode(FILE *f, const char *path, PawnCodeFormat format, bool selectedOnl
 		}
 		fputs("#endif\n\n", f);
 	}
+	bool wroteCalls = false, afterBlock = false;
 	for(size_t g = 0; g < groups.size(); g++){
 		for(size_t i = 0; i < insts.size(); i++){
 			ObjectInst *inst = insts[i];
@@ -9353,11 +9369,18 @@ pawnWriteCode(FILE *f, const char *path, PawnCodeFormat format, bool selectedOnl
 			}
 			std::unordered_map<const ObjectInst*, std::string>::iterator it = handles.find(inst);
 			const char *handle = it != handles.end() ? it->second.c_str() : "";
+			// Calls with a variable (and what follows them) stand apart, with
+			// a blank line on each side; plain calls stay together.
+			bool block = handle[0] != '\0' && !IsPlayerAttachedObject(inst);
+			if((block && wroteCalls) || (!block && afterBlock))
+				fputc('\n', f);
 			pawnWriteObjectCall(f, inst, format, handle);
 			if(!inst->m_isVehicle && kind == SAMP_ELEMENT_OBJECT)
 				pawnWriteMaterialCalls(f, inst, format, handle);
 			if(unusedHandles.count(inst))
 				fprintf(f, "\t#pragma unused %s\n", handle);
+			wroteCalls = true;
+			afterBlock = block;
 		}
 	}
 	if(!attachParents.empty()){
@@ -12541,7 +12564,7 @@ ImportPawnSource(const std::string &rawSource, const char *path, int *numSkipped
 				properties.interiorZeroOnly = e.interior == 0;
 				// Keep hand-written variable names; generated and temporary
 				// handles are recreated on export.
-				bool generated = strcmp(e.handle, "tmpobjid") == 0 ||
+				bool generated = strcmp(e.handle, "tmpobjid") == 0 || strcmp(e.handle, "objectid") == 0 ||
 					(strncmp(e.handle, "Haumea_", 7) == 0 &&
 					 (strstr(e.handle, "_obj_") || strstr(e.handle, "_zone_") ||
 					  strstr(e.handle, "_actor_") || strstr(e.handle, "_npc_") || strstr(e.handle, "_area_")));

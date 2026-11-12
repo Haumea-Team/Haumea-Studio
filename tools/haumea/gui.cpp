@@ -4776,7 +4776,7 @@ uiSavePawnAsPopup(void)
 			strncpy(path, gPawnSavePath, sizeof(path)-1);
 		else if(!maps.empty())
 			snprintf(path, sizeof(path), "%s/map.pwn", maps.c_str());
-		else if(!GetHaumeaDataPath(path, sizeof(path), "pawn-exports/map.pwn"))
+		else if(!GetUserDocumentsPath(path, sizeof(path), "map.pwn"))	// Documents/Haumea Studio
 			path[0] = '\0';
 		path[sizeof(path)-1] = '\0';
 		format = gPawnSaveFormat;
@@ -4923,7 +4923,8 @@ uiExportPawnPopup(void)
 		char exportPath[1024];
 		char filename[256];
 		bool validName = pawnExportNameValid(pawnName);
-		bool havePath = validName && GetHaumeaDataPath(exportDir, sizeof(exportDir), "pawn-exports");
+		// Exports go to Documents/Haumea Studio, where they are easy to pick up.
+		bool havePath = validName && GetUserDocumentsPath(exportDir, sizeof(exportDir), nil);
 		if(validName && havePath){
 			const char *suffix = pathHasExtensionCi(pawnName, ".pwn") ? "" : ".pwn";
 			if(snprintf(filename, sizeof(filename), "%s%s", pawnName, suffix) >= (int)sizeof(filename) ||
@@ -11480,7 +11481,7 @@ uiInstWindow(void)
 		if((isObject || inst->m_isVehicle) && uiInspectorSection(L("Model details"))){
 			uiObjInfo(obj);
 			char exportDir[1024];
-			bool haveExportDir = GetHaumeaDataPath(exportDir, sizeof(exportDir), "dff-txd-exports");
+			bool haveExportDir = GetUserDocumentsPath(exportDir, sizeof(exportDir), "DFF-TXD");
 			if(ImGui::Button(_("Export DFF"))){
 				int failed = 0;
 				int exported = haveExportDir ? ExportSelectedDffs(exportDir, &failed) : 0;

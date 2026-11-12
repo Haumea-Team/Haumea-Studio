@@ -25,6 +25,8 @@ static zone = -1;
 
 stock Haumea_hv_streamer_CreateObjects()
 {
+	new objectid;
+
 	// ---- NPC paths (open.mp) ----
 	new p = NPC_CreatePath();
 	NPC_AddPointToPath(p, 1600.000000, -1920.000000, 13.500000, 0.50); // path point
@@ -37,26 +39,38 @@ stock Haumea_hv_streamer_CreateObjects()
 
 	new tmp = CreateDynamicObject(19353, 1600.000000, -1890.000000, 14.000000, 0.000000, 0.000000, 90.000000, 0, -1, -1, STREAMER_OBJECT_SD, 300.00); // wall001
 	SetDynamicObjectMaterial(tmp, 0, 19297, "matcolours", "white", 0xFFFF0000);
-	new Haumea_hv_streamer_obj_0 = CreateDynamicObject(19353, 1604.000000, -1890.000000, 14.000000, 0.000000, 0.000000, 90.000000, 5, 3, -1, 200.00, 150.00); // wall001
-	SetDynamicObjectMaterialText(Haumea_hv_streamer_obj_0, 0, "OPEN", OBJECT_MATERIAL_SIZE_256x128, "Arial", 24, true, 0xFFFFFFFF, 0xFF000000, OBJECT_MATERIAL_TEXT_ALIGN_CENTER);
+
+	objectid = CreateDynamicObject(19353, 1604.000000, -1890.000000, 14.000000, 0.000000, 0.000000, 90.000000, 5, 3, -1, 200.00, 150.00); // wall001
+	SetDynamicObjectMaterialText(objectid, 0, "OPEN", OBJECT_MATERIAL_SIZE_256x128, "Arial", 24, true, 0xFFFFFFFF, 0xFF000000, OBJECT_MATERIAL_TEXT_ALIGN_CENTER);
+
 	new base = CreateDynamicObject(1271, 1616.000000, -1890.000000, 13.500000, 0.000000, 0.000000, 45.000000, -1, -1, -1); // gunbox
+
 	new crate = CreateDynamicObject(1271, 1616.000000, -1890.000000, 14.300000, 15.000000, 25.000000, 80.000000, -1, -1, -1); // gunbox
+
 	AddStaticVehicle(411, 1610.000000, -1880.000000, 13.300000, 90.000000, 1, 1); // infernus
 	AddStaticVehicleEx(560, 1615.000000, -1880.000000, 13.300000, 180.000000, 3, 3, 120); // sultan
+
 	new car = CreateVehicle(522, 1620.000000, -1880.000000, 13.300000, 0.000000, 6, 6, 60); // nrg500
 	LinkVehicleToInterior(car, 1);
+
 	CreateDynamicPickup(1240, 2, 1600.000000, -1900.000000, 13.500000, 0, -1, -1, 100.00); // health [pickup]
 	CreateDynamic3DTextLabel("Welcome", 0xFFFF00FF, 1602.000000, -1900.000000, 14.000000, 25.00, INVALID_PLAYER_ID, INVALID_VEHICLE_ID, true, 0, -1, -1, STREAMER_3D_TEXT_LABEL_SD); // info [3D text label]
+
 	new a = CreateDynamicActor(179, 1605.000000, -1900.000000, 13.500000, 180.000000, 0, 50.00, 0, -1, -1, STREAMER_ACTOR_SD); // WMYAMMO [actor]
 	ApplyDynamicActorAnimation(a, "DEALER", "DEALER_IDLE", 4.10, 1, 0, 0, 0, 0);
+
 	CreateDynamicActor(180, 1607.000000, -1900.000000, 13.500000, 0.000000, 1, 100.00, 0, -1, -1, STREAMER_ACTOR_SD); // BMYTATT [actor]
 	AddPlayerClass(0, 1610.000000, -1900.000000, 13.500000, 90.000000, WEAPON_FIST, 0, WEAPON_FIST, 0, WEAPON_FIST, 0); // CJ [player class]
 	AddPlayerClassEx(2, 105, 1612.000000, -1900.000000, 13.500000, -90.000000, WEAPON_DEAGLE, 100, WEAPON_M4, 300, WEAPON_FIST, 0); // FAM1 [player class]
 	CreateDynamicCP(1630.000000, -1900.000000, 13.500000, 3.00, 0, -1, -1, STREAMER_CP_SD); // checkpoint
+
 	new cp = CreateDynamicCP(1632.000000, -1900.000000, 13.500000, 2.00, -1, -1, -1, STREAMER_CP_SD); // checkpoint
 	#pragma unused cp
+
 	zone = GangZoneCreate(1590.000000, -1910.000000, 1630.000000, -1870.000000); // gangzone [gang zone]
+
 	CreateDynamicMapIcon(1600.000000, -1880.000000, 13.500000, 6, 0x00000000, 0, -1, -1, STREAMER_MAP_ICON_SD, MAPICON_LOCAL); // mapicon [map icon]
+
 	new n = NPC_Create("SWalker"); // WMYST [NPC]
 	NPC_Spawn(n);
 	NPC_SetSkin(n, 101);
@@ -64,22 +78,26 @@ stock Haumea_hv_streamer_CreateObjects()
 	NPC_SetFacingAngle(n, 90.000000);
 	NPC_SetWeapon(n, WEAPON:31);
 	NPC_SetAmmo(n, 300);
-	new Haumea_hv_streamer_npc_1 = NPC_Create("SDancer"); // BALLAS1 [NPC]
-	NPC_Spawn(Haumea_hv_streamer_npc_1);
-	NPC_SetSkin(Haumea_hv_streamer_npc_1, 102);
-	NPC_SetPos(Haumea_hv_streamer_npc_1, 1606.000000, -1915.000000, 13.500000);
-	NPC_SetFacingAngle(Haumea_hv_streamer_npc_1, 0.000000);
-	NPC_ApplyAnimation(Haumea_hv_streamer_npc_1, "DANCING", "dnce_M_a", 4.10, true, false, false, false, 0);
+
+	new Haumea_hv_streamer_npc_0 = NPC_Create("SDancer"); // BALLAS1 [NPC]
+	NPC_Spawn(Haumea_hv_streamer_npc_0);
+	NPC_SetSkin(Haumea_hv_streamer_npc_0, 102);
+	NPC_SetPos(Haumea_hv_streamer_npc_0, 1606.000000, -1915.000000, 13.500000);
+	NPC_SetFacingAngle(Haumea_hv_streamer_npc_0, 0.000000);
+	NPC_ApplyAnimation(Haumea_hv_streamer_npc_0, "DANCING", "dnce_M_a", 4.10, true, false, false, false, 0);
+
 	new nw = NPC_Create("SNodeWalker"); // male01 [NPC]
 	NPC_Spawn(nw);
 	NPC_SetSkin(nw, 7);
 	NPC_SetPos(nw, 2490.000000, -1670.000000, 13.300000);
 	NPC_SetFacingAngle(nw, 0.000000);
+
 	new dr = NPC_Create("SDriver"); // WMYCH [NPC]
 	NPC_Spawn(dr);
 	NPC_SetSkin(dr, 255);
 	NPC_SetPos(dr, 1700.000000, -1950.000000, 14.000000);
 	NPC_SetFacingAngle(dr, 0.000000);
+
 	new streak = AddStaticVehicleEx(538, 2864.750000, 1254.159058, 12.126000, 180.000000, -1, -1, 100); // streak
 
 	// ---- attachments ----

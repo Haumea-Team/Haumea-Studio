@@ -57,11 +57,13 @@ stock Haumea_hv_loops_CreateObjects()
 	NPC_SetSkin(guard, 280);
 	NPC_SetPos(guard, 1600.000000, -1702.000000, 13.500000);
 	NPC_SetFacingAngle(guard, 0.000000);
+
 	new runner = NPC_Create("LaneRunner"); // lapd1 [NPC]
 	NPC_Spawn(runner);
 	NPC_SetSkin(runner, 280);
 	NPC_SetPos(runner, 1640.000000, -1702.000000, 13.500000);
 	NPC_SetFacingAngle(runner, 0.000000);
+
 	new walker = NPC_Create("OnceWalker"); // lapd1 [NPC]
 	NPC_Spawn(walker);
 	NPC_SetSkin(walker, 280);

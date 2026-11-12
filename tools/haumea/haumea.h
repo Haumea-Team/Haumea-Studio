@@ -124,6 +124,8 @@ bool BuildPath(char *dst, size_t size, const char *dir, const char *name);
 bool EnsureParentDirectoriesForPath(const char *path);
 bool GetHaumeaDataDirectory(char *dir, size_t size);
 bool GetHaumeaDataPath(char *dst, size_t size, const char *name);
+// <Documents>/Haumea Studio/<name> (created): where exported maps go, easy to find.
+bool GetUserDocumentsPath(char *dst, size_t size, const char *name);
 FILE *fopenHaumeaDataRead(const char *name, const char *legacyName = nil);
 FILE *fopenHaumeaDataWrite(const char *name);
 void setHotReloadTracePath(const char *path);

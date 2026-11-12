@@ -34,6 +34,7 @@ stock Haumea_hv_text_CreateObjects()
 {
 	new sign = CreateObject(19353, 1600.000000, -1890.000000, 14.000000, 0.000000, 0.000000, 90.000000); // wall001
 	SetObjectMaterialText(sign, "Ação, Coração, € and ñ", 0, OBJECT_MATERIAL_SIZE_256x128, "Arial", 24, true, 0xFFFFFFFF, 0x00000000, OBJECT_MATERIAL_TEXT_ALIGN_CENTER);
+
 	Create3DTextLabel("Ação, Coração, € and ñ", 0xFFFFFFFF, 1602.000000, -1890.000000, 14.000000, 20.00, 0, false); // info [3D text label]
 }
 
