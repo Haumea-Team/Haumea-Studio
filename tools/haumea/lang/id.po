@@ -8413,9 +8413,6 @@ msgstr "Tetap dalam penempatan setelah tiap klik, seperti Shift+klik."
 msgid "Step"
 msgstr "Langkah"
 
-msgid "Step snapping"
-msgstr "Snap langkah"
-
 msgid ""
 "Step snapping: hold Shift while dragging the gizmo\n"
 "to move in %g m steps or rotate in %g° steps.\n"
@@ -10740,32 +10737,11 @@ msgstr "Semua pengaturan kuas"
 msgid "Brush disc size. 0 = single object under cursor."
 msgstr "Ukuran cakram kuas. 0 = satu objek di bawah kursor."
 
-msgid "Click objects to select them, drag them to move along the ground."
-msgstr "Klik objek untuk memilihnya, seret untuk memindahkannya di atas tanah."
-
 msgid "Count:"
 msgstr "Jumlah:"
 
-msgid "Drag the arrows on the selected object."
-msgstr "Seret panah pada objek yang dipilih."
-
-msgid "Drag the rings on the selected object."
-msgstr "Seret cincin pada objek yang dipilih."
-
-msgid "Map tools"
-msgstr "Alat peta"
-
-msgid "More options"
-msgstr "Opsi lainnya"
-
 msgid "Number of objects scattered per click when Radius > 0."
 msgstr "Jumlah objek yang ditebar per klik saat Radius > 0."
-
-msgid "Opens %s in the Tools panel. Right-click or hold for the others."
-msgstr "Membuka %s di panel Alat. Klik kanan atau tahan untuk yang lain."
-
-msgid "Paint copies of the Object Browser's object onto the world. Its settings are on the options bar."
-msgstr "Melukis salinan objek dari Penjelajah objek ke dunia. Pengaturannya ada di bilah opsi."
 
 msgid "Pick the object to paint in the Object Browser first."
 msgstr "Pilih dulu objek yang akan dilukis di Penjelajah objek."
@@ -10778,3 +10754,114 @@ msgstr "Jarak antar:"
 
 msgid "Right-click to hide the new dot."
 msgstr "Klik kanan untuk menyembunyikan titik baru."
+
+msgid "%d object(s)"
+msgstr "%d objek"
+
+msgid "%d object(s) selected."
+msgstr "%d objek dipilih."
+
+msgid "%d texture(s) found in all TXDs"
+msgstr "%d tekstur ditemukan di semua TXD"
+
+msgid "A saved selection has this name: saving replaces it."
+msgstr "Sudah ada pilihan tersimpan dengan nama ini: menyimpan akan menggantinya."
+
+msgid "Brush\nPaint copies of the Object Browser's object onto the world. Its settings are over the 3D view."
+msgstr "Kuas\nMelukis salinan objek dari Penjelajah Objek ke dunia. Pengaturannya ada di atas tampilan 3D."
+
+msgid "Click to select these objects; Ctrl+click adds them to the selection."
+msgstr "Klik untuk memilih objek-objek ini; Ctrl+klik menambahkannya ke pilihan."
+
+msgid "Confirm and use this game folder"
+msgstr "Konfirmasi dan gunakan folder game ini"
+
+msgid "Current selection: %d object(s)"
+msgstr "Pilihan saat ini: %d objek"
+
+msgid "Deleted the saved selection \"%s\""
+msgstr "Pilihan tersimpan \"%s\" dihapus"
+
+msgid "Dragging a copy (Alt+drag)"
+msgstr "Menyeret salinan (Alt+seret)"
+
+msgid "First %d textures found in all TXDs: type more to narrow it down."
+msgstr "%d tekstur pertama di semua TXD: ketik lebih banyak untuk mempersempit."
+
+msgid "Forget this saved selection (the objects stay)"
+msgstr "Lupakan pilihan tersimpan ini (objeknya tetap ada)"
+
+msgid "Keep the selected objects under a name, to select them again later."
+msgstr "Simpan objek yang dipilih dengan sebuah nama, untuk memilihnya lagi nanti."
+
+msgid "Move (%s)\nDrag the arrows on the selected object."
+msgstr "Pindah (%s)\nSeret panah pada objek yang dipilih."
+
+msgid "No saved selections yet. Select some objects (Shift+click or drag a box) and save them here."
+msgstr "Belum ada pilihan tersimpan. Pilih beberapa objek (Shift+klik atau seret kotak) lalu simpan di sini."
+
+msgid "No texture has that in its name or its TXD's name."
+msgstr "Tidak ada tekstur yang namanya atau nama TXD-nya memuat itu."
+
+msgid "Not applied yet: confirm to use this folder (Haumea restarts to load it)."
+msgstr "Belum diterapkan: konfirmasi untuk memakai folder ini (Haumea dimulai ulang untuk memuatnya)."
+
+msgid "Or browse one TXD:"
+msgstr "Atau jelajahi satu TXD:"
+
+msgid "Outlines"
+msgstr "Garis tepi"
+
+msgid "Pick them all again later from Map Objects or Edit > Saved selections."
+msgstr "Pilih semuanya lagi nanti dari Objek Peta atau Edit > Pilihan tersimpan."
+
+msgid "Replace with the current selection"
+msgstr "Ganti dengan pilihan saat ini"
+
+msgid "Rotate (%s)\nDrag the rings on the selected object."
+msgstr "Putar (%s)\nSeret cincin pada objek yang dipilih."
+
+msgid "Save as a new selection..."
+msgstr "Simpan sebagai pilihan baru..."
+
+msgid "Save over"
+msgstr "Timpa"
+
+msgid "Save selection"
+msgstr "Simpan pilihan"
+
+msgid "Save selection..."
+msgstr "Simpan pilihan..."
+
+msgid "Saved selections"
+msgstr "Pilihan tersimpan"
+
+msgid "Saved selections: keep a selection under a name and select it again later."
+msgstr "Pilihan tersimpan: simpan pilihan dengan sebuah nama dan pilih lagi nanti."
+
+msgid "Saved the selection \"%s\" (%d object(s))"
+msgstr "Pilihan \"%s\" disimpan (%d objek)"
+
+msgid "Search all textures (e.g. white)"
+msgstr "Cari di semua tekstur (mis. white)"
+
+msgid "Select\nClick objects to select them, drag them to move along the ground."
+msgstr "Pilih\nKlik objek untuk memilihnya, seret untuk memindahkannya di atas tanah."
+
+msgid "Select some objects first (Shift+click or drag a box)."
+msgstr "Pilih beberapa objek dulu (Shift+klik atau seret kotak)."
+
+msgid "Selected %d object(s) from \"%s\""
+msgstr "%d objek dipilih dari \"%s\""
+
+msgid "Selection %d"
+msgstr "Pilihan %d"
+
+msgid "Selections"
+msgstr "Pilihan"
+
+msgid "To ground"
+msgstr "Ke tanah"
+
+msgid "blank white"
+msgstr "putih polos"

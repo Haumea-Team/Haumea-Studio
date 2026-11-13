@@ -137,8 +137,9 @@ showCombo(int mods, int key, const char *extra, double now)
 		return;
 	// The action's name only when the editor ran it: not for W while flying.
 	int action = key && extra == nil && gHeldKeys.size() == 1 && c.buttons == 0 ? shortcutFor(key, mods) : -1;
+	// Esc's full name lists every mode it leaves: too long for the view.
 	if(action >= 0 && ShortcutPressed(action))
-		c.action = _(GetShortcutInfo(action)->name);
+		c.action = action == SC_CANCEL ? _("Cancel") : _(GetShortcutInfo(action)->name);
 	c.count = 1;
 	c.last = now;
 	c.text = comboText(c);
@@ -440,7 +441,6 @@ KeycastPreferences(void)
 		gAgent.clear();
 	if(gShowKeys || gShowAgent){
 		const char *corners[NUM_CORNERS] = { _("Bottom"), _("Bottom left"), _("Bottom right"), _("Top left"), _("Top right") };
-		ImGui::SetNextItemWidth(ImGui::GetFontSize() * 9.0f);
 		changed |= ImGui::Combo(L("Where"), &gCorner, corners, NUM_CORNERS);
 		ImGui::SetItemTooltip("%s", _("Where in the 3D view the pressed keys and Namaka's actions show."));
 	}

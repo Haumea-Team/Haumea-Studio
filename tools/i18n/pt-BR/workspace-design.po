@@ -8,9 +8,6 @@ msgstr "Avançado"
 msgid "Restores the panels to one column on the right: the browser above Object Info."
 msgstr "Restaura os painéis numa coluna à direita: o navegador acima das informações do objeto."
 
-msgid "Step snapping"
-msgstr "Ajustar por incrementos"
-
 msgid "%.0f FPS"
 msgstr "%.0f FPS"
 

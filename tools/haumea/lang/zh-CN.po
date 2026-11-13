@@ -8005,9 +8005,6 @@ msgstr "每次点击后仍保持放置状态，就像 Shift+单击一样。"
 msgid "Step"
 msgstr "步长"
 
-msgid "Step snapping"
-msgstr "步进吸附"
-
 #, c-format
 msgid ""
 "Step snapping: hold Shift while dragging the gizmo\n"
@@ -11242,32 +11239,11 @@ msgstr "全部笔刷设置"
 msgid "Brush disc size. 0 = single object under cursor."
 msgstr "笔刷圆盘大小。0 = 光标下的单个物体。"
 
-msgid "Click objects to select them, drag them to move along the ground."
-msgstr "点击物体以选中，拖动它们沿地面移动。"
-
 msgid "Count:"
 msgstr "数量："
 
-msgid "Drag the arrows on the selected object."
-msgstr "拖动所选物体上的箭头。"
-
-msgid "Drag the rings on the selected object."
-msgstr "拖动所选物体上的圆环。"
-
-msgid "Map tools"
-msgstr "地图工具"
-
-msgid "More options"
-msgstr "更多选项"
-
 msgid "Number of objects scattered per click when Radius > 0."
 msgstr "半径 > 0 时每次点击散布的物体数量。"
-
-msgid "Opens %s in the Tools panel. Right-click or hold for the others."
-msgstr "在“工具”面板中打开%s。右键单击或按住以查看其他工具。"
-
-msgid "Paint copies of the Object Browser's object onto the world. Its settings are on the options bar."
-msgstr "将物体浏览器中的物体复制绘制到世界中。设置位于选项栏。"
 
 msgid "Pick the object to paint in the Object Browser first."
 msgstr "请先在物体浏览器中选择要绘制的物体。"
@@ -11280,3 +11256,114 @@ msgstr "间距："
 
 msgid "Right-click to hide the new dot."
 msgstr "右键点击可隐藏“新”标记。"
+
+msgid "%d object(s)"
+msgstr "%d 个对象"
+
+msgid "%d object(s) selected."
+msgstr "已选择 %d 个对象。"
+
+msgid "%d texture(s) found in all TXDs"
+msgstr "在所有 TXD 中找到 %d 个纹理"
+
+msgid "A saved selection has this name: saving replaces it."
+msgstr "已有同名的保存选择：保存会替换它。"
+
+msgid "Brush\nPaint copies of the Object Browser's object onto the world. Its settings are over the 3D view."
+msgstr "画笔\n把对象浏览器中的对象复制并绘制到世界中。它的设置在 3D 视图上方。"
+
+msgid "Click to select these objects; Ctrl+click adds them to the selection."
+msgstr "单击选择这些对象；Ctrl+单击将它们加入选择。"
+
+msgid "Confirm and use this game folder"
+msgstr "确认并使用此游戏文件夹"
+
+msgid "Current selection: %d object(s)"
+msgstr "当前选择：%d 个对象"
+
+msgid "Deleted the saved selection \"%s\""
+msgstr "已删除保存的选择“%s”"
+
+msgid "Dragging a copy (Alt+drag)"
+msgstr "正在拖动副本（Alt+拖动）"
+
+msgid "First %d textures found in all TXDs: type more to narrow it down."
+msgstr "所有 TXD 中的前 %d 个纹理：输入更多内容以缩小范围。"
+
+msgid "Forget this saved selection (the objects stay)"
+msgstr "忘记这个保存的选择（对象保留）"
+
+msgid "Keep the selected objects under a name, to select them again later."
+msgstr "以名称保存所选对象，以便稍后再次选择。"
+
+msgid "Move (%s)\nDrag the arrows on the selected object."
+msgstr "移动（%s）\n拖动所选对象上的箭头。"
+
+msgid "No saved selections yet. Select some objects (Shift+click or drag a box) and save them here."
+msgstr "还没有保存的选择。选择一些对象（Shift+单击或拖出方框）并在此保存。"
+
+msgid "No texture has that in its name or its TXD's name."
+msgstr "没有纹理的名称或其 TXD 名称包含这些内容。"
+
+msgid "Not applied yet: confirm to use this folder (Haumea restarts to load it)."
+msgstr "尚未应用：确认以使用此文件夹（Haumea 会重启以加载它）。"
+
+msgid "Or browse one TXD:"
+msgstr "或浏览一个 TXD："
+
+msgid "Outlines"
+msgstr "轮廓"
+
+msgid "Pick them all again later from Map Objects or Edit > Saved selections."
+msgstr "稍后可从“地图对象”或“编辑 > 保存的选择”再次全部选中。"
+
+msgid "Replace with the current selection"
+msgstr "用当前选择替换"
+
+msgid "Rotate (%s)\nDrag the rings on the selected object."
+msgstr "旋转（%s）\n拖动所选对象上的圆环。"
+
+msgid "Save as a new selection..."
+msgstr "另存为新选择..."
+
+msgid "Save over"
+msgstr "覆盖保存"
+
+msgid "Save selection"
+msgstr "保存选择"
+
+msgid "Save selection..."
+msgstr "保存选择..."
+
+msgid "Saved selections"
+msgstr "保存的选择"
+
+msgid "Saved selections: keep a selection under a name and select it again later."
+msgstr "保存的选择：以名称保存一个选择，稍后再次选择它。"
+
+msgid "Saved the selection \"%s\" (%d object(s))"
+msgstr "已保存选择“%s”（%d 个对象）"
+
+msgid "Search all textures (e.g. white)"
+msgstr "搜索所有纹理（例如 white）"
+
+msgid "Select\nClick objects to select them, drag them to move along the ground."
+msgstr "选择\n单击对象以选择，拖动以沿地面移动。"
+
+msgid "Select some objects first (Shift+click or drag a box)."
+msgstr "请先选择一些对象（Shift+单击或拖出方框）。"
+
+msgid "Selected %d object(s) from \"%s\""
+msgstr "已选择 %d 个对象（来自“%s”）"
+
+msgid "Selection %d"
+msgstr "选择 %d"
+
+msgid "Selections"
+msgstr "选择集"
+
+msgid "To ground"
+msgstr "贴地"
+
+msgid "blank white"
+msgstr "纯白"

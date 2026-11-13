@@ -3320,6 +3320,22 @@ dogizmo(void)
 
 	// Capture start state when drag begins
 	if(isUsing && !wasDragging){
+		// Alt+drag: leave the original where it is and drag a copy, to lay
+		// out a wall or a row piece by piece. The copies are made in place
+		// and selected, so the gesture carries on with them.
+		// (Not trains: there Alt lets the engine off the rails.)
+		bool train = inst->m_isVehicle && IsTrainEngineModel(inst->m_objectId);
+		if(io.KeyAlt && !train && DuplicateSelected() > 0 && selection.first){
+			ObjectInst *leader = (ObjectInst*)selection.first->item;
+			for(CPtrNode *p = selection.first; p; p = p->next){
+				ObjectInst *candidate = (ObjectInst*)p->item;
+				if(!candidate->m_isDeleted && candidate->m_selectSeq < leader->m_selectSeq)
+					leader = candidate;
+			}
+			if(!leader->m_isDeleted && IsPawnObjectEditable(leader))
+				inst = leader;
+			Toast(TOAST_COPY_PASTE, _("Dragging a copy (Alt+drag)"));
+		}
 		dragStartPivot=pivot;
 		dragStartLeaderPos = inst->m_translation;
 		dragStartLeaderRot = NormalizeQuatOrIdentity(inst->m_rotation);

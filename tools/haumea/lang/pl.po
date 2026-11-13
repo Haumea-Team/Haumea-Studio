@@ -8413,9 +8413,6 @@ msgstr "Zostań w trybie umieszczania po każdym kliknięciu, jak przy Shift+kli
 msgid "Step"
 msgstr "Krok"
 
-msgid "Step snapping"
-msgstr "Przyciąganie krokowe"
-
 msgid ""
 "Step snapping: hold Shift while dragging the gizmo\n"
 "to move in %g m steps or rotate in %g° steps.\n"
@@ -10740,32 +10737,11 @@ msgstr "Wszystkie ustawienia pędzla"
 msgid "Brush disc size. 0 = single object under cursor."
 msgstr "Rozmiar dysku pędzla. 0 = jeden obiekt pod kursorem."
 
-msgid "Click objects to select them, drag them to move along the ground."
-msgstr "Klikaj obiekty, aby je zaznaczyć; przeciągaj, aby przesuwać je po ziemi."
-
 msgid "Count:"
 msgstr "Liczba:"
 
-msgid "Drag the arrows on the selected object."
-msgstr "Przeciągaj strzałki na zaznaczonym obiekcie."
-
-msgid "Drag the rings on the selected object."
-msgstr "Przeciągaj pierścienie na zaznaczonym obiekcie."
-
-msgid "Map tools"
-msgstr "Narzędzia mapy"
-
-msgid "More options"
-msgstr "Więcej opcji"
-
 msgid "Number of objects scattered per click when Radius > 0."
 msgstr "Liczba obiektów rozrzucanych na kliknięcie, gdy Promień > 0."
-
-msgid "Opens %s in the Tools panel. Right-click or hold for the others."
-msgstr "Otwiera %s w panelu Narzędzia. Kliknij prawym lub przytrzymaj, aby zobaczyć pozostałe."
-
-msgid "Paint copies of the Object Browser's object onto the world. Its settings are on the options bar."
-msgstr "Maluje kopie obiektu z Przeglądarki obiektów w świecie. Jego ustawienia są na pasku opcji."
 
 msgid "Pick the object to paint in the Object Browser first."
 msgstr "Najpierw wybierz w Przeglądarce obiektów obiekt do malowania."
@@ -10778,3 +10754,114 @@ msgstr "Odstęp:"
 
 msgid "Right-click to hide the new dot."
 msgstr "Kliknij prawym, aby ukryć kropkę nowości."
+
+msgid "%d object(s)"
+msgstr "Obiekty: %d"
+
+msgid "%d object(s) selected."
+msgstr "Zaznaczone obiekty: %d."
+
+msgid "%d texture(s) found in all TXDs"
+msgstr "Znalezione tekstury we wszystkich TXD: %d"
+
+msgid "A saved selection has this name: saving replaces it."
+msgstr "Zapisane zaznaczenie o tej nazwie już istnieje: zapis je zastąpi."
+
+msgid "Brush\nPaint copies of the Object Browser's object onto the world. Its settings are over the 3D view."
+msgstr "Pędzel\nMaluje kopie obiektu z przeglądarki obiektów na świecie. Jego ustawienia są nad widokiem 3D."
+
+msgid "Click to select these objects; Ctrl+click adds them to the selection."
+msgstr "Kliknij, aby zaznaczyć te obiekty; Ctrl+klik dodaje je do zaznaczenia."
+
+msgid "Confirm and use this game folder"
+msgstr "Potwierdź i użyj tego folderu gry"
+
+msgid "Current selection: %d object(s)"
+msgstr "Bieżące zaznaczenie: obiekty: %d"
+
+msgid "Deleted the saved selection \"%s\""
+msgstr "Usunięto zapisane zaznaczenie „%s”"
+
+msgid "Dragging a copy (Alt+drag)"
+msgstr "Przeciąganie kopii (Alt+przeciągnij)"
+
+msgid "First %d textures found in all TXDs: type more to narrow it down."
+msgstr "Pierwsze %d tekstur ze wszystkich TXD: wpisz więcej, aby zawęzić."
+
+msgid "Forget this saved selection (the objects stay)"
+msgstr "Zapomnij to zapisane zaznaczenie (obiekty zostają)"
+
+msgid "Keep the selected objects under a name, to select them again later."
+msgstr "Zachowaj zaznaczone obiekty pod nazwą, aby później zaznaczyć je ponownie."
+
+msgid "Move (%s)\nDrag the arrows on the selected object."
+msgstr "Przesuń (%s)\nPrzeciągaj strzałki na zaznaczonym obiekcie."
+
+msgid "No saved selections yet. Select some objects (Shift+click or drag a box) and save them here."
+msgstr "Brak zapisanych zaznaczeń. Zaznacz obiekty (Shift+klik lub przeciągnij ramkę) i zapisz je tutaj."
+
+msgid "No texture has that in its name or its TXD's name."
+msgstr "Żadna tekstura nie ma tego w nazwie ani w nazwie swojego TXD."
+
+msgid "Not applied yet: confirm to use this folder (Haumea restarts to load it)."
+msgstr "Jeszcze nie zastosowano: potwierdź, aby użyć tego folderu (Haumea uruchomi się ponownie, aby go wczytać)."
+
+msgid "Or browse one TXD:"
+msgstr "Albo przeglądaj jeden TXD:"
+
+msgid "Outlines"
+msgstr "Kontury"
+
+msgid "Pick them all again later from Map Objects or Edit > Saved selections."
+msgstr "Zaznacz je później ponownie w Obiektach mapy lub Edycja > Zapisane zaznaczenia."
+
+msgid "Replace with the current selection"
+msgstr "Zastąp bieżącym zaznaczeniem"
+
+msgid "Rotate (%s)\nDrag the rings on the selected object."
+msgstr "Obróć (%s)\nPrzeciągaj pierścienie na zaznaczonym obiekcie."
+
+msgid "Save as a new selection..."
+msgstr "Zapisz jako nowe zaznaczenie..."
+
+msgid "Save over"
+msgstr "Nadpisz"
+
+msgid "Save selection"
+msgstr "Zapisz zaznaczenie"
+
+msgid "Save selection..."
+msgstr "Zapisz zaznaczenie..."
+
+msgid "Saved selections"
+msgstr "Zapisane zaznaczenia"
+
+msgid "Saved selections: keep a selection under a name and select it again later."
+msgstr "Zapisane zaznaczenia: zachowaj zaznaczenie pod nazwą i zaznacz je ponownie później."
+
+msgid "Saved the selection \"%s\" (%d object(s))"
+msgstr "Zapisano zaznaczenie „%s” (obiekty: %d)"
+
+msgid "Search all textures (e.g. white)"
+msgstr "Szukaj we wszystkich teksturach (np. white)"
+
+msgid "Select\nClick objects to select them, drag them to move along the ground."
+msgstr "Zaznacz\nKlikaj obiekty, aby je zaznaczyć; przeciągaj, aby przesuwać po ziemi."
+
+msgid "Select some objects first (Shift+click or drag a box)."
+msgstr "Najpierw zaznacz obiekty (Shift+klik lub przeciągnij ramkę)."
+
+msgid "Selected %d object(s) from \"%s\""
+msgstr "Zaznaczono obiekty: %d z „%s”"
+
+msgid "Selection %d"
+msgstr "Zaznaczenie %d"
+
+msgid "Selections"
+msgstr "Zaznaczenia"
+
+msgid "To ground"
+msgstr "Na ziemię"
+
+msgid "blank white"
+msgstr "czysta biel"

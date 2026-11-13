@@ -332,6 +332,7 @@ SearchTextures(const char *query, int limit, std::vector<TextureSearchResult> &o
 		r.custom = gKind[e.txdSlot] == KIND_CUSTOM;
 		r.tstudioIndex = tstudioIndexOf(txd->name, e.name);
 		r.tiles = e.tiles;
+		r.txdSlot = e.txdSlot;
 		out.push_back(r);
 	}
 	return (int)out.size();

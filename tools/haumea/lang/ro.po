@@ -8413,9 +8413,6 @@ msgstr "Rămâi în plasare după fiecare clic, ca la Shift+clic."
 msgid "Step"
 msgstr "Pas"
 
-msgid "Step snapping"
-msgstr "Snapping pe pași"
-
 msgid ""
 "Step snapping: hold Shift while dragging the gizmo\n"
 "to move in %g m steps or rotate in %g° steps.\n"
@@ -10740,32 +10737,11 @@ msgstr "Toate setările pensulei"
 msgid "Brush disc size. 0 = single object under cursor."
 msgstr "Mărimea discului pensulei. 0 = un singur obiect sub cursor."
 
-msgid "Click objects to select them, drag them to move along the ground."
-msgstr "Dă clic pe obiecte pentru a le selecta; trage-le pentru a le muta pe sol."
-
 msgid "Count:"
 msgstr "Număr:"
 
-msgid "Drag the arrows on the selected object."
-msgstr "Trage săgețile de pe obiectul selectat."
-
-msgid "Drag the rings on the selected object."
-msgstr "Trage inelele de pe obiectul selectat."
-
-msgid "Map tools"
-msgstr "Unelte pentru hartă"
-
-msgid "More options"
-msgstr "Mai multe opțiuni"
-
 msgid "Number of objects scattered per click when Radius > 0."
 msgstr "Numărul de obiecte împrăștiate la fiecare clic când Rază > 0."
-
-msgid "Opens %s in the Tools panel. Right-click or hold for the others."
-msgstr "Deschide %s în panoul Unelte. Clic dreapta sau ține apăsat pentru celelalte."
-
-msgid "Paint copies of the Object Browser's object onto the world. Its settings are on the options bar."
-msgstr "Pictează copii ale obiectului din Exploratorul de obiecte în lume. Setările lui sunt pe bara de opțiuni."
 
 msgid "Pick the object to paint in the Object Browser first."
 msgstr "Alege mai întâi în Exploratorul de obiecte obiectul de pictat."
@@ -10778,3 +10754,114 @@ msgstr "Spațiere:"
 
 msgid "Right-click to hide the new dot."
 msgstr "Clic dreapta pentru a ascunde punctul de noutate."
+
+msgid "%d object(s)"
+msgstr "%d obiect(e)"
+
+msgid "%d object(s) selected."
+msgstr "%d obiect(e) selectat(e)."
+
+msgid "%d texture(s) found in all TXDs"
+msgstr "%d textur(i) găsite în toate TXD-urile"
+
+msgid "A saved selection has this name: saving replaces it."
+msgstr "Există deja o selecție salvată cu acest nume: salvarea o înlocuiește."
+
+msgid "Brush\nPaint copies of the Object Browser's object onto the world. Its settings are over the 3D view."
+msgstr "Pensulă\nPictează copii ale obiectului din Browserul de obiecte pe lume. Setările ei sunt deasupra vederii 3D."
+
+msgid "Click to select these objects; Ctrl+click adds them to the selection."
+msgstr "Clic pentru a selecta aceste obiecte; Ctrl+clic le adaugă la selecție."
+
+msgid "Confirm and use this game folder"
+msgstr "Confirmă și folosește acest folder al jocului"
+
+msgid "Current selection: %d object(s)"
+msgstr "Selecția curentă: %d obiect(e)"
+
+msgid "Deleted the saved selection \"%s\""
+msgstr "Selecția salvată „%s” a fost ștearsă"
+
+msgid "Dragging a copy (Alt+drag)"
+msgstr "Se trage o copie (Alt+tragere)"
+
+msgid "First %d textures found in all TXDs: type more to narrow it down."
+msgstr "Primele %d texturi găsite în toate TXD-urile: scrie mai mult ca să restrângi."
+
+msgid "Forget this saved selection (the objects stay)"
+msgstr "Uită această selecție salvată (obiectele rămân)"
+
+msgid "Keep the selected objects under a name, to select them again later."
+msgstr "Păstrează obiectele selectate sub un nume, ca să le selectezi din nou mai târziu."
+
+msgid "Move (%s)\nDrag the arrows on the selected object."
+msgstr "Mută (%s)\nTrage de săgețile de pe obiectul selectat."
+
+msgid "No saved selections yet. Select some objects (Shift+click or drag a box) and save them here."
+msgstr "Încă nu există selecții salvate. Selectează câteva obiecte (Shift+clic sau trage un dreptunghi) și salvează-le aici."
+
+msgid "No texture has that in its name or its TXD's name."
+msgstr "Nicio textură nu are asta în nume sau în numele TXD-ului ei."
+
+msgid "Not applied yet: confirm to use this folder (Haumea restarts to load it)."
+msgstr "Încă neaplicat: confirmă pentru a folosi acest folder (Haumea repornește ca să-l încarce)."
+
+msgid "Or browse one TXD:"
+msgstr "Sau răsfoiește un TXD:"
+
+msgid "Outlines"
+msgstr "Contururi"
+
+msgid "Pick them all again later from Map Objects or Edit > Saved selections."
+msgstr "Selectează-le pe toate din nou mai târziu din Obiectele hărții sau Editare > Selecții salvate."
+
+msgid "Replace with the current selection"
+msgstr "Înlocuiește cu selecția curentă"
+
+msgid "Rotate (%s)\nDrag the rings on the selected object."
+msgstr "Rotește (%s)\nTrage de inelele de pe obiectul selectat."
+
+msgid "Save as a new selection..."
+msgstr "Salvează ca selecție nouă..."
+
+msgid "Save over"
+msgstr "Suprascrie"
+
+msgid "Save selection"
+msgstr "Salvează selecția"
+
+msgid "Save selection..."
+msgstr "Salvează selecția..."
+
+msgid "Saved selections"
+msgstr "Selecții salvate"
+
+msgid "Saved selections: keep a selection under a name and select it again later."
+msgstr "Selecții salvate: păstrează o selecție sub un nume și selecteaz-o din nou mai târziu."
+
+msgid "Saved the selection \"%s\" (%d object(s))"
+msgstr "Selecția „%s” a fost salvată (%d obiect(e))"
+
+msgid "Search all textures (e.g. white)"
+msgstr "Caută în toate texturile (ex. white)"
+
+msgid "Select\nClick objects to select them, drag them to move along the ground."
+msgstr "Selectează\nDă clic pe obiecte ca să le selectezi, trage-le ca să le muți pe sol."
+
+msgid "Select some objects first (Shift+click or drag a box)."
+msgstr "Selectează mai întâi câteva obiecte (Shift+clic sau trage un dreptunghi)."
+
+msgid "Selected %d object(s) from \"%s\""
+msgstr "Au fost selectate %d obiect(e) din „%s”"
+
+msgid "Selection %d"
+msgstr "Selecția %d"
+
+msgid "Selections"
+msgstr "Selecții"
+
+msgid "To ground"
+msgstr "Pe sol"
+
+msgid "blank white"
+msgstr "alb simplu"

@@ -8413,9 +8413,6 @@ msgstr "Оставаться в режиме размещения после к�
 msgid "Step"
 msgstr "Шаг"
 
-msgid "Step snapping"
-msgstr "Пошаговая привязка"
-
 msgid ""
 "Step snapping: hold Shift while dragging the gizmo\n"
 "to move in %g m steps or rotate in %g° steps.\n"
@@ -10740,32 +10737,11 @@ msgstr "Все настройки кисти"
 msgid "Brush disc size. 0 = single object under cursor."
 msgstr "Размер диска кисти. 0 = один объект под курсором."
 
-msgid "Click objects to select them, drag them to move along the ground."
-msgstr "Щёлкайте объекты, чтобы выбрать их; перетаскивайте, чтобы двигать по земле."
-
 msgid "Count:"
 msgstr "Количество:"
 
-msgid "Drag the arrows on the selected object."
-msgstr "Перетаскивайте стрелки на выбранном объекте."
-
-msgid "Drag the rings on the selected object."
-msgstr "Перетаскивайте кольца на выбранном объекте."
-
-msgid "Map tools"
-msgstr "Инструменты карты"
-
-msgid "More options"
-msgstr "Ещё параметры"
-
 msgid "Number of objects scattered per click when Radius > 0."
 msgstr "Сколько объектов разбрасывается за щелчок, когда Радиус > 0."
-
-msgid "Opens %s in the Tools panel. Right-click or hold for the others."
-msgstr "Открывает %s на панели «Инструменты». Правый щелчок или удержание — остальные."
-
-msgid "Paint copies of the Object Browser's object onto the world. Its settings are on the options bar."
-msgstr "Рисует копии объекта из Обозревателя объектов прямо в мире. Его настройки — на панели параметров."
 
 msgid "Pick the object to paint in the Object Browser first."
 msgstr "Сначала выберите объект для рисования в Обозревателе объектов."
@@ -10778,3 +10754,114 @@ msgstr "Интервал:"
 
 msgid "Right-click to hide the new dot."
 msgstr "Щёлкните правой кнопкой, чтобы скрыть отметку «новое»."
+
+msgid "%d object(s)"
+msgstr "Объектов: %d"
+
+msgid "%d object(s) selected."
+msgstr "Выбрано объектов: %d."
+
+msgid "%d texture(s) found in all TXDs"
+msgstr "Найдено текстур во всех TXD: %d"
+
+msgid "A saved selection has this name: saving replaces it."
+msgstr "Сохранённое выделение с таким именем уже есть: сохранение заменит его."
+
+msgid "Brush\nPaint copies of the Object Browser's object onto the world. Its settings are over the 3D view."
+msgstr "Кисть\nРисует копии объекта из браузера объектов по миру. Её настройки — над 3D-видом."
+
+msgid "Click to select these objects; Ctrl+click adds them to the selection."
+msgstr "Щелчок выделяет эти объекты; Ctrl+щелчок добавляет их к выделению."
+
+msgid "Confirm and use this game folder"
+msgstr "Подтвердить и использовать эту папку игры"
+
+msgid "Current selection: %d object(s)"
+msgstr "Текущее выделение: объектов %d"
+
+msgid "Deleted the saved selection \"%s\""
+msgstr "Сохранённое выделение «%s» удалено"
+
+msgid "Dragging a copy (Alt+drag)"
+msgstr "Перетаскивание копии (Alt+перетаскивание)"
+
+msgid "First %d textures found in all TXDs: type more to narrow it down."
+msgstr "Первые %d текстур во всех TXD: уточните запрос."
+
+msgid "Forget this saved selection (the objects stay)"
+msgstr "Забыть это сохранённое выделение (объекты останутся)"
+
+msgid "Keep the selected objects under a name, to select them again later."
+msgstr "Сохранить выделенные объекты под именем, чтобы потом выделить их снова."
+
+msgid "Move (%s)\nDrag the arrows on the selected object."
+msgstr "Перемещение (%s)\nТяните стрелки на выделенном объекте."
+
+msgid "No saved selections yet. Select some objects (Shift+click or drag a box) and save them here."
+msgstr "Сохранённых выделений пока нет. Выделите объекты (Shift+щелчок или рамкой) и сохраните их здесь."
+
+msgid "No texture has that in its name or its TXD's name."
+msgstr "Ни у одной текстуры нет этого в названии или в названии её TXD."
+
+msgid "Not applied yet: confirm to use this folder (Haumea restarts to load it)."
+msgstr "Ещё не применено: подтвердите, чтобы использовать эту папку (Haumea перезапустится, чтобы загрузить её)."
+
+msgid "Or browse one TXD:"
+msgstr "Или просмотрите один TXD:"
+
+msgid "Outlines"
+msgstr "Контуры"
+
+msgid "Pick them all again later from Map Objects or Edit > Saved selections."
+msgstr "Потом их можно снова выделить в «Объектах карты» или в «Правка > Сохранённые выделения»."
+
+msgid "Replace with the current selection"
+msgstr "Заменить текущим выделением"
+
+msgid "Rotate (%s)\nDrag the rings on the selected object."
+msgstr "Вращение (%s)\nТяните кольца на выделенном объекте."
+
+msgid "Save as a new selection..."
+msgstr "Сохранить как новое выделение..."
+
+msgid "Save over"
+msgstr "Перезаписать"
+
+msgid "Save selection"
+msgstr "Сохранить выделение"
+
+msgid "Save selection..."
+msgstr "Сохранить выделение..."
+
+msgid "Saved selections"
+msgstr "Сохранённые выделения"
+
+msgid "Saved selections: keep a selection under a name and select it again later."
+msgstr "Сохранённые выделения: сохраните выделение под именем и выделяйте его снова позже."
+
+msgid "Saved the selection \"%s\" (%d object(s))"
+msgstr "Выделение «%s» сохранено (объектов: %d)"
+
+msgid "Search all textures (e.g. white)"
+msgstr "Искать во всех текстурах (напр. white)"
+
+msgid "Select\nClick objects to select them, drag them to move along the ground."
+msgstr "Выделение\nЩёлкайте по объектам, чтобы выделить их; перетаскивайте, чтобы двигать по земле."
+
+msgid "Select some objects first (Shift+click or drag a box)."
+msgstr "Сначала выделите объекты (Shift+щелчок или рамкой)."
+
+msgid "Selected %d object(s) from \"%s\""
+msgstr "Выделено объектов: %d из «%s»"
+
+msgid "Selection %d"
+msgstr "Выделение %d"
+
+msgid "Selections"
+msgstr "Выделения"
+
+msgid "To ground"
+msgstr "На землю"
+
+msgid "blank white"
+msgstr "чисто белая"

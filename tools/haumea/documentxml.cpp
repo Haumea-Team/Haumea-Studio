@@ -742,7 +742,8 @@ void CaptureMapXMLExport(const std::vector<ObjectInst *> &objects,
 	Node &scene = captured.add("scene");
 	for (ObjectInst *inst : ordered) {
 		auto h = handles.find(inst);
-		Node object = writeInstance(inst, h == handles.end() ? "" : h->second);
+		// The shared "objectid" names many objects: those are matched by position.
+		Node object = writeInstance(inst, h == handles.end() || h->second == "objectid" ? "" : h->second);
 		for (const char *ref : {"parent", "npc-vehicle", "lod"}) {
 			double id = 0;
 			object.number(ref, &id);

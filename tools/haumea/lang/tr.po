@@ -8413,9 +8413,6 @@ msgstr "Shift+tık gibi, her tıklamadan sonra yerleştirmede kal."
 msgid "Step"
 msgstr "Adım"
 
-msgid "Step snapping"
-msgstr "Adım yapışması"
-
 msgid ""
 "Step snapping: hold Shift while dragging the gizmo\n"
 "to move in %g m steps or rotate in %g° steps.\n"
@@ -10740,32 +10737,11 @@ msgstr "Tüm fırça ayarları"
 msgid "Brush disc size. 0 = single object under cursor."
 msgstr "Fırça diski boyutu. 0 = imlecin altındaki tek nesne."
 
-msgid "Click objects to select them, drag them to move along the ground."
-msgstr "Seçmek için nesnelere tıklayın; zeminde taşımak için sürükleyin."
-
 msgid "Count:"
 msgstr "Adet:"
 
-msgid "Drag the arrows on the selected object."
-msgstr "Seçili nesnenin üzerindeki okları sürükleyin."
-
-msgid "Drag the rings on the selected object."
-msgstr "Seçili nesnenin üzerindeki halkaları sürükleyin."
-
-msgid "Map tools"
-msgstr "Harita araçları"
-
-msgid "More options"
-msgstr "Diğer seçenekler"
-
 msgid "Number of objects scattered per click when Radius > 0."
 msgstr "Yarıçap > 0 olduğunda tıklama başına dağıtılan nesne sayısı."
-
-msgid "Opens %s in the Tools panel. Right-click or hold for the others."
-msgstr "%s bölümünü Araçlar panelinde açar. Diğerleri için sağ tıklayın veya basılı tutun."
-
-msgid "Paint copies of the Object Browser's object onto the world. Its settings are on the options bar."
-msgstr "Nesne tarayıcısındaki nesnenin kopyalarını dünyaya boyar. Ayarları seçenekler çubuğundadır."
 
 msgid "Pick the object to paint in the Object Browser first."
 msgstr "Önce Nesne tarayıcısında boyanacak nesneyi seçin."
@@ -10778,3 +10754,114 @@ msgstr "Aralık:"
 
 msgid "Right-click to hide the new dot."
 msgstr "Yeni noktasını gizlemek için sağ tıklayın."
+
+msgid "%d object(s)"
+msgstr "%d nesne"
+
+msgid "%d object(s) selected."
+msgstr "%d nesne seçili."
+
+msgid "%d texture(s) found in all TXDs"
+msgstr "Tüm TXD'lerde %d doku bulundu"
+
+msgid "A saved selection has this name: saving replaces it."
+msgstr "Bu adda kayıtlı bir seçim var: kaydetmek onu değiştirir."
+
+msgid "Brush\nPaint copies of the Object Browser's object onto the world. Its settings are over the 3D view."
+msgstr "Fırça\nNesne Tarayıcısı'ndaki nesnenin kopyalarını dünyaya boyar. Ayarları 3B görünümün üzerindedir."
+
+msgid "Click to select these objects; Ctrl+click adds them to the selection."
+msgstr "Bu nesneleri seçmek için tıklayın; Ctrl+tık onları seçime ekler."
+
+msgid "Confirm and use this game folder"
+msgstr "Onayla ve bu oyun klasörünü kullan"
+
+msgid "Current selection: %d object(s)"
+msgstr "Geçerli seçim: %d nesne"
+
+msgid "Deleted the saved selection \"%s\""
+msgstr "\"%s\" kayıtlı seçimi silindi"
+
+msgid "Dragging a copy (Alt+drag)"
+msgstr "Kopya sürükleniyor (Alt+sürükle)"
+
+msgid "First %d textures found in all TXDs: type more to narrow it down."
+msgstr "Tüm TXD'lerde bulunan ilk %d doku: daraltmak için daha fazla yazın."
+
+msgid "Forget this saved selection (the objects stay)"
+msgstr "Bu kayıtlı seçimi unut (nesneler kalır)"
+
+msgid "Keep the selected objects under a name, to select them again later."
+msgstr "Seçili nesneleri bir adla saklayın, sonra yeniden seçebilirsiniz."
+
+msgid "Move (%s)\nDrag the arrows on the selected object."
+msgstr "Taşı (%s)\nSeçili nesnedeki okları sürükleyin."
+
+msgid "No saved selections yet. Select some objects (Shift+click or drag a box) and save them here."
+msgstr "Henüz kayıtlı seçim yok. Birkaç nesne seçin (Shift+tık veya kutu çizin) ve burada kaydedin."
+
+msgid "No texture has that in its name or its TXD's name."
+msgstr "Hiçbir dokunun adında veya TXD'sinin adında bu yok."
+
+msgid "Not applied yet: confirm to use this folder (Haumea restarts to load it)."
+msgstr "Henüz uygulanmadı: bu klasörü kullanmak için onaylayın (Haumea yüklemek için yeniden başlar)."
+
+msgid "Or browse one TXD:"
+msgstr "Ya da bir TXD'ye göz atın:"
+
+msgid "Outlines"
+msgstr "Dış hatlar"
+
+msgid "Pick them all again later from Map Objects or Edit > Saved selections."
+msgstr "Hepsini daha sonra Harita Nesneleri'nden veya Düzen > Kayıtlı seçimler'den yeniden seçin."
+
+msgid "Replace with the current selection"
+msgstr "Geçerli seçimle değiştir"
+
+msgid "Rotate (%s)\nDrag the rings on the selected object."
+msgstr "Döndür (%s)\nSeçili nesnedeki halkaları sürükleyin."
+
+msgid "Save as a new selection..."
+msgstr "Yeni seçim olarak kaydet..."
+
+msgid "Save over"
+msgstr "Üzerine kaydet"
+
+msgid "Save selection"
+msgstr "Seçimi kaydet"
+
+msgid "Save selection..."
+msgstr "Seçimi kaydet..."
+
+msgid "Saved selections"
+msgstr "Kayıtlı seçimler"
+
+msgid "Saved selections: keep a selection under a name and select it again later."
+msgstr "Kayıtlı seçimler: bir seçimi adla saklayın ve sonra yeniden seçin."
+
+msgid "Saved the selection \"%s\" (%d object(s))"
+msgstr "\"%s\" seçimi kaydedildi (%d nesne)"
+
+msgid "Search all textures (e.g. white)"
+msgstr "Tüm dokularda ara (ör. white)"
+
+msgid "Select\nClick objects to select them, drag them to move along the ground."
+msgstr "Seç\nNesneleri seçmek için tıklayın, zeminde taşımak için sürükleyin."
+
+msgid "Select some objects first (Shift+click or drag a box)."
+msgstr "Önce birkaç nesne seçin (Shift+tık veya kutu çizin)."
+
+msgid "Selected %d object(s) from \"%s\""
+msgstr "%d nesne seçildi (\"%s\" içinden)"
+
+msgid "Selection %d"
+msgstr "Seçim %d"
+
+msgid "Selections"
+msgstr "Seçimler"
+
+msgid "To ground"
+msgstr "Zemine"
+
+msgid "blank white"
+msgstr "düz beyaz"

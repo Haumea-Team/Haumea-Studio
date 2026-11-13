@@ -18,7 +18,9 @@ static hv_radar_zone_2 = -1;
 stock Haumea_hv_radar_CreateObjects()
 {
 	hv_radar_zone_0 = GangZoneCreate(2000.000000, -3004.000000, 2012.000000, -2996.000000); // gangzone [gang zone]
+
 	hv_radar_zone_1 = GangZoneCreate(2000.000000, -2996.000000, 2004.000000, -2992.000000); // gangzone [gang zone]
+
 	hv_radar_zone_2 = GangZoneCreate(2004.000000, -2996.000000, 2012.000000, -2992.000000); // gangzone [gang zone]
 }
 

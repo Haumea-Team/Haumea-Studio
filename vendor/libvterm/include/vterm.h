@@ -1,6 +1,11 @@
 #ifndef __VTERM_H__
 #define __VTERM_H__
 
+/* windows.h (rpcndr.h) defines small as char; the cell attributes have a field of that name */
+#ifdef small
+#undef small
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif

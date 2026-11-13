@@ -16,3 +16,5 @@ tools/haumea/lang/haumea.pot
 # premake5 writes these (location "build"); CI makes its own.
 /build/
 .DS_Store
+__pycache__/
+*.pyc

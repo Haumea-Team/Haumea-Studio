@@ -244,8 +244,10 @@ GetNameAndDamage(char *nodename, char *name, int *n)
 	}
 }
 
+// lightUnprelit: an atomic model (an object), not a part of a ped, vehicle or
+// other clump, which keep the pipeline they always had.
 static void
-SetupAtomic(rw::Atomic *atm)
+SetupAtomic(rw::Atomic *atm, bool lightUnprelit)
 {
 	// Make sure we are not pre-instanced
 	gta::attachCustomPipelines(atm);	// attach xbox pipelines, which we want to uninstance
@@ -278,6 +280,19 @@ SetupAtomic(rw::Atomic *atm)
 			atm->pipeline = nil;
 	}
 	atm->setRenderCB(myRenderCB);
+	// A model without prelighting but with normals (SA-MP's own walls, floors
+	// and most 0.3.x objects) is made to be lit: the game draws it with the
+	// ambient and the sun. The building pipeline only has prelighting to go
+	// on, so it came out black in daylight. Light it as the game lights
+	// objects; it is not instanced yet, so the pipeline can still change.
+	rw::Geometry *geo = atm->geometry;
+	if(lightUnprelit && params.daynightPipe && !params.neoWorldPipe && !params.leedsPipe && geo &&
+	   !(geo->flags & rw::Geometry::PRELIT) && (geo->flags & rw::Geometry::NORMALS) &&
+	   !(geo->flags & rw::Geometry::NATIVE) && geo->instData == nil){
+		atm->pipeline = nil;
+		gta::setPipelineID(atm, 0);
+		atm->setRenderCB(LitObjectRenderCB);
+	}
 }
 
 void
@@ -418,7 +433,7 @@ ObjectDef::LoadAtomic(void)
 			SetAtomic(n, atomic);
 			atomic->clump->removeAtomic(atomic);
 			atomic->setFrame(rw::Frame::create());
-			SetupAtomic(atomic);
+			SetupAtomic(atomic, true);
 		}
 		clump->destroy();
 		if(m_atomics[0] == nil)
@@ -511,7 +526,7 @@ ObjectDef::LoadClump(void)
 				rw::Matrix::mult(&effectLocal, atomic->getFrame()->getLTM(), &invRoot);
 				appendGeometry2dEffects(this, atomic, &effectLocal);
 			}
-			SetupAtomic(atomic);
+			SetupAtomic(atomic, false);
 		}
 		if(m_isPed){
 			AnimNoteSkinBindPose(clump);	// animation skins from the original pose

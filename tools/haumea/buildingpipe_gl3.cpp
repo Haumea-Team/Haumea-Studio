@@ -81,8 +81,18 @@ buildingInstanceCB(Geometry *geo, gl3::InstanceDataHeader *header, bool32 reinst
 			stride += 4;
 			a++;
 		}else{
-			// we need vertex colors in the shader so force white like on PS2, one set is enough
+			// we need vertex colors in the shader so force white like on PS2.
+			// Both sets: the PC shader takes day and night, and an attribute
+			// left out reads as black, which made such models black by day.
 			a->index = ATTRIB_NIGHTCOLOR;
+			a->size = 4;
+			a->type = GL_UNSIGNED_BYTE;
+			a->normalized = GL_TRUE;
+			a->offset = stride;
+			stride += 4;
+			a++;
+
+			a->index = ATTRIB_DAYCOLOR;
 			a->size = 4;
 			a->type = GL_UNSIGNED_BYTE;
 			a->normalized = GL_TRUE;
@@ -178,6 +188,10 @@ buildingInstanceCB(Geometry *geo, gl3::InstanceDataHeader *header, bool32 reinst
 			}
 			instWhite(VERT_RGBA, verts + a->offset,
 				header->totalNumVertex, a->stride);
+			for(b = attribs; b->index != ATTRIB_DAYCOLOR; b++)
+				;
+			instWhite(VERT_RGBA, verts + b->offset,
+				header->totalNumVertex, b->stride);
 		}
 	}
 

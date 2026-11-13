@@ -132,6 +132,8 @@ bool BuildPath(char *dst, size_t size, const char *dir, const char *name);
 bool EnsureParentDirectoriesForPath(const char *path);
 bool GetHaumeaDataDirectory(char *dir, size_t size);
 bool GetHaumeaDataPath(char *dst, size_t size, const char *name);
+// <Documents>/Haumea Studio/<name> (created): where exported maps go, easy to find.
+bool GetUserDocumentsPath(char *dst, size_t size, const char *name);
 FILE *fopenHaumeaDataRead(const char *name, const char *legacyName = nil);
 FILE *fopenHaumeaDataWrite(const char *name);
 void setHotReloadTracePath(const char *path);
@@ -1046,7 +1048,7 @@ void DrawTextureBrowserWindow(bool *open);
 // Help > About > Licenses (licenses.cpp)
 void DrawLicensesWindow(bool *open);
 struct TextureSearchResult { int model; std::string txd, texture; bool samp, custom; int tstudioIndex;
-	int tiles; };	// tiles: 0 not, 1 left to right, 2 top to bottom, 3 both
+	int tiles; int txdSlot; };	// tiles: 0 not, 1 left to right, 2 top to bottom, 3 both
 int SearchTextures(const char *query, int limit, std::vector<TextureSearchResult> &out);	// indexes everything first
 // Texture Studio's texture list (tstudio.cpp): Texture Studio maps store
 // textures as indices into it, so its order matters. The workspace's own

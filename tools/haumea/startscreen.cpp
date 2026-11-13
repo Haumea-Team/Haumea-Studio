@@ -279,10 +279,19 @@ gameSection(bool gameLoaded)
 		ImGui::PopStyleColor();
 	}
 	else if(changed){
-		if(ImGui::Button(_("Use this game folder"))){
+		// Picking a folder changes nothing until it is confirmed here.
+		ImGui::TextColored(UiSemanticColor(UI_COLOR_WARNING), TI(ICON_FA_CIRCLE_INFO,
+			"Not applied yet: confirm to use this folder (Haumea restarts to load it)."));
+		ImVec4 accent = ImGui::GetStyleColorVec4(ImGuiCol_CheckMark);
+		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(accent.x, accent.y, accent.z, 0.45f));
+		if(ImGui::Button(TI(ICON_FA_CHECK, "Confirm and use this game folder"))){
 			SetGameDir(gGameField, nil);
 			gRestartNeeded = true;
 		}
+		ImGui::PopStyleColor();
+		ImGui::SameLine();
+		if(ImGui::Button(_("Cancel")))
+			snprintf(gGameField, sizeof(gGameField), "%s", GetGameDir());
 	}else if(gameLoaded){
 		// What the editor found in the folder it loaded.
 		std::string version;
