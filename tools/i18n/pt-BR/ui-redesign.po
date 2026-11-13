@@ -33,3 +33,127 @@ msgstr "Confirmar e usar esta pasta do jogo"
 #: tools/haumea/shortcuts.cpp
 msgid "Leave place, prefab, brush, path or TextDraw mode; otherwise deselect"
 msgstr "Sair do modo de colocar, prefab, pincel, caminho ou TextDraw; senão, tira a seleção"
+
+#: tools/haumea/gui.cpp
+msgid "Saved selections"
+msgstr "Seleções salvas"
+
+#: tools/haumea/gui.cpp
+msgid "Save current selection"
+msgstr "Salvar seleção atual"
+
+#: tools/haumea/gui.cpp
+msgid "Save selection..."
+msgstr "Salvar seleção..."
+
+#: tools/haumea/gui.cpp
+msgid "Save selection"
+msgstr "Salvar seleção"
+
+#: tools/haumea/gui.cpp
+msgid "None yet."
+msgstr "Nenhuma ainda."
+
+#: tools/haumea/gui.cpp
+msgid "Selection %d"
+msgstr "Seleção %d"
+
+#: tools/haumea/gui.cpp
+msgid "%d object(s) selected."
+msgstr "%d objeto(s) selecionado(s)."
+
+#: tools/haumea/gui.cpp
+msgid "Pick them all again later from Map Objects or Edit > Saved selections."
+msgstr "Selecione todos de novo depois em Objetos do mapa ou Editar > Seleções salvas."
+
+#: tools/haumea/gui.cpp
+msgid "Keep the selected objects under a name, to select them again later."
+msgstr "Guarda os objetos selecionados com um nome, para selecioná-los de novo depois."
+
+#: tools/haumea/gui.cpp
+msgid "Select some objects first (Shift+click or drag a box)."
+msgstr "Selecione alguns objetos primeiro (Shift+clique ou arraste uma caixa)."
+
+#: tools/haumea/gui.cpp
+msgid "Click to select these objects; Ctrl+click adds them to the selection."
+msgstr "Clique para selecionar estes objetos; Ctrl+clique os adiciona à seleção."
+
+#: tools/haumea/gui.cpp
+msgid "Replace with the current selection"
+msgstr "Substituir pela seleção atual"
+
+#: tools/haumea/gui.cpp
+msgid "Forget this saved selection (the objects stay)"
+msgstr "Esquecer esta seleção salva (os objetos continuam)"
+
+#: tools/haumea/gui.cpp
+msgid "Selected %d object(s) from \"%s\""
+msgstr "%d objeto(s) selecionado(s) de \"%s\""
+
+#: tools/haumea/gui.cpp
+msgid "Saved the selection \"%s\" (%d object(s))"
+msgstr "Seleção \"%s\" salva (%d objeto(s))"
+
+#: tools/haumea/gui.cpp
+msgid "Search all textures (e.g. white)"
+msgstr "Buscar em todas as texturas (ex.: white)"
+
+#: tools/haumea/gui.cpp
+msgid "First %d textures found in all TXDs: type more to narrow it down."
+msgstr "Primeiras %d texturas encontradas em todas as TXDs: digite mais para filtrar."
+
+#: tools/haumea/gui.cpp
+msgid "%d texture(s) found in all TXDs"
+msgstr "%d textura(s) encontrada(s) em todas as TXDs"
+
+#: tools/haumea/gui.cpp
+msgid "No texture has that in its name or its TXD's name."
+msgstr "Nenhuma textura tem isso no nome ou no nome da TXD."
+
+#: tools/haumea/gui.cpp
+msgid "Or browse one TXD:"
+msgstr "Ou navegue por uma TXD:"
+
+#: tools/haumea/gui.cpp
+msgid "model"
+msgstr "modelo"
+
+#: tools/haumea/gui.cpp
+msgid "Selections"
+msgstr "Seleções"
+
+#: tools/haumea/gui.cpp
+msgid "Save as a new selection..."
+msgstr "Salvar como nova seleção..."
+
+#: tools/haumea/gui.cpp
+msgid "Save over"
+msgstr "Salvar por cima"
+
+#: tools/haumea/gui.cpp
+msgid "Current selection: %d object(s)"
+msgstr "Seleção atual: %d objeto(s)"
+
+#: tools/haumea/gui.cpp
+msgid "Nothing selected"
+msgstr "Nada selecionado"
+
+#: tools/haumea/gui.cpp
+msgid "%d object(s)"
+msgstr "%d objeto(s)"
+
+#: tools/haumea/gui.cpp
+msgid "No saved selections yet. Select some objects (Shift+click or drag a box) and save them here."
+msgstr "Nenhuma seleção salva ainda. Selecione alguns objetos (Shift+clique ou arraste uma caixa) e salve aqui."
+
+#: tools/haumea/gui.cpp
+msgid "Deleted the saved selection \"%s\""
+msgstr "Seleção salva \"%s\" excluída"
+
+#: tools/haumea/gui.cpp
+msgid "A saved selection has this name: saving replaces it."
+msgstr "Já existe uma seleção com esse nome: salvar vai substituí-la."
+
+#: tools/haumea/gui.cpp
+msgid "Saved selections: keep a selection under a name and select it again later."
+msgstr "Seleções salvas: guarde uma seleção com um nome e selecione-a de novo depois."

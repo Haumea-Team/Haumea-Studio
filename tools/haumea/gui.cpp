@@ -88,6 +88,7 @@ static bool showViewWindow;
 static bool showBrowserWindow = true;
 static bool showDiffWindow;
 static bool showMapObjectsWindow = true;	// the outliner, on the left
+static bool showSavedSelectionsWindow = true;	// under it
 static bool showHistoryWindow;
 static bool showTextureBrowserWindow;
 static bool showPawnCodeWindow;
@@ -222,7 +223,7 @@ static float gSettingsAutosaveSeconds;
 static bool gPersistentSettingsLoaded;
 // Off: Reload Game Files asks only when there are unsaved changes.
 static bool gConfirmReloadGame = false;
-static const int SAVE_SETTINGS_VERSION = 9;
+static const int SAVE_SETTINGS_VERSION = 10;
 
 static void loadSaveSettings(void);
 static void saveSaveSettings(void);
@@ -238,6 +239,18 @@ static bool splitSettingLine(const char *line, char *key, size_t keySize, const 
 static bool parseBoolSetting(const char *value, bool *out);
 static bool parseIntSetting(const char *value, int *out);
 static bool savePawnMap(void);
+// Saved selections (defined with the map's open and save, below).
+struct SavedSelection
+{
+	std::string name;
+	std::vector<ObjectInst*> objects;
+};
+static std::vector<SavedSelection> gSavedSelections;
+static bool gOpenSaveSelection;
+static std::unordered_set<ObjectInst*> uiLiveInstances(void);
+static int uiSavedSelectionCount(const SavedSelection &set, const std::unordered_set<ObjectInst*> &live);
+static void uiSelectSavedSelection(const SavedSelection &set, bool add);
+static void uiSaveSelectionPopup(void);
 static void uiRunShortcut(int action);
 static void uiOpenObjectDiscovery(int model, bool similar, const char *ids = nil);
 static bool gBrowserDiscoveryFocusPending;
@@ -3064,6 +3077,10 @@ uiMainToolbar(void)
 	snprintf(tip, sizeof(tip), "%s (%s)", _("Tools"), ShortcutLabel(SC_WINDOW_TOOLS));
 	if(uiBigToolButton("tools", ICON_FA_WRENCH, _("Tools"), showToolsWindow, tip))
 		uiRunShortcut(SC_WINDOW_TOOLS);
+	ImGui::SameLine(0.0f, gap);
+	if(uiBigToolButton("selections", ICON_FA_STAR, _("Selections"), showSavedSelectionsWindow,
+	   _("Saved selections: keep a selection under a name and select it again later.")))
+		showSavedSelectionsWindow ^= 1;
 
 	uiBigDivider();
 	snprintf(tip, sizeof(tip), "%s (%s)", _(GetShortcutInfo(SC_SNAP_TO_GROUND)->name), ShortcutLabel(SC_SNAP_TO_GROUND));
@@ -3442,6 +3459,7 @@ uiPanelStrip(void)
 		{ ICON_FA_LIST_CHECK "##panel_map_check", SC_WINDOW_MAP_CHECK },
 		{ ICON_FA_FILE "##panel_changes", SC_WINDOW_CHANGES },
 		{ ICON_FA_CLOCK_ROTATE_LEFT "##panel_history", -2 },
+		{ ICON_FA_STAR "##panel_saved_selections", -4 },
 		{ ICON_FA_TERMINAL "##panel_log", SC_WINDOW_LOG },
 		{ nil, -1 },
 		{ ICON_FA_USERS "##panel_multiplayer", -3 },
@@ -3456,9 +3474,11 @@ uiPanelStrip(void)
 			ImGui::Dummy(ImVec2(button, 6.0f));
 			continue;
 		}
-		bool *open = p.action == -2 ? &showHistoryWindow : p.action == -3 ? &showMultiplayerWindow : uiPanelVisibility(p.action);
+		bool *open = p.action == -2 ? &showHistoryWindow : p.action == -3 ? &showMultiplayerWindow :
+			p.action == -4 ? &showSavedSelectionsWindow : uiPanelVisibility(p.action);
 		const char *key = p.action < 0 ? "" : ShortcutLabel(p.action);
-		const char *name = p.action == -2 ? _("History") : p.action == -3 ? _("Multiplayer") : _(GetShortcutInfo(p.action)->name);
+		const char *name = p.action == -2 ? _("History") : p.action == -3 ? _("Multiplayer") :
+			p.action == -4 ? _("Saved selections") : _(GetShortcutInfo(p.action)->name);
 		if(key[0]) snprintf(tip, sizeof(tip), "%s (%s)", name, key);
 		else snprintf(tip, sizeof(tip), "%s", name);
 		bool on = open && *open;
@@ -3466,6 +3486,7 @@ uiPanelStrip(void)
 		if(uiToolbarButton(p.icon, false, tip, true, ImVec2(button, button))){
 			if(p.action == -2) showHistoryWindow ^= 1;
 			else if(p.action == -3) showMultiplayerWindow ^= 1;
+			else if(p.action == -4) showSavedSelectionsWindow ^= 1;
 			else uiRunShortcut(p.action);
 		}
 		ImGui::PopStyleColor();
@@ -3799,6 +3820,21 @@ uiMainmenu(void)
 			if(ImGui::MenuItem(TI(ICON_FA_EYE_SLASH, "Hide Selection"), ShortcutLabel(SC_HIDE_SELECTION), false, hasSelection)) uiRunShortcut(SC_HIDE_SELECTION);
 			if(ImGui::MenuItem(_("Isolate Selection"), ShortcutLabel(SC_ISOLATE_SELECTION), false, hasSelection)) uiRunShortcut(SC_ISOLATE_SELECTION);
 			if(ImGui::MenuItem(TI(ICON_FA_EYE, "Show All"), ShortcutLabel(SC_SHOW_ALL), false, CountHiddenInstances() > 0)) uiRunShortcut(SC_SHOW_ALL);
+			ImGui::Separator();
+			if(ImGui::MenuItem(TI(ICON_FA_STAR, "Save selection..."), nil, false, hasSelection)) gOpenSaveSelection = true;
+			ImGui::SetItemTooltip(_("Keep the selected objects under a name, to select them again later."));
+			if(ImGui::BeginMenu(LI(ICON_FA_STAR, "Saved selections"), !gSavedSelections.empty())){
+				std::unordered_set<ObjectInst*> live = uiLiveInstances();
+				for(size_t i = 0; i < gSavedSelections.size(); i++){
+					ImGui::PushID((int)i);
+					char count[16];
+					snprintf(count, sizeof(count), "%d", uiSavedSelectionCount(gSavedSelections[i], live));
+					if(ImGui::MenuItem(gSavedSelections[i].name.c_str(), count))
+						uiSelectSavedSelection(gSavedSelections[i], ImGui::GetIO().KeyCtrl);
+					ImGui::PopID();
+				}
+				ImGui::EndMenu();
+			}
 			ImGui::SetItemTooltip(_("Hiding is only for editing: hidden objects stay in the map and are saved as usual."));
    }
 			ImGui::EndMenu();
@@ -3809,6 +3845,7 @@ uiMainmenu(void)
 				if(ImGui::MenuItem(TI(ICON_FA_CIRCLE_INFO, "Object Info"), ShortcutLabel(SC_WINDOW_OBJECT_INFO), showInstanceWindow)) { showInstanceWindow ^= 1; }
 				if(ImGui::MenuItem(TI(ICON_FA_LAYER_GROUP, "Map Objects"), ShortcutLabel(SC_WINDOW_MAP_OBJECTS), showMapObjectsWindow)) { showMapObjectsWindow ^= 1; }
 				if(ImGui::MenuItem(TI(ICON_FA_CLOCK_ROTATE_LEFT, "History"), nil, showHistoryWindow)) { showHistoryWindow ^= 1; }
+				if(ImGui::MenuItem(TI(ICON_FA_STAR, "Saved selections"), nil, showSavedSelectionsWindow)) { showSavedSelectionsWindow ^= 1; }
 				if(ImGui::MenuItem(TI(ICON_FA_WRENCH, "Tools"), ShortcutLabel(SC_WINDOW_TOOLS), showToolsWindow)) { showToolsWindow ^= 1; }
 				if(ImGui::MenuItem(TI(ICON_FA_PAINTBRUSH, "Texture Browser"), ShortcutLabel(SC_WINDOW_TEXTURES), showTextureBrowserWindow)) { showTextureBrowserWindow ^= 1; }
 				ImGui::EndMenu();
@@ -3907,6 +3944,7 @@ uiMainmenu(void)
 	uiExportPawnPopup();
 	uiImportPawnPopup();
 	uiOpenReportWindow();
+	uiSaveSelectionPopup();
 	uiCustomImportPopup();
 	uiReloadGamePopup();
 }
@@ -4369,6 +4407,381 @@ importMapFile(const char *path, int *skipped)
 	return ImportPawnCode(path, skipped);
 }
 
+// ---- Saved selections ----
+//
+// A selection kept under a name, to pick the same objects again later (the
+// walls of one building, say). They are kept per map in the config folder,
+// by the objects' document ids, which the map's .pwn.xml keeps across saves.
+
+static std::string
+uiSavedSelectionKey(const char *mapPath)
+{
+	std::string key = mapPath ? mapPath : "";
+	for(char &c : key){
+		if(c == '\\')
+			c = '/';
+#ifdef _WIN32
+		c = (char)tolower((unsigned char)c);
+#endif
+	}
+	return key;
+}
+
+// The objects of the scene, to check a kept pointer still names one.
+static std::unordered_set<ObjectInst*>
+uiLiveInstances(void)
+{
+	std::unordered_set<ObjectInst*> live;
+	for(CPtrNode *p = instances.first; p; p = p->next)
+		live.insert((ObjectInst*)p->item);
+	return live;
+}
+
+static void
+uiWriteSavedSelections(const char *mapPath)
+{
+	char path[1024];
+	if(mapPath == nil || mapPath[0] == '\0' || !GetHaumeaDataPath(path, sizeof(path), "saved_selections.txt"))
+		return;
+	std::string key = uiSavedSelectionKey(mapPath);
+	// Keep the other maps' selections as they are.
+	std::vector<std::string> kept;
+	if(FILE *in = fopen(path, "r")){
+		char line[8192];
+		bool mine = false;
+		while(fgets(line, sizeof(line), in)){
+			std::string s = line;
+			while(!s.empty() && (s.back() == '\n' || s.back() == '\r'))
+				s.pop_back();
+			if(s.compare(0, 4, "map\t") == 0)
+				mine = uiSavedSelectionKey(s.c_str() + 4) == key;
+			if(!mine && !s.empty())
+				kept.push_back(s);
+		}
+		fclose(in);
+	}
+	std::unordered_set<ObjectInst*> live = uiLiveInstances();
+	unsigned next = 0;
+	for(ObjectInst *inst : live)
+		next = std::max(next, inst->m_editorDocumentId);
+	for(const SavedSelection &set : gSavedSelections)
+		for(ObjectInst *inst : set.objects)
+			if(live.count(inst) && !inst->m_isDeleted && inst->m_editorDocumentId == 0)
+				inst->m_editorDocumentId = ++next;
+	FILE *out = fopen(path, "w");
+	if(out == nil)
+		return;
+	for(const std::string &s : kept)
+		fprintf(out, "%s\n", s.c_str());
+	bool wroteMap = false;
+	for(const SavedSelection &set : gSavedSelections){
+		std::string ids;
+		for(ObjectInst *inst : set.objects)
+			if(live.count(inst) && !inst->m_isDeleted && inst->m_editorDocumentId){
+				char token[96];
+				snprintf(token, sizeof(token), " %u@%d@%.3f,%.3f,%.3f", inst->m_editorDocumentId,
+					PawnModelId(inst->m_objectId), inst->m_translation.x, inst->m_translation.y, inst->m_translation.z);
+				ids += token;
+			}
+		if(ids.empty())
+			continue;
+		if(!wroteMap){
+			fprintf(out, "map\t%s\n", mapPath);
+			wroteMap = true;
+		}
+		std::string name = set.name;
+		for(char &c : name)
+			if(c == '\t' || c == '\n' || c == '\r')
+				c = ' ';
+		fprintf(out, "set\t%s\t%s\n", name.c_str(), ids.c_str() + 1);
+	}
+	fclose(out);
+}
+
+static void
+uiLoadSavedSelections(const char *mapPath)
+{
+	gSavedSelections.clear();
+	char path[1024];
+	if(mapPath == nil || mapPath[0] == '\0' || !GetHaumeaDataPath(path, sizeof(path), "saved_selections.txt"))
+		return;
+	FILE *in = fopen(path, "r");
+	if(in == nil)
+		return;
+	std::unordered_map<unsigned, ObjectInst*> byId;
+	for(CPtrNode *p = instances.first; p; p = p->next){
+		ObjectInst *inst = (ObjectInst*)p->item;
+		if(inst->m_editorDocumentId && !inst->m_isDeleted)
+			byId[inst->m_editorDocumentId] = inst;
+	}
+	std::string key = uiSavedSelectionKey(mapPath);
+	char line[8192];
+	bool mine = false;
+	while(fgets(line, sizeof(line), in)){
+		std::string s = line;
+		while(!s.empty() && (s.back() == '\n' || s.back() == '\r'))
+			s.pop_back();
+		if(s.compare(0, 4, "map\t") == 0){
+			mine = uiSavedSelectionKey(s.c_str() + 4) == key;
+			continue;
+		}
+		if(!mine || s.compare(0, 4, "set\t") != 0)
+			continue;
+		size_t tab = s.find('\t', 4);
+		if(tab == std::string::npos)
+			continue;
+		SavedSelection set;
+		set.name = s.substr(4, tab - 4);
+		const char *p = s.c_str() + tab + 1;
+		while(*p){
+			while(*p == ' ')
+				p++;
+			if(*p == '\0')
+				break;
+			char *end;
+			unsigned long id = strtoul(p, &end, 10);
+			if(end == p)
+				break;
+			p = end;
+			int model = -1;
+			float x = 0, y = 0, z = 0;
+			bool placed = false;
+			if(*p == '@'){
+				model = (int)strtol(p + 1, &end, 10);
+				p = end;
+				if(*p == '@' && sscanf(p + 1, "%f,%f,%f", &x, &y, &z) == 3)
+					placed = true;
+				while(*p && *p != ' ')
+					p++;
+			}
+			ObjectInst *found = nil;
+			auto it = byId.find((unsigned)id);
+			if(it != byId.end() && (model < 0 || PawnModelId(it->second->m_objectId) == model))
+				found = it->second;
+			if(found == nil && placed)
+				for(CPtrNode *n = instances.first; n && found == nil; n = n->next){
+					ObjectInst *inst = (ObjectInst*)n->item;
+					if(!inst->m_isDeleted && PawnModelId(inst->m_objectId) == model &&
+					   fabsf(inst->m_translation.x - x) < 0.01f && fabsf(inst->m_translation.y - y) < 0.01f &&
+					   fabsf(inst->m_translation.z - z) < 0.01f)
+						found = inst;
+				}
+			if(found && std::find(set.objects.begin(), set.objects.end(), found) == set.objects.end())
+				set.objects.push_back(found);
+		}
+		if(!set.objects.empty())
+			gSavedSelections.push_back(set);
+	}
+	fclose(in);
+}
+
+static std::vector<ObjectInst*>
+uiCurrentSelectionObjects(void)
+{
+	std::vector<ObjectInst*> objects;
+	for(CPtrNode *p = selection.first; p; p = p->next){
+		ObjectInst *inst = (ObjectInst*)p->item;
+		if(inst && !inst->m_isDeleted)
+			objects.push_back(inst);
+	}
+	return objects;
+}
+
+static int
+uiSavedSelectionCount(const SavedSelection &set, const std::unordered_set<ObjectInst*> &live)
+{
+	int n = 0;
+	for(ObjectInst *inst : set.objects)
+		if(live.count(inst) && !inst->m_isDeleted)
+			n++;
+	return n;
+}
+
+// add: keep what is selected and add these (Ctrl+click).
+static void
+uiSelectSavedSelection(const SavedSelection &set, bool add)
+{
+	finishTransformPanelEdit();
+	if(!add)
+		ClearSelection();
+	std::unordered_set<ObjectInst*> live = uiLiveInstances();
+	int n = 0;
+	for(ObjectInst *inst : set.objects)
+		if(live.count(inst) && !inst->m_isDeleted){
+			inst->Select();
+			n++;
+		}
+	Toast(TOAST_SELECTION, _("Selected %d object(s) from \"%s\""), n, set.name.c_str());
+}
+
+static void
+uiSaveSelectionPopup(void)
+{
+	static char name[96];
+	if(gOpenSaveSelection){
+		gOpenSaveSelection = false;
+		snprintf(name, sizeof(name), _("Selection %d"), (int)gSavedSelections.size() + 1);
+		ImGui::OpenPopup(L("Save selection"));
+	}
+	if(!ImGui::BeginPopupModal(L("Save selection"), nil, ImGuiWindowFlags_AlwaysAutoResize))
+		return;
+	std::vector<ObjectInst*> objects = uiCurrentSelectionObjects();
+	ImGui::Text(_("%d object(s) selected."), (int)objects.size());
+	ImGui::TextDisabled(_("Pick them all again later from Map Objects or Edit > Saved selections."));
+	if(ImGui::IsWindowAppearing())
+		ImGui::SetKeyboardFocusHere();
+	ImGui::SetNextItemWidth(ImGui::GetFontSize() * 18.0f);
+	bool enter = ImGui::InputText(_("Name"), name, sizeof(name), ImGuiInputTextFlags_EnterReturnsTrue);
+	for(const SavedSelection &set : gSavedSelections)
+		if(set.name == name){
+			ImGui::TextColored(UiSemanticColor(UI_COLOR_WARNING), "%s", _("A saved selection has this name: saving replaces it."));
+			break;
+		}
+	ImGui::BeginDisabled(objects.empty() || name[0] == '\0');
+	if(ImGui::Button(TI(ICON_FA_FLOPPY_DISK, "Save"), ImVec2(ImGui::GetFontSize() * 7.0f, 0)) || (enter && !objects.empty() && name[0])){
+		SavedSelection *existing = nil;
+		for(SavedSelection &set : gSavedSelections)
+			if(set.name == name)
+				existing = &set;
+		if(existing)
+			existing->objects = objects;	// the same name replaces it
+		else
+			gSavedSelections.push_back({ name, objects });
+		uiWriteSavedSelections(gPawnSavePath);
+		Toast(TOAST_SELECTION, _("Saved the selection \"%s\" (%d object(s))"), name, (int)objects.size());
+		ImGui::CloseCurrentPopup();
+	}
+	ImGui::EndDisabled();
+	ImGui::SameLine();
+	if(ImGui::Button(_("Cancel")) || ImGui::IsKeyPressed(ImGuiKey_Escape))
+		ImGui::CloseCurrentPopup();
+	ImGui::EndPopup();
+}
+
+// The Saved selections panel: keep the current selection under a name, then
+// select it again, save the current selection over it, rename or delete it.
+static void
+uiSavedSelectionsPanel(void)
+{
+	static int renaming = -1;
+	static bool focusRename;
+	static char renameBuf[96];
+	std::vector<ObjectInst*> current = uiCurrentSelectionObjects();
+	bool hasSelection = !current.empty();
+	float fs = ImGui::GetFontSize();
+
+	ImGui::TextDisabled(hasSelection ? _("Current selection: %d object(s)") : _("Nothing selected"), (int)current.size());
+	ImVec4 fill = UiAccentFill();
+	ImGui::BeginDisabled(!hasSelection);
+	ImGui::PushStyleColor(ImGuiCol_Button, fill);
+	ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(fill.x*1.15f, fill.y*1.15f, fill.z*1.15f, 1.0f));
+	ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 1, 1, 1));
+	if(ImGui::Button(TI(ICON_FA_PLUS, "Save as a new selection..."), ImVec2(-FLT_MIN, fs*2.0f)))
+		gOpenSaveSelection = true;
+	ImGui::PopStyleColor(3);
+	ImGui::EndDisabled();
+	ImGui::SetItemTooltip("%s", hasSelection ? _("Keep the selected objects under a name, to select them again later.") :
+		_("Select some objects first (Shift+click or drag a box)."));
+	ImGui::Spacing();
+
+	if(gSavedSelections.empty()){
+		ImGui::TextWrapped("%s", _("No saved selections yet. Select some objects (Shift+click or drag a box) and save them here."));
+		return;
+	}
+	std::unordered_set<ObjectInst*> live = uiLiveInstances();
+	int remove = -1;
+	for(int i = 0; i < (int)gSavedSelections.size(); i++){
+		SavedSelection &set = gSavedSelections[i];
+		ImGui::PushID(i);
+		// A card per selection: its name and count, then its actions.
+		ImGui::PushStyleColor(ImGuiCol_ChildBg, ImGui::GetStyleColorVec4(ImGuiCol_FrameBg));
+		ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 6.0f);
+		ImGui::BeginChild("##card", ImVec2(0, 0), ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_AlwaysUseWindowPadding);
+		if(renaming == i){
+			ImGui::SetNextItemWidth(-FLT_MIN);
+			if(focusRename){
+				ImGui::SetKeyboardFocusHere();
+				focusRename = false;
+			}
+			bool done = ImGui::InputText("##rename", renameBuf, sizeof(renameBuf),
+				ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll);
+			if(ImGui::IsItemDeactivated() || done){
+				if(renameBuf[0]){
+					set.name = renameBuf;
+					uiWriteSavedSelections(gPawnSavePath);
+				}
+				renaming = -1;
+			}
+		}else{
+			ImGui::TextUnformatted(set.name.c_str());
+			ImGui::SameLine();
+			ImGui::TextDisabled(_("%d object(s)"), uiSavedSelectionCount(set, live));
+		}
+		// Each button goes beside the last one when it fits, else on a new line.
+		bool firstButton = true;
+		auto place = [&](const char *label){
+			if(!firstButton){
+				float w = ImGui::CalcTextSize(label, nil, true).x + ImGui::GetStyle().FramePadding.x*2.0f;
+				float right = ImGui::GetItemRectMax().x + ImGui::GetStyle().ItemSpacing.x + w;
+				if(right <= ImGui::GetWindowPos().x + ImGui::GetWindowContentRegionMax().x)
+					ImGui::SameLine();
+			}
+			firstButton = false;
+		};
+		const char *selectLabel = TI(ICON_FA_ARROW_POINTER, "Select");
+		place(selectLabel);
+		if(ImGui::SmallButton(selectLabel))
+			uiSelectSavedSelection(set, ImGui::GetIO().KeyCtrl);
+		ImGui::SetItemTooltip("%s", _("Click to select these objects; Ctrl+click adds them to the selection."));
+		const char *overLabel = TI(ICON_FA_FLOPPY_DISK, "Save over");
+		place(overLabel);
+		ImGui::BeginDisabled(!hasSelection);
+		if(ImGui::SmallButton(overLabel)){
+			set.objects = current;
+			uiWriteSavedSelections(gPawnSavePath);
+			Toast(TOAST_SELECTION, _("Saved the selection \"%s\" (%d object(s))"), set.name.c_str(), (int)current.size());
+		}
+		ImGui::EndDisabled();
+		ImGui::SetItemTooltip("%s", _("Replace with the current selection"));
+		const char *renameLabel = TI(ICON_FA_PEN, "Rename");
+		place(renameLabel);
+		if(ImGui::SmallButton(renameLabel)){
+			renaming = i;
+			snprintf(renameBuf, sizeof(renameBuf), "%s", set.name.c_str());
+			focusRename = true;
+		}
+		const char *deleteLabel = TI(ICON_FA_TRASH, "Delete");
+		place(deleteLabel);
+		ImGui::PushStyleColor(ImGuiCol_Text, UiSemanticColor(UI_COLOR_ERROR));
+		if(ImGui::SmallButton(deleteLabel))
+			remove = i;
+		ImGui::PopStyleColor();
+		ImGui::SetItemTooltip("%s", _("Forget this saved selection (the objects stay)"));
+		ImGui::EndChild();
+		ImGui::PopStyleVar();
+		ImGui::PopStyleColor();
+		ImGui::PopID();
+	}
+	if(remove >= 0){
+		Toast(TOAST_SELECTION, _("Deleted the saved selection \"%s\""), gSavedSelections[remove].name.c_str());
+		gSavedSelections.erase(gSavedSelections.begin() + remove);
+		if(renaming == remove)
+			renaming = -1;
+		uiWriteSavedSelections(gPawnSavePath);
+	}
+}
+
+static void
+uiSavedSelectionsWindow(void)
+{
+	uiNextPanelSizeConstraints();
+	if(ImGui::Begin(LI(ICON_FA_STAR, "Saved selections"), &showSavedSelectionsWindow)){
+		uiFitItemsToPanel();
+		uiSavedSelectionsPanel();
+	}
+	ImGui::End();
+}
+
 static bool
 openPawnMap(const char *path)
 {
@@ -4445,6 +4858,7 @@ openPawnMap(const char *path)
 	saveSaveSettings();
 	// Recordings are looked for in this server's npcmodes/recordings.
 	RecSetServerHint(path);
+	uiLoadSavedSelections(gPawnSavePath[0] ? gPawnSavePath : path);
 	ToastFor(TOAST_SAVE, 4.0f, _("Opened %s"), pathFilename(path));
 	if(skipped > 0 || !GetLastPawnImportReport().notes.empty()){
 		// Say what was left out instead of failing silently.
@@ -4460,6 +4874,7 @@ newPawnMap(void)
 {
 	finishTransformPanelEdit();
 	ResetPawnMap();
+	gSavedSelections.clear();
 	gPawnSavePath[0] = '\0';
 	gPawnLastSavedChangeSeq = GetLatestChangeSeq();
 	saveSaveSettings();
@@ -4754,6 +5169,7 @@ savePawnMap(void)
 	gPawnLastSavedChangeSeq = GetLatestChangeSeq();
 	addRecentMap(gPawnSavePath);
 	saveSaveSettings();
+	uiWriteSavedSelections(gPawnSavePath);	// the save gave new objects their document ids
 	MultiplayerMapSaved(gPawnSavePath);	// a session's server that keeps maps gets it too
 	Toast(TOAST_SAVE, skipped > 0 ? _("Saved %s: %d object operation(s) (some unsupported objects skipped)") :
 	      _("Saved %s: %d object operation(s)"), pathFilename(gPawnSavePath), saved);
@@ -6618,6 +7034,78 @@ uiMaterialTexturePopup(void)
 	if(!ImGui::BeginPopupModal(L("Choose Material Texture"), nil, ImGuiWindowFlags_AlwaysAutoResize))
 		return;
 
+	// Typing searches every texture of every TXD by name ("white", "wood"...),
+	// with no TXD to pick first; the TXD list below is for browsing one.
+	static char globalQuery[64];
+	static std::string lastQuery;
+	static std::vector<TextureSearchResult> globalResults;
+	const int globalLimit = 600;
+	if(ImGui::IsWindowAppearing())
+		ImGui::SetKeyboardFocusHere();
+	ImGui::SetNextItemWidth(520.0f);
+	ImGui::InputTextWithHint("##material_search_all", TI(ICON_FA_MAGNIFYING_GLASS, "Search all textures (e.g. white)"),
+		globalQuery, sizeof(globalQuery));
+	bool searchingAll = strlen(globalQuery) >= 2;
+	if(searchingAll && lastQuery != globalQuery){
+		lastQuery = globalQuery;
+		SearchTextures(globalQuery, globalLimit, globalResults);
+	}
+	if(searchingAll){
+		if((int)globalResults.size() >= globalLimit)
+			ImGui::Text(_("First %d textures found in all TXDs: type more to narrow it down."), globalLimit);
+		else
+			ImGui::Text(_("%d texture(s) found in all TXDs"), (int)globalResults.size());
+		if(ImGui::BeginChild("##material_search_results", ImVec2(520.0f, 380.0f), true)){
+			float availableWidth = ImGui::GetContentRegionAvail().x;
+			int columns = clamp((int)(availableWidth / 112.0f), 1, 5);
+			if(ImGui::BeginTable("##material_search_grid", columns,
+				ImGuiTableFlags_SizingStretchSame | ImGuiTableFlags_BordersInnerV)){
+				for(size_t i = 0; i < globalResults.size(); i++){
+					const TextureSearchResult &r = globalResults[i];
+					ImGui::TableNextColumn();
+					ImGui::PushID((int)i);
+					rw::Texture *texture = r.txdSlot >= 0 ? FindTextureInTxd(r.txdSlot, r.texture.c_str()) : nil;
+					bool clicked;
+					if(texture && texture->raster)
+						clicked = ImGui::ImageButton("##texture", (void*)(intptr_t)texture, ImVec2(80.0f, 64.0f));
+					else
+						clicked = ImGui::Button(_("No preview"), ImVec2(80.0f, 64.0f));
+					ImGui::SetItemTooltip("%s\n%s %s, %s %d", r.texture.c_str(), _("TXD"), r.txd.c_str(), _("model"), r.model);
+					ImGui::TextWrapped("%s", r.texture.c_str());
+					ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+					ImGui::TextWrapped("%s", r.txd.c_str());
+					ImGui::PopStyleColor();
+					if(clicked){
+						MaterialTextureChoice choice = {};
+						choice.txdSlot = r.txdSlot;
+						choice.sourceModel = EditorModelId(r.model);
+						choice.textureDictionarySlot = r.txdSlot;
+						choice.textureIndex = -1;
+						snprintf(choice.txdName, sizeof(choice.txdName), "%s", r.txd.c_str());
+						snprintf(choice.textureName, sizeof(choice.textureName), "%s", r.texture.c_str());
+						uiApplyMaterialTextureChoice(choice);
+						globalQuery[0] = '\0';
+						lastQuery.clear();
+						ImGui::CloseCurrentPopup();
+					}
+					ImGui::PopID();
+				}
+				ImGui::EndTable();
+			}
+			if(globalResults.empty())
+				ImGui::TextDisabled(_("No texture has that in its name or its TXD's name."));
+		}
+		ImGui::EndChild();
+		if(ImGui::Button(_("Cancel"))){
+			globalQuery[0] = '\0';
+			lastQuery.clear();
+			ImGui::CloseCurrentPopup();
+		}
+		ImGui::EndPopup();
+		return;
+	}
+	ImGui::TextDisabled(_("Or browse one TXD:"));
+
 	TxdDef *selectedTxd = GetTxdDef(gMaterialTextureBrowserTxd);
 	const char *txdPreview = selectedTxd ? selectedTxd->name : _("Select TXD...");
 	if(ImGui::BeginCombo("TXD", txdPreview)){
@@ -7844,9 +8332,10 @@ loadSaveSettings(void)
 	if(loadedSettingsVersion < 8) gFogMode = FOG_LIGHT;
 	// The editor's new arrangement (map objects left, details right, browser
 	// below the 3D view): adopt it once.
-	if(loadedSettingsVersion < 9){
+	if(loadedSettingsVersion < 10){
+		// v9: the editor's new arrangement; v10: Saved selections under Map Objects.
 		gResetPanelLayout = true;
-		showBrowserWindow = showInstanceWindow = showMapObjectsWindow = true;
+		showBrowserWindow = showInstanceWindow = showMapObjectsWindow = showSavedSelectionsWindow = true;
 	}
 	if(loadedSettingsVersion < 7){
 		gStreamDistance = 1000.0f;
@@ -8364,6 +8853,7 @@ uiResetPanelLayout(void)
 	showBrowserWindow = true;
 	showInstanceWindow = true;
 	showMapObjectsWindow = true;
+	showSavedSelectionsWindow = true;
 	showToolsWindow = false;
 	gResetPanelLayout = true;
 }
@@ -8387,7 +8877,10 @@ uiBuildDefaultDockLayout(ImGuiID dockspace)
 	ImGuiID right = ImGui::DockBuilderSplitNode(center, ImGuiDir_Right, side, nil, &center);
 	ImGuiID left = ImGui::DockBuilderSplitNode(center, ImGuiDir_Left, outliner / (1.0f - side), nil, &center);
 	ImGuiID bottom = ImGui::DockBuilderSplitNode(center, ImGuiDir_Down, 0.32f, nil, &center);
-	ImGui::DockBuilderDockWindow(LI(ICON_FA_LAYER_GROUP, "Map Objects"), left);
+	ImGuiID leftBottom;
+	ImGuiID leftTop = ImGui::DockBuilderSplitNode(left, ImGuiDir_Up, 0.66f, nil, &leftBottom);
+	ImGui::DockBuilderDockWindow(LI(ICON_FA_LAYER_GROUP, "Map Objects"), leftTop);
+	ImGui::DockBuilderDockWindow(LI(ICON_FA_STAR, "Saved selections"), leftBottom);
 	ImGui::DockBuilderDockWindow(LI(ICON_FA_CIRCLE_INFO, "Object Info"), right);
 	ImGui::DockBuilderDockWindow(LI(ICON_FA_WRENCH, "Tools"), right);
 	ImGui::DockBuilderDockWindow(LI(ICON_FA_CLOCK_ROTATE_LEFT, "History"), right);
@@ -13650,6 +14143,19 @@ uiOutlinerObjectMenu(ObjectInst *inst)
 	if(ImGui::MenuItem(_("Rename variable"), ShortcutLabel(SC_RENAME)))
 		uiOutlinerStartRename(inst);
 	if(ImGui::MenuItem(_("Group selected..."), ShortcutLabel(SC_GROUP_SELECTION))) uiRequestGroupSelection();
+	if(ImGui::MenuItem(TI(ICON_FA_STAR, "Save selection..."))) gOpenSaveSelection = true;
+	if(ImGui::BeginMenu(LI(ICON_FA_STAR, "Saved selections"), !gSavedSelections.empty())){
+		std::unordered_set<ObjectInst*> live = uiLiveInstances();
+		for(size_t i = 0; i < gSavedSelections.size(); i++){
+			ImGui::PushID((int)i);
+			char count[16];
+			snprintf(count, sizeof(count), "%d", uiSavedSelectionCount(gSavedSelections[i], live));
+			if(ImGui::MenuItem(gSavedSelections[i].name.c_str(), count))
+				uiSelectSavedSelection(gSavedSelections[i], ImGui::GetIO().KeyCtrl);
+			ImGui::PopID();
+		}
+		ImGui::EndMenu();
+	}
 	if(ImGui::MenuItem(_("Duplicate"), ShortcutLabel(SC_DUPLICATE))) uiRunShortcut(SC_DUPLICATE);
 	if(ImGui::MenuItem(TI(ICON_FA_TRASH, "Delete"), ShortcutLabel(SC_DELETE))) uiRunShortcut(SC_DELETE);
 }
@@ -15066,6 +15572,9 @@ gui(void)
 		uiTimeWeather();
 		ImGui::End();
 	}
+
+	if(mapPanels && showSavedSelectionsWindow)
+		uiSavedSelectionsWindow();
 
 	if(mapPanels && showHistoryWindow)
 		uiHistoryWindow();
