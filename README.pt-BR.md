@@ -3,7 +3,7 @@
 <p align="center"><img src="docs/images/banner.png" alt="Haumea, por itsneufox: editor de mapas para open.mp e SA-MP" width="100%"></p>
 
 <p align="center">
-  <a href="https://github.com/itsneufox/Haumea-Studio/releases"><img src="https://img.shields.io/github/v/release/itsneufox/Haumea-Studio?style=flat-square&color=4FB6FF&label=release" alt="Última versão"></a>
+  <a href="https://github.com/Haumea-Team/Haumea-Studio/releases"><img src="https://img.shields.io/github/v/release/Haumea-Team/Haumea-Studio?style=flat-square&color=4FB6FF&label=release" alt="Última versão"></a>
   <img src="https://img.shields.io/badge/Windows%20%C2%B7%20Linux%20%C2%B7%20macOS-5f7fa8?style=flat-square" alt="Windows, Linux e macOS">
   <img src="https://img.shields.io/badge/open.mp%20%C2%B7%20SA--MP-29C738?style=flat-square" alt="open.mp e SA-MP">
   <a href="LICENSE"><img src="https://img.shields.io/badge/licen%C3%A7a-GPL--2.0%2B-E62929?style=flat-square" alt="GPL v2 ou posterior"></a>
@@ -100,7 +100,7 @@ Começando com o Haumea Studio? Leia o **[guia do usuário](docs/USER_GUIDE.pt-B
 
 ## Instalação
 
-Baixe o Haumea Studio na [página de releases](https://github.com/itsneufox/Haumea-Studio/releases).
+Baixe o Haumea Studio na [página de releases](https://github.com/Haumea-Team/Haumea-Studio/releases).
 Você também precisa do GTA San Andreas e, para testar mapas, de uma pasta de servidor open.mp ou SA-MP.
 
 Baixe **um arquivo** para sua plataforma. Os downloads de todas as plataformas já incluem o
