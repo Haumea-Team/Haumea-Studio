@@ -2,6 +2,22 @@
 
 <p align="center"><img src="docs/images/banner.png" alt="Haumea, por itsneufox: editor de mapas para open.mp e SA-MP" width="100%"></p>
 
+<p align="center">
+  <a href="https://github.com/itsneufox/Haumea-Studio/releases"><img src="https://img.shields.io/github/v/release/itsneufox/Haumea-Studio?style=flat-square&color=4FB6FF&label=release" alt="Última versão"></a>
+  <img src="https://img.shields.io/badge/Windows%20%C2%B7%20Linux%20%C2%B7%20macOS-5f7fa8?style=flat-square" alt="Windows, Linux e macOS">
+  <img src="https://img.shields.io/badge/open.mp%20%C2%B7%20SA--MP-29C738?style=flat-square" alt="open.mp e SA-MP">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/licen%C3%A7a-GPL--2.0%2B-E62929?style=flat-square" alt="GPL v2 ou posterior"></a>
+  <a href="https://discord.gg/YSxtANrsB4"><img src="https://img.shields.io/badge/Discord-entrar-335CF2?style=flat-square&logo=discord&logoColor=white" alt="Discord do Haumea"></a>
+</p>
+
+<p align="center">
+  <a href="#instalação"><b>Instalação</b></a> ·
+  <a href="#primeiros-passos"><b>Primeiros passos</b></a> ·
+  <a href="docs/USER_GUIDE.pt-BR.md"><b>Guia do usuário</b></a> ·
+  <a href="docs/BUILDING.md"><b>Compilar</b></a> ·
+  <a href="CONTRIBUTING.md"><b>Contribuir</b></a>
+</p>
+
 # Haumea Studio
 
 **O editor completo para open.mp e SA-MP.** Monte o mundo do seu servidor no GTA San Andreas:
@@ -15,43 +31,59 @@ Começando com o Haumea Studio? Leia o **[guia do usuário](docs/USER_GUIDE.pt-B
 
 ## Recursos
 
-**Monte o mapa**
+### Monte o mapa
+
+<img src="docs/images/readme/build.pt-BR.svg" alt="Objetos com o gizmo de mover, um veículo tunado, e um pickup, um 3D text label e um map icon sobre uma gang zone" width="100%">
 
 - **Objetos**: encontre objetos do GTA e do SA-MP por nome, ID ou categoria, depois coloque, mova e gire, com desfazer.
 - **Veículos**: defina cores, placa, paintjob e peças de tuning, e veja tudo no carro.
 - **Elementos do servidor**: pickups, 3D text labels, atores, classes de jogador, gang zones, map icons, sons e checkpoints.
-- **NPCs** (só open.mp): coloque bots que seguem um caminho, andam pelas ruas do jogo ou tocam uma gravação.
 - **Animações**: dê uma animação a atores e NPCs e veja-a no editor.
-- **Materiais**: mude as texturas, cores e textos de um objeto, mostrados como os jogadores vão ver.
 - **Modelos personalizados** (0.3.DL): adicione seus próprios modelos para jogadores do open.mp e do SA-MP 0.3.DL.
-- **TextDraws**: desenhe textdraws na tela do jogo e salve-os num arquivo próprio.
 - **Prefabs**: salve um grupo de objetos e coloque-o de novo; um conjunto inicial vem incluído.
+- **Interiores**: vá a qualquer interior do GTA e copie o código Pawn que leva um jogador até lá.
+
+<img src="docs/images/readme/world.pt-BR.svg" alt="Um NPC andando no caminho dele, um bloco com textura de tijolo e texto de material, e um HUD de textdraws sendo editado" width="100%">
+
+- **NPCs** (só open.mp): coloque bots que seguem um caminho, andam pelas ruas do jogo ou tocam uma gravação.
+- **Materiais**: mude as texturas, cores e textos de um objeto, mostrados como os jogadores vão ver.
+- **TextDraws**: desenhe textdraws na tela do jogo e salve-os num arquivo próprio.
+
+### Monte mais rápido
+
+<img src="docs/images/readme/tools.pt-BR.svg" alt="Objetos copiados em círculo, uma casa desenhada no radar com gang zones, e uma rede de ruas de nós de caminho" width="100%">
+
 - **Ferramentas de mapa**: copie objetos em linha ou em círculo, espelhe, alinhe, espalhe com um pincel e distribua objetos ao longo de uma linha.
 - **Radar art**: transforme seus objetos em gang zones que os desenham no radar (globais, por jogador ou streamed; as duas últimas só no open.mp).
 - **Nós de caminho**: edite as ruas por onde os NPCs do open.mp andam, salvas no seu servidor.
-- **Interiores**: vá a qualquer interior do GTA e copie o código Pawn que leva um jogador até lá.
 
-**Verifique e teste**
+### Verifique e teste
+
+<img src="docs/images/readme/check.pt-BR.svg" alt="Um objeto flutuando marcado pela Verificação do mapa, a distância de desenho do jogador e um servidor de teste iniciado com F5" width="100%">
 
 - **Verificação do mapa**: encontre o que vai quebrar no jogo antes que os jogadores vejam.
 - **Visão do jogador**: veja o mapa como um jogador vê, com distâncias de desenho e limites do streamer.
 - **Testar no jogo**: rode o mapa num servidor open.mp privado com uma tecla e entre nele.
 
-**Arquivos**
+### Arquivos e Namaka
 
-- **Código**: edite o Pawn gerado ou abra scripts num editor nativo com cores, números de linha, desfazer/refazer e localizar/substituir. Edições manuais são salvas em um script separado, com recuperação de rascunhos.
+<img src="docs/images/readme/files.pt-BR.svg" alt="Código Pawn gerado, dois mapas mesclados em um, e o Namaka colocando um objeto" width="100%">
+
 - **Mapas Pawn**: salve como código nativo ou streamer que compila com os includes do open.mp e do SA-MP 0.3.7.
+- **Código**: edite o Pawn gerado ou abra scripts num editor nativo com cores, números de linha, desfazer/refazer e localizar/substituir. Edições manuais são salvas em um script separado, com recuperação de rascunhos.
 - **Outros editores**: abra mapas do Texture Studio e mescle mapas do MTA:SA e IPL ao seu.
+- **Namaka**: deixe um assistente de IA ver e editar o seu mapa.
 - **Autosave**: recupere o trabalho não salvo depois de um travamento.
 
-**O editor**
+### O editor
 
 - **Editores**: alterne entre Mapa, TextDraws e Código pela barra superior.
 - **Workspaces**: uma tela inicial com seus servidores e os mapas deles.
 - **Suas próprias teclas**: mude todos os atalhos.
 - **Painéis**: encaixe-os em volta da vista 3D ou deixe-os flutuando.
-- **Namaka**: deixe um assistente de IA ver e editar o seu mapa.
 - **Seguro para o seu jogo**: o Haumea Studio nunca altera os arquivos do seu jogo.
+
+### No aplicativo
 
 <table>
   <tr>
@@ -124,10 +156,12 @@ sudo apt install libc6:i386 libatomic1:i386
 
 ## Primeiros passos
 
-1. Abra o Haumea Studio e escolha a pasta do GTA San Andreas e a pasta do seu servidor (o workspace).
-2. Abra o **Navegador de objetos** (`Ctrl+1`), escolha um objeto, clique em **Colocar** e clique no mundo.
-3. Pressione `F5` para testar o mapa num servidor open.mp privado.
-4. Pressione `Ctrl+S` para salvá-lo como arquivo Pawn.
+| | |
+| :---: | --- |
+| **1** | Abra o Haumea Studio e escolha a pasta do GTA San Andreas e a pasta do seu servidor (o workspace). |
+| **2** | Abra o **Navegador de objetos** (<kbd>Ctrl</kbd>+<kbd>1</kbd>), escolha um objeto, clique em **Colocar** e clique no mundo. |
+| **3** | Pressione <kbd>F5</kbd> para testar o mapa num servidor open.mp privado. |
+| **4** | Pressione <kbd>Ctrl</kbd>+<kbd>S</kbd> para salvá-lo como arquivo Pawn. |
 
 O [guia do usuário](docs/USER_GUIDE.pt-BR.md) explica cada recurso. Para compilar o Haumea Studio
 ou rodar os testes dele, veja [Building and testing](docs/BUILDING.md) (em inglês).
@@ -144,6 +178,7 @@ Licenciado sob a GNU GPL v2 ou posterior; veja [LICENSE](LICENSE) e [THIRD_PARTY
 
 Para relatar um bug, sugerir um recurso, traduzir ou contribuir com código, veja [CONTRIBUTING.md](CONTRIBUTING.md) (em inglês).
 
-Discord do Haumea: https://discord.gg/YSxtANrsB4
-
-Discord do open.mp: https://discord.gg/samp
+<p align="center">
+  <a href="https://discord.gg/YSxtANrsB4"><b>Discord do Haumea</b></a> ·
+  <a href="https://discord.gg/samp"><b>Discord do open.mp</b></a>
+</p>
