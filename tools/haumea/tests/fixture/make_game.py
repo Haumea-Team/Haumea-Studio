@@ -19,6 +19,7 @@ RW_VERSION = 0x1803FFFF	# GTA San Andreas (RW 3.6.0.3)
 OBJECTS = {
 	728: ('tree_hipoly06', 'gtatreeshi', 299, 2105348),
 	754: ('sm_des_cactiigrp', 'gta_deserttrees', 75, 2097284),
+	980: ('airportgate', 'airportgate', 150, 0),
 	1215: ('bollardlight', 'metal', 40, 2097156),
 	1225: ('barrel4', 'dynbarrels', 40, 2162816),
 	1226: ('lamppost3', 'dynsigns', 62, 32896),
