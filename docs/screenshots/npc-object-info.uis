@@ -1,0 +1,9 @@
+# Object Info for Sweet, the NPC that walks grove_patrol.
+open "$SCENE/grove.pwn"
+camera 2487 -1683 17.5 2486 -1658 13
+wait 30
+click_item 'Map Objects' 'NPC Sweet'
+wait 10
+move 50% 97%
+wait 120
+grab "$OUT" 'Object Info'

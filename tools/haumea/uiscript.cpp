@@ -82,7 +82,7 @@
 //   clipboard "text"            what a paste will get
 //   open <map.pwn>              opens a map as File > Open would
 //   $NAME / ${NAME} in arguments: environment variables, and $UI_CONFIG_DIR (the config folder)
-//   grab <file.png>
+//   grab <file.png> ['Window']   the frame, or just that window (its title without the icon)
 //   assert <what> [op value]    see uiAssert below
 //   log "text" / fail "text" / exit
 
@@ -1423,7 +1423,7 @@ static std::string gScrollWindow, gScrollLabel;
 static int gScrollFrames;
 static std::vector<std::string> gWaitUntil;
 static int gWaitUntilFrames;
-static std::string gGrabPath;
+static std::string gGrabPath, gGrabWindow;
 static int gDragItemDx, gDragItemDy;
 static bool gDragItem;
 static std::string gDragToWindow, gDragToLabel;	// drag_item_to: the item to drop on
@@ -1801,6 +1801,7 @@ nextCommand(void)
 			return;
 		}else if(cmd == "grab" && a.size() >= 2){
 			gGrabPath = a[1];
+			gGrabWindow = a.size() >= 3 ? a[2] : "";
 			gWaitFrames = 2;
 			return;
 		}else if(cmd == "assert"){
@@ -2100,12 +2101,39 @@ UiScriptAfterRender(void)
 #ifdef RW_GL3
 	int vp[4];
 	glGetIntegerv(GL_VIEWPORT, vp);
-	int w = vp[2], h = vp[3];
+	int x0 = 0, y0 = 0, w = vp[2], h = vp[3];
+	if(!gGrabWindow.empty()){
+		// The first visible window whose title (past its icon) is the name.
+		ImGuiWindow *found = nil;
+		for(ImGuiWindow *win : ImGui::GetCurrentContext()->Windows){
+			// Docked windows count as child windows too.
+			if(!win->WasActive || win->Hidden || ((win->Flags & ImGuiWindowFlags_ChildWindow) && !win->DockIsActive))
+				continue;
+			std::string title = win->Name;
+			title = title.substr(0, title.find("###"));
+			size_t at = title.find(gGrabWindow);
+			if(at != std::string::npos && at + gGrabWindow.size() == title.size()){
+				found = win;
+				break;
+			}
+		}
+		if(found == nil){
+			say("line %d: FAIL no window '%s' to grab", (int)gLine, gGrabWindow.c_str());
+			gFails++;
+			gGrabPath.clear();
+			return;
+		}
+		float scale = ImGui::GetIO().DisplayFramebufferScale.x;
+		x0 = std::max(0, (int)(found->Pos.x * scale));
+		y0 = std::max(0, (int)(found->Pos.y * scale));
+		w = std::min(vp[2] - x0, (int)(found->Size.x * scale));
+		h = std::min(vp[3] - y0, (int)(found->Size.y * scale));
+	}
 	rw::Image *image = rw::Image::create(w, h, 24);
 	image->allocate();
 	std::vector<uint8> px(w * h * 3);
 	glPixelStorei(GL_PACK_ALIGNMENT, 1);
-	glReadPixels(0, 0, w, h, GL_RGB, GL_UNSIGNED_BYTE, px.data());
+	glReadPixels(x0, vp[3] - y0 - h, w, h, GL_RGB, GL_UNSIGNED_BYTE, px.data());
 	for(int y = 0; y < h; y++)
 		memcpy(image->pixels + y * image->stride, &px[(h - 1 - y) * w * 3], w * 3);
 	rw::writePNG(image, gGrabPath.c_str());

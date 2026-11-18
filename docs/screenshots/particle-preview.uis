@@ -1,0 +1,9 @@
+# Particle effects previewed in the view.
+open "$SCENE/particles.pwn"
+camera 2488 -1684 16.5 2488 -1664 13.5
+wait 30
+shortcut window_browser
+wait 5
+move 50% 97%
+wait 600
+grab "$OUT"

@@ -1,0 +1,15 @@
+# Test in game: the map running on the private open.mp server (downloaded on
+# the first run), with its log.
+open "$SCENE/grove.pwn"
+camera 2487 -1683 17.5 2486 -1658 13
+wait 30
+shortcut window_browser
+wait 5
+shortcut test_in_game
+wait 30
+wait 1500
+move 50% 97%
+wait 600
+grab "$OUT"
+click_item 'Test server' 'Stop'
+wait 30

@@ -217,7 +217,7 @@ arquivos recentes e o servidor de destino do código. Use as abas de conteúdo, 
 estilo para editar a seleção; **Opções de código** contém variável e escopo do Pawn, e
 **Organizar** reúne agrupamento e alinhamento.
 
-![O editor de TextDraws](images/textdraw-editor.png)
+![O editor de TextDraws](images/textdraws.png)
 
 ### Códigos de cor dos TextDraws
 

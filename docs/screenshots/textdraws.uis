@@ -1,0 +1,28 @@
+# The TextDraws editor with the Grove HUD, moved to a file of its own.
+# with: hud
+open "$SCENE/grove.pwn"
+camera 2487 -1683 17.5 2486 -1658 13
+wait 30
+click_item '*' '##editor'
+wait 2
+click_item '*' 'TextDraws'
+wait 10
+click_item 'TextDraws' 'Move to a separate file...'
+wait 5
+click_item '*' 'Move textdraws to a separate file'
+wait 10
+click_item '*' '##editor'
+wait 2
+click_item '*' 'Map'
+wait 10
+key Ctrl+S
+wait 10
+click_item '*' '##editor'
+wait 2
+click_item '*' 'TextDraws'
+wait 10
+click_item 'Layers' 'text  Haumea_grove_td1'
+wait 10
+move 50% 97%
+wait 600
+grab "$OUT"

@@ -256,7 +256,7 @@ dock. **…** in the file toolbar contains **Save As**, recent files and the cod
 Use **Content**, **Layout** and **Style** for the selection; **Code settings** contains its
 Pawn variable and scope, and **Arrange** contains grouping and alignment tools.
 
-![The TextDraw designer](images/textdraw-editor.png)
+![The TextDraw designer](images/textdraws.png)
 
 ### Server TXD sprites (0.3.DL)
 

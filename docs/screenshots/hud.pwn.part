@@ -1,0 +1,32 @@
+// The Grove HUD: screenshots.py adds it to grove.pwn for shots that say "# with: hud".
+new Text:Haumea_grove_td0, Text:Haumea_grove_td1, Text:Haumea_grove_td2, Text:Haumea_grove_td3;
+
+stock Haumea_grove_CreateTextDraws()
+{
+	Haumea_grove_td0 = TextDrawCreate(470.000, 320.000, "_");
+	TextDrawLetterSize(Haumea_grove_td0, 0.000, 11.500);
+	TextDrawTextSize(Haumea_grove_td0, 625.000, 0.000);
+	TextDrawUseBox(Haumea_grove_td0, true);
+	TextDrawBoxColour(Haumea_grove_td0, 0x00000099);
+	Haumea_grove_td1 = TextDrawCreate(478.000, 326.000, "GROVE STREET");
+	TextDrawLetterSize(Haumea_grove_td1, 0.520, 2.200);
+	TextDrawColour(Haumea_grove_td1, 0x33AA33FF);
+	TextDrawSetOutline(Haumea_grove_td1, 1);
+	TextDrawFont(Haumea_grove_td1, TEXT_DRAW_FONT:0);
+	Haumea_grove_td2 = TextDrawCreate(478.000, 352.000, "Welcome home, ~g~CJ~w~.");
+	TextDrawLetterSize(Haumea_grove_td2, 0.300, 1.300);
+	TextDrawSetOutline(Haumea_grove_td2, 1);
+	TextDrawFont(Haumea_grove_td2, TEXT_DRAW_FONT:1);
+	Haumea_grove_td3 = TextDrawCreate(478.000, 368.000, "Press ~y~F~w~ to enter.");
+	TextDrawLetterSize(Haumea_grove_td3, 0.300, 1.300);
+	TextDrawSetOutline(Haumea_grove_td3, 1);
+	TextDrawFont(Haumea_grove_td3, TEXT_DRAW_FONT:1);
+}
+
+stock Haumea_grove_ShowTextDraws(playerid)
+{
+	TextDrawShowForPlayer(playerid, Haumea_grove_td0);
+	TextDrawShowForPlayer(playerid, Haumea_grove_td1);
+	TextDrawShowForPlayer(playerid, Haumea_grove_td2);
+	TextDrawShowForPlayer(playerid, Haumea_grove_td3);
+}

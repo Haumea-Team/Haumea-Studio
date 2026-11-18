@@ -1,0 +1,11 @@
+# The editor: Grove Street with the NPC selected in Object Info.
+open "$SCENE/grove.pwn"
+camera 2487 -1683 17.5 2486 -1658 13
+wait 30
+shortcut window_browser
+wait 5
+click_item 'Map Objects' 'NPC Sweet'
+wait 10
+move 50% 97%
+wait 600
+grab "$OUT"
