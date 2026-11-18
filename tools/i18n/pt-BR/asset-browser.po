@@ -1,0 +1,10 @@
+# The Asset Browser's Particles shelf.
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+
+msgid "Particles"
+msgstr "Partículas"
+
+msgid "%d particles"
+msgstr "%d partículas"

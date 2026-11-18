@@ -40,11 +40,6 @@ msgstr ""
 "%d elemento(s) SA-MP, %d veículo(s)\n"
 "%s"
 
-#: tools/haumea/gui.cpp:11841
-#, c-format
-msgid "%d added, %d deleted, %d moved, %d rotated, %d material"
-msgstr "%d adicionado(s), %d excluído(s), %d movido(s), %d girado(s), %d de material"
-
 #: tools/haumea/gui.cpp:8944
 #, c-format
 msgid "%d audio streams: a player hears one at a time, the last one started."
@@ -259,11 +254,6 @@ msgstr "(escolha um)"
 #, c-format
 msgid ", %d removed"
 msgstr ", %d removidos"
-
-#: tools/haumea/gui.cpp:11843
-#, c-format
-msgid ", %d restored"
-msgstr ", %d restaurados"
 
 #: tools/haumea/gui.cpp:9258
 msgid ""
@@ -589,11 +579,6 @@ msgstr "Anexar %s a este"
 msgid "Attach this to %s"
 msgstr "Anexar este a %s"
 
-#: tools/haumea/gui.cpp:9284
-#, c-format
-msgid "Attached to %s"
-msgstr "Anexado a %s"
-
 #: tools/haumea/gui.cpp:9450
 msgid "Attachment"
 msgstr "Anexo"
@@ -628,10 +613,6 @@ msgstr "Salvar automaticamente mapas não salvos"
 #: tools/haumea/maptools.cpp:784 tools/haumea/maptools.cpp:842
 msgid "Axis"
 msgstr "Eixo"
-
-#: tools/haumea/gui.cpp:12074
-msgid "BRUSH"
-msgstr "PINCEL"
 
 #: tools/haumea/gui.cpp:8667
 msgid "Back and forth"
@@ -1254,11 +1235,6 @@ msgstr "Arrastar"
 msgid "Draw distance"
 msgstr "Distância de desenho"
 
-#: tools/haumea/gui.cpp:10169
-#, c-format
-msgid "Draw distance %.0f"
-msgstr "Distância de desenho %.0f"
-
 #: tools/haumea/radarart.cpp:898
 msgid "Draws the footprints' edge cells in their own colour."
 msgstr "Desenha as células da borda das áreas de base com uma cor própria."
@@ -1425,10 +1401,6 @@ msgstr "Menos cores fazem menos zonas."
 #: tools/haumea/gui.cpp:7665
 msgid "Filter by action or key"
 msgstr "Filtrar por ação ou tecla"
-
-#: tools/haumea/gui.cpp:6993
-msgid "Find objects by model or TXD"
-msgstr "Achar objetos por modelo ou TXD"
 
 #: tools/haumea/gui.cpp:8028
 msgid "Fire"
@@ -2379,10 +2351,6 @@ msgstr "Nenhum interior encontrado nos arquivos IPL de data/maps do jogo."
 msgid "No object is in a group."
 msgstr "Nenhum objeto está num grupo."
 
-#: tools/haumea/gui.cpp:7450
-msgid "No object selected"
-msgstr "Nenhum objeto selecionado"
-
 #: tools/haumea/gui.cpp:10122
 msgid "No prefabs yet: select objects and use File > Export > Selection as Prefab."
 msgstr "Nenhum prefab ainda: selecione objetos e use Arquivo > Exportar > Seleção como prefab."
@@ -2436,8 +2404,8 @@ msgid "Nothing matches."
 msgstr "Nada corresponde."
 
 #: tools/haumea/gui.cpp:11747
-msgid "Nothing placed yet. Pick an object in the Object Browser and click Place."
-msgstr "Nada colocado ainda. Escolha um objeto no Navegador de objetos e clique em Colocar."
+msgid "Nothing placed yet. Pick an object in the Asset Browser and click Place."
+msgstr "Nada colocado ainda. Escolha um objeto no Navegador de recursos e clique em Colocar."
 
 #: tools/haumea/gui.cpp:9493
 msgid "Nothing selected"
@@ -2468,13 +2436,13 @@ msgid "OG Loc"
 msgstr "OG Loc"
 
 #: tools/haumea/gui.cpp:7159 tools/haumea/gui.cpp:10440
-msgid "Object Browser"
-msgstr "Navegador de objetos"
+msgid "Asset Browser"
+msgstr "Navegador de recursos"
 
 #: tools/haumea/gui.cpp:9500
 #, c-format
-msgid "Object Browser (%s): pick something to place."
-msgstr "Navegador de objetos (%s): escolha algo para colocar."
+msgid "Asset Browser (%s): pick something to place."
+msgstr "Navegador de recursos (%s): escolha algo para colocar."
 
 #: tools/haumea/gui.cpp:7158 tools/haumea/gui.cpp:9367
 msgid "Object Info"
@@ -2591,19 +2559,6 @@ msgstr "Ordem"
 #: tools/haumea/radarart.cpp:897
 msgid "Outline"
 msgstr "Contorno"
-
-#: tools/haumea/gui.cpp:12084
-msgid "PLACE"
-msgstr "COLOCAR"
-
-#: tools/haumea/gui.cpp:12079
-msgid "PREFAB"
-msgstr "PREFAB"
-
-#: tools/haumea/gui.cpp:7448
-#, c-format
-msgid "Painting: %s"
-msgstr "Pintando: %s"
 
 #: tools/haumea/gui.cpp:8000 tools/haumea/gui.cpp:8021
 msgid "Parachute"
@@ -2865,10 +2820,6 @@ msgstr "Põe o NPC num veículo como motorista."
 msgid "Quarry"
 msgstr "Pedreira"
 
-#: tools/haumea/gui.cpp:12096
-msgid "READY"
-msgstr "PRONTO"
-
 #: tools/haumea/gui.cpp:8019
 msgid "RPG"
 msgstr "RPG"
@@ -2935,11 +2886,6 @@ msgstr "Ler os interiores dos arquivos do jogo de novo."
 #: tools/haumea/gui.cpp:10063
 msgid "Read the prefab folders again."
 msgstr "Ler as pastas de prefabs de novo."
-
-#: tools/haumea/gui.cpp:7458
-#, c-format
-msgid "Ready: %s"
-msgstr "Pronto: %s"
 
 #: tools/haumea/gui.cpp:9530 tools/haumea/gui.cpp:10477 tools/haumea/gui.cpp:10482
 msgid "Recently placed"
@@ -3094,10 +3040,6 @@ msgstr "Música de abertura do SA (0.3.7-R2)"
 #: tools/haumea/gui.cpp:10560 tools/haumea/objfilters.cpp:531
 msgid "SA-MP"
 msgstr "SA-MP"
-
-#: tools/haumea/gui.cpp:12089
-msgid "SELECT"
-msgstr "SELECIONAR"
 
 #: tools/haumea/gui.cpp:8020
 msgid "Satchel charge"
@@ -3545,10 +3487,6 @@ msgstr "Sweet"
 msgid "Sync rotation"
 msgstr "Sincronizar rotação"
 
-#: tools/haumea/gui.cpp:12068
-msgid "TEXTDRAW"
-msgstr "TEXTDRAW"
-
 #: tools/haumea/gui.cpp:10087
 #, c-format
 msgid "Tags: %s"
@@ -3581,10 +3519,12 @@ msgstr "Testar no jogo"
 #: tools/haumea/testserver.cpp:1308
 msgid ""
 "Test in game runs the map on a private open.mp server in Haumea's config\n"
-"folder. Its files come from this package, or from the workspace server when empty."
+"folder. Its files come from this package, or when empty from the workspace server,\n"
+"or else from the latest open.mp release, downloaded the first time."
 msgstr ""
 "Testar no jogo roda o mapa num servidor open.mp privado na pasta de configuração\n"
-"do Haumea. Os arquivos dele vêm deste pacote, ou do servidor do workspace quando vazio."
+"do Haumea. Os arquivos dele vêm deste pacote, ou quando vazio do servidor do workspace,\n"
+"ou então da versão mais recente do open.mp, baixada na primeira vez."
 
 #: tools/haumea/testserver.cpp:952
 #, c-format
@@ -4276,10 +4216,6 @@ msgstr "selecione algo antes"
 #: tools/haumea/testserver.cpp:474
 msgid "set an open.mp server package (folder, .tar.gz or .zip) in Preferences > Test server"
 msgstr "defina um pacote de servidor open.mp (pasta, .tar.gz ou .zip) em Preferências > Servidor de teste"
-
-#: tools/haumea/gui.cpp:6906
-msgid "show"
-msgstr "mostrar"
 
 #: tools/haumea/gui.cpp:10814
 msgid "sphere"

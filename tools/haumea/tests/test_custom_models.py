@@ -1,7 +1,8 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
-"""Open a map that uses SA-MP 0.3.DL / open.mp custom models in the real editor.
+"""Open a map that uses custom models (open.mp, SA-MP 0.3.DL) in the real editor.
 
-The test builds a server folder with models/artconfig.txt from models in the
+The test builds a server folder with the models listed (artconfig.txt, or
+Haumea's own haumea_models.txt) from models in the
 game's own gta3.img, so no game files are kept in the repository.
 Needs a built editor, a GTA San Andreas directory with SA-MP installed and a
 display: set HAUMEA_GAME_DIR (and HAUMEA_BINARY if it is not in bin/).
@@ -56,7 +57,8 @@ def img_entries(path):
 @unittest.skipUnless(GAME_DIR and BINARY and HAVE_DISPLAY,
                      'set HAUMEA_GAME_DIR and build the editor to run')
 class CustomModelTests(unittest.TestCase):
-    def test_custom_models_round_trip(self):
+    def round_trip(self, list_name):
+        """The map through the editor, with the models listed in models/<list_name>."""
         img = Path(GAME_DIR, 'models', 'gta3.img')
         entries = img_entries(img)
         with tempfile.TemporaryDirectory() as tmp:
@@ -71,7 +73,7 @@ class CustomModelTests(unittest.TestCase):
                     offset, size = entries[source]
                     f.seek(offset)
                     (server / 'models' / target).write_bytes(f.read(size))
-            (server / 'models' / 'artconfig.txt').write_text(ARTCONFIG)
+            (server / 'models' / list_name).write_text(ARTCONFIG)
             source = server / 'scriptfiles' / 'map.pwn'
             source.write_text(MAP)
             target = Path(tmp, 'out.pwn')
@@ -79,16 +81,29 @@ class CustomModelTests(unittest.TestCase):
                                      '--pawn-roundtrip', str(source), str(target)],
                                     cwd=tmp, env=editor_env(tmp), capture_output=True, text=True)
             self.assertIn('0 skipped on save', result.stdout, result.stdout[-2000:])
-            out = target.read_text()
+            return target.read_text()
 
-        self.assertIn('needs SA-MP 0.3.DL or open.mp', out)
+    def test_custom_models_round_trip(self):
+        # A SA-MP style artconfig.txt registers them: the map doesn't again.
+        out = self.round_trip('artconfig.txt')
+        self.assertIn('players need the SA-MP 0.3.DL client', out)
+        self.assertNotIn('AddSimpleModel', out)
         # Negative IDs stay negative, also as a material's texture source;
         # the file name differs in case from artconfig.txt.
-        self.assertIn('new wreck = CreateObject(-2000, 2490.000000', out)
+        self.assertIn('new wreck = CreateObject(-2000, 2490.0', out)
         self.assertIn('SetObjectMaterial(wreck, 1, -2001, "mybarrel", "redmetal"', out)
-        self.assertIn('CreateObject(-2001, 2494.000000', out)
+        self.assertIn('CreateObject(-2001, 2494.0', out)
         # AddCharModel skins work as actor skins.
-        self.assertIn('CreateActor(20001, 2488.000000', out)
+        self.assertIn('CreateActor(20001, 2488.0', out)
+
+    def test_map_registers_its_models(self):
+        # Haumea's own list (servers don't read it): the map registers the
+        # models it uses in its own code, as open.mp scripts do, before using them.
+        out = self.round_trip('haumea_models.txt')
+        self.assertIn('AddSimpleModel(-1, 3594, -2000, "WreckCar.dff", "wreckcar.txd");', out)
+        self.assertIn('AddSimpleModelTimed(-1, 1225, -2001, "sub/mybarrel.dff", "sub/mybarrel.txd", 6, 22);', out)
+        self.assertIn('AddCharModel(7, 20001, "myskin.dff", "myskin.txd");', out)
+        self.assertLess(out.index('AddSimpleModel(-1, 3594'), out.index('CreateObject(-2000'))
 
 
 if __name__ == '__main__':

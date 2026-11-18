@@ -1029,18 +1029,28 @@ RadarArtLayersOutliner(void)
 	for(size_t i = 0; i < gLayers.size(); i++){
 		const RadarArtLayer &l = gLayers[i];
 		ImGui::PushID((int)i);
+		// The layer's name and size, its show and delete buttons at the row's right end.
+		float button = ImGui::GetFrameHeight(), spacing = ImGui::GetStyle().ItemSpacing.x;
+		float right = ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x;
+		char text[192];
+		snprintf(text, sizeof(text), _("Radar art \"%s\": %d zones, %s"), l.group, (int)l.zones.size(),
+			_(modes[std::min(std::max(l.zoneMode, 0), 2)]));
+		ImGui::AlignTextToFramePadding();
 		ImGui::TextUnformatted(ICON_FA_VECTOR_SQUARE);
 		ImGui::SameLine();
-		ImGui::Text(_("Radar art \"%s\": %d zones, %s"), l.group, (int)l.zones.size(),
-			_(modes[std::min(std::max(l.zoneMode, 0), 2)]));
+		UiElidedText(text, std::max(ImGui::GetFontSize(), right - ImGui::GetCursorPosX() - (button + spacing) * 2));
 		ImGui::SameLine();
-		if(ImGui::SmallButton(gLayersIn3D ? ICON_FA_EYE "##radar_layer_3d" : ICON_FA_EYE_SLASH "##radar_layer_3d"))
+		if(ImGui::GetCursorPosX() < right - button * 2 - spacing)
+			ImGui::SetCursorPosX(right - button * 2 - spacing);
+		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
+		if(ImGui::Button(gLayersIn3D ? ICON_FA_EYE "##radar_layer_3d" : ICON_FA_EYE_SLASH "##radar_layer_3d", ImVec2(button, button)))
 			gLayersIn3D = !gLayersIn3D;
 		ImGui::SetItemTooltip("%s", gLayersIn3D ? _("Shown in the 3D view: click to hide.") :
 			_("Click to show the zones in the 3D view. The radar (Windows > Show Radar) always shows them."));
 		ImGui::SameLine();
-		if(ImGui::SmallButton(ICON_FA_TRASH "##radar_layer_delete"))
+		if(ImGui::Button(ICON_FA_TRASH "##radar_layer_delete", ImVec2(button, button)))
 			remove = (int)i;
+		ImGui::PopStyleColor();
 		ImGui::SetItemTooltip("%s", _("Delete this radar art (Ctrl+Z brings it back)."));
 		ImGui::PopID();
 	}
@@ -1195,7 +1205,7 @@ static bool
 colourEdit(const char *label, uint32 *rgb00)
 {
 	float c[3] = { ((*rgb00 >> 24) & 0xFF) / 255.0f, ((*rgb00 >> 16) & 0xFF) / 255.0f, ((*rgb00 >> 8) & 0xFF) / 255.0f };
-	if(!ImGui::ColorEdit3(label, c, ImGuiColorEditFlags_NoInputs))
+	if(!UiColorEdit3(label, c, ImGuiColorEditFlags_NoInputs))
 		return false;
 	*rgb00 = (uint32)(c[0] * 255.0f + 0.5f) << 24 | (uint32)(c[1] * 255.0f + 0.5f) << 16 |
 		(uint32)(c[2] * 255.0f + 0.5f) << 8;
@@ -1224,7 +1234,7 @@ RadarArtPanel(void)
 		RadarArtDefaults(&gParams);
 		gParamsReady = true;
 	}
-	if(!ImGui::CollapsingHeader(LI(ICON_FA_SQUARE, "Radar art from objects"))){
+	if(!UiSection(LI(ICON_FA_SQUARE, "Radar art from objects"))){
 		gHaveResult = false;	// built again when opened
 		return;
 	}
@@ -1246,7 +1256,7 @@ RadarArtPanel(void)
 				groups.push_back(g);
 		}
 		std::sort(groups.begin(), groups.end());
-		if(ImGui::BeginCombo(_("Group"), p.group[0] ? p.group : _("(pick one)"))){
+		if(UiBeginCombo(_("Group"), p.group[0] ? p.group : _("(pick one)"))){
 			for(size_t i = 0; i < groups.size(); i++)
 				if(ImGui::Selectable(groups[i].c_str(), groups[i] == p.group))
 					snprintf(p.group, sizeof(p.group), "%s", groups[i].c_str());
@@ -1260,18 +1270,16 @@ RadarArtPanel(void)
 	UiCombo(_("Shape"), &p.shape, shapes, IM_ARRAYSIZE(shapes));
 	ImGui::SetItemTooltip(_("Model: the objects as they are drawn, seen from above.\n"
 		"Collision: their collision, which is often boxes (a tree only its trunk)."));
-	ImGui::Checkbox(_("Leave out what's under water"), &p.aboveWater);
-	ImGui::SetItemTooltip(_("Parts of the objects below the water's surface (a rock's\n"
-		"wide base, a pier's legs) aren't drawn, as the radar shows the water there."));
-	ImGui::DragFloat(_("Cell size"), &p.cellSize, 0.1f, 0.5f, 1000.0f, "%.1f m");
+	UiDragFloat(_("Cell size"), &p.cellSize, 0.1f, 0.5f, 1000.0f, "%.1f m");
 	ImGui::SetItemTooltip(_("The art's pixel size. Smaller cells follow the shapes more\n"
 		"closely and take more gang zones."));
 	p.cellSize = clamp(p.cellSize, 0.5f, 1000.0f);
-	ImGui::SetNextItemWidth(ImGui::GetFontSize() * 6.0f);
+	// The zone count to fit, its button filling the rest of the row.
+	ImGui::SetNextItemWidth(ImGui::GetFontSize() * 5.0f);
 	ImGui::InputInt("##fit_to", &gFitTo, 0);
 	gFitTo = clamp(gFitTo, 1, (int)MAX_RADAR_ZONES);
 	ImGui::SameLine();
-	if(ImGui::Button(_("Fit to this many zones"))){
+	if(ImGui::Button(_("Fit to this many zones"), ImVec2(-FLT_MIN, 0))){
 		float cs;
 		std::string why;
 		if(RadarArtFitCellSize(p, gFitTo, &cs, &why))
@@ -1280,8 +1288,12 @@ RadarArtPanel(void)
 			ToastFor(TOAST_SELECTION, 4.0f, _("Radar art: %s"), _(why.c_str()));
 	}
 	ImGui::SetItemTooltip(_("Picks the smallest cell size whose art needs at most this many zones."));
+	UiCheckbox(_("Leave out what's under water"), &p.aboveWater);
+	ImGui::SetItemTooltip(_("Parts of the objects below the water's surface (a rock's\n"
+		"wide base, a pier's legs) aren't drawn, as the radar shows the water there."));
 
-	ImGui::SeparatorText(_("Colours"));
+	ImGui::Spacing();
+	ImGui::Spacing();
 	static const char *colourModes[] = { N_("One colour"), N_("By group"), N_("From textures"), N_("Radar colours") };
 	UiCombo(_("Colour"), &p.colourMode, colourModes, IM_ARRAYSIZE(colourModes));
 	ImGui::SetItemTooltip(_("Radar colours: the game's own map colours, by what each surface is\n"
@@ -1289,7 +1301,7 @@ RadarArtPanel(void)
 		"From textures: each model's colour seen from above, from its\n"
 		"textures, reduced to a few colours so neighbouring cells merge."));
 	if(p.colourMode == RADAR_COLOUR_TEXTURE){
-		ImGui::SliderInt(_("Colours"), &p.numColours, 1, 16);
+		UiSliderInt(_("Colours"), &p.numColours, 1, 16);
 		ImGui::SetItemTooltip(_("Fewer colours make fewer zones."));
 	}
 	bool radar = p.colourMode == RADAR_COLOUR_RADAR;
@@ -1299,21 +1311,22 @@ RadarArtPanel(void)
 			ImGui::SetItemTooltip("%s", p.colourMode == RADAR_COLOUR_GROUP ? _("For objects without a group.") :
 				_("For models whose textures can't be read."));
 	}
-	ImGui::SliderInt(_("Opacity"), &p.alpha, 0, 255);
-	ImGui::Checkbox(_("Outline"), &p.outline);
+	UiSliderInt(_("Opacity"), &p.alpha, 0, 255);
+	UiCheckbox(_("Outline"), &p.outline);
 	ImGui::SetItemTooltip(_("Draws the footprints' edge cells in their own colour."));
 	if(p.outline){
 		ImGui::SameLine();
 		colourEdit("##outline_colour", &p.outlineColour);
 	}
 	if(!radar){
-		ImGui::Checkbox(_("Height shading"), &p.heightShading);
+		UiCheckbox(_("Height shading"), &p.heightShading);
 		ImGui::SetItemTooltip(_("Higher surfaces are lighter, in a few steps."));
 		if(p.heightShading)
-			ImGui::SliderInt(_("Steps"), &p.heightLevels, 2, 8);
+			UiSliderInt(_("Steps"), &p.heightLevels, 2, 8);
 	}
 
-	ImGui::SeparatorText(_("Zones"));
+	ImGui::Spacing();
+	ImGui::Spacing();
 	static const char *modes[] = { N_("Global zones"), N_("Per-player zones"), N_("Streamed per-player zones") };
 	UiCombo(_("Shown as"), &p.zoneMode, modes, IM_ARRAYSIZE(modes));
 	ImGui::SetItemTooltip(_("Global: GangZoneCreate, 1024 on the whole server.\n"
@@ -1327,14 +1340,19 @@ RadarArtPanel(void)
 			UiBadge(_("streamer"), _("The map includes the streamer for its areas."));
 		}
 	}
-	ImGui::InputText(_("Group##out_group"), p.outGroup, sizeof(p.outGroup));
+	UiInputText(_("Group##out_group"), p.outGroup, sizeof(p.outGroup));
 	ImGui::SetItemTooltip(_("The group the zones go in."));
-	ImGui::Checkbox(_("Replace this group's zones"), &p.replace);
+	UiCheckbox(_("Replace this group's zones"), &p.replace);
 
 	rebuildIfNeeded();
-	ImGui::Separator();
-	if(!gError.empty())
-		ImGui::TextColored(ImVec4(0.95f, 0.45f, 0.35f, 1.0f), "%s", gError.c_str());
+	ImGui::Spacing();
+	ImGui::Spacing();
+	// The result as quiet lines, then preview and the one main action.
+	if(!gError.empty()){
+		ImGui::PushStyleColor(ImGuiCol_Text, UiSemanticColor(UI_COLOR_ERROR));
+		ImGui::TextWrapped("%s", gError.c_str());
+		ImGui::PopStyleColor();
+	}
 	else if(gHaveResult){
 		int n = (int)gResult.zones.size();
 		bool over = false;
@@ -1354,7 +1372,7 @@ RadarArtPanel(void)
 		}
 		if(over){
 			ImGui::SameLine();
-			ImGui::TextColored(ImVec4(0.95f, 0.45f, 0.35f, 1.0f), _("(over 1024)"));
+			ImGui::TextColored(UiSemanticColor(UI_COLOR_ERROR), _("(over 1024)"));
 			ImGui::SetItemTooltip("%s", p.zoneMode == SAMP_ZONE_GLOBAL ?
 				_("The server makes at most 1024 gang zones. Use bigger cells, fewer colours,\n"
 				"or streamed zones.") : _("A player sees at most 1024 gang zones. Use bigger cells or fewer colours."));
@@ -1363,10 +1381,16 @@ RadarArtPanel(void)
 			_("%d objects, %d x %d cells"), gResult.objects, gResult.cols, gResult.rows);
 	}else
 		ImGui::TextDisabled(_("Working..."));
-	ImGui::Checkbox(_("Preview##radar_preview"), &gPreview);
-	ImGui::SameLine();
+	UiCheckbox(_("Preview##radar_preview"), &gPreview);
 	ImGui::BeginDisabled(!gError.empty() || !gHaveResult || gResult.zones.empty());
-	if(ImGui::Button(_("Apply##radar_apply"))){
+	ImVec4 fill = UiAccentFill();
+	ImGui::PushStyleColor(ImGuiCol_Button, fill);
+	ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(fill.x*1.12f, fill.y*1.12f, fill.z*1.12f, 1.0f));
+	ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(fill.x*0.9f, fill.y*0.9f, fill.z*0.9f, 1.0f));
+	ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 1, 1, 1));
+	bool apply = ImGui::Button(_("Apply##radar_apply"), ImVec2(-FLT_MIN, 0));
+	ImGui::PopStyleColor(4);
+	if(apply){
 		std::string why;
 		int made = RadarArtApply(p, &why);
 		if(made < 0)

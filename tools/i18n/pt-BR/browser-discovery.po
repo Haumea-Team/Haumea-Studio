@@ -138,4 +138,3 @@ msgstr "Modelo desconhecido"
 
 msgid "Yellow marks the search results. Your editing selection stays independent."
 msgstr "Amarelo indica os resultados da busca. A seleção para edição é independente."
-

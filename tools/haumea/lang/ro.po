@@ -110,9 +110,6 @@ msgstr ""
 "Elemente SA-MP: %d, vehicule: %d\n"
 "%s"
 
-msgid "%d added, %d deleted, %d moved, %d rotated, %d material"
-msgstr "%d adăugate, %d șterse, %d mutate, %d rotite, %d material"
-
 msgid "%d attached or referenced objects excluded from cleanup."
 msgstr "Obiecte atașate sau referite excluse din curățare: %d."
 
@@ -151,9 +148,6 @@ msgstr "Elemente dincolo de harta San Andreas (±%d): %d. Funcționează, dar ap
 
 msgid "%d element(s) outside SA-MP's world bounds (±%d): the server clamps or ignores those positions."
 msgstr "Elemente în afara limitelor lumii SA-MP (±%d): %d. Serverul limitează sau ignoră acele poziții."
-
-msgid "%d element(s) use custom models: the server needs them in models/artconfig.txt (or AddSimpleModel) and artwork enabled%s; players need SA-MP 0.3.DL or an open.mp client.%s"
-msgstr "Elemente cu modele personalizate: %d. Serverul le cere în models/artconfig.txt (sau AddSimpleModel) și cu artwork activat%s; jucătorii au nevoie de SA-MP 0.3.DL sau un client open.mp.%s"
 
 msgid "%d elements share the variable name \"%s\": the Pawn code won't compile."
 msgstr "%d elemente au același nume de variabilă „%s”: codul Pawn nu se va compila."
@@ -221,6 +215,9 @@ msgstr "Obiecte cu modele necunoscute editorului omise la deschiderea hărții: 
 msgid "%d objects"
 msgstr "Obiecte: %d"
 
+msgid "%d particles"
+msgstr "Particule: %d"
+
 msgid "%d objects along this path"
 msgstr "Obiecte de-a lungul acestui traseu: %d"
 
@@ -248,9 +245,6 @@ msgstr "%d din %d"
 msgid "%d of %d objects (%s): the rest of the gamemode has little room left."
 msgstr "Obiecte: %d din %d (%s): restul gamemode-ului are puțin spațiu rămas."
 
-msgid "%d of those models were imported into the game's modloader/Haumea folder, which SA-MP players don't have. They can become custom models in the server's models folder (SA-MP 0.3.DL / open.mp)."
-msgstr "Modele importate în folderul modloader/Haumea al jocului, pe care jucătorii SA-MP nu îl au: %d. Pot deveni modele personalizate în folderul models al serverului (SA-MP 0.3.DL / open.mp)."
-
 msgid "%d per-player or streamed gang zone(s): CreatePlayerGangZone only compiles and runs on open.mp, not on a SA-MP 0.3.7 server. For 0.3.7, set them to Global (Object Info > Shown as, or radar art's Shown as)."
 msgstr "Gang zone-uri per jucător sau streamed: %d. CreatePlayerGangZone se compilează și rulează doar pe open.mp, nu pe un server SA-MP 0.3.7. Pentru 0.3.7, setează-le ca Global (Informații obiect > Afișat ca, sau Afișat ca din radar art)."
 
@@ -268,9 +262,6 @@ msgstr "Selectate: %d"
 
 msgid "%d selected world object(s) will be replaced in the map."
 msgstr "Obiecte din lume selectate care vor fi înlocuite în hartă: %d."
-
-msgid "%d selected · Drag gizmo to move or rotate · %s deletes."
-msgstr "Selectate: %d · Trage gizmo-ul pentru a muta sau roti · %s șterge."
 
 msgid "%d selected, %d of this kind"
 msgstr "Selectate: %d, de acest fel: %d"
@@ -432,9 +423,6 @@ msgstr "%s (lipsă)"
 
 msgid "%s (you)"
 msgstr "%s (tu)"
-
-msgid "%s Browse · %s Map objects · %s Save · %s Shortcuts"
-msgstr "%s Explorare · %s Obiectele hărții · %s Salvează · %s Scurtături"
 
 msgid "%s The update installs the next time Haumea starts."
 msgstr "%s Actualizarea se instalează la următoarea pornire a Haumea."
@@ -637,14 +625,8 @@ msgstr "(versiune necunoscută)"
 msgid ", %d removed"
 msgstr ", eliminate: %d"
 
-msgid ", %d restored"
-msgstr ", restaurate: %d"
-
 msgid ", and it has none"
 msgstr ", și nu are niciunul"
-
-msgid ", but config.json has artwork.enable off"
-msgstr ", dar config.json are artwork.enable dezactivat"
 
 msgid ""
 "-1 keeps the original texture, 0 is SA-MP's blank white texture.\n"
@@ -898,13 +880,6 @@ msgstr "Un fișier .pwn sau .inc doar cu textdraw-uri; gamemode-ul tău îl incl
 msgid "A copy of the shape under it, this far down and right. 0 for none."
 msgstr "O copie a formei de sub ea, atât de jos și la dreapta. 0 pentru niciuna."
 
-msgid ""
-"A custom model's texture: players on 0.3.DL and open.mp download it;\n"
-"0.3.7 players see nothing there."
-msgstr ""
-"Textura unui model personalizat: jucătorii de pe 0.3.DL și open.mp o descarcă;\n"
-"jucătorii 0.3.7 nu văd nimic acolo."
-
 msgid "A driver recording: the NPC must be in a vehicle"
 msgstr "O înregistrare de șofer: NPC-ul trebuie să fie într-un vehicul"
 
@@ -998,9 +973,6 @@ msgstr "Actori"
 msgid "Add"
 msgstr "Adaugă"
 
-msgid "Add Custom Model (SA-MP 0.3.DL / open.mp)"
-msgstr "Adaugă model personalizat (SA-MP 0.3.DL / open.mp)"
-
 msgid "Add a marker to the radar."
 msgstr "Adaugă un marcaj pe radar."
 
@@ -1037,9 +1009,6 @@ msgstr "Adaugă modelul selectat"
 msgid "Add text in the 3D world."
 msgstr "Adaugă text în lumea 3D."
 
-msgid "Add the shape"
-msgstr "Adaugă forma"
-
 msgid "Add to Favourites"
 msgstr "Adaugă la Favorite"
 
@@ -1058,8 +1027,8 @@ msgstr "Adăugat"
 msgid "Added %d object(s) and %d removed building(s)."
 msgstr "Obiecte adăugate: %d, clădiri eliminate: %d."
 
-msgid "Added %d to the server: Object Browser > Custom models"
-msgstr "Adăugate pe server: %d. Explorator de obiecte > Modele personalizate"
+msgid "Added %d to the server: Asset Browser > Custom models"
+msgstr "Adăugate pe server: %d. Explorator de resurse > Modele personalizate"
 
 msgid "Added the node, but couldn't link it: %s"
 msgstr "Nodul a fost adăugat, dar nu a putut fi legat: %s"
@@ -1085,9 +1054,6 @@ msgstr "Adaugă în această hartă obiectele, texturile și clădirile eliminat
 
 msgid "Adjust FOV zoom"
 msgstr "Ajustează zoom-ul FOV"
-
-msgid "Admin"
-msgstr "Admin"
 
 msgid "Admin password"
 msgstr "Parola de admin"
@@ -1350,9 +1316,6 @@ msgstr "În jurul Y"
 msgid "Around Z"
 msgstr "În jurul Z"
 
-msgid "Arrange"
-msgstr "Aranjează"
-
 msgid "Array"
 msgstr "Matrice"
 
@@ -1417,12 +1380,6 @@ msgstr "Atașează la țintă"
 msgid "Attached %d object(s) to the selected target."
 msgstr "Obiecte atașate la ținta selectată: %d."
 
-msgid "Attached to %s"
-msgstr "Atașat la %s"
-
-msgid "Attached to player preview (skin %d)"
-msgstr "Atașat la previzualizarea jucătorului (skin %d)"
-
 msgid "Attachment"
 msgstr "Atașament"
 
@@ -1483,9 +1440,6 @@ msgstr "Prefabs disponibile:"
 
 msgid "Axis"
 msgstr "Axă"
-
-msgid "BRUSH"
-msgstr "BRUSH"
 
 msgid "Back"
 msgstr "Înapoi"
@@ -1748,9 +1702,6 @@ msgstr "Elemente de construcție"
 msgid "Building the world"
 msgstr "Se construiește lumea"
 
-msgid "Bundled: Namaka %s"
-msgstr "Inclus: Namaka %s"
-
 msgid "Burger Shot"
 msgstr "Burger Shot"
 
@@ -1801,9 +1752,6 @@ msgstr "Ținta camerei"
 
 msgid "Can't add a node: %s"
 msgstr "Nu se poate adăuga un nod: %s"
-
-msgid "Can't be dragged or resized on the canvas. The fields here still change it."
-msgstr "Nu poate fi tras sau redimensionat pe canvas. Câmpurile de aici îl modifică în continuare."
 
 msgid "Can't link: %s"
 msgstr "Nu se poate lega: %s"
@@ -2123,9 +2071,6 @@ msgstr ""
 "Dă clic pe un nod, apoi pe altul, pentru a le lega.\n"
 "Clic pe două noduri legate le dezleagă. Clic dreapta sau Esc oprește."
 
-msgid "Click or drag to paint · %s stops."
-msgstr "Clic sau tragere pentru a picta · %s oprește."
-
 msgid ""
 "Click points in the world one after another.\n"
 "Right-click or Esc stops."
@@ -2163,9 +2108,6 @@ msgstr "Clic prin cele blocate"
 
 msgid "Click to place the pin. Esc cancels."
 msgstr "Dă clic pentru a plasa pinul. Esc anulează."
-
-msgid "Click to place · Shift+click repeats · %s stops."
-msgstr "Clic pentru a plasa · Shift+clic repetă · %s oprește."
 
 msgid "Click to place. Q/E or the wheel turn it, Esc stops."
 msgstr "Clic pentru a plasa. Q/E sau rotița îl rotesc, Esc oprește."
@@ -2224,9 +2166,6 @@ msgstr "Coliziune și detaliu"
 
 msgid "Collisions"
 msgstr "Coliziuni"
-
-msgid "Color 0: the model's own color is kept."
-msgstr "Culoarea 0: culoarea proprie a modelului este păstrată."
 
 msgid "Colour"
 msgstr "Culoare"
@@ -2336,9 +2275,6 @@ msgstr "Copii"
 msgid "Copies of the selection, not counting it."
 msgstr "Copii ale selecției, fără a o număra pe ea."
 
-msgid "Copies the DFF and TXD into the server's models folder and adds them to models/artconfig.txt, so SA-MP 0.3.DL and open.mp send them to players. Nothing is written into the game folder."
-msgstr "Copiază DFF și TXD în folderul models al serverului și le adaugă în models/artconfig.txt, astfel încât SA-MP 0.3.DL și open.mp să le trimită jucătorilor. Nu se scrie nimic în folderul jocului."
-
 msgid "Copies the lines shown, to paste in a bug report"
 msgstr "Copiază liniile afișate, pentru a le lipi într-un raport de bug"
 
@@ -2418,9 +2354,6 @@ msgstr "Copiază poziția camerei"
 
 msgid "Copy the visible X Y Z values"
 msgstr "Copiază valorile X Y Z vizibile"
-
-msgid "Copy transform"
-msgstr "Copiază transformarea"
 
 msgid "Copy: %s"
 msgstr "Copiere: %s"
@@ -2603,9 +2536,6 @@ msgstr "Mânere de curbă"
 msgid "Custom"
 msgstr "Personalizat"
 
-msgid "Custom Model... (0.3.DL)"
-msgstr "Model personalizat... (0.3.DL)"
-
 msgid "Custom import is wired for GTA San Andreas only in this v1."
 msgstr "Importul personalizat este conectat doar pentru GTA San Andreas în această v1."
 
@@ -2614,9 +2544,6 @@ msgstr "Importul personalizat necesită .dff și .txd potrivite în același fol
 
 msgid "Custom models"
 msgstr "Modele personalizate"
-
-msgid "Custom models (0.3.DL)"
-msgstr "Modele personalizate (0.3.DL)"
 
 msgid "Custom models that couldn't be loaded: %d (see the log)"
 msgstr "Modele personalizate care nu au putut fi încărcate: %d (vezi jurnalul)"
@@ -2855,9 +2782,6 @@ msgstr "Puncte"
 msgid "Double-click: look from where they were when they wrote this."
 msgstr "Dublu clic: privește de unde erau când au scris asta."
 
-msgid "Down"
-msgstr "Jos"
-
 msgid "Download updates automatically"
 msgstr "Descarcă actualizările automat"
 
@@ -2905,9 +2829,6 @@ msgstr "Trage pentru a muta capătul"
 msgid "Drag to move pin"
 msgstr "Trage pentru a muta pinul"
 
-msgid "Drag to move · drag a corner to resize · %s stops."
-msgstr "Trage pentru a muta · trage un colț pentru a redimensiona · %s oprește."
-
 msgid "Drag to move, wheel to zoom, double-click to fly there."
 msgstr "Trage pentru a muta, rotița pentru zoom, dublu clic pentru a zbura acolo."
 
@@ -2937,17 +2858,8 @@ msgstr "Distanță de randare"
 msgid "Draw Last"
 msgstr "Desenează ultimul"
 
-msgid "Draw dist:"
-msgstr "Dist. randare:"
-
 msgid "Draw distance"
 msgstr "Distanță de randare"
-
-msgid "Draw distance %.0f"
-msgstr "Distanță de randare %.0f"
-
-msgid "Draw distance %.0f  ·  LOD %s"
-msgstr "Distanță de randare %.0f  ·  LOD %s"
 
 msgid "Draw distance (m)"
 msgstr "Distanță de randare (m)"
@@ -3051,9 +2963,6 @@ msgstr "Fiecare punct este un textdraw: SA-MP permite 2048 globale și 256 per j
 
 msgid "Edit"
 msgstr "Editează"
-
-msgid "Edit Pawn · Ctrl+S saves · Ctrl+F searches."
-msgstr "Editează Pawn · Ctrl+S salvează · Ctrl+F caută."
 
 msgid "Edit all selected"
 msgstr "Editează toate cele selectate"
@@ -3399,11 +3308,8 @@ msgstr "Caută dubluri"
 msgid "Find instances"
 msgstr "Caută instanțe"
 
-msgid "Find it in Object Browser > Custom models and place it like any object."
-msgstr "Găsește-l în Explorator de obiecte > Modele personalizate și plasează-l ca orice obiect."
-
-msgid "Find objects by model or TXD"
-msgstr "Caută obiecte după model sau TXD"
+msgid "Find it in Asset Browser > Custom models and place it like any object."
+msgstr "Găsește-l în Explorator de resurse > Modele personalizate și plasează-l ca orice obiect."
 
 msgid "Find similar models"
 msgstr "Caută modele similare"
@@ -3494,9 +3400,6 @@ msgstr "Folder"
 
 msgid "Folder for NODES*.DAT (a server's scriptfiles/NPCs/nodes)"
 msgstr "Folder pentru NODES*.DAT (scriptfiles/NPCs/nodes al unui server)"
-
-msgid "Folder missing"
-msgstr "Folder lipsă"
 
 msgid "Folder with the server's .rec files; empty: the workspace's npcmodes/recordings"
 msgstr "Folder cu fișierele .rec ale serverului; gol: npcmodes/recordings din workspace"
@@ -3603,9 +3506,6 @@ msgstr "De aici"
 msgid "From textures"
 msgstr "Din texturi"
 
-msgid "From the workspace's models/artconfig.txt."
-msgstr "Din models/artconfig.txt al workspace-ului."
-
 msgid "Front"
 msgstr "Față"
 
@@ -3653,9 +3553,6 @@ msgstr "Obiect din lumea GTA"
 
 msgid "Game HUD"
 msgstr "HUD de joc"
-
-msgid "Game folder"
-msgstr "Folderul jocului"
 
 msgid "Game nodes"
 msgstr "Noduri de joc"
@@ -3795,9 +3692,6 @@ msgstr "Mergi în altă cameră: harta ei o înlocuiește aici pe a ta."
 
 msgid "Go to coordinates (pasted x, y, z)"
 msgstr "Mergi la coordonate (x, y, z lipite)"
-
-msgid "Go to node"
-msgstr "Mergi la nod"
 
 msgid "Golf club"
 msgstr "Crosă de golf"
@@ -4080,14 +3974,8 @@ msgstr "Cursă de cai (0.3.7-R2)"
 msgid "Hospital"
 msgstr "Spital"
 
-msgid "Host"
-msgstr "Găzduiește"
-
 msgid "Host this map"
 msgstr "Găzduiește această hartă"
-
-msgid "Hosting on port %d"
-msgstr "Se găzduiește pe portul %d"
 
 msgid "Hour"
 msgstr "Oră"
@@ -4165,9 +4053,6 @@ msgstr "ID-ul %d este deja folosit"
 
 msgid "ID %d is out of range"
 msgstr "ID-ul %d este în afara intervalului"
-
-msgid "ID: %d\n"
-msgstr "ID: %d\n"
 
 msgid "IDE"
 msgstr "IDE"
@@ -4252,9 +4137,6 @@ msgstr ""
 
 msgid "In canvas units: 0 to 640 across, 0 to 448 down."
 msgstr "În unități de canvas: 0 până la 640 pe lățime, 0 până la 448 pe înălțime."
-
-msgid "In game: SetPlayerTime(playerid, %d, %d); SetPlayerWeather(playerid, %d);"
-msgstr "În joc: SetPlayerTime(playerid, %d, %d); SetPlayerWeather(playerid, %d);"
 
 msgid "In room %s on %s, as %s"
 msgstr "În camera %s pe %s, ca %s"
@@ -4395,9 +4277,6 @@ msgstr "Vizualizare izolată"
 msgid "Isolated the selection, %d other instance(s) hidden | %s: show all"
 msgstr "Selecție izolată, alte instanțe ascunse: %d | %s: afișează tot"
 
-msgid "It goes into the workspace's models folder and artconfig.txt."
-msgstr "Se duce în folderul models și în artconfig.txt ale workspace-ului."
-
 msgid "It installs the next time Haumea starts."
 msgstr "Se instalează la următoarea pornire a Haumea."
 
@@ -4409,9 +4288,6 @@ msgstr "Merge într-un sens cu un unghi peste 180 și în celălalt până la 18
 
 msgid "Its account's: the server knows it from the agent's token."
 msgstr "Cel al contului său: serverul îl cunoaște după token-ul agentului."
-
-msgid "Its password is kept on this computer."
-msgstr "Parola sa este păstrată pe acest computer."
 
 msgid "Its player name, shown over its head and in the player list."
 msgstr "Numele său de jucător, afișat deasupra capului și în lista de jucători."
@@ -4541,9 +4417,6 @@ msgstr "Lansează jocul se alătură. După modificări, Reîncarcă harta în f
 
 msgid "Launch game with"
 msgstr "Lansează jocul cu"
-
-msgid "Layers - %s"
-msgstr "Straturi - %s"
 
 msgid "Layout"
 msgstr "Aranjament"
@@ -4770,9 +4643,6 @@ msgstr "Blochează sau deblochează grupul"
 
 msgid "Lock this room"
 msgstr "Blochează această cameră"
-
-msgid "Locked"
-msgstr "Blocat"
 
 msgid "Locked external reference — reopen its source IPL to edit it."
 msgstr "Referință externă blocată — redeschide IPL-ul sursă pentru a o edita."
@@ -5049,9 +4919,6 @@ msgstr "Punct de mijloc"
 msgid "Min"
 msgstr "Min"
 
-msgid "Min Draw dist: %.0f"
-msgstr "Dist. randare min.: %.0f"
-
 msgid "Mine"
 msgstr "Ale mele"
 
@@ -5131,9 +4998,6 @@ msgstr "Modelul 0: „blanktex” alb simplu din SA-MP; numele TXD și texturii 
 msgid "Model ID"
 msgstr "ID model"
 
-msgid "Model ID changes: %d"
-msgstr "Schimbări de ID model: %d"
-
 msgid "Model IDs can't be changed for objects linked to an LOD or outside the active map."
 msgstr "ID-urile de model nu pot fi schimbate pentru obiecte legate de un LOD sau din afara hărții active."
 
@@ -5182,9 +5046,6 @@ msgstr "Mai multe acțiuni"
 
 msgid "More bands blend more smoothly. Each band is a textdraw."
 msgstr "Mai multe benzi se amestecă mai fin. Fiecare bandă este un textdraw."
-
-msgid "More display and snapping options"
-msgstr "Mai multe opțiuni de afișare și lipire"
 
 msgid "Motor, stopping"
 msgstr "Motor, oprire"
@@ -5261,9 +5122,6 @@ msgstr "Mută obiectele peste traseu, spre dreapta lui; negativ pentru stânga."
 
 msgid "Moves when hit"
 msgstr "Se mișcă la lovire"
-
-msgid "Moves when the map loads"
-msgstr "Se mișcă la încărcarea hărții"
 
 msgid "Moving this object updates the offset; moving the parent carries it along."
 msgstr "Mutarea acestui obiect actualizează decalajul; mutarea părintelui îl poartă după el."
@@ -5603,9 +5461,6 @@ msgstr "Niciun nod selectat. Dă clic pe unul în viewport."
 msgid "No object is in a group."
 msgstr "Niciun obiect nu este într-un grup."
 
-msgid "No object selected"
-msgstr "Niciun obiect selectat"
-
 msgid "No parts fit this model."
 msgstr "Nicio piesă nu se potrivește acestui model."
 
@@ -5745,8 +5600,8 @@ msgstr "Note"
 msgid "Nothing matches."
 msgstr "Nicio potrivire."
 
-msgid "Nothing placed yet. Pick an object in the Object Browser and click Place."
-msgstr "Nimic plasat încă. Alege un obiect în Explorator de obiecte și apasă Plasează."
+msgid "Nothing placed yet. Pick an object in the Asset Browser and click Place."
+msgstr "Nimic plasat încă. Alege un obiect în Explorator de resurse și apasă Plasează."
 
 msgid "Nothing selected"
 msgstr "Nimic selectat"
@@ -5822,17 +5677,17 @@ msgstr "Obiect"
 msgid "Object (AddSimpleModel)"
 msgstr "Obiect (AddSimpleModel)"
 
-msgid "Object Browser"
-msgstr "Explorator de obiecte"
+msgid "Asset Browser"
+msgstr "Explorator de resurse"
 
-msgid "Object Browser (%s): pick an object, Place, then click in the world."
-msgstr "Explorator de obiecte (%s): alege un obiect, Plasează, apoi fă clic în lume."
+msgid "Asset Browser (%s): pick an object, Place, then click in the world."
+msgstr "Explorator de resurse (%s): alege un obiect, Plasează, apoi fă clic în lume."
 
-msgid "Object Browser (%s): pick something to place."
-msgstr "Explorator de obiecte (%s): alege ceva de plasat."
+msgid "Asset Browser (%s): pick something to place."
+msgstr "Explorator de resurse (%s): alege ceva de plasat."
 
-msgid "Object Browser list"
-msgstr "Lista Explorator de obiecte"
+msgid "Asset Browser list"
+msgstr "Lista Explorator de resurse"
 
 msgid "Object ID"
 msgstr "ID obiect"
@@ -5895,13 +5750,6 @@ msgid ""
 msgstr ""
 "Oprit îl redă unde a fost înregistrat. Pornit mută tot traseul astfel\n"
 "încât să înceapă unde stă NPC-ul (poziția de start din NPC_StartPlayback)."
-
-msgid ""
-"Off: the outer ones stay and the gaps between come out equal.\n"
-"On: each is this far from the one before, from the first."
-msgstr ""
-"Oprit: cele de la margini rămân și golurile dintre ele devin egale.\n"
-"Pornit: fiecare este la această distanță de cel dinainte, începând de la primul."
 
 msgid "Off: world X, Y and Z. On: the first selected object's axes."
 msgstr "Oprit: X, Y și Z ale lumii. Pornit: axele primului obiect selectat."
@@ -5995,9 +5843,6 @@ msgstr "Folosit doar de pictogramele 0 și 1 (markerele colorate)."
 
 msgid "Opacity"
 msgstr "Opacitate"
-
-msgid "Opacity of the red overlay drawn on selected objects."
-msgstr "Opacitatea suprapunerii roșii desenate pe obiectele selectate."
 
 msgid "Open"
 msgstr "Deschide"
@@ -6124,15 +5969,6 @@ msgstr "Origine"
 msgid "Original"
 msgstr "Original"
 
-msgid ""
-"Others join with this computer's address, the port and the session code.\n"
-"Over the internet the port must be forwarded to this computer, or use a VPN such as Tailscale.\n"
-"For a session that stays up without you, run haumea-server where your SA-MP server runs."
-msgstr ""
-"Ceilalți se alătură cu adresa acestui calculator, portul și codul sesiunii.\n"
-"Prin internet, portul trebuie redirecționat către acest calculator, sau folosește un VPN precum Tailscale.\n"
-"Pentru o sesiune care rămâne activă fără tine, rulează haumea-server unde rulează serverul tău SA-MP."
-
 msgid "Outgoing"
 msgstr "Ieșire"
 
@@ -6151,32 +5987,14 @@ msgstr "Contur"
 msgid "Outline every map object"
 msgstr "Conturează toate obiectele hărții"
 
-msgid "Outline map objects"
-msgstr "Conturează obiectele hărții"
-
 msgid "Outline map objects (%s)"
 msgstr "Conturează obiectele hărții (%s)"
-
-msgid "Outline selected and hovered objects"
-msgstr "Conturează obiectele selectate și cele sub cursor"
 
 msgid "Outline selected objects"
 msgstr "Conturează obiectele selectate"
 
-msgid "Output: %s"
-msgstr "Ieșire: %s"
-
 msgid "Over IPv6, others can join at %s when your router lets them in."
 msgstr "Prin IPv6, ceilalți se pot alătura la %s dacă routerul îi lasă să intre."
-
-msgid "Over the internet, others join at %s"
-msgstr "Prin internet, ceilalți se alătură la %s"
-
-msgid "PLACE"
-msgstr "PLACE"
-
-msgid "PREFAB"
-msgstr "PREFAB"
 
 msgid "Page %d of %d (%d models)"
 msgstr "Pagina %d din %d (%d modele)"
@@ -6189,9 +6007,6 @@ msgstr "Pictează obiectul selectat pe suprafață"
 
 msgid "Painted %d x %s"
 msgstr "Pictate: %d x %s"
-
-msgid "Painting: %s"
-msgstr "Se pictează: %s"
 
 msgid "Paintjob"
 msgstr "Paintjob"
@@ -6236,6 +6051,9 @@ msgstr "Deschiderea parașutei"
 msgid "Particle effects"
 msgstr "Efecte de particule"
 
+msgid "Particles"
+msgstr "Particule"
+
 msgid ""
 "Parts of the objects below the water's surface (a rock's\n"
 "wide base, a pier's legs) aren't drawn, as the radar shows the water there."
@@ -6257,9 +6075,6 @@ msgstr "Lipește pe loc"
 
 msgid "Paste in front of the camera"
 msgstr "Lipește în fața camerei"
-
-msgid "Paste transform"
-msgstr "Lipește transformarea"
 
 msgid "Paste where it was copied"
 msgstr "Lipește unde a fost copiat"
@@ -6815,13 +6630,6 @@ msgstr "Pune selecția într-un grup"
 msgid "Put what is placed in a group named after the prefab."
 msgstr "Pune ce este plasat într-un grup numit după prefab."
 
-msgid ""
-"Puts a DFF and TXD in the server's models folder and artconfig.txt,\n"
-"so SA-MP 0.3.DL and open.mp players get it. The game folder isn't touched."
-msgstr ""
-"Pune un DFF și un TXD în folderul models al serverului și în artconfig.txt,\n"
-"astfel încât jucătorii SA-MP 0.3.DL și open.mp să le primească. Folderul jocului nu este modificat."
-
 msgid "Puts back the version before the last update, then restarts."
 msgstr "Restabilește versiunea dinaintea ultimei actualizări, apoi repornește."
 
@@ -6839,9 +6647,6 @@ msgstr "Python"
 
 msgid "Quarry"
 msgstr "Carieră"
-
-msgid "READY"
-msgstr "GATA"
 
 msgid "RMB"
 msgstr "RMB"
@@ -6981,9 +6786,6 @@ msgstr "Se citesc poligoanele și texturile..."
 msgid "Ready"
 msgstr "Gata"
 
-msgid "Ready: %s"
-msgstr "Gata: %s"
-
 msgid "Rebuild objects"
 msgstr "Reconstruiește obiectele"
 
@@ -7062,12 +6864,6 @@ msgstr "Reîmprospătează din hartă"
 
 msgid "Refused: "
 msgstr "Refuzat: "
-
-msgid "Related timed: %s\n"
-msgstr "Model asociat temporizat: %s\n"
-
-msgid "Related: %s\n"
-msgstr "Model asociat: %s\n"
 
 msgid "Release page"
 msgstr "Pagina versiunii"
@@ -7195,9 +6991,6 @@ msgstr "Raport"
 
 msgid "Reports waiting: %d"
 msgstr "Rapoarte în așteptare: %d"
-
-msgid "Requested: %s"
-msgstr "Cerut: %s"
 
 msgid "Required"
 msgstr "Obligatoriu"
@@ -7363,9 +7156,6 @@ msgstr "Revenit la %s: repornește Haumea pentru a o folosi"
 msgid "Rooftop"
 msgstr "Acoperiș"
 
-msgid "Room"
-msgstr "Cameră"
-
 msgid "Room password"
 msgstr "Parola camerei"
 
@@ -7446,9 +7236,6 @@ msgstr "Rulează"
 msgid "Running on 127.0.0.1:%d"
 msgstr "Rulează pe 127.0.0.1:%d"
 
-msgid "Running: %s"
-msgstr "Rulează: %s"
-
 msgid ""
 "Runs the map as it is now on a private open.mp test server.\n"
 "Your map file and your own server are not touched."
@@ -7492,9 +7279,6 @@ msgstr ""
 "(96 x 82, dimensionat după înălțimea ecranului). Activ dacă jucătorul nu l-a oprit\n"
 "(nohudscalefix=1 în sa-mp.cfg). Nu cu Widescreen Fix, care dimensionează radarul singur."
 
-msgid "SA-MP 0.3.DL and open.mp clients download custom models."
-msgstr "Clienții SA-MP 0.3.DL și open.mp descarcă modele personalizate."
-
 msgid "SA-MP chat"
 msgstr "Chat SA-MP"
 
@@ -7518,9 +7302,6 @@ msgstr "Valorile implicite SA-MP"
 
 msgid "SA-MP's own objects won't show without its client files."
 msgstr "Obiectele proprii SA-MP nu vor apărea fără fișierele clientului."
-
-msgid "SELECT"
-msgstr "SELECT"
 
 msgid "Safe area (5%)"
 msgstr "Zonă sigură (5%)"
@@ -7757,9 +7538,6 @@ msgstr "Loc"
 msgid "Seconds. -1 with a static vehicle writes AddStaticVehicle."
 msgstr "Secunde. -1 cu un vehicul static scrie AddStaticVehicle."
 
-msgid "Section"
-msgstr "Secțiune"
-
 msgid "See-through (alpha)"
 msgstr "Transparent (alpha)"
 
@@ -7928,17 +7706,11 @@ msgstr "Jurnalul serverului"
 msgid "Server package"
 msgstr "Pachetul serverului"
 
-msgid "Server: %s"
-msgstr "Server: %s"
-
 msgid "Servers"
 msgstr "Servere"
 
 msgid "Session code"
 msgstr "Codul sesiunii"
-
-msgid "Session code: %s"
-msgstr "Codul sesiunii: %s"
 
 msgid "Set X, Y and Z rotation to zero."
 msgstr "Setează rotația X, Y și Z la zero."
@@ -7951,9 +7723,6 @@ msgstr "SetVehicleNumberPlate, până la 32 de caractere. Gol păstrează număr
 
 msgid "Sets the interior of all %d selected."
 msgstr "Setează interiorul pentru toate cele %d selectate."
-
-msgid "Settings and editor data: %s"
-msgstr "Setări și date de editor: %s"
 
 msgid "Setup, elements, NPCs, textdraws, testing and saving, with screenshots."
 msgstr "Configurare, elemente, NPC-uri, textdraws, testare și salvare, cu capturi de ecran."
@@ -8041,9 +7810,6 @@ msgstr "Arată ghidajele:"
 
 msgid "Show material indexes"
 msgstr "Arată indexurile materialelor"
-
-msgid "Show object edges, including invisible and see-through objects."
-msgstr "Arată marginile obiectelor, inclusiv ale celor invizibile și transparente."
 
 msgid "Show only the target and its attachments against an empty background."
 msgstr "Arată doar ținta și atașările ei pe un fundal gol."
@@ -8548,17 +8314,11 @@ msgstr "Dezactivat"
 msgid "Sync rotation"
 msgstr "Sincronizează rotația"
 
-msgid "TEXTDRAW"
-msgstr "TEXTDRAW"
-
 msgid "TXD"
 msgstr "TXD"
 
 msgid "TXD \"%s\" was not found; the original texture stays."
 msgstr "TXD-ul „%s” nu a fost găsit; textura originală rămâne."
-
-msgid "TXD %s"
-msgstr "TXD %s"
 
 msgid "TXD contains"
 msgstr "TXD conține"
@@ -8594,9 +8354,6 @@ msgstr "Nod țintă"
 msgid "Target picking failed. Click again or cancel."
 msgstr "Alegerea țintei a eșuat. Fă clic din nou sau anulează."
 
-msgid "Target: %s"
-msgstr "Țintă: %s"
-
 msgid "Tattoo"
 msgstr "Tatuaj"
 
@@ -8620,10 +8377,12 @@ msgstr "Testează în joc (%s) rulează harta pe un server open.mp privat."
 
 msgid ""
 "Test in game runs the map on a private open.mp server in Haumea's config\n"
-"folder. Its files come from this package, or from the workspace server when empty."
+"folder. Its files come from this package, or when empty from the workspace server,\n"
+"or else from the latest open.mp release, downloaded the first time."
 msgstr ""
 "Testează în joc rulează harta pe un server open.mp privat în folderul de configurare\n"
-"Haumea. Fișierele lui vin din acest pachet sau, dacă e gol, din serverul workspace-ului."
+"Haumea. Fișierele lui vin din acest pachet sau, dacă e gol, din serverul workspace-ului,\n"
+"altfel din cea mai recentă versiune open.mp, descărcată prima dată."
 
 msgid "Test in game: %s"
 msgstr "Testează în joc: %s"
@@ -9136,9 +8895,6 @@ msgstr "Oră și vreme"
 msgid "Time (ms)"
 msgstr "Timp (ms)"
 
-msgid "Time: %d %d (visible now: %s)"
-msgstr "Oră: %d %d (vizibil acum: %s)"
-
 msgid "Timed (day or night)"
 msgstr "Temporizat (zi sau noapte)"
 
@@ -9168,9 +8924,6 @@ msgstr "Pentru a edita chiar acel fișier, folosește Fișier > Deschide harta."
 
 msgid "To everyone (TextDrawCreate)"
 msgstr "Pentru toți (TextDrawCreate)"
-
-msgid "To keep them: a SA-MP 0.3.DL or open.mp custom model goes in the workspace's models/artconfig.txt (AddSimpleModel) with its DFF and TXD; anything else needs a similar game or SA-MP object in its place (search the Object Browser)."
-msgstr "Ca să le păstrezi: un model personalizat SA-MP 0.3.DL sau open.mp merge în models/artconfig.txt al workspace-ului (AddSimpleModel) cu DFF și TXD; orice altceva are nevoie de un obiect similar din joc sau SA-MP în loc (caută în Explorator de obiecte)."
 
 msgid "To the key one"
 msgstr "La cel cheie"
@@ -9326,9 +9079,6 @@ msgstr "Scala UI"
 msgid "URL"
 msgstr "URL"
 
-msgid "Uncapped"
-msgstr "Fără limită"
-
 msgid ""
 "Unchanged world objects are not saved in the map. Once you move,\n"
 "rotate, retexture or delete one, the map removes the original with\n"
@@ -9410,9 +9160,6 @@ msgstr "Textdraws nesalvate"
 
 msgid "Untitled map"
 msgstr "Hartă fără titlu"
-
-msgid "Up"
-msgstr "Sus"
 
 msgid "Up / Down"
 msgstr "Sus / Jos"
@@ -9819,9 +9566,6 @@ msgstr "Lume"
 msgid "World & streaming"
 msgstr "Lume și streaming"
 
-msgid "World object: it stays unchanged and is omitted from Pawn export. If you move, rotate, delete, or edit its materials, export removes the original per player and creates the scripted replacement."
-msgstr "Obiect al lumii: rămâne nemodificat și este omis din exportul Pawn. Dacă îl muți, rotești, ștergi sau îi editezi materialele, exportul elimină originalul per jucător și creează înlocuitorul din script."
-
 msgid "World origin"
 msgstr "Originea lumii"
 
@@ -10142,9 +9886,6 @@ msgstr "se editează textdraws"
 msgid "empty text can crash 0.3.7 clients; use \"_\" for nothing."
 msgstr "textul gol poate bloca clienții 0.3.7; folosește „_” pentru nimic."
 
-msgid "empty: pick from the list"
-msgstr "gol: alege din listă"
-
 msgid "fit to at least one zone"
 msgstr "încadrează în cel puțin o zonă"
 
@@ -10240,9 +9981,6 @@ msgstr "numele noului traseu"
 
 msgid "new room's name"
 msgstr "numele noii camere"
-
-msgid "no"
-msgstr "nu"
 
 msgid "no NODES*.DAT files in %s"
 msgstr "niciun fișier NODES*.DAT în %s"
@@ -10425,9 +10163,6 @@ msgstr "se selectează obiecte"
 msgid "set an open.mp server package (folder, .tar.gz or .zip) in Preferences > Test server"
 msgstr "setează un pachet de server open.mp (folder, .tar.gz sau .zip) în Preferințe > Server de test"
 
-msgid "show"
-msgstr "arată"
-
 msgid "sphere"
 msgstr "sferă"
 
@@ -10556,9 +10291,6 @@ msgstr "spectatori"
 
 msgid "walks NODES%d.DAT from point %d"
 msgstr "parcurge NODES%d.DAT de la punctul %d"
-
-msgid "yes"
-msgstr "da"
 
 msgid "yesterday"
 msgstr "ieri"
@@ -10743,8 +10475,8 @@ msgstr "Număr:"
 msgid "Number of objects scattered per click when Radius > 0."
 msgstr "Numărul de obiecte împrăștiate la fiecare clic când Rază > 0."
 
-msgid "Pick the object to paint in the Object Browser first."
-msgstr "Alege mai întâi în Exploratorul de obiecte obiectul de pictat."
+msgid "Pick the object to paint in the Asset Browser first."
+msgstr "Alege mai întâi în Exploratorul de resurse obiectul de pictat."
 
 msgid "Radius:"
 msgstr "Rază:"
@@ -10767,8 +10499,8 @@ msgstr "%d textur(i) găsite în toate TXD-urile"
 msgid "A saved selection has this name: saving replaces it."
 msgstr "Există deja o selecție salvată cu acest nume: salvarea o înlocuiește."
 
-msgid "Brush\nPaint copies of the Object Browser's object onto the world. Its settings are over the 3D view."
-msgstr "Pensulă\nPictează copii ale obiectului din Browserul de obiecte pe lume. Setările ei sunt deasupra vederii 3D."
+msgid "Brush\nPaint copies of the Asset Browser's object onto the world. Its settings are over the 3D view."
+msgstr "Pensulă\nPictează copii ale obiectului din Exploratorul de resurse pe lume. Setările ei sunt deasupra vederii 3D."
 
 msgid "Click to select these objects; Ctrl+click adds them to the selection."
 msgstr "Clic pentru a selecta aceste obiecte; Ctrl+clic le adaugă la selecție."
@@ -10836,9 +10568,6 @@ msgstr "Salvează selecția..."
 msgid "Saved selections"
 msgstr "Selecții salvate"
 
-msgid "Saved selections: keep a selection under a name and select it again later."
-msgstr "Selecții salvate: păstrează o selecție sub un nume și selecteaz-o din nou mai târziu."
-
 msgid "Saved the selection \"%s\" (%d object(s))"
 msgstr "Selecția „%s” a fost salvată (%d obiect(e))"
 
@@ -10857,11 +10586,375 @@ msgstr "Au fost selectate %d obiect(e) din „%s”"
 msgid "Selection %d"
 msgstr "Selecția %d"
 
-msgid "Selections"
-msgstr "Selecții"
-
 msgid "To ground"
 msgstr "Pe sol"
 
 msgid "blank white"
 msgstr "alb simplu"
+
+msgid "New"
+msgstr "Nou"
+
+msgid "Open..."
+msgstr "Deschide..."
+
+msgid "Switch between the map, TextDraws and Code editors."
+msgstr "Comută între editoarele de hartă, TextDraws și cod."
+
+msgid "The screen, previews, background, HUD, guides and nudging."
+msgstr "Ecranul, previzualizările, fundalul, HUD-ul, ghidajele și deplasarea."
+
+msgid "Zoom in"
+msgstr "Mărește"
+
+msgid "Zoom out"
+msgstr "Micșorează"
+
+msgid "Layers"
+msgstr "Straturi"
+
+msgid "Off: the outer ones stay and the gaps between come out equal.\nOn: each is this far from the one before, from the first."
+msgstr "Oprit: cele de la capete rămân, iar spațiile dintre ele devin egale.\nPornit: fiecare e la această distanță de cel dinainte, de la primul."
+
+msgid "Properties"
+msgstr "Proprietăți"
+
+msgid "Same height"
+msgstr "Aceeași înălțime"
+
+msgid "Same width"
+msgstr "Aceeași lățime"
+
+msgid "The gap, in canvas units. Drag or double-click to type."
+msgstr "Spațiul, în unități de pânză. Trage sau dă dublu clic ca să scrii."
+
+msgid "File missing"
+msgstr "Fișier lipsă"
+
+msgid "Open or close a panel."
+msgstr "Deschide sau închide un panou."
+
+msgid "Panels"
+msgstr "Panouri"
+
+msgid "Arrow keys"
+msgstr "Săgeți"
+
+msgid "Attached to"
+msgstr "Atașat de"
+
+msgid "Detail"
+msgstr "Detaliu"
+
+msgid "Far version"
+msgstr "Versiune de departe"
+
+msgid "Grid size"
+msgstr "Mărimea grilei"
+
+msgid "Hidden at the editor's time now."
+msgstr "Ascuns acum la ora editorului."
+
+msgid "Hours"
+msgstr "Ore"
+
+msgid "In game"
+msgstr "În joc"
+
+msgid "Now"
+msgstr "Acum"
+
+msgid "Opacity of the tint drawn on selected objects."
+msgstr "Opacitatea nuanței de pe obiectele selectate."
+
+msgid "Output"
+msgstr "Ieșire"
+
+msgid "Player preview (skin %d)"
+msgstr "Previzualizare jucător (skin %d)"
+
+msgid "Related"
+msgstr "Legat"
+
+msgid "Related timed"
+msgstr "Legat de oră"
+
+msgid "Screen"
+msgstr "Ecran"
+
+msgid "Shown at the editor's time now."
+msgstr "Vizibil acum la ora editorului."
+
+msgid "Shows from"
+msgstr "Se vede de la"
+
+msgid "Sign in with"
+msgstr "Conectare cu"
+
+msgid "The model is only drawn from this far away."
+msgstr "Modelul se desenează doar de la această distanță."
+
+msgid "Trip"
+msgstr "Traseu"
+
+msgid "Editor data"
+msgstr "Datele editorului"
+
+msgid "Selection outline"
+msgstr "Contur selecție"
+
+msgid "Build Replay"
+msgstr "Reluarea construcției"
+
+msgid "Plays the map being built, element by element in the order they were added, while the camera circles it."
+msgstr "Arată cum a fost construită harta, element cu element în ordinea în care au fost adăugate, în timp ce camera se rotește în jurul ei."
+
+msgid "Elements built so far. Drag to scrub."
+msgstr "Elemente construite până acum. Trage pentru a derula."
+
+msgid "Circle the map. Moving the camera stops it."
+msgstr "Rotește în jurul hărții. Mișcarea camerei oprește rotirea."
+
+msgid "Add one with + above, or from the ribbon."
+msgstr "Adaugă unul cu + de mai sus sau din panglică."
+
+msgid "Admin"
+msgstr "Administrare"
+
+msgid "All lines, warnings and errors, or errors only"
+msgstr "Toate liniile, avertismente și erori sau doar erori"
+
+msgid "Also list what is fine but worth knowing."
+msgstr "Arată și ce e în regulă, dar merită știut."
+
+msgid "An admin of this server makes them."
+msgstr "Le creează un administrator al acestui server."
+
+msgid "Arrange"
+msgstr "Aranjare"
+
+msgid "Bundled"
+msgstr "Inclus"
+
+msgid "Click to fill in the form; double-click to join."
+msgstr "Clic pentru a completa formularul; dublu clic pentru a intra."
+
+msgid "Click to fill in the form; double-click to join. Its password is kept on this computer."
+msgstr "Clic pentru a completa formularul; dublu clic pentru a intra. Parola e păstrată pe acest calculator."
+
+msgid "Create"
+msgstr "Creare"
+
+msgid "Everything the browser can show"
+msgstr "Tot ce poate arăta browserul"
+
+msgid "Find objects"
+msgstr "Găsește obiecte"
+
+msgid "Go to this view"
+msgstr "Mergi la această vedere"
+
+msgid "Join a session"
+msgstr "Intră într-o sesiune"
+
+msgid "Keeps this view: the camera, the time, the weather and the interior."
+msgstr "Păstrează această vedere: camera, ora, vremea și interiorul."
+
+msgid "Make one with the + button above."
+msgstr "Creează una cu butonul + de mai sus."
+
+msgid "Maximize"
+msgstr "Maximizare"
+
+msgid "Minimize"
+msgstr "Minimizare"
+
+msgid "Name the current view and Save it to come back to it."
+msgstr "Denumește vederea curentă și salveaz-o ca să revii la ea."
+
+msgid "No messages yet."
+msgstr "Niciun mesaj încă."
+
+msgid "No one else here yet."
+msgstr "Încă nu mai e nimeni aici."
+
+msgid "No output yet."
+msgstr "Nicio ieșire încă."
+
+msgid "No saved views yet."
+msgstr "Nicio vedere salvată încă."
+
+msgid "Only textures from TXDs whose name matches"
+msgstr "Doar texturi din TXD-uri al căror nume se potrivește"
+
+msgid "Others join with this computer's address, the port and the session code shown once you host."
+msgstr "Ceilalți intră cu adresa acestui calculator, portul și codul sesiunii afișat după ce găzduiești."
+
+msgid ""
+"Over the internet the port must be forwarded to this computer, or use a VPN such as Tailscale.\n"
+"For a session that stays up without you, run haumea-server where your SA-MP server runs."
+msgstr ""
+"Prin internet, portul trebuie redirecționat către acest calculator sau folosește un VPN precum Tailscale.\n"
+"Pentru o sesiune care rămâne pornită fără tine, rulează haumea-server unde rulează serverul tău SA-MP."
+
+msgid "Restore"
+msgstr "Restabilire"
+
+msgid "Send them the port and session code above."
+msgstr "Trimite-le portul și codul sesiunii de mai sus."
+
+msgid "Show the target point"
+msgstr "Arată punctul țintă"
+
+msgid "Snap to steps"
+msgstr "Aliniere la pași"
+
+msgid "Test in game starts the server; what it prints shows here."
+msgstr "Testează în joc pornește serverul; ce afișează apare aici."
+
+msgid "Type a model ID and press Enter to swap the model. Custom models use their negative Pawn IDs."
+msgstr "Scrie un ID de model și apasă Enter pentru a schimba modelul. Modelele personalizate folosesc ID-uri Pawn negative."
+
+msgid "Moves"
+msgstr "Se mișcă"
+
+msgid "Starts"
+msgstr "Pornește"
+
+msgid "When the map loads"
+msgstr "Când se încarcă harta"
+
+msgid "When a player presses a key"
+msgstr "Când un jucător apasă o tastă"
+
+msgid "When a driver sounds the horn"
+msgstr "Când un șofer claxonează"
+
+msgid "A gate: it moves back after a while. The map's code needs\n<map>_Gates(playerid, newkeys, oldkeys) called from OnPlayerKeyStateChange;\nTest in game does that."
+msgstr "O poartă: revine după un timp. Codul hărții trebuie să apeleze\n<map>_Gates(playerid, newkeys, oldkeys) din OnPlayerKeyStateChange;\nTestul în joc face asta."
+
+msgid "Closes after"
+msgstr "Se închide după"
+
+msgid "Seconds it stands open."
+msgstr "Câte secunde rămâne deschisă."
+
+msgid "Garage door sounds"
+msgstr "Sunete de ușă de garaj"
+
+msgid "The open.mp server (%s) is in %s."
+msgstr "Serverul open.mp (%s) este în %s."
+
+msgid "Could not download the open.mp server: %s"
+msgstr "Serverul open.mp nu a putut fi descărcat: %s"
+
+msgid "Download the open.mp server into it"
+msgstr "Descarcă serverul open.mp în el"
+
+msgid "The latest open.mp release from GitHub, so Test in game and pawncc work in it.\nFiles already in the folder are kept."
+msgstr "Cea mai nouă versiune open.mp de pe GitHub, ca Testul în joc și pawncc să funcționeze în el.\nFișierele care sunt deja în dosar se păstrează."
+
+msgid "Downloading the open.mp server: %.1f MB"
+msgstr "Se descarcă serverul open.mp: %.1f MB"
+
+msgid "It already has a server."
+msgstr "Are deja un server."
+
+msgid "%d of those models were imported into the game's modloader/Haumea folder, which SA-MP players don't have. They can become custom models in the server's models folder."
+msgstr "%d dintre aceste modele au fost importate în dosarul modloader/Haumea al jocului, pe care jucătorii SA-MP nu îl au. Pot deveni modele proprii în dosarul models al serverului."
+
+msgid ", but artwork is off in the server's config (Add Custom Model turns it on)"
+msgstr ", dar artwork este oprit în configurația serverului (Adaugă model propriu îl pornește)"
+
+msgid "A custom model's texture: players on the SA-MP 0.3.DL client download it;\n0.3.7 players see nothing there."
+msgstr "O textură de model propriu: jucătorii cu clientul SA-MP 0.3.DL o descarcă;\njucătorii 0.3.7 nu văd nimic acolo."
+
+msgid "Add Custom Model"
+msgstr "Adaugă model propriu"
+
+msgid "Artwork is off on this server: players won't get custom models."
+msgstr "Artwork este oprit pe acest server: jucătorii nu vor primi modele proprii."
+
+msgid "Artwork is on in %s."
+msgstr "Artwork este pornit în %s."
+
+msgid "Custom Model..."
+msgstr "Model propriu..."
+
+msgid "Players on the SA-MP 0.3.DL client download custom models."
+msgstr "Jucătorii cu clientul SA-MP 0.3.DL descarcă modelele proprii."
+
+msgid "Sets artwork.enable in config.json (open.mp), or useartwork 1 in server.cfg (SA-MP)."
+msgstr "Setează artwork.enable în config.json (open.mp) sau useartwork 1 în server.cfg (SA-MP)."
+
+msgid "Turn on artwork"
+msgstr "Pornește artwork"
+
+msgid "%d element(s) use custom models: their DFF and TXD go in the server's models folder, with artwork enabled%s; players need the SA-MP 0.3.DL client.%s"
+msgstr "%d element(e) folosesc modele proprii: DFF-ul și TXD-ul lor merg în dosarul models al serverului, cu artwork pornit%s; jucătorii au nevoie de clientul SA-MP 0.3.DL.%s"
+
+msgid "In the workspace's models folder."
+msgstr "În dosarul models al spațiului de lucru."
+
+msgid "It goes into the workspace's models folder; maps that use it register it in their code."
+msgstr "Merge în dosarul models al spațiului de lucru; hărțile care îl folosesc îl înregistrează în codul lor."
+
+msgid "Puts your DFF and TXD in the server's models folder; maps that use it register it\nin their own code. Players on the SA-MP 0.3.DL client download it. The game folder isn't touched."
+msgstr "Pune DFF-ul și TXD-ul tău în dosarul models al serverului; hărțile care îl folosesc îl înregistrează\nîn codul lor. Jucătorii cu clientul SA-MP 0.3.DL îl descarcă. Dosarul jocului nu e atins."
+
+msgid "To keep them: add it as a custom model (File > Import > Custom Model) with its DFF and TXD; anything else needs a similar game or SA-MP object in its place (search the Asset Browser)."
+msgstr "Ca să le păstrezi: adaugă-l ca model propriu (Fișier > Importă > Model propriu) cu DFF-ul și TXD-ul lui; restul are nevoie de un obiect asemănător din joc sau din SA-MP în locul lui (caută în exploratorul de resurse)."
+
+msgid "Your own DFF and TXD, copied into the server's models folder. Maps that use them register them in their own code (AddSimpleModel, AddCharModel); the server (open.mp, or SA-MP 0.3.DL) sends them to players as they join, and players need the SA-MP 0.3.DL client. Nothing is written into the game folder."
+msgstr "DFF-ul și TXD-ul tău, copiate în dosarul models al serverului. Hărțile care le folosesc le înregistrează în codul lor (AddSimpleModel, AddCharModel); serverul (open.mp sau SA-MP 0.3.DL) le trimite jucătorilor când intră, iar jucătorii au nevoie de clientul SA-MP 0.3.DL. Nu se scrie nimic în dosarul jocului."
+
+msgid "Custom models changed on disk were reloaded"
+msgstr "Modelele personalizate modificate pe disc au fost reîncărcate"
+
+msgid "Reload custom models"
+msgstr "Reîncarcă modelele personalizate"
+
+msgid "Custom models reloaded: %d"
+msgstr "Modele personalizate reîncărcate: %d"
+
+msgid "Reads the models' DFF and TXD files and the AddSimpleModel lines again. Files rebuilt on disk are also picked up by themselves."
+msgstr "Citește din nou fișierele DFF și TXD ale modelelor și liniile AddSimpleModel. Fișierele refăcute pe disc sunt preluate și singure."
+
+msgid "Map changed on disk"
+msgstr "Harta s-a schimbat pe disc"
+
+msgid "%s was changed outside Haumea since it was opened."
+msgstr "%s a fost modificată în afara Haumea de când a fost deschisă."
+
+msgid "Saving now replaces those changes with the map as it is here."
+msgstr "Dacă salvezi acum, acele modificări sunt înlocuite cu harta așa cum e aici."
+
+msgid "Reload from disk"
+msgstr "Reîncarcă de pe disc"
+
+msgid "Overwrite"
+msgstr "Suprascrie"
+
+msgid "%s changed on disk and was opened again"
+msgstr "%s s-a schimbat pe disc și a fost redeschisă"
+
+msgid "%s changed on disk outside Haumea: saving will ask before replacing it"
+msgstr "%s s-a schimbat pe disc în afara Haumea: salvarea va întreba înainte să o înlocuiască"
+
+msgid "Unsaved changes were kept in an autosave (File > Recover Autosave)"
+msgstr "Modificările nesalvate au fost păstrate într-o salvare automată (Fișier > Recuperează salvarea automată)"
+
+msgid "%d object(s) of custom model %d (%s): its DFF has no collision, so in the game players, actors and cars go through it. Haumea makes one from its shape only for clicking and snapping here. Embed a COL in the DFF."
+msgstr "%d obiect(e) ale modelului personalizat %d (%s): DFF-ul lui nu are coliziune, așa că în joc jucătorii, actorii și mașinile trec prin el. Haumea face una din forma lui doar pentru clic și aliniere aici. Include un COL în DFF."
+
+msgid "%s has nothing to stand on within 2 m under its feet: in the game it falls until it lands on something. Custom models without collision in their DFF don't count."
+msgstr "%s nu are pe ce sta în cei 2 m de sub picioare: în joc cade până aterizează pe ceva. Modelele personalizate fără coliziune în DFF nu contează."
+
+msgid "Downloading the open.mp server..."
+msgstr "Se descarcă serverul open.mp..."
+
+msgid "Downloading the streamer plugin..."
+msgstr "Se descarcă pluginul streamer..."
+
+msgid "a server download is running; try again when it finishes"
+msgstr "o descărcare de server este în curs; încearcă din nou când se termină"

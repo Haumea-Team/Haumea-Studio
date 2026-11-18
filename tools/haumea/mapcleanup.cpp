@@ -147,44 +147,85 @@ int MapCleanupDuplicateCount()
 		count += (int)g.copies.size();
 	return count;
 }
+int MapCleanupDuplicates(float tol, bool selectedOnly, bool strictSettings, bool remove,
+	int *groupCount, int *protectedOut)
+{
+	tolerance = std::isfinite(tol) ? std::clamp(tol, 0.001f, 1.0f) : 0.01f;
+	onlySelected = selectedOnly;
+	strict = strictSettings;
+	// scan() reads the selection, so it runs before selectCopies replaces it.
+	scan();
+	int count = MapCleanupDuplicateCount();
+	if (groupCount)
+		*groupCount = (int)groups.size();
+	if (protectedOut)
+		*protectedOut = protectedCount;
+	selectCopies();
+	if (remove && count > 0) {
+		DeleteSelected();
+		scanned = false;
+	}
+	return count;
+}
+// Equal-width buttons sharing one row: the width of each of n.
+static float rowButtonWidth(int n)
+{
+	float spacing = ImGui::GetStyle().ItemSpacing.x;
+	return floorf((ImGui::GetContentRegionAvail().x - spacing * (n - 1)) / n);
+}
 void MapCleanupPanel()
 {
-	bool change = ImGui::Checkbox(L("Selection only"), &onlySelected);
-	change |= ImGui::Checkbox(L("Match properties and materials"), &strict);
+	bool change = UiInputFloat(L("Position tolerance"), &tolerance, .001f, .01f, "%.3f m");
+	tolerance = std::isfinite(tolerance) ? clamp(tolerance, .001f, 1.f) : .01f;
+	change |= UiCheckbox(L("Selection only"), &onlySelected);
+	change |= UiCheckbox(L("Match properties and materials"), &strict);
 	ImGui::SetItemTooltip(
 	    _("Keeps objects with different runtime settings, textures, or named variables separate."));
-	ImGui::SetNextItemWidth(
-	    std::max(ImGui::GetFontSize() * 6, ImGui::GetContentRegionAvail().x -
-		                                       ImGui::CalcTextSize(_("Position tolerance")).x -
-		                                       ImGui::GetStyle().ItemInnerSpacing.x));
-	change |= ImGui::InputFloat(L("Position tolerance"), &tolerance, .001f, .01f, "%.3f m");
-	tolerance = std::isfinite(tolerance) ? clamp(tolerance, .001f, 1.f) : .01f;
 	if (change)
 		scanned = false;
-	if (ImGui::Button(L("Find duplicates")))
+	ImGui::Spacing();
+	ImVec4 fill = UiAccentFill();
+	ImGui::PushStyleColor(ImGuiCol_Button, fill);
+	ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(fill.x * 1.12f, fill.y * 1.12f, fill.z * 1.12f, 1.0f));
+	ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(fill.x * 0.9f, fill.y * 0.9f, fill.z * 0.9f, 1.0f));
+	ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 1, 1, 1));
+	bool find = ImGui::Button(L("Find duplicates"), ImVec2(-FLT_MIN, 0));
+	ImGui::PopStyleColor(4);
+	if (find)
 		scan();
 	if (!scanned)
 		return;
 	int count = MapCleanupDuplicateCount();
-	ImGui::Text(_("%d duplicates in %d groups"), count, (int)groups.size());
+	ImGui::TextDisabled(_("%d duplicates in %d groups"), count, (int)groups.size());
 	if (protectedCount)
-		ImGui::TextWrapped(_("%d attached or referenced objects excluded from cleanup."), protectedCount);
+		ImGui::TextDisabled(_("%d attached or referenced objects excluded from cleanup."), protectedCount);
 	bool stale = GetLatestChangeSeq() != scanRevision;
-	if (stale)
+	if (stale) {
+		ImGui::PushStyleColor(ImGuiCol_Text, UiSemanticColor(UI_COLOR_WARNING));
 		ImGui::TextWrapped(_("The map changed. Find duplicates again before removing objects."));
+		ImGui::PopStyleColor();
+	}
 	ImGui::BeginDisabled(stale || count == 0);
-	if (ImGui::Button(L("Select duplicates")))
+	float w = rowButtonWidth(2);
+	if (ImGui::Button(L("Select duplicates"), ImVec2(w, 0)))
 		selectCopies();
 	ImGui::SameLine();
-	if (ImGui::Button(L("Remove duplicates")))
+	if (ImGui::Button(L("Remove duplicates"), ImVec2(w, 0)))
 		ImGui::OpenPopup("##remove_duplicates");
 	if (ImGui::BeginPopup("##remove_duplicates")) {
+		ImGui::PushTextWrapPos(ImGui::GetFontSize() * 22.0f);
 		ImGui::TextWrapped(_("Remove %d duplicates, keeping one object per group? Undo restores them."),
 		                   count);
-		if (!strict)
+		if (!strict) {
+			ImGui::PushStyleColor(ImGuiCol_Text, UiSemanticColor(UI_COLOR_WARNING));
 			ImGui::TextWrapped(
 			    _("Properties and materials were ignored. Overlapping objects may be intentional."));
-		if (ImGui::Button(L("Remove##confirm_duplicates"))) {
+			ImGui::PopStyleColor();
+		}
+		ImGui::PopTextWrapPos();
+		ImGui::Spacing();
+		float pw = std::max(ImGui::GetFontSize() * 6.0f, rowButtonWidth(2));
+		if (ImGui::Button(L("Remove##confirm_duplicates"), ImVec2(pw, 0))) {
 			// Refresh the comparison immediately before a mutation; never trust stale IDs.
 			scan();
 			selectCopies();
@@ -193,7 +234,7 @@ void MapCleanupPanel()
 			ImGui::CloseCurrentPopup();
 		}
 		ImGui::SameLine();
-		if (ImGui::Button(L("Cancel")))
+		if (ImGui::Button(L("Cancel"), ImVec2(pw, 0)))
 			ImGui::CloseCurrentPopup();
 		ImGui::EndPopup();
 	}

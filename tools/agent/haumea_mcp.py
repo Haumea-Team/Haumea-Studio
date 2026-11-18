@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 from typing import Literal
 
+import contextlib
 import contextvars
 import functools
 import inspect
@@ -92,6 +93,9 @@ mcp = MCPServer(
 		"namaka='<name>' to any tool to work as that one, and give each its own area or job. Their ids "
 		"differ from one another. save_map from a named Namaka only commits its edits: call it without "
 		"namaka to write the file. Stop extra ones with namaka_team(action='stop') when done. "
+		"The editor's other windows have tools too: world_buildings, clipboard, edit_history, live_paths, "
+		"textdraw_layout, path_nodes, interiors, export_files, editor_view; selection_sets, "
+		"asset_favourites, pawn_code, custom_models and workspace act on the user's editor. "
 		"In a session, session_chat talks with the people there (your messages show an AI tag); when "
 		"the user asks you to take requests from the chat, loop session_chat(action='wait')."
 	),
@@ -99,6 +103,22 @@ mcp = MCPServer(
 
 
 _register_tool = mcp.tool
+
+
+# Arguments that name instance ids, or a plan or patch made of them: only these go stale when the
+# background Namaka restarts. Everything else (poses, models, areas, keys) means the same to the next one.
+_INSTANCE_ID_ARGUMENTS = {"instance_id", "instance_ids", "ids", "plan_id"}
+
+
+def _holds_instance_ids(value) -> bool:
+	if isinstance(value, BaseModel):
+		value = value.model_dump()
+	if isinstance(value, dict):
+		return any((key in _INSTANCE_ID_ARGUMENTS and item not in (None, [], ())) or _holds_instance_ids(item)
+		           for key, item in value.items())
+	if isinstance(value, (list, tuple)):
+		return any(_holds_instance_ids(item) for item in value)
+	return False
 
 
 def _guarded_tool(*args, **kwargs):
@@ -109,7 +129,7 @@ def _guarded_tool(*args, **kwargs):
 	register = _register_tool(*args, **kwargs)
 
 	def decorate(function):
-		def enter(namaka):
+		def enter(namaka, call_kwargs):
 			# The tool runs in the editor of the Namaka named, or the user's.
 			tool = function.__name__
 			if namaka == USER_EDITOR or (namaka is None and tool in EDITOR_TOOLS):
@@ -117,7 +137,7 @@ def _guarded_tool(*args, **kwargs):
 			if namaka is None:
 				try:
 					return _current_service.set((team.default_running() or owner_service) if tool in OFFLINE_TOOLS
-					                            else team.default_service())
+					                            else team.default_service(_holds_instance_ids(call_kwargs)))
 				except HaumeaError as error:
 					raise ToolError(str(error)) from error
 			if tool in OWNER_ONLY_TOOLS:
@@ -130,7 +150,7 @@ def _guarded_tool(*args, **kwargs):
 		if inspect.iscoroutinefunction(function):
 			@functools.wraps(function)
 			async def guarded(*call_args, namaka=None, **call_kwargs):
-				token = enter(namaka)
+				token = enter(namaka, call_kwargs)
 				try:
 					return await function(*call_args, **call_kwargs)
 				except ToolError:
@@ -142,7 +162,7 @@ def _guarded_tool(*args, **kwargs):
 		else:
 			@functools.wraps(function)
 			def guarded(*call_args, namaka=None, **call_kwargs):
-				token = enter(namaka)
+				token = enter(namaka, call_kwargs)
 				try:
 					return function(*call_args, **call_kwargs)
 				except ToolError:
@@ -628,18 +648,52 @@ def restore_checkpoint(name: str) -> dict:
 
 
 
+@contextlib.contextmanager
+def _capture_view_settings(interior: int | Literal["all"] | None, show_collision: bool = False):
+	"""For one capture: that interior, or every one at once ("all"), and collision drawn; the view's own
+	afterwards."""
+	if interior is None and not show_collision:
+		yield
+		return
+	before = service.editor_op("view", "get")
+	fields = {}
+	if interior == "all":
+		fields["all_interiors"] = True
+	elif interior is not None:
+		fields.update(all_interiors=False, interior=int(interior))
+	if show_collision:
+		fields["collision"] = True
+	service.editor_op("view", "set", **fields)
+	try:
+		yield
+	finally:
+		service.editor_op("view", "set", all_interiors=before["all_interiors"], interior=before.get("interior"),
+		                  collision=before.get("collision"))
+
+
 @mcp.tool(structured_output=False)
 def capture_view(output_path: str, label: str = "view",
                  position: list[float] | None = None, target: list[float] | None = None,
                  fov: float = 58.0, up: list[float] | None = None,
-                 expected_camera_revision: int | None = None) -> list:
+                 expected_camera_revision: int | None = None,
+                 interior: int | Literal["all"] | None = None, show_collision: bool = False) -> list:
 	"""Screenshot the 3D view as a PNG and return it, to check your work.
 
 	Without position/target: the user's live view as it is. With only target
 	([x, y, z]; use a position from an element's reply, so it isn't inside a
 	building): Haumea picks a camera about
 	25 m away that has a clear view of it. With position and target: exactly
-	that view. The user's camera is put back afterwards."""
+	that view. The user's camera is put back afterwards.
+
+	The view shows the objects of one interior (0, the world, unless it was changed): objects
+	created in another interior are left out. interior: show that interior for this capture, or
+	"all" for every one at once. show_collision: draws the collision as wireframes, to see whether
+	a custom model's loaded and fits (map_check says which custom models have none in the game)."""
+	with _capture_view_settings(interior, show_collision):
+		return _capture_view(output_path, label, position, target, fov, up, expected_camera_revision)
+
+
+def _capture_view(output_path, label, position, target, fov, up, expected_camera_revision) -> list:
 	if position is None and target is None:
 		result = service.client.capture_current(Path(output_path), label=label)
 	else:
@@ -671,12 +725,16 @@ def capture_view(output_path: str, label: str = "view",
 @mcp.tool(structured_output=False)
 def render_scene_views(output_directory: str, fov: float = 58.0,
 	                   center_x: float | None = None, center_y: float | None = None,
-	                   center_z: float | None = None, span: float | None = None) -> list:
-	"""Render four provenance-bound views; an explicit center enables empty-scene survey."""
+	                   center_z: float | None = None, span: float | None = None,
+	                   interior: int | Literal["all"] | None = None, show_collision: bool = False) -> list:
+	"""Render four provenance-bound views; an explicit center enables empty-scene survey.
+
+	interior and show_collision: as for capture_view."""
 	center = None
 	if center_x is not None and center_y is not None:
 		center = [center_x, center_y, center_z if center_z is not None else 0.0]
-	manifest = service.capture_views(Path(output_directory), fov, center=center, span=span)
+	with _capture_view_settings(interior, show_collision):
+		manifest = service.capture_views(Path(output_directory), fov, center=center, span=span)
 	views = []
 	for item in manifest["views"]:
 		name, path = item["label"], item["path"]
@@ -926,9 +984,13 @@ ELEMENT_PROPERTIES_DOC = """Properties by kind (all optional; defaults in bracke
 	  instead of -1, every interior], draw_distance, stream_distance (streamer)
 	object: move_offset [x,y,z] (MoveObject: metres from where it stands; "none" stops it
 	  moving), move_speed (m/s), move_rotation [rx,ry,rz] (the turn on the way; "none");
+	  move_trigger [load; key or horn make it a gate: it moves when a player near it presses
+	  gate_key (a KEY_* value, 65536 KEY_YES) or a driver sounds the horn, and goes back
+	  gate_close_delay ms after], gate_range [10 m], gate_close_delay [5000], gate_sounds [true]
 	object: attach_to (instance id, -1 detaches), attach_sync_rotation
 	vehicle: color1, color2 [-1 random], respawn_delay [100 seconds; -1 never], paintjob [-1 none],
-	  plate [none], mods [none; component ids, a wrong one lists those that fit]
+	  plate [none], mods [none; component ids, a wrong one lists those that fit],
+	  static [false; true writes AddStaticVehicleEx instead of CreateVehicle]
 	pickup: model [1239], pickup_type [1]
 	label: text ["3D text label"; {RRGGBB} colour codes, newlines], color [0xFFFFFFFF],
 	  draw_distance [20], test_los [false]
@@ -986,10 +1048,17 @@ def select_elements(instance_ids: list[int]) -> dict:
 
 
 @mcp.tool()
-def add_path_node(x: float, y: float, z: float, vehicle: bool = True) -> dict:
+def add_path_node(x: float, y: float, z: float, vehicle: bool = True,
+                  link_to: list[int] | None = None) -> dict:
 	"""Add a node to the road network open.mp NPCs walk and drive (the Nodes tool): a vehicle node, or
-	a pedestrian one with vehicle=False. Returns its area and point."""
-	return service.client.command("nodes_add", x, y, z, 1 if vehicle else 0)
+	a pedestrian one with vehicle=False. link_to [area, point] links it to that node as it is added
+	(chain several by linking each to the one before). Returns its area and point; path_nodes edits more."""
+	fields = [x, y, z, 1 if vehicle else 0]
+	if link_to:
+		if len(link_to) != 2:
+			raise ValueError("link_to is [area, point]")
+		fields += [int(link_to[0]), int(link_to[1])]
+	return service.client.command("nodes_add", *fields)
 
 
 @mcp.tool()
@@ -1064,9 +1133,14 @@ def namaka_team(action: Literal["spawn", "stop", "status"], names: list[str] | N
 
 
 @mcp.tool()
-def multiplayer_session(action: Literal["join", "host", "leave", "status"], address: str | None = None,
+def multiplayer_session(action: Literal["join", "host", "enter", "admin", "leave", "status"],
+                        address: str | None = None,
                         port: int = 7790, password: str | None = None, name: str = "Namaka",
-                        discard_changes: bool = False) -> dict:
+                        discard_changes: bool = False, open_router_port: bool = True,
+                        room: str | None = None, empty_map: bool = False,
+                        admin: Literal["invite", "set_role", "kick", "lock", "delete_room", "users",
+                                       "agents", "rooms"] | None = None,
+                        args: list[str] | None = None) -> dict:
 	"""Edit one map with other people and agents, like File > Multiplayer.
 
 	join: the session at address:port (a haumea-server, or an editor hosting) with password
@@ -1077,9 +1151,17 @@ def multiplayer_session(action: Literal["join", "host", "leave", "status"], addr
 	selections. Several agents can work in one editor too, each with its own edit session:
 	finish_edit_session(commit=False) and undo only take back this agent's own edits, and what
 	someone else changed last stays. join and host end the edit
-	session: unsaved edits refuse them unless discard_changes drops the edits."""
+	session: unsaved edits refuse them unless discard_changes drops the edits.
+	host: open_router_port asks the router to forward the port (UPnP) so people outside the
+	network can join. enter (on a server with rooms): goes to room ("" the lobby) with its
+	password; a room that doesn't exist yet is made with the open map, or empty with empty_map.
+	admin (needs the right role; the answer is admin_reply in the returned status): invite
+	args [role, uses, days] makes a code; set_role [account, role or "", room or ""]; kick
+	[peer id]; lock [password, "" unlocks] this room; delete_room [room]; users lists accounts;
+	agents ["builder", "viewer" or "none"] sets what agents may do here; rooms lists rooms."""
 	return service.multiplayer(action, address=address, port=port, password=password, name=name,
-	                           discard_changes=discard_changes)
+	                           discard_changes=discard_changes, open_router_port=open_router_port,
+	                           room=room, empty_map=empty_map, admin=admin, args=args)
 
 
 @mcp.tool()
@@ -1209,7 +1291,8 @@ def set_element_properties(instance_id: int, properties: dict) -> dict:
 
 @mcp.tool()
 def map_tool(op: Literal["array", "mirror", "align", "distribute", "snap_rotations",
-                         "drop", "relative", "lay_along", "radar_art", "duplicate"],
+                         "drop", "relative", "lay_along", "radar_art", "duplicate", "duplicates",
+                         "center_parent", "align_to_guide"],
              ids: list[int] | None = None, count: int | None = None, radial: bool | None = None,
              offset: list[float] | None = None, rotate: list[float] | None = None,
              centre: list[float] | None = None, angle: float | None = None,
@@ -1222,7 +1305,13 @@ def map_tool(op: Literal["array", "mirror", "align", "distribute", "snap_rotatio
              model: int | None = None, spacing: float | None = None,
              heading: float | None = None, along_length: bool | None = None,
              follow_slope: bool | None = None, on_ground: bool | None = None,
-             radar_art: dict | None = None) -> dict:
+             radar_art: dict | None = None, align: bool | None = None,
+             start: list[float] | None = None, end: list[float] | None = None,
+             guide: Literal["pin", "ruler"] | None = None, axes: str | None = None,
+             anchor: Literal["min", "centre", "max", "origin"] | None = None,
+             distribute: bool | None = None, face: bool | None = None,
+             cleanup: Literal["find", "remove"] | None = None, tolerance: float | None = None,
+             strict: bool | None = None) -> dict:
 	"""Run one of the Tools window's transform tools on ids (the first is the reference); one undo step.
 
 	array: count copies; linear (offset [x,y,z] m and rotate [x,y,z] degrees per copy,
@@ -1238,7 +1327,17 @@ def map_tool(op: Literal["array", "mirror", "align", "distribute", "snap_rotatio
 	align: axis x/y/z, mode min/centre/max of the bounding boxes, to the first id.
 	distribute: even spacing along axis between the two outermost objects.
 	snap_rotations: round every angle to step degrees.
-	drop: each onto the ground below it.
+	drop: each onto the ground below it; align=true also tilts each to the slope (Drop and align).
+	center_parent: moves an attachment's parent to the middle of its family (ids: the parent or
+	  a child), children staying where they are.
+	align_to_guide (the coordinate pin): to the point start [x,y,z] the whole group moves; with
+	  end [x,y,z] each is put on the line through start and end, or distribute=true spreads them
+	  evenly from start to end; face=true turns them along it. axes (default "xy") are the axes
+	  moved, anchor (min, centre, max of each box, or origin) the point that lands on it.
+	  guide="pin" or "ruler" takes start (and end) from the user's coordinate pin.
+	duplicates (ids optional: else the whole map): copies of an object at the same place within
+	  tolerance m (0.01) and turn; strict (default) also wants the same settings and materials.
+	  cleanup find (default) lists them, remove deletes the copies (the first of each stays).
 	relative: Pawn for ids relative to the first (attach=true: AttachObjectToObject;
 	  false: CreateObject at x/y/z plus offsets); changes nothing.
 	lay_along (no ids): copies of model every spacing metres (default: the model's
@@ -1261,16 +1360,26 @@ def map_tool(op: Literal["array", "mirror", "align", "distribute", "snap_rotatio
 	  cell, objects and cells.
 	model is a Pawn model id (custom models are negative). Returns the objects afterwards
 	(with copies or new objects) as ids, or the Pawn; the selection is left empty."""
+	if guide:
+		pin = owner_service.client.command("coordinate_pin")
+		start = pin.get("pin")
+		end = pin.get("ruler_end") if guide == "ruler" else end
+		if not start or (guide == "ruler" and not end):
+			raise ValueError(f"the user has no coordinate {guide} set (Tools > Coordinate pin)")
+	if op == "duplicates":
+		mode = cleanup
 	return service.map_tool(op, ids, count=count, radial=radial, offset=offset, rotate=rotate,
 	                        centre=centre, angle=angle, rows=rows, row_offset=row_offset, axis=axis, around=around, mode=mode,
 	                        step=step, attach=attach, copy=copy, points=points, model=model,
 	                        spacing=spacing, heading=heading, along_length=along_length,
 	                        follow_slope=follow_slope,
-	                        on_ground=on_ground, radar_art=radar_art)
+	                        on_ground=on_ground, radar_art=radar_art, align=align, start=start, end=end,
+	                        axes=axes, anchor=anchor, distribute=distribute, face=face,
+	                        tolerance=tolerance, strict=strict)
 
 
 @mcp.tool()
-def test_in_game(action: Literal["run", "status", "stop", "restart"] = "status",
+def test_in_game(action: Literal["run", "status", "stop", "restart", "launch"] = "status",
                  log_lines: int = 40) -> dict:
 	"""File > Test in game: run the map as it is now on a private open.mp test server.
 
@@ -1279,7 +1388,10 @@ def test_in_game(action: Literal["run", "status", "stop", "restart"] = "status",
 	takes a few seconds, so poll status until state is running (or idle with
 	compiler errors). Returns state, status, compiler messages (file:line: text)
 	and the server log's last log_lines lines. The server package is set in
-	Preferences > Test server or comes from the workspace server."""
+	Preferences > Test server or comes from the workspace server; with neither,
+	the first run downloads the latest open.mp (and the streamer plugin) and
+	state is downloading for a minute or so. launch starts the
+	user's game client connected to the running server, to play the map."""
 	if action in ("run", "restart"):
 		team.settle(commit=False)
 	return service.test_in_game(action, log_lines)
@@ -1355,7 +1467,7 @@ def search_textures(query: str, limit: int = 50) -> dict:
 @mcp.tool()
 def filter_assets(filters: str = "", name: str = "", limit: int = 200,
                   models: list[int] | None = None) -> dict:
-	"""Find models by what they are, with the Object Browser's filters, or get those facts for models.
+	"""Find models by what they are, with the Asset Browser's filters, or get those facts for models.
 
 	filters is key=value pairs joined by ";", e.g. "size=2-10;collision=with;city=san_fierro;sort=polygons".
 	Ranges are min-max (either side may be empty): size (longest side, m), width (X), depth (Y),
@@ -1437,6 +1549,282 @@ def delete_textdraw(index: int) -> dict:
 def undo_edit(steps: int = 1, redo: bool = False) -> dict:
 	"""Step back (or forward with redo=True) through the editor's undo history, the same as Ctrl+Z/Ctrl+Y."""
 	return service.engine("redo" if redo else "undo", [steps])
+
+
+def _ids(ids: list[int] | None) -> str | None:
+	return ",".join(str(int(i)) for i in ids) if ids else None
+
+
+@mcp.tool()
+def world_buildings(action: Literal["removed", "restore", "convert", "model_instances"],
+                    ids: list[int] | None = None, model: int | None = None, limit: int = 100) -> dict:
+	"""GTA's own buildings in the open map.
+
+	removed: the buildings the map removes (RemoveBuildingForPlayer), with their instance ids.
+	restore: puts removed ones (ids) back. convert: keeps buildings (ids) where they are as map
+	objects: saving removes the originals and writes CreateObject (or the streamer's) for them,
+	so they can be moved, retextured and saved. model_instances: every placement of a model in
+	the whole world (GTA's and the map's), e.g. to find where a building stands. restore and
+	convert are edits (undo, edit session); delete_element removes a building."""
+	return service.editor_op("world", action, ids=_ids(ids), model=model, limit=limit)
+
+
+@mcp.tool()
+def clipboard(action: Literal["copy", "cut", "paste", "paste_in_place"], ids: list[int] | None = None) -> dict:
+	"""Ctrl+C, Ctrl+X and Ctrl+V. copy and cut take ids (copy works on GTA buildings too, to paste
+	them as map objects); paste puts the copies where the camera looks, paste_in_place where the
+	originals were. Returns the new ids. map_tool duplicate copies with an offset in one go."""
+	return service.editor_op("clipboard", action, ids=_ids(ids))
+
+
+@mcp.tool()
+def selection_sets(action: Literal["list", "save", "apply", "delete"], name: str | None = None,
+                   ids: list[int] | None = None, add: bool = False) -> dict:
+	"""The user's saved selections (Map Objects), kept with their map: list them with their ids,
+	save a set of ids under a name (replacing one by that name), apply one (selects it on their
+	screen; add keeps what is selected) or delete one."""
+	return service.editor_op("selection_sets", action, name=name, ids=_ids(ids),
+	                         add=add if action == "apply" else None)
+
+
+@mcp.tool()
+def edit_history(action: Literal["list", "goto", "changes"], done: int | None = None, limit: int = 100) -> dict:
+	"""The undo history and what changed since the map was saved.
+
+	list: the steps (type and how many objects) and how many are done. goto: undoes or redoes
+	until done steps are done, like clicking a step in Edit > History (everyone's steps, so not
+	while another agent edits). changes: the elements added, deleted, moved, rotated, restored or
+	retextured since the last save, with what changed."""
+	return service.editor_op("history", action, done=done, limit=limit if action != "goto" else None)
+
+
+@mcp.tool()
+def editor_view(all_hours: bool | None = None, all_interiors: bool | None = None,
+                interior: int | None = None, collision: bool | None = None,
+                radar_art_3d: bool | None = None, radar_layers: bool = False,
+                delete_radar_layer: str | None = None) -> dict:
+	"""View switches that change what the view and capture_view show; omitted ones stay.
+
+	all_hours: timed objects (lights, night signs) at any hour. all_interiors: every interior at
+	once instead of the one being edited. interior: the interior viewed (0-255; objects in
+	others aren't drawn). collision: collision drawn as wireframes. radar_art_3d: radar art layers
+	drawn in 3D.
+	radar_layers=true also lists the radar art layers (map_tool radar_art makes them);
+	delete_radar_layer deletes the layer of that group (an edit, with undo)."""
+	result = service.editor_op("view", "set", all_hours=all_hours, all_interiors=all_interiors,
+	                           interior=interior, collision=collision, radar_art_3d=radar_art_3d)
+	if delete_radar_layer:
+		result["radar_layers"] = service.editor_op("radar_layers", "delete", group=delete_radar_layer)["layers"]
+	elif radar_layers:
+		result["radar_layers"] = service.editor_op("radar_layers", "list")["layers"]
+	return result
+
+
+@mcp.tool()
+def asset_favourites(models: list[int], favourite: bool | None = None) -> dict:
+	"""The Asset Browser's stars (filter_assets mine=favourites lists them): whether these models
+	are favourites, or star (favourite=true) or unstar them for the user."""
+	return service.editor_op("favourites", "get" if favourite is None else "set", models=_ids(models),
+	                         on=favourite)
+
+
+@mcp.tool()
+def export_files(action: Literal["pawn", "dff", "txd", "races"], ids: list[int] | None = None,
+                 path: str | None = None, name: str | None = None,
+                 format: Literal["native", "streamer"] | None = None, centred: bool = False,
+                 directory: str | None = None) -> dict:
+	"""Write files from the map without saving it.
+
+	pawn (File > Export as Pawn): ids, or the whole map, as a Pawn file at path, or name in
+	Haumea's pawn-exports folder; format defaults to the map's; centred writes positions around
+	the origin (relative_to says where from). dff, txd: the models of ids as .dff or .txd files
+	in directory (default Haumea's dff-txd-exports). races: haumea_races.inc (StartMapRace for
+	race_playable checkpoints) into the workspace's qawno/include or pawno/include, or path."""
+	return service.editor_op("export", action, ids=_ids(ids), path=path, name=name, format=format,
+	                         centred=centred if action == "pawn" else None, directory=directory)
+
+
+@mcp.tool()
+def custom_models(action: Literal["add", "import", "migrate", "suggest_id", "reload"], dff: str | None = None,
+                  txd: str | None = None, col: str | None = None, id: int | None = None,
+                  base_id: int | None = None, character: bool = False, name: str | None = None,
+                  txd_name: str | None = None, draw_distance: float | None = None,
+                  ide_flags: int | None = None, models: list[int] | None = None) -> dict:
+	"""Bring new models into the user's editor and workspace.
+
+	add (0.3.DL, Add custom model): copies dff and txd into the server's models folder with an
+	AddSimpleModel line (character=true: AddCharModel, a skin); id -1000..-30000 (skins
+	20001..30000), omitted picks a free one; base_id the game model whose settings it takes
+	(19379, or skin 7). Returns the Pawn model id to place.
+	import (Import custom model): dff, txd and optionally col as a game object id in
+	modloader/Haumea (id: suggest_id's free one by default), with name, txd_name, draw_distance
+	(300) and IDE ide_flags; places one where the camera looks.
+	migrate: moves old modloader/Haumea imports the open map uses (or models) into the server as
+	custom models; reopen the map afterwards.
+	reload: reads every custom model's DFF/TXD again and the AddSimpleModel lists (the map, the
+	maps beside it, gamemodes, models/haumea_models.txt). Files rebuilt on disk are also picked
+	up by themselves within a few seconds, in the background Namaka too."""
+	return service.editor_op("custom_model", action, dff=dff, txd=txd, col=col, id=id, base_id=base_id,
+	                         character=character if action == "add" else None, txd_name=txd_name,
+	                         draw_distance=draw_distance, ide_flags=ide_flags, models=_ids(models),
+	                         **({"name": name} if name else {}))
+
+
+@mcp.tool()
+def workspace(action: Literal["get", "set_workspace", "set_game", "reload_game"] = "get",
+              directory: str | None = None, discard_changes: bool = False) -> dict:
+	"""The user's workspace (their server folder) and game folder.
+
+	get: both, recent workspaces, recent maps and autosaves (newest first; open_map opens one).
+	set_workspace: another server folder ("" for none). set_game: the GTA San Andreas folder,
+	used from the next start. reload_game restarts Haumea to read the game files again (the
+	connection drops for a while; unsaved map changes refuse it unless discard_changes)."""
+	return service.editor_op("workspace", action, directory=directory,
+	                         discard_changes=discard_changes if action == "reload_game" else None)
+
+
+@mcp.tool()
+def pawn_code(action: Literal["get", "set", "refresh", "open", "save", "settings"] = "get",
+              text: str | None = None, path: str | None = None, offset: int = 0, max_bytes: int = 200000,
+              format: Literal["native", "streamer"] | None = None,
+              encoding: Literal["utf-8", "windows-1252"] | None = None,
+              mode: Literal["map", "textdraws", "pawn"] | None = None, discard_changes: bool = False) -> dict:
+	"""The user's Pawn code editor (the Pawn IDE): a script made from the map, or a file.
+
+	get: its text (max_bytes from offset; length is the whole). set: replaces the text.
+	refresh: makes it again from the map. open: reads the script at path. save: writes it to
+	path, or its own file (never the map's .pwn: save_map writes that). settings: format of the
+	generated code, encoding to save with, and mode, the editor on the user's screen (map,
+	textdraws or pawn, the IDE). set, refresh, open and a new format refuse unsaved script
+	changes unless discard_changes."""
+	return service.editor_op("pawn_code", action, text=text, path=path,
+	                         offset=offset if action == "get" else None,
+	                         max_bytes=max_bytes if action == "get" else None, format=format,
+	                         encoding=encoding, mode=mode, discard_changes=discard_changes or None)
+
+
+@mcp.tool()
+def textdraw_layout(action: Literal["boards", "board_new", "board_switch", "board_rename", "board_duplicate",
+                                    "board_delete", "select", "arrange", "shape", "image", "import",
+                                    "guides", "guide_add", "guides_clear", "guide_layout", "code_target"],
+                    board: str | None = None, name: str | None = None, indexes: list[int] | None = None,
+                    command: Literal["left", "centre", "right", "top", "middle", "bottom", "space_across",
+                                     "space_down", "same_width", "same_height", "flip_across",
+                                     "flip_down"] | None = None,
+                    align_to: Literal["selection", "key", "screen"] | None = None, gap: float | None = None,
+                    kind: Literal["rounded", "circle", "bar", "ring", "pill", "outline", "circleoutline",
+                                  "gradient", "triangle", "arrow", "plus"] | None = None,
+                    shape: dict | None = None, path: str | None = None, source: str | None = None,
+                    side: Literal["vertical", "horizontal"] | None = None, at: float | None = None,
+                    layout: dict | None = None, target: Literal["samp", "openmp"] | None = None) -> dict:
+	"""The TextDraws window's boards, arranging, shapes, guides and code target (indexes as
+	list_textdraws gives them; edits need an edit session like add_textdraw).
+
+	Boards are separate screens in one file ("Main" is the first): boards lists them,
+	board_new/board_switch/board_rename (to name)/board_duplicate/board_delete; set_textdraw's
+	board field moves one. arrange: command on indexes (on one board): align left..bottom,
+	space_across/space_down (gap: fixed, else equal), same_width/same_height, flip; align_to the
+	selection, the key (last index) or the screen. shape: a ready-made shape of sprites in a
+	group, kind with shape settings {x, y, w, h, colour, back (0xRRGGBBAA), radius, thickness,
+	segments, value (bar/ring %), dir (right, left, up, down), shadow, shadow_colour}. image: a
+	picture at path under the textdraws to trace (never saved as Pawn). import: textdraws in
+	Pawn source (TextDrawCreate...) added to the board. guides, guide_add (side, at),
+	guides_clear, guide_layout (layout {columns, num_columns, column_width, column_gutter, rows,
+	num_rows, row_height, row_gutter, margins, top, bottom, left, right, clear}: Make the layout).
+	code_target: samp (0.3.7) or openmp, the Pawn the file is saved as."""
+	fields = dict(board=board, ids=_ids(indexes), command=command, align_to=align_to, gap=gap, kind=kind,
+	              path=path, source=source, side=side, at=at, target=target)
+	if name is not None:
+		fields["name"] = name
+	for extra in (shape, layout):
+		for key, value in (extra or {}).items():
+			if key in fields or not str(key).isidentifier():
+				raise ValueError(f"invalid setting {key!r}")
+			fields[str(key)] = f"0x{value:08X}" if key in ("colour", "back", "shadow_colour") and \
+				isinstance(value, int) and not isinstance(value, bool) else value
+	return service.editor_op("textdraw_tool", action, **fields)
+
+
+@mcp.tool()
+def path_nodes(action: Literal["list", "get", "link", "unlink", "delete", "move", "save", "load",
+                               "reload_game"],
+               x: float | None = None, y: float | None = None, radius: float = 50.0,
+               node: list[int] | None = None, to: list[int] | None = None,
+               position: list[float] | None = None, directory: str | None = None,
+               discard_changes: bool = False, limit: int = 100) -> dict:
+	"""Edit the open.mp NPC road network (the Nodes tool); a node is [area, point].
+
+	list: the nodes within radius of x, y with their links. get: one node. link / unlink node
+	and to. delete: a node (later points in its area renumber: list again). move: node to
+	position [x, y, z] (it stays in its 750 m area). save: the edited areas as NODES<n>.DAT into
+	directory (default the workspace's scriptfiles/NPCs/nodes, never the game). load: areas from
+	a folder; reload_game: the game's own nodes again (both refuse unsaved edits unless
+	discard_changes). add_path_node adds nodes."""
+	def pair(value, name):
+		if value is None:
+			return None, None
+		if len(value) != 2:
+			raise ValueError(f"{name} is [area, point]")
+		return int(value[0]), int(value[1])
+	area, point = pair(node, "node")
+	to_area, to_point = pair(to, "to")
+	return service.editor_op("nodes", action, x=x, y=y, radius=radius if action == "list" else None,
+	                         limit=limit if action == "list" else None, area=area, point=point,
+	                         to_area=to_area, to_point=to_point, position=position, directory=directory,
+	                         discard_changes=discard_changes or None)
+
+
+@mcp.tool()
+def interiors(action: Literal["list", "goto", "pawn"] = "list", filter: str = "", index: int | None = None,
+              limit: int = 50) -> dict:
+	"""GTA's interiors (the Interiors window): list those whose name, GXT key or interior id
+	contain filter; goto moves this editor's camera to one's spawn point and shows that interior
+	(look with capture_view); pawn gives SetPlayerInterior/SetPlayerPos/SetPlayerFacingAngle for it."""
+	return service.editor_op("interiors", action, filter=filter if action == "list" else None,
+	                         index=index, limit=limit if action == "list" else None)
+
+
+@mcp.tool()
+def coordinate_pin(action: Literal["get", "set", "clear"] = "get", position: list[float] | None = None,
+                   end: list[float] | None = None, all: bool = False) -> dict:
+	"""The user's coordinate pin and ruler (Tools > Coordinate pin), on their screen.
+
+	set puts a new pin at position [x, y, z] (with a ruler to end when given) to show the user
+	a spot or a distance; it becomes the active pin. clear removes the active pin (all: every
+	pin). get, and every action, returns pin and ruler_end (null when unset) and how many pins
+	there are. Pins aren't undo steps. map_tool(guide='pin'|'ruler') aligns to them."""
+	if action == "set" and not position:
+		raise ValueError("set needs position [x, y, z]")
+	return service.editor_op("coordinate_pin", action, position=position if action == "set" else None,
+	                         end=end if action == "set" else None, all=True if action == "clear" and all else None)
+
+
+@mcp.tool()
+def live_paths(action: Literal["list", "get", "new", "set", "add_point", "insert_point", "remove_point",
+                               "move_point", "generate", "detach", "delete"],
+               index: int | None = None, shape: Literal["line", "curve", "loop", "helix"] | None = None,
+               centre: list[float] | None = None, radius: float | None = None, turns: float | None = None,
+               rise: float | None = None, axis: Literal["x", "y", "z"] | None = None,
+               fit_model: int | None = None, point: int | None = None, after: int | None = None,
+               position: list[float] | None = None, settings: dict | None = None) -> dict:
+	"""Live paths & curves (Tools): a curve with objects along it that follow when it changes.
+
+	new: a shape at centre (default the camera target): line, curve, loop or helix (radius,
+	turns, rise, axis it turns around; fit_model rounds radius so that model's length closes
+	the loop); settings may come in the same call. set: settings {name, model, points [[x,y,z],
+	...] (replaces them), spacing (m), count (0: every spacing, else that many), from, to (0-1:
+	the stretch with objects), curved, closed, follow (tilt with the curve), ground,
+	along_length, heading, bank, side_offset, height_offset}. add_point position (after point),
+	insert_point (the midpoint after point), remove_point / move_point point (position).
+	generate places (or rebuilds) the objects; detach leaves them as plain objects; delete removes
+	the path (its objects stay). Each change is one undo step; index from list or new."""
+	fields = dict(index=index, shape=shape, centre=centre, radius=radius, turns=turns, rise=rise, axis=axis,
+	              fit_model=fit_model, point=point, after=after, position=position)
+	for key, value in (settings or {}).items():
+		if key in fields or not str(key).isidentifier():
+			raise ValueError(f"invalid setting {key!r}")
+		fields[str(key)] = value
+	return service.editor_op("layout_path", action, **fields)
 
 
 def main():

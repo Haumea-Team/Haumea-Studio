@@ -98,8 +98,9 @@ void ResetMapToolsLine();
 // Viewport clicks while picking a line for "Along a line"; true when used.
 bool MapToolsHandleViewportClick(void);
 // The Tools window's sections.
-void MapToolsPanel(void);
-void MapToolsMorePanel(void);	// the specialised tools, after the brush
+// The Tools panel's sections of a tab: 0 placing, 1 arranging, 2 making more.
+void MapToolsTab(int tab);
+int MapToolsRequestedTab(void);	// the tab MapToolsOpenSection asked for, or -1
 // Opens one section of the Tools panel ("Array", "Coordinate pin"...: its English
 // name) and scrolls to it the next time the panel draws.
 void MapToolsOpenSection(const char *name);

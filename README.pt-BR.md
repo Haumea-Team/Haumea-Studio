@@ -159,7 +159,7 @@ sudo apt install libc6:i386 libatomic1:i386
 | | |
 | :---: | --- |
 | **1** | Abra o Haumea Studio e escolha a pasta do GTA San Andreas e a pasta do seu servidor (o workspace). |
-| **2** | Abra o **Navegador de objetos** (<kbd>Ctrl</kbd>+<kbd>1</kbd>), escolha um objeto, clique em **Colocar** e clique no mundo. |
+| **2** | Abra o **Navegador de recursos** (<kbd>Ctrl</kbd>+<kbd>1</kbd>), escolha um objeto, clique em **Colocar** e clique no mundo. |
 | **3** | Pressione <kbd>F5</kbd> para testar o mapa num servidor open.mp privado. |
 | **4** | Pressione <kbd>Ctrl</kbd>+<kbd>S</kbd> para salvá-lo como arquivo Pawn. |
 

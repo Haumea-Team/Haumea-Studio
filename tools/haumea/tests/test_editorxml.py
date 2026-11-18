@@ -147,11 +147,11 @@ class XMLMigrationTests(unittest.TestCase):
         obj.set('position.x', '17.25')
         xml.write(str(target)+'.xml', encoding='utf-8', xml_declaration=True)
         self.run_pairs((target, copy))
-        self.assertIn('17.250000, 20.000000, 30.000000', copy.read_text())
+        self.assertIn('17.25, 20.0, 30.0', copy.read_text())
         # Changed Pawn keeps its runtime values; the named object's notes survive.
-        target.write_text(target.read_text().replace('10.000000, 20.000000', '42.000000, 20.000000'))
+        target.write_text(target.read_text().replace('10.0, 20.0', '42.0, 20.0'))
         self.run_pairs((target, copy))
-        self.assertIn('42.000000, 20.000000', copy.read_text())
+        self.assertIn('42.0, 20.0', copy.read_text())
         props = self.xml(copy).getroot().find('./scene/object/properties')
         self.assertEqual(props.get('group'), 'Doors')
         self.assertEqual(props.get('comment'), 'A & B')
@@ -176,8 +176,8 @@ class XMLMigrationTests(unittest.TestCase):
     def test_deleted_world_does_not_consume_same_model_replacement(self):
         source,target,copy=[self.folder/name for name in ('old.pwn','map.pwn','copy.pwn')]
         source.write_text('stock Init(playerid){\n'
-            'RemoveBuildingForPlayer(playerid, 3555, 2063.132813, -1731.781250, 15.273438, 0.25);\n'
-            'CreateObject(3555, 2063.132813, -1731.781250, 15.273438, 0.0, 0.0, 0.0);\n'
+            'RemoveBuildingForPlayer(playerid, 3555, 2063.1328, -1731.7812, 15.273438, 0.25);\n'
+            'CreateObject(3555, 2063.1328, -1731.7812, 15.273438, 0.0, 0.0, 0.0);\n'
             'CreateObject(1271, 10.0, 20.0, 30.0, 0.0, 0.0, 0.0);\n}\n')
         self.run_pairs((source,target),(target,copy))
         self.assertEqual(target.read_text(),copy.read_text().replace('Haumea_copy','Haumea_map'))
@@ -193,7 +193,7 @@ class XMLMigrationTests(unittest.TestCase):
         xml.getroot().find('./removals/sphere').set('radius','2.5')
         xml.write(str(target)+'.xml',encoding='utf-8',xml_declaration=True)
         self.run_pairs((target,copy))
-        self.assertIn('RemoveBuildingForPlayer(playerid, -1, 100.000000, 200.000000, 3.000000, 2.500000)',copy.read_text())
+        self.assertIn('RemoveBuildingForPlayer(playerid, -1, 100.0, 200.0, 3.0, 2.5)',copy.read_text())
         self.assertEqual(self.xml(copy).getroot().find('./removals/sphere').get('radius'),'2.5')
 
     def test_invalid_xml_is_not_overwritten(self):

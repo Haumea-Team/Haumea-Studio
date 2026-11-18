@@ -16,29 +16,29 @@ stock Haumea_hv_areas_CreateObjects()
 	new objectid;
 
 	// ---- dynamic areas (streamer) ----
-	new const areaid = CreateDynamicCuboid(2080.463867, -1776.104248, -89.000000, 2534.369629, -1381.691650, 0.000000, -1, -1); // area [dynamic area]
-	new const areaid_2 = CreateDynamicCuboid(1900.000000, -1800.000000, -40.000000, 1950.000000, -1750.000000, -10.000000, -1, -1); // area [dynamic area]
-	new const circle = CreateDynamicCircle(2300.000000, -1600.000000, 25.000000, -1, -1); // area [dynamic area]
-	new const cylinder = CreateDynamicCylinder(2340.000000, -1600.000000, 10.000000, 30.000000, 15.000000, 0, 0); // area [dynamic area]
-	new const sphere = CreateDynamicSphere(2380.000000, -1600.000000, 14.000000, 12.000000, -1, -1); // area [dynamic area]
-	new const rectangle = CreateDynamicRectangle(2350.000000, -1650.000000, 2370.000000, -1630.000000, -1, -1); // area [dynamic area]
-	new const cube = CreateDynamicCube(2300.000000, -1700.000000, 10.000000, 2310.000000, -1690.000000, 20.000000, -1, -1); // area [dynamic area]
-	new const yard = CreateDynamicPolygon(Float:{2400.000000, -1700.000000, 2420.000000, -1700.000000, 2420.000000, -1680.000000, 2400.000000, -1680.000000}, 10.000000, 30.000000, 8, -1, -1); // area [dynamic area]
-	new const triangle = CreateDynamicPolygon(Float:{2450.000000, -1700.000000, 2470.000000, -1700.000000, 2460.000000, -1680.000000}, -FLOAT_INFINITY, FLOAT_INFINITY, 6, -1, -1); // area [dynamic area]
-	new const spare = CreateDynamicCircle(2500.000000, -1600.000000, 5.000000, -1, -1); // area [dynamic area]
+	new const areaid = CreateDynamicCuboid(2080.4639, -1776.1042, -89.0, 2534.3696, -1381.6917, 0.0, -1, -1); // area [dynamic area]
+	new const areaid_2 = CreateDynamicCuboid(1900.0, -1800.0, -40.0, 1950.0, -1750.0, -10.0, -1, -1); // area [dynamic area]
+	new const circle = CreateDynamicCircle(2300.0, -1600.0, 25.0, -1, -1); // area [dynamic area]
+	new const cylinder = CreateDynamicCylinder(2340.0, -1600.0, 10.0, 30.0, 15.0, 0, 0); // area [dynamic area]
+	new const sphere = CreateDynamicSphere(2380.0, -1600.0, 14.0, 12.0, -1, -1); // area [dynamic area]
+	new const rectangle = CreateDynamicRectangle(2350.0, -1650.0, 2370.0, -1630.0, -1, -1); // area [dynamic area]
+	new const cube = CreateDynamicCube(2300.0, -1700.0, 10.0, 2310.0, -1690.0, 20.0, -1, -1); // area [dynamic area]
+	new const yard = CreateDynamicPolygon(Float:{2400.0, -1700.0, 2420.0, -1700.0, 2420.0, -1680.0, 2400.0, -1680.0}, 10.0, 30.0, 8, -1, -1); // area [dynamic area]
+	new const triangle = CreateDynamicPolygon(Float:{2450.0, -1700.0, 2470.0, -1700.0, 2460.0, -1680.0}, -FLOAT_INFINITY, FLOAT_INFINITY, 6, -1, -1); // area [dynamic area]
+	new const spare = CreateDynamicCircle(2500.0, -1600.0, 5.0, -1, -1); // area [dynamic area]
 	#pragma unused spare
 
-	objectid = CreateDynamicObject(18990, 2488.229980, -1656.476929, -8.388013, 89.999992, -45.199764, -89.999961, -1, 0, -1, STREAMER_OBJECT_SD, 300.00, areaid); // Tube25m90Bend1
+	objectid = CreateDynamicObject(18990, 2488.23, -1656.4769, -8.388013, 89.999992, -45.199764, -89.999961, -1, 0, -1, 300.0, 300.0, areaid); // Tube25m90Bend1
 	SetDynamicObjectMaterial(objectid, 1, 18065, "ab_sfammumain", "breezewall5", 0xFFFCFFE6);
 
-	CreateDynamicObject(18990, 2480.229980, -1650.476929, -8.388013, 89.999992, -45.199764, -89.999961, -1, 0, -1, STREAMER_OBJECT_SD, 300.00, areaid); // Tube25m90Bend1
-	CreateDynamicObject(19353, 2470.000000, -1640.000000, -8.000000, 0.000000, 0.000000, 90.000000, -1, 0, -1, STREAMER_OBJECT_SD, 300.00, areaid); // wall001
-	CreateDynamicObject(19353, 1920.000000, -1780.000000, -20.000000, 0.000000, 0.000000, 0.000000, -1, -1, -1, STREAMER_OBJECT_SD, STREAMER_OBJECT_DD, areaid_2); // wall001
-	CreateDynamicPickup(1240, 2, 2300.000000, -1600.000000, 13.500000, -1, -1, -1, STREAMER_PICKUP_SD, circle); // health [pickup]
-	CreateDynamicObject(1271, 2340.000000, -1600.000000, 13.500000, 0.000000, 0.000000, 0.000000, 0, 0, -1, STREAMER_OBJECT_SD, 300.00, cylinder); // gunbox
-	CreateDynamicCP(2380.000000, -1600.000000, 13.500000, 3.00, -1, -1, -1, STREAMER_CP_SD, sphere); // checkpoint
-	CreateDynamic3DTextLabel("Members only", 0xFFFFFFFF, 2360.000000, -1640.000000, 14.000000, 20.00, INVALID_PLAYER_ID, INVALID_VEHICLE_ID, false, -1, -1, -1, STREAMER_3D_TEXT_LABEL_SD, rectangle); // info [3D text label]
-	CreateDynamicMapIcon(2305.000000, -1695.000000, 13.000000, 52, 0x00000000, -1, -1, -1, STREAMER_MAP_ICON_SD, MAPICON_LOCAL, cube); // mapicon [map icon]
-	CreateDynamicActor(280, 2410.000000, -1690.000000, 13.500000, 90.000000, 1, 100.00, -1, -1, -1, STREAMER_ACTOR_SD, yard); // lapd1 [actor]
-	CreateDynamicObject(1271, 2460.000000, -1693.000000, 13.500000, 0.000000, 0.000000, 0.000000, -1, -1, -1, STREAMER_OBJECT_SD, STREAMER_OBJECT_DD, triangle); // gunbox
+	CreateDynamicObject(18990, 2480.23, -1650.4769, -8.388013, 89.999992, -45.199764, -89.999961, -1, 0, -1, 300.0, 300.0, areaid); // Tube25m90Bend1
+	CreateDynamicObject(19353, 2470.0, -1640.0, -8.0, 0.0, 0.0, 90.0, -1, 0, -1, 300.0, 300.0, areaid); // wall001
+	CreateDynamicObject(19353, 1920.0, -1780.0, -20.0, 0.0, 0.0, 0.0, -1, -1, -1, STREAMER_OBJECT_SD, STREAMER_OBJECT_DD, areaid_2); // wall001
+	CreateDynamicPickup(1240, 2, 2300.0, -1600.0, 13.5, -1, -1, -1, STREAMER_PICKUP_SD, circle); // health [pickup]
+	CreateDynamicObject(1271, 2340.0, -1600.0, 13.5, 0.0, 0.0, 0.0, 0, 0, -1, 300.0, 300.0, cylinder); // gunbox
+	CreateDynamicCP(2380.0, -1600.0, 13.5, 3.0, -1, -1, -1, STREAMER_CP_SD, sphere); // checkpoint
+	CreateDynamic3DTextLabel("Members only", 0xFFFFFFFF, 2360.0, -1640.0, 14.0, 20.0, INVALID_PLAYER_ID, INVALID_VEHICLE_ID, false, -1, -1, -1, STREAMER_3D_TEXT_LABEL_SD, rectangle); // info [3D text label]
+	CreateDynamicMapIcon(2305.0, -1695.0, 13.0, 52, 0x00000000, -1, -1, -1, STREAMER_MAP_ICON_SD, MAPICON_LOCAL, cube); // mapicon [map icon]
+	CreateDynamicActor(280, 2410.0, -1690.0, 13.5, 90.0, 1, 100.0, -1, -1, -1, STREAMER_ACTOR_SD, yard); // lapd1 [actor]
+	CreateDynamicObject(1271, 2460.0, -1693.0, 13.5, 0.0, 0.0, 0.0, -1, -1, -1, STREAMER_OBJECT_SD, STREAMER_OBJECT_DD, triangle); // gunbox
 }

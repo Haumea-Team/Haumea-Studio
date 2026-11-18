@@ -23,9 +23,6 @@ msgstr "Sincronização vertical"
 msgid "Limit frame rate"
 msgstr "Limitar taxa de quadros"
 
-msgid "Uncapped"
-msgstr "Sem limite"
-
 msgid "%.0f FPS  /  %.1f ms"
 msgstr "%.0f FPS  /  %.1f ms"
 
@@ -46,9 +43,6 @@ msgstr "Prévia dos mundos virtuais, interiores, áreas e limites de objetos do 
 
 msgid "Recent workspaces"
 msgstr "Áreas de trabalho recentes"
-
-msgid "Folder missing"
-msgstr "Pasta não encontrada"
 
 msgid "Remove from recent"
 msgstr "Remover dos recentes"
@@ -152,14 +146,6 @@ msgstr "Nenhum ponto ainda. Escolha Caminhos no navegador para adicioná-los."
 msgid "Map elements"
 msgstr "Elementos do mapa"
 
-#, c-format
-msgid "%d selected · Drag gizmo to move or rotate · %s deletes."
-msgstr "%d selecionados · Arraste o gizmo para mover ou girar · %s exclui."
-
-#, c-format
-msgid "%s Browse · %s Map objects · %s Save · %s Shortcuts"
-msgstr "%s Navegar · %s Objetos do mapa · %s Salvar · %s Atalhos"
-
 msgid "Brush with this object"
 msgstr "Pintar com este objeto"
 
@@ -172,14 +158,6 @@ msgstr "Escolha um objeto e clique no mundo para colocá-lo."
 msgid "Choose or create a workspace."
 msgstr "Escolha ou crie um workspace."
 
-#, c-format
-msgid "Click or drag to paint · %s stops."
-msgstr "Clique ou arraste para pintar · %s encerra."
-
-#, c-format
-msgid "Click to place · Shift+click repeats · %s stops."
-msgstr "Clique para colocar · Shift+clique repete · %s encerra."
-
 msgid "Continue without workspace"
 msgstr "Continuar sem workspace"
 
@@ -189,25 +167,11 @@ msgstr "Criar uma pasta de workspace."
 msgid "Dark"
 msgstr "Escuro"
 
-#, c-format
-msgid "Drag to move · drag a corner to resize · %s stops."
-msgstr "Arraste para mover · arraste um canto para redimensionar · %s encerra."
-
-#, c-format
-msgid "Draw distance %.0f  ·  LOD %s"
-msgstr "Distância de desenho %.0f  ·  LOD %s"
-
-msgid "Edit Pawn · Ctrl+S saves · Ctrl+F searches."
-msgstr "Edite Pawn · Ctrl+S salva · Ctrl+F busca."
-
 msgid "Find similar models"
 msgstr "Buscar modelos semelhantes"
 
 msgid "Follow ground"
 msgstr "Seguir o chão"
-
-msgid "Game folder"
-msgstr "Pasta do jogo"
 
 msgid "Hold Shift while moving with the magnet on."
 msgstr "Segure Shift ao mover com o ímã ativado."
@@ -230,9 +194,6 @@ msgstr "Alinhar o ângulo do objeto à inclinação do chão. Ative Seguir o ch�
 
 msgid "More actions"
 msgstr "Mais ações"
-
-msgid "More display and snapping options"
-msgstr "Mais opções de exibição e ajuste"
 
 msgid "New objects sit on the object under the cursor."
 msgstr "Novos objetos ficam sobre o objeto sob o cursor."
@@ -265,18 +226,11 @@ msgstr "Cliente SA-MP não encontrado"
 msgid "SA-MP's own objects won't show without its client files."
 msgstr "Os objetos do SA-MP não aparecem sem os arquivos do cliente."
 
-msgid "Show object edges, including invisible and see-through objects."
-msgstr "Mostrar as bordas dos objetos, incluindo os invisíveis e transparentes."
-
 msgid "Start with a category."
 msgstr "Comece por uma categoria."
 
 msgid "Switch between tiles and list. Right-click for tile size."
 msgstr "Alternar entre miniaturas e lista. Clique com o botão direito para ajustar o tamanho."
-
-#, c-format
-msgid "TXD %s"
-msgstr "TXD %s"
 
 msgid "Theme"
 msgstr "Tema"

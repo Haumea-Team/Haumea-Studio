@@ -7,6 +7,8 @@ wait 5
 wait 10
 assert objects == 6
 assert radar_zones == 0
+click_item 'Tools' '###tools_create'
+wait 2
 click_item 'Tools' 'Radar art from objects'
 wait 30
 scroll_until 'Tools' '##radar_apply'

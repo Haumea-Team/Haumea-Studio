@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #include "haumea.h"
 #include "playerview.h"
+#include "buildreplay.h"
 #include "areas.h"
 
 #include <algorithm>
@@ -163,6 +164,8 @@ PlayerViewUpdate(void)
 bool
 PlayerViewHides(const ObjectInst *inst)
 {
+	if(BuildReplayHides(inst))
+		return true;
 	return gPlayerView && inst->m_playerView == PV_HIDDEN && !inst->m_selected;
 }
 

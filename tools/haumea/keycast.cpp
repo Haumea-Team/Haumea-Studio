@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #include "haumea.h"
 #include "keycast.h"
+#include "textdraws.h"
+#include "pawneditor.h"
 #include "shortcuts.h"
 #include "icons.h"
 #include "i18n.h"
@@ -238,10 +240,17 @@ viewRect(ImVec2 *pos, ImVec2 *size)
 	*pos = vp->WorkPos;
 	*size = vp->WorkSize;
 #ifdef IMGUI_HAS_DOCK
-	ImGuiDockNode *central = ImGui::DockBuilderGetCentralNode(ImHashStr("HaumeaDockSpace"));
+	// The open editor's own dock space: the map's, or the TextDraw canvas's.
+	// The Code editor fills the work area.
+	if(InPawnIdeMode())
+		return;
+	ImGuiDockNode *central = ImGui::DockBuilderGetCentralNode(ImHashStr(InTextDrawMode() ? "HaumeaTextDrawDockSpace" : "HaumeaDockSpace"));
 	if(central && central->Size.x > 32.0f && central->Size.y > 32.0f){
 		*pos = central->Pos;
 		*size = central->Size;
+		// Above the selection pill at the map view's bottom, not under it.
+		if(!InTextDrawMode())
+			size->y -= ViewportBottomOverlayInset();
 	}
 #endif
 }
@@ -429,19 +438,19 @@ KeycastPreferences(void)
 {
 	bool changed = false;
 	bool keys = gShowKeys;
-	if(ImGui::Checkbox(L("Show pressed keys (for tutorials and recordings)"), &keys)){
+	if(UiCheckbox(L("Show pressed keys (for tutorials and recordings)"), &keys)){
 		KeycastSetEnabled(keys);
 		changed = true;
 	}
 	ImGui::SetItemTooltip("%s", _("Shows the keys and mouse buttons you press over the 3D view.\n"
 		"While you type in a field only shortcuts show, never the text."));
-	changed |= ImGui::Checkbox(L("Show what Namaka is doing"), &gShowAgent);
+	changed |= UiCheckbox(L("Show what Namaka is doing"), &gShowAgent);
 	ImGui::SetItemTooltip("%s", _("While Namaka works in the editor, a line over the 3D view says what it is doing."));
 	if(!gShowAgent)
 		gAgent.clear();
 	if(gShowKeys || gShowAgent){
 		const char *corners[NUM_CORNERS] = { _("Bottom"), _("Bottom left"), _("Bottom right"), _("Top left"), _("Top right") };
-		changed |= ImGui::Combo(L("Where"), &gCorner, corners, NUM_CORNERS);
+		changed |= UiCombo(L("Where"), &gCorner, corners, NUM_CORNERS);
 		ImGui::SetItemTooltip("%s", _("Where in the 3D view the pressed keys and Namaka's actions show."));
 	}
 	return changed;

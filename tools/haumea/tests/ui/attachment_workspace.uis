@@ -46,12 +46,12 @@ assert selected.y < -2999.99
 assert selected.z > 5.99
 assert selected.z < 6.01
 assert pawn_contains 'SetPlayerAttachedObject(walker, 0, 1271, 6,'
-assert pawn_contains '1.500000, 0.800000, 2.000000, 0x00000000, 0x00000000'
+assert pawn_contains '1.5, 0.8, 2.0, 0x00000000, 0x00000000'
 # The attached object's settings are editable in the workspace itself.
 assert item 'Attachment Workspace' 'Player slot'
 set_item 'Attachment Workspace' 'Offset/#0' '0.25' ctrl tab
 wait 4
-assert pawn_contains '1271, 6, 0.250000,'
+assert pawn_contains '1271, 6, 0.25,'
 # Selecting the host keeps editing its real attachment, without a fake entry.
 set_item 'Attachment Workspace' 'Offset/#0' '5.0' ctrl tab
 click_object model=7
@@ -62,7 +62,7 @@ assert item 'Attachment Workspace' 'Offset/#0'
 assert item 'Attachment Workspace' 'Rotation/#0'
 set_item 'Attachment Workspace' 'Offset/#0' '0.5' ctrl tab
 wait 4
-assert pawn_contains '1271, 6, 0.500000,'
+assert pawn_contains '1271, 6, 0.5,'
 assert selected.x > 1999.99
 assert selected.x < 2000.01
 set_item 'Attachment Workspace' 'Offset/#0' '0.25' ctrl tab
@@ -74,13 +74,13 @@ wait 3
 # New browser models are attached using the current bone and scale.
 click_item 'Attachment Workspace' 'Browse models'
 wait 5
-click_item 'Object Browser' '##browser_source'
+click_item 'Asset Browser' '##browser_source'
 wait 3
 click_item '*' 'Objects'
 wait 3
-set_item 'Object Browser' '##search_objects' '1238'
+set_item 'Asset Browser' '##search_objects' '1238'
 wait 5
-click_item 'Object Browser' '##tile'
+click_item 'Asset Browser' '##tile'
 wait 3
 move 1100 650
 shortcut window_browser
@@ -89,7 +89,7 @@ click_item 'Attachment Workspace' 'Add selected model'
 wait 5
 assert objects == 6
 assert selected.model == 1238
-assert pawn_contains 'SetPlayerAttachedObject(walker, 1, 1238, 6, 0.250000,'
+assert pawn_contains 'SetPlayerAttachedObject(walker, 1, 1238, 6, 0.25,'
 # Creating an attachment is one undo step.
 move 1100 650
 shortcut undo
@@ -98,7 +98,7 @@ assert objects == 5
 shortcut redo
 wait 5
 assert objects == 6
-assert pawn_contains 'SetPlayerAttachedObject(walker, 1, 1238, 6, 0.250000,'
+assert pawn_contains 'SetPlayerAttachedObject(walker, 1, 1238, 6, 0.25,'
 # Clicking a vehicle retargets the same window and exposes vehicle controls.
 click_object model=411
 wait 5
@@ -159,8 +159,8 @@ wait 5
 reopen
 wait 8
 assert objects == 6
-assert pawn_contains 'SetPlayerAttachedObject(walker, 0, 1271, 6, 0.250000,'
-assert pawn_contains '1.500000, 0.800000, 2.000000, 0x00000000, 0x00000000'
+assert pawn_contains 'SetPlayerAttachedObject(walker, 0, 1271, 6, 0.25,'
+assert pawn_contains '1.5, 0.8, 2.0, 0x00000000, 0x00000000'
 assert pawn_contains 'AttachObjectToVehicle('
 click_object model=7
 wait 5

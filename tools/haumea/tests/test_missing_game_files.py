@@ -78,7 +78,7 @@ set_item 'Welcome to Haumea Studio' '##game' '{healthy}'
 click_item 'Welcome to Haumea Studio' 'Continue'
 wait 20
 assert no_window 'Welcome to Haumea Studio'
-assert item '*' 'Code'
+assert item '*' 'editor'
 ''', saved=True)
 
     def test_empty_core_file_is_also_rejected(self):

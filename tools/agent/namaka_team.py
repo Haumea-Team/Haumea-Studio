@@ -37,7 +37,8 @@ START_TIMEOUT = 180.0
 JOIN_TIMEOUT = 60.0
 # Agents can't do these to the session from a worker: they would take it from everyone.
 OWNER_ONLY_TOOLS = {"open_map", "new_map", "merge_map", "multiplayer_session", "test_in_game", "namaka_team",
-                    "textdraw_file"}
+                    "textdraw_file", "workspace", "custom_models", "pawn_code", "selection_sets",
+                    "asset_favourites", "coordinate_pin"}
 # With no namaka given, these still act on the user's editor: its file, its view and its session.
 EDITOR_TOOLS = OWNER_ONLY_TOOLS | {"haumea_status", "save_map", "move_camera", "camera_back"}
 # These don't look at the scene, so they need no worker (and use one only if it's up).
@@ -121,10 +122,11 @@ class NamakaTeam:
 		worker = self.workers.get(DEFAULT_WORKER)
 		return worker.service if worker and worker.process.poll() is None else None
 
-	def default_service(self) -> HaumeaService:
+	def default_service(self, holds_ids: bool = True) -> HaumeaService:
 		"""The hidden Namaka tools work in unless told otherwise, started on first need.
 
-		Where one can't run, the user's editor, as before workers existed."""
+		Where one can't run, the user's editor, as before workers existed. holds_ids: the call
+		names instance ids (or a plan made of them), which a restarted Namaka can't know."""
 		if not self._can_hide:
 			return self.owner
 		with self._default_lock:
@@ -132,10 +134,13 @@ class NamakaTeam:
 			if running:
 				return running
 			if self._default_started:
-				# It closed. Its instance ids meant nothing to the next one, so the caller must look again.
+				# It closed. Its instance ids meant nothing to the next one, so a call naming them must
+				# look again; one that names none (a screenshot from a pose, a listing) just carries on.
 				self._default_started = False
-				raise HaumeaError("the background Namaka closed after sitting idle, so instance ids from before no "
-				                  "longer apply: list the scene again and retry. What it built is still in the map.")
+				if holds_ids:
+					raise HaumeaError("the background Namaka closed after sitting idle, so instance ids from before "
+					                  "no longer apply: list the scene again and retry. What it built is still in the "
+					                  "map.")
 			try:
 				info = self.owner.client.command("editor_info")
 				if not info.get("can_hide_window") or info.get("background"):
@@ -277,10 +282,24 @@ class NamakaTeam:
 				# It starts looking where the user is looking.
 				camera = self.owner.client.command("camera_context")["camera"]
 				client.command("camera", *camera["position"], *camera["target"], camera["fov"])
+				self._match_user_view(worker.service)
 				return
 			if status["state"] == "off" or time.time() > deadline:
 				raise HaumeaError(f"Namaka {worker.name} couldn't join: {status.get('status') or status['state']}")
 			time.sleep(0.1)
+
+	def _match_user_view(self, service: HaumeaService) -> None:
+		"""Its screenshots look like the user's view: their hour and weather (a fresh editor has noon in
+		the sunniest weather, whose colour filter is the strongest) and the interior they look at."""
+		try:
+			env = self.owner.client.command("environment")
+			service.client.command("environment", env["hour"], env["minute"], env["weather_a"], env["weather_b"],
+			                       f"{float(env['blend']):.4f}")
+			view = self.owner.editor_op("view", "get")
+			service.editor_op("view", "set", all_interiors=bool(view.get("all_interiors")),
+			                  interior=view.get("interior"))
+		except (OSError, KeyError, ValueError, HaumeaError) as error:
+			print(f"Namaka: couldn't match the user's view: {error}", file=sys.stderr, flush=True)
 
 	def spawn(self, names: list[str], address: str | None = None, password: str | None = None) -> dict:
 		for name in names:

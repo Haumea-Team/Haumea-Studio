@@ -471,16 +471,27 @@ TelemetryDrawConsent(void)
 	ImGui::BeginChild("##telemetry_question", ImVec2(0, 0), ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_AlwaysUseWindowPadding);
 	ImGui::TextWrapped(_("Help count Haumea Studio's users? Once a day it would send a random install ID, "
 		"the version, the channel and the operating system: nothing about you, your computer or your maps."));
-	if(ImGui::Button(_("Yes, send it")))
+	ImGui::Spacing();
+	// The answer as one row of equal buttons, the yes in the accent.
+	float spacing = ImGui::GetStyle().ItemSpacing.x;
+	ImVec2 third(floorf((ImGui::GetContentRegionAvail().x - spacing * 2) / 3), 0);
+	ImVec4 fill = UiAccentFill();
+	ImGui::PushStyleColor(ImGuiCol_Button, fill);
+	ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(fill.x*1.12f, fill.y*1.12f, fill.z*1.12f, 1.0f));
+	ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(fill.x*0.9f, fill.y*0.9f, fill.z*0.9f, 1.0f));
+	ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 1, 1, 1));
+	bool yes = ImGui::Button(_("Yes, send it"), third);
+	ImGui::PopStyleColor(4);
+	ImGui::SetItemTooltip("%s", _("Preferences > Privacy changes it later."));
+	if(yes)
 		TelemetrySetEnabled(true);
 	ImGui::SameLine();
-	if(ImGui::Button(_("No thanks")))
+	if(ImGui::Button(_("No thanks"), third))
 		TelemetrySetEnabled(false);
+	ImGui::SetItemTooltip("%s", _("Preferences > Privacy changes it later."));
 	ImGui::SameLine();
-	if(ImGui::SmallButton(_("What is kept?")))
+	if(ImGui::Button(_("What is kept?"), third))
 		OpenInFileManager(PRIVACY_URL);
-	ImGui::SameLine();
-	ImGui::TextDisabled(_("Preferences > Privacy changes it later."));
 	ImGui::EndChild();
 	ImGui::PopStyleVar();
 	ImGui::PopStyleColor();
@@ -498,11 +509,16 @@ void
 TelemetryPreferences(void)
 {
 	bool on = TelemetryIsEnabled();
-	if(ImGui::Checkbox(_("Send a daily usage ping"), &on))
+	if(UiCheckbox(_("Send a daily usage ping"), &on))
 		TelemetrySetEnabled(on);
-	ImGui::TextWrapped(_("At most once a day: a random install ID, the version (%s), the channel (%s) and the "
+	if(ImGui::BeginItemTooltip()){
+		ImGui::PushTextWrapPos(ImGui::GetFontSize() * 24.0f);
+		ImGui::TextWrapped(_("At most once a day: a random install ID, the version (%s), the channel (%s) and the "
 		"operating system (%s). It counts how many installs are in use; nothing about you, your computer or "
 		"your maps is sent. Turning it off deletes the ID."), HaumeaFullVersion(), HAUMEA_CHANNEL, osName());
+		ImGui::PopTextWrapPos();
+		ImGui::EndTooltip();
+	}
 	if(on){
 		load();
 		if(!gLastSent.empty())
@@ -510,6 +526,6 @@ TelemetryPreferences(void)
 		if(const char *why = blockedBecause())
 			ImGui::TextDisabled(_("Not sent from this run (%s)."), _(why));
 	}
-	if(ImGui::SmallButton(_("What is sent and kept...")))
+	if(ImGui::Button(_("What is sent and kept..."), ImVec2(-FLT_MIN, 0)))
 		OpenInFileManager(PRIVACY_URL);
 }

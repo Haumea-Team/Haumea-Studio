@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-#include "particles.h"
 #include "haumea.h"
+#include "particles.h"
 #include "particlefx.h"
 #include "playerview.h"
 #include <algorithm>
@@ -132,10 +132,13 @@ void quad(const rw::V3d corners[4], const ParticleFX::Appearance &a)
 		v.setV(vs[k]);
 	}
 }
-void render()
+// The sprites in draws, facing a camera at eye with those right and up
+// axes. cull: skip the ones off the 3D view's screen (not for previews).
+void render(rw::V3d eye, rw::V3d cameraRight, rw::V3d cameraUp, bool cull)
 {
 	if (draws.empty())
 		return;
+	(void)eye;
 	// Sort transparent sprites globally, including particles from different objects.
 	std::sort(draws.begin(), draws.end(),
 			  [](const Draw &a, const Draw &b) { return a.distance > b.distance; });
@@ -151,9 +154,6 @@ void render()
 	rw::SetRenderState(rw::ZWRITEENABLE, 0);
 	rw::SetRenderState(rw::CULLMODE, rw::CULLNONE);
 	rw::SetRenderState(rw::ALPHATESTREF, 0);
-	rw::V3d direction = rw::normalize(rw::sub(TheCamera.m_target, TheCamera.m_position));
-	rw::V3d cameraRight = rw::normalize(rw::cross(direction, TheCamera.m_up));
-	rw::V3d cameraUp = rw::normalize(rw::cross(cameraRight, direction));
 	rw::Raster *current = nil;
 	int src = -1, dst = -1;
 	for (const Draw &item : draws) {
@@ -165,7 +165,7 @@ void render()
 			continue;
 		rw::V3d centre = vec(p.position), screen;
 		float sw, sh;
-		if (!Sprite::CalcScreenCoors(centre, &screen, &sw, &sh, false))
+		if (cull && !Sprite::CalcScreenCoors(centre, &screen, &sw, &sh, false))
 			continue;
 		unsigned image = p.texture;
 		if (primitive.info[ParticleFX::AnimTexture].present) {
@@ -348,6 +348,90 @@ void Render(float dt)
 			++it;
 	stats.systems = (int)states.size();
 	stats.live = (int)total;
-	render();
+	rw::V3d direction = rw::normalize(rw::sub(TheCamera.m_target, TheCamera.m_position));
+	rw::V3d cameraRight = rw::normalize(rw::cross(direction, TheCamera.m_up));
+	rw::V3d cameraUp = rw::normalize(rw::cross(cameraRight, direction));
+	render(TheCamera.m_position, cameraRight, cameraUp, true);
+}
+
+// ---- A model's effects in a preview (Asset Browser tiles and the like) ----
+// Its particle systems run for a while at the model's origin, so the picture
+// shows the effect going rather than its first frame.
+namespace
+{
+int previewModel = -1;
+std::vector<std::unique_ptr<State>> previewStates;
+}
+
+bool PreviewModelParticles(int objectId, const std::vector<Effect> &effects, rw::V3d *centre, float *radius)
+{
+	previewStates.clear();
+	previewModel = -1;
+	if (!isSA())
+		return false;
+	bool any = false;
+	for (const Effect &effect : effects)
+		any |= effect.type == FX_PARTICLE && effect.prtcl.name[0];
+	if (!any)
+		return false;
+	load();
+	for (size_t n = 0; n < effects.size(); n++) {
+		const Effect &effect = effects[n];
+		if (effect.type != FX_PARTICLE || !effect.prtcl.name[0])
+			continue;
+		const auto *system = project.find(effect.prtcl.name);
+		if (!system)
+			continue;
+		ParticleFX::Matrix transform = {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, vec(effect.pos)};
+		std::unique_ptr<State> state(new State(system, 1234u + (uint32_t)n));
+		state->transform = transform;
+		// About two and a half seconds, in steps of a frame.
+		for (int step = 0; step < 75; step++)
+			state->simulation.advance(1.0f / 30.0f, transform, {.4f, .2f, 0}, PerSystem);
+		previewStates.push_back(std::move(state));
+	}
+	rw::V3d lo = {1e9f, 1e9f, 1e9f}, hi = {-1e9f, -1e9f, -1e9f};
+	any = false;
+	for (const auto &state : previewStates)
+		for (const auto &p : state->simulation.particles) {
+			ParticleFX::Appearance a = state->simulation.appearance(p);
+			float r = std::max(a.width, a.height) * 0.5f;
+			rw::V3d at = vec(p.position);
+			lo = {std::min(lo.x, at.x - r), std::min(lo.y, at.y - r), std::min(lo.z, at.z - r)};
+			hi = {std::max(hi.x, at.x + r), std::max(hi.y, at.y + r), std::max(hi.z, at.z + r)};
+			any = true;
+		}
+	if (!any)
+		return false;
+	previewModel = objectId;
+	*centre = scale(add(lo, hi), 0.5f);
+	*radius = std::max(0.5f, length(sub(hi, lo)) * 0.5f);
+	return true;
+}
+
+void RenderModelParticles(int objectId, rw::V3d eye, rw::V3d target, rw::V3d up)
+{
+	if (objectId != previewModel || previewStates.empty())
+		return;
+	for (int q = 0; q < 1024; q++) {
+		uint16 b = (uint16)(q * 4),
+			   ix[] = {b, (uint16)(b + 1), (uint16)(b + 2), b, (uint16)(b + 2), (uint16)(b + 3)};
+		for (int j = 0; j < 6; j++)
+			indices[q * 6 + j] = ix[j];
+	}
+	draws.clear();
+	for (const auto &state : previewStates)
+		for (const auto &particle : state->simulation.particles) {
+			rw::V3d delta = sub(vec(particle.position), eye);
+			draws.push_back({state.get(), &particle, dot(delta, delta)});
+		}
+	rw::V3d direction = rw::normalize(rw::sub(target, eye));
+	rw::V3d right = rw::normalize(rw::cross(direction, up));
+	rw::V3d cameraUp = rw::normalize(rw::cross(right, direction));
+	bool fog = gEnableFog;
+	gEnableFog = false;
+	render(eye, right, cameraUp, false);
+	gEnableFog = fog;
+	draws.clear();
 }
 } // namespace ParticlePreview

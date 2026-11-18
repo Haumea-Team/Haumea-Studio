@@ -35,9 +35,27 @@ enum LightFlags {
 	LIGHTFLAG_BLINKING_3      = 1 << 12
 };
 
+static std::vector<Effect> *capture;
+
+void
+SetEffectCapture(std::vector<Effect> *list)
+{
+	capture = list;
+}
+
+bool
+EffectCaptureActive(void)
+{
+	return capture != nil;
+}
+
 void
 AddEffect(Effect e)
 {
+	if(capture){
+		capture->push_back(e);
+		return;
+	}
 	ObjectDef *def = GetObjectDef(e.id);
 	if(def == nil){
 		log("Effect for non-existing object %d\n", e.id);

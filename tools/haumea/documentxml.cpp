@@ -40,6 +40,11 @@ void writeProperties(Node &node, const ObjectPawnProperties &value)
 	write(node, "moveRotation", value.moveRotation);
 	write(node, "moveRotates", value.moveRotates);
 	write(node, "moveSpeed", value.moveSpeed);
+	write(node, "moveTrigger", value.moveTrigger);
+	write(node, "gateKey", value.gateKey);
+	write(node, "gateRange", value.gateRange);
+	write(node, "gateCloseDelay", value.gateCloseDelay);
+	write(node, "gateSilent", value.gateSilent);
 	write(node, "elementKind", value.elementKind);
 	write(node, "pickupType", value.pickupType);
 	write(node, "labelText", value.labelText);
@@ -144,7 +149,9 @@ bool readProperties(const Node &node, ObjectPawnProperties &value, std::string *
 		return false;
 	if (!read(node, "moveEnabled", value.moveEnabled, error) || !read(node, "moveOffset", value.moveOffset, error) ||
 	    !read(node, "moveRotation", value.moveRotation, error) || !read(node, "moveRotates", value.moveRotates, error) ||
-	    !read(node, "moveSpeed", value.moveSpeed, error))
+	    !read(node, "moveSpeed", value.moveSpeed, error) || !read(node, "moveTrigger", value.moveTrigger, error) ||
+	    !read(node, "gateKey", value.gateKey, error) || !read(node, "gateRange", value.gateRange, error) ||
+	    !read(node, "gateCloseDelay", value.gateCloseDelay, error) || !read(node, "gateSilent", value.gateSilent, error))
 		return false;
 	if (!read(node, "elementKind", value.elementKind, error))
 		return false;

@@ -1,0 +1,13 @@
+# Test in game downloads open.mp and the streamer when nothing has them.
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+
+msgid "Downloading the open.mp server..."
+msgstr "Baixando o servidor open.mp..."
+
+msgid "Downloading the streamer plugin..."
+msgstr "Baixando o plugin streamer..."
+
+msgid "a server download is running; try again when it finishes"
+msgstr "um download do servidor está em andamento; tente de novo quando terminar"

@@ -194,18 +194,14 @@ msgstr "Em uso: %s"
 msgid "Active: %s (lenient IMG read)"
 msgstr "Em uso: %s (leitura tolerante do IMG)"
 
-#: tools/haumea/custommodels.cpp:734
-msgid "Add Custom Model (SA-MP 0.3.DL / open.mp)"
-msgstr "Adicionar modelo personalizado (SA-MP 0.3.DL / open.mp)"
-
 #: tools/haumea/custommodels.cpp:798
 msgid "Add to server"
 msgstr "Adicionar ao servidor"
 
 #: tools/haumea/custommodels.cpp:814
 #, c-format
-msgid "Added %d to the server: Object Browser > Custom models"
-msgstr "%d adicionado ao servidor: Navegador de objetos > Modelos personalizados"
+msgid "Added %d to the server: Asset Browser > Custom models"
+msgstr "%d adicionado ao servidor: Navegador de recursos > Modelos personalizados"
 
 #: tools/haumea/nodes_ui.cpp:148
 #, c-format
@@ -416,10 +412,6 @@ msgstr "Cor"
 msgid "Controls:"
 msgstr "Controles:"
 
-#: tools/haumea/custommodels.cpp:740
-msgid "Copies the DFF and TXD into the server's models folder and adds them to models/artconfig.txt, so SA-MP 0.3.DL and open.mp send them to players. Nothing is written into the game folder."
-msgstr "Copia a DFF e a TXD para a pasta models do servidor e as adiciona a models/artconfig.txt, para que o SA-MP 0.3.DL e o open.mp as enviem aos jogadores. Nada é gravado na pasta do jogo."
-
 #: tools/haumea/textdraws_ui.cpp:1121
 #, c-format
 msgid "Could not move the textdraws: %s"
@@ -515,10 +507,6 @@ msgstr "Não salvar"
 #: tools/haumea/sapaths.cpp:6922
 msgid "Dont Wander"
 msgstr "Não passear"
-
-#: tools/haumea/textdraws_ui.cpp:1444
-msgid "Down"
-msgstr "Descer"
 
 #: tools/haumea/objfilters.cpp:37 tools/haumea/objfilters.cpp:412
 msgid "Draw distance"
@@ -654,10 +642,6 @@ msgstr "Nós do jogo"
 #: tools/haumea/nodes_ui.cpp:295
 msgid "Go"
 msgstr "Ir"
-
-#: tools/haumea/nodes_ui.cpp:286
-msgid "Go to node"
-msgstr "Ir para o nó"
 
 #: tools/haumea/objfilters.cpp:428 tools/haumea/objfilters.cpp:780
 msgid "Has a far version"
@@ -1250,11 +1234,6 @@ msgstr "Recarregar caminhos do SA"
 msgid "Removes the node and its links. Later nodes in NODES%d.DAT move up one point id."
 msgstr "Remove o nó e as suas ligações. Os nós seguintes em NODES%d.DAT sobem um id de ponto."
 
-#: tools/haumea/sapaths.cpp:7303
-#, c-format
-msgid "Requested: %s"
-msgstr "Pedido: %s"
-
 #: tools/haumea/textdraws_ui.cpp:984
 msgid "Right"
 msgstr "Direita"
@@ -1395,11 +1374,6 @@ msgstr "Nó selecionado"
 #: tools/haumea/custommodels.cpp:752
 msgid "Server folder (has gamemodes/, models/)"
 msgstr "Pasta do servidor (tem gamemodes/, models/)"
-
-#: tools/haumea/custommodels.cpp:760
-#, c-format
-msgid "Server: %s"
-msgstr "Servidor: %s"
 
 #: tools/haumea/textdraws_ui.cpp:995
 msgid "Shadow"
@@ -1736,10 +1710,6 @@ msgstr "Alterações não salvas - %s"
 #: tools/haumea/textdraws_ui.cpp:1133 tools/haumea/textdraws_ui.cpp:1136
 msgid "Unsaved textdraws"
 msgstr "Textdraws não salvos"
-
-#: tools/haumea/textdraws_ui.cpp:1437
-msgid "Up"
-msgstr "Subir"
 
 #: tools/haumea/textdraws_ui.cpp:912
 msgid "Variable"
@@ -2091,14 +2061,6 @@ msgstr "Enquanto o Namaka trabalha no editor, uma linha sobre a vista 3D diz o q
 #: tools/haumea/keycast.cpp:122
 msgid "drag"
 msgstr "arrastar"
-
-#: tools/haumea/textdraws_ui.cpp
-msgid "Locked"
-msgstr "Travado"
-
-#: tools/haumea/textdraws_ui.cpp
-msgid "Can't be dragged or resized on the canvas. The fields here still change it."
-msgstr "Não pode ser arrastado nem redimensionado na tela. Os campos aqui ainda o alteram."
 
 #: tools/haumea/textdraws_ui.cpp
 msgid "%d errors"
@@ -2513,20 +2475,12 @@ msgid "A picture to build on: a mock-up or a screenshot (PNG, BMP or TGA).\nIt i
 msgstr "Uma imagem para construir em cima: um rascunho ou uma captura de tela (PNG, BMP ou TGA).\nÉ uma camada como as outras, só o editor a mostra; o conta-gotas pega as cores dela."
 
 #: tools/haumea/textdraws_ui.cpp
-msgid "Layers - %s"
-msgstr "Camadas - %s"
-
-#: tools/haumea/textdraws_ui.cpp
 msgid "Click a textdraw, or drag a box round several. Alt+click picks the one under it."
 msgstr "Clique num textdraw, ou arraste uma caixa em volta de vários. Alt+clique pega o de baixo."
 
 #: tools/haumea/textdraws_ui.cpp
 msgid "\nRight-click to keep it in Favourites"
 msgstr "\nClique direito para guardá-lo nos Favoritos"
-
-#: tools/haumea/textdraws_ui.cpp
-msgid "Add the shape"
-msgstr "Adicionar a forma"
 
 #: tools/haumea/textdraws_ui.cpp
 msgid "Add to favourites"
@@ -2808,14 +2762,6 @@ msgstr ""
 
 #: tools/haumea/textdraws_ui.cpp
 msgid ""
-"Off: the outer ones stay and the gaps between come out equal.\n"
-"On: each is this far from the one before, from the first."
-msgstr ""
-"Desligado: os das pontas ficam e os espaços entre eles ficam iguais.\n"
-"Ligado: cada um fica a esta distância do anterior, a partir do primeiro."
-
-#: tools/haumea/textdraws_ui.cpp
-msgid ""
 "Or drag its handles on the canvas: Shift keeps the shape's proportions,\n"
 "Alt sizes it from the centre, Ctrl stops snapping."
 msgstr ""
@@ -3082,18 +3028,6 @@ msgstr "Escolha uma imagem"
 #: tools/haumea/textdraws_ui.cpp
 msgid "Images"
 msgstr "Imagens"
-
-#: tools/haumea/textdraws_ui.cpp
-msgid ""
-"A custom model's texture: players on 0.3.DL and open.mp download it;\n"
-"0.3.7 players see nothing there."
-msgstr ""
-"Textura de um modelo personalizado: jogadores no 0.3.DL e open.mp a baixam;\n"
-"jogadores no 0.3.7 não veem nada ali."
-
-#: tools/haumea/textdraws_ui.cpp
-msgid "Custom models (0.3.DL)"
-msgstr "Modelos personalizados (0.3.DL)"
 
 #: tools/haumea/textdraws_ui.cpp
 msgid "The game's"

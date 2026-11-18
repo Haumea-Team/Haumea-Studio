@@ -87,6 +87,21 @@ RemoveTxdSlot(int i)
 	return true;
 }
 
+// Drops a loaded TXD so the next LoadTxd reads its file again.
+void
+UnloadTxd(int i)
+{
+	TxdDef *td = GetTxdDef(i);
+	if(td == nil || td->txd == nil)
+		return;
+	if(rw::TexDictionary::getCurrent() == td->txd)
+		rw::TexDictionary::setCurrent(defaultTxd);
+	if(pushedTxd == td->txd)
+		pushedTxd = defaultTxd;
+	td->txd->destroy();
+	td->txd = nil;
+}
+
 int
 GetNumTxdSlots(void)
 {

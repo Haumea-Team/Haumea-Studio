@@ -26,6 +26,7 @@ struct Cached {
 	std::string english;
 	std::string label;	// Label/LabelIcon/TextIcon results
 	const char *result = nil;	// Translate
+	bool migrated = false;	// its window's old settings looked for (migrateWindowSettings)
 };
 static std::unordered_map<const char *, Cached> literalCache, labelCache;
 typedef std::pair<const char *, const char *> LiteralPair;
@@ -464,19 +465,33 @@ Translate(const char *text)
 // first for LI) is moved to the ### ID's settings, so layouts and docks
 // survive the switch to L()/LI() labels. A no-op once moved or for labels
 // that were never windows.
+// Called with each label until it has run once with the settings loaded:
+// a label made before imgui.ini is read (a layout built at start-up) would
+// otherwise never move its window's settings.
+static bool moveWindowSettings(const char *oldTitle, const char *english);
+
 static void
-migrateWindowSettings(const char *oldTitle, const char *english)
+migrateWindowSettings(Cached &c, const char *oldTitle, const char *english)
 {
-	if(ImGui::GetCurrentContext() == nil)
+	if(c.migrated || ImGui::GetCurrentContext() == nil || !ImGui::GetCurrentContext()->SettingsLoaded)
 		return;
+	c.migrated = true;
+	moveWindowSettings(oldTitle, english);
+}
+
+// Moves the settings saved under oldTitle to ###english; false when there
+// were none, or ###english has its own already.
+static bool
+moveWindowSettings(const char *oldTitle, const char *english)
+{
 	std::string idTitle = std::string("###") + english;
 	ImGuiID newId = ImHashStr(idTitle.c_str());
 	ImGuiID oldId = ImHashStr(oldTitle);
 	if(oldId == newId || ImGui::FindWindowSettingsByID(newId))
-		return;
+		return false;
 	ImGuiWindowSettings *old = ImGui::FindWindowSettingsByID(oldId);
 	if(old == nil)
-		return;
+		return false;
 	ImGuiWindowSettings copy = *old;
 	old->WantDelete = true;
 	ImGuiWindowSettings *moved = ImGui::CreateNewWindowSettings(idTitle.c_str());
@@ -498,6 +513,7 @@ migrateWindowSettings(const char *oldTitle, const char *english)
 		if(node->TabBar && node->TabBar->NextSelectedTabId == oldId)
 			node->TabBar->NextSelectedTabId = newId;
 	}
+	return true;
 }
 
 const char *
@@ -507,15 +523,21 @@ Label(const char *english)
 		apply();
 	Cached &c = labelCache[english];
 	std::string &s = c.label;
+	migrateWindowSettings(c, english, english);
 	if(s.empty() || c.english != english){
 		c.english = english;
-		migrateWindowSettings(english, english);
 		s = Translate(english);
 		s += "###";
 		s += english;
 	}
 	return s.c_str();
 }
+
+// Windows whose English name changed: their saved place, size and docking
+// move over from the old name, as ###Old or the older "icon Old" title.
+static const struct { const char *english, *old; } gRenamedWindows[] = {
+	{ "Asset Browser", "Object Browser" },
+};
 
 const char *
 LabelIcon(const char *icon, const char *english)
@@ -524,10 +546,16 @@ LabelIcon(const char *icon, const char *english)
 		apply();
 	Cached &c = labelIconCache[LiteralPair(icon, english)];
 	std::string &s = c.label;
+	if(!c.migrated && ImGui::GetCurrentContext() && ImGui::GetCurrentContext()->SettingsLoaded){
+		c.migrated = true;
+		if(!moveWindowSettings((std::string(icon) + " " + english).c_str(), english))
+			for(const auto &r : gRenamedWindows)
+				if(strcmp(r.english, english) == 0 &&
+				   !moveWindowSettings((std::string("###") + r.old).c_str(), english))
+					moveWindowSettings((std::string(icon) + " " + r.old).c_str(), english);
+	}
 	if(s.empty() || c.english != english){
 		c.english = english;
-		std::string oldTitle = std::string(icon) + " " + english;
-		migrateWindowSettings(oldTitle.c_str(), english);
 		s = icon;
 		s += " ";
 		s += Translate(english);
@@ -570,9 +598,9 @@ uiLanguagePreferences(void)
 			if(l.code == current)
 				shown = l.name;
 	}
-	// Its name beside it, like every other field of the page.
+	// Its name in the left column, like every other field of the page.
 	std::string label = std::string(_("Language")) + "###language";
-	if(ImGui::BeginCombo(label.c_str(), shown.c_str())){
+	if(UiBeginCombo(label.c_str(), shown.c_str())){
 		if(ImGui::Selectable(_("Auto"), current == "auto"))
 			{ I18nSetLanguage("auto"); changed = true; }
 		if(ImGui::Selectable("English", current == "en"))

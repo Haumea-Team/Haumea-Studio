@@ -45,30 +45,30 @@ stock Haumea_hv_loops_CreateObjects()
 {
 	// ---- NPC paths (open.mp) ----
 	new lane = NPC_CreatePath();
-	NPC_AddPointToPath(lane, 1640.000000, -1700.000000, 13.500000, 0.50); // path point
-	NPC_AddPointToPath(lane, 1680.000000, -1700.000000, 13.500000, 0.50); // path point
+	NPC_AddPointToPath(lane, 1640.0, -1700.0, 13.5, 0.5); // path point
+	NPC_AddPointToPath(lane, 1680.0, -1700.0, 13.5, 0.5); // path point
 	new yard = NPC_CreatePath();
-	NPC_AddPointToPath(yard, 1600.000000, -1700.000000, 13.500000, 0.20); // path point
-	NPC_AddPointToPath(yard, 1620.000000, -1700.000000, 13.500000, 0.20); // path point
-	NPC_AddPointToPath(yard, 1620.000000, -1720.000000, 13.500000, 0.20); // path point
+	NPC_AddPointToPath(yard, 1600.0, -1700.0, 13.5, 0.2); // path point
+	NPC_AddPointToPath(yard, 1620.0, -1700.0, 13.5, 0.2); // path point
+	NPC_AddPointToPath(yard, 1620.0, -1720.0, 13.5, 0.2); // path point
 
 	new guard = NPC_Create("YardGuard"); // lapd1 [NPC]
 	NPC_Spawn(guard);
 	NPC_SetSkin(guard, 280);
-	NPC_SetPos(guard, 1600.000000, -1702.000000, 13.500000);
-	NPC_SetFacingAngle(guard, 0.000000);
+	NPC_SetPos(guard, 1600.0, -1702.0, 13.5);
+	NPC_SetFacingAngle(guard, 0.0);
 
 	new runner = NPC_Create("LaneRunner"); // lapd1 [NPC]
 	NPC_Spawn(runner);
 	NPC_SetSkin(runner, 280);
-	NPC_SetPos(runner, 1640.000000, -1702.000000, 13.500000);
-	NPC_SetFacingAngle(runner, 0.000000);
+	NPC_SetPos(runner, 1640.0, -1702.0, 13.5);
+	NPC_SetFacingAngle(runner, 0.0);
 
 	new walker = NPC_Create("OnceWalker"); // lapd1 [NPC]
 	NPC_Spawn(walker);
 	NPC_SetSkin(walker, 280);
-	NPC_SetPos(walker, 1640.000000, -1710.000000, 13.500000);
-	NPC_SetFacingAngle(walker, 0.000000);
+	NPC_SetPos(walker, 1640.0, -1710.0, 13.5);
+	NPC_SetFacingAngle(walker, 0.0);
 
 	// ---- NPC movement ----
 	Haumea_hv_loops_MoveByPathRepeat(guard, yard, NPC_MOVE_TYPE_WALK, NPC_MOVE_SPEED_AUTO, false, NPC_PATH_LOOP);

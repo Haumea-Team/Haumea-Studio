@@ -17,11 +17,12 @@ release W
 key Backspace
 assert camera_moved < 0.01
 # Ctrl+C stops a program and the shell lives on.
-type "sleep 100"
+type "sh $UI_FIXTURES/terminal_sleep.sh"
 key Enter
-wait 20
+wait_until terminal_contains 'RUNNING'
 key Ctrl+C
-wait 20
+# The next prompt (PS1 is set by the test): bash drops keys typed before it.
+wait_until terminal_contains 'ready-3$'
 type "expr 500 + 55"
 key Enter
 wait_until terminal_contains '555'
@@ -43,7 +44,7 @@ wait 10
 key Enter
 wait_until terminal_contains '^[[200~pasted-1^[[201~'
 key Ctrl+C
-wait 20
+wait_until terminal_contains 'ready-6$'
 # Colours, styles and letters beyond ASCII reach the screen.
 type "sh $UI_FIXTURES/terminal_colour.sh"
 key Enter

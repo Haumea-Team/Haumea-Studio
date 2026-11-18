@@ -1,6 +1,8 @@
 # TextDraw mode: a sprite dragged past its own corner mirrors (negative size),
 # and a locked textdraw stays put on the canvas and is saved locked.
 open "$UI_FIXTURES/ui_map.pwn"
+click_item '*' '##editor'
+wait 2
 click_item '*' 'TextDraws'
 wait 5
 click_item 'TextDraws' 'Sprite'
@@ -19,16 +21,14 @@ assert textdraw.0.size_y < 0
 drag_item '*' 'hit' 60 0
 wait 5
 assert textdraw.0.x > 440
-click_item 'TextDraws' 'Arrange'
-wait 3
-click_item 'TextDraws' 'Locked'
+click_item 'TextDraws' 'lock'
 wait 5
 assert textdraw.0.locked == 1
 drag_item '*' 'hit' 100 60
 wait 5
 assert textdraw.0.x < 480
 assert no_item '*' 'resize'
-click_item 'TextDraws' '###File options'
+click_item 'TextDraws' 'td_file_options'
 wait 3
 click_item '*' 'Save As...'
 wait 5

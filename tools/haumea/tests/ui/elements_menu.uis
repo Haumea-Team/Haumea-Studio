@@ -3,8 +3,8 @@ open "$UI_FIXTURES/ui_floor.pwn"
 shortcut window_browser
 shortcut window_object_info
 wait 40
-assert window 'Object Browser'
-click_item 'Object Browser' '##browser_source'
+assert window 'Asset Browser'
+click_item 'Asset Browser' '##browser_source'
 wait 3
 assert no_item '*' 'SA-MP'
 assert item '*' 'Characters'
@@ -17,24 +17,24 @@ assert item '*' 'Favourites'
 assert item '*' 'Model files'
 click_item '*' 'Characters'
 wait 5
-assert item 'Object Browser' '##place Actor'
-assert item 'Object Browser' '##place Player class'
-assert item 'Object Browser' '##place NPC'
-assert no_item 'Object Browser' '##place Pickup'
-assert item 'Object Browser' '##place_skin'
+assert item 'Asset Browser' '##place Actor'
+assert item 'Asset Browser' '##place Player class'
+assert item 'Asset Browser' '##place NPC'
+assert no_item 'Asset Browser' '##place Pickup'
+assert item 'Asset Browser' '##place_skin'
 # The browser shares its column with Object Info: Place may be below the fold.
-scroll_until 'Object Browser' '##element_place'
-assert item 'Object Browser' '##element_place'
+scroll_until 'Asset Browser' '##element_place'
+assert item 'Asset Browser' '##element_place'
 assert placing == 0
 assert clipped_items == 0
-click_item 'Object Browser' '##place_skin'
+click_item 'Asset Browser' '##place_skin'
 wait 3
 set_item '*' 'ID' '105'
 close_popup
 wait 3
 assert placing == 0
-click_item 'Object Browser' 'Keep placing'
-click_item 'Object Browser' '##element_place'
+click_item 'Asset Browser' 'Keep placing'
+click_item 'Asset Browser' '##element_place'
 wait 3
 assert placing == 1
 click_world 1998 -3001 4
@@ -45,12 +45,12 @@ assert pawn_contains 'CreateActor(105,'
 key Esc
 wait 3
 assert placing == 0
-assert item 'Object Browser' '##place_skin'
+assert item 'Asset Browser' '##place_skin'
 # Classes and NPCs have their own skin choices.
-click_item 'Object Browser' '##place Player class'
+click_item 'Asset Browser' '##place Player class'
 wait 3
 assert placing == 0
-click_item 'Object Browser' '##element_place'
+click_item 'Asset Browser' '##element_place'
 wait 3
 click_world 1998 -2998 4
 wait 3
@@ -58,34 +58,34 @@ assert selected.model == 7
 assert pawn_contains 'AddPlayerClass(7,'
 key Esc
 wait 3
-click_item 'Object Browser' '##place NPC'
+click_item 'Asset Browser' '##place NPC'
 wait 3
 assert placing == 0
-click_item 'Object Browser' '##place_skin'
+click_item 'Asset Browser' '##place_skin'
 wait 3
 set_item '*' 'ID' '101'
 close_popup
 wait 3
-click_item 'Object Browser' '##element_place'
+click_item 'Asset Browser' '##element_place'
 wait 3
 click_world 2002 -2998 4
 wait 3
 assert selected.model == 101
 assert pawn_contains 'NPC_Spawn('
 # Opening another feature stops the previous placement tool.
-click_item 'Object Browser' '##browser_source'
+click_item 'Asset Browser' '##browser_source'
 wait 3
 click_item '*' 'Paths'
 wait 5
 assert placing == 0
-assert item 'Object Browser' '##place_path'
-assert no_item 'Object Browser' '##place_skin'
-click_item 'Object Browser' '##place_path'
+assert item 'Asset Browser' '##place_path'
+assert no_item 'Asset Browser' '##place_skin'
+click_item 'Asset Browser' '##place_path'
 wait 3
 set_item '*' '##newpath' 'route_test'
 wait 5
-assert item 'Object Browser' '##place_path'
-click_item 'Object Browser' '##element_place'
+assert item 'Asset Browser' '##place_path'
+click_item 'Asset Browser' '##element_place'
 wait 3
 click_world 1999 -3002 4
 click_world 2001 -3002 4
@@ -94,35 +94,35 @@ assert pawn_contains 'route_test'
 assert pawn_contains 'NPC_AddPointToPath('
 key Esc
 wait 3
-click_item 'Object Browser' '##browser_source'
+click_item 'Asset Browser' '##browser_source'
 wait 3
 click_item '*' 'Markers'
 wait 3
-assert item 'Object Browser' '##place_pickup'
-click_item 'Object Browser' '##place Checkpoint'
+assert item 'Asset Browser' '##place_pickup'
+click_item 'Asset Browser' '##place Checkpoint'
 wait 3
-assert item 'Object Browser' '##place_race'
+assert item 'Asset Browser' '##place_race'
 assert placing == 0
-click_item 'Object Browser' '##browser_source'
+click_item 'Asset Browser' '##browser_source'
 wait 3
 click_item '*' 'Text & audio'
 wait 3
-assert item 'Object Browser' '##place Sound'
-assert item 'Object Browser' '##place 3D text label'
-click_item 'Object Browser' '##browser_source'
+assert item 'Asset Browser' '##place Sound'
+assert item 'Asset Browser' '##place 3D text label'
+click_item 'Asset Browser' '##browser_source'
 wait 3
 click_item '*' 'Zones'
 wait 3
-assert item 'Object Browser' '##place Gang zone'
-assert item 'Object Browser' '##place Dynamic area'
+assert item 'Asset Browser' '##place Gang zone'
+assert item 'Asset Browser' '##place Dynamic area'
 assert clipped_items == 0
-click_item 'Object Browser' '##browser_source'
+click_item 'Asset Browser' '##browser_source'
 wait 3
 click_item '*' 'Prefabs'
 wait 3
-assert item 'Object Browser' '##browser_source'
-click_item 'Object Browser' '##browser_source'
+assert item 'Asset Browser' '##browser_source'
+click_item 'Asset Browser' '##browser_source'
 wait 3
 click_item '*' 'Objects'
 wait 3
-assert item 'Object Browser' '##search_objects'
+assert item 'Asset Browser' '##search_objects'

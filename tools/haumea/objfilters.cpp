@@ -476,14 +476,15 @@ rangeInputs(const char *label, Range &r, float step)
 {
 	ImGui::PushID(label);
 	bool changed = false;
-	float w = (ImGui::GetContentRegionAvail().x - ImGui::CalcTextSize(label, nil, true).x) * 0.5f - ImGui::GetStyle().ItemSpacing.x;
+	// The name in the left column, the minimum and the maximum sharing the rest.
+	char id[256];
+	UiFieldLabel(label, id, sizeof(id));
+	float w = floorf((ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x) * 0.5f);
 	ImGui::SetNextItemWidth(std::max(w, 40.0f));
 	changed |= ImGui::InputFloat("##min", &r.lo, 0.0f, 0.0f, r.lo > 0.0f ? "%g" : _("any"));
 	ImGui::SameLine();
-	ImGui::SetNextItemWidth(std::max(w, 40.0f));
+	ImGui::SetNextItemWidth(-FLT_MIN);
 	changed |= ImGui::InputFloat("##max", &r.hi, 0.0f, 0.0f, r.hi > 0.0f ? "%g" : _("any"));
-	ImGui::SameLine();
-	ImGui::TextUnformatted(label, strstr(label, "##"));	// an L() label: without its ID
 	(void)step;
 	r.lo = std::max(r.lo, 0.0f);
 	r.hi = std::max(r.hi, 0.0f);
@@ -496,8 +497,7 @@ textInput(const char *label, std::string &value)
 {
 	char buf[64];
 	snprintf(buf, sizeof(buf), "%s", value.c_str());
-	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.6f);
-	if(ImGui::InputText(label, buf, sizeof(buf)))
+	if(UiInputText(label, buf, sizeof(buf)))
 		value = buf;
 }
 
@@ -505,7 +505,7 @@ void
 bitCheckbox(const char *label, unsigned &bits, int bit)
 {
 	bool on = (bits & 1u << bit) != 0;
-	if(ImGui::Checkbox(label, &on))
+	if(UiCheckbox(label, &on))
 		bits = on ? bits | 1u << bit : bits & ~(1u << bit);
 }
 
@@ -591,7 +591,7 @@ uiWhereUsed(Filters &f)
 					char zl[96];
 					snprintf(zl, sizeof(zl), "%s (%d)##z%d", GetMetaZoneName(z), zones[z], z);
 					bool on = f.zones.count(z) != 0;
-					if(ImGui::Checkbox(zl, &on)){
+					if(UiCheckbox(zl, &on)){
 						if(on) f.zones.insert(z);
 						else f.zones.erase(z);
 					}
@@ -603,14 +603,17 @@ uiWhereUsed(Filters &f)
 	}
 	char label[64];
 	snprintf(label, sizeof(label), "%s (%d)", _("Not placed"), cities[NUM_MODEL_CITIES]);
-	ImGui::Checkbox(label, &f.notPlaced);
+	UiCheckbox(label, &f.notPlaced);
 }
 
 void
 uiPresets(void)
 {
 	static char name[48];
-	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.45f);
+	// One row: the presets to load, the name to save under, save and delete
+	// at the row's right end.
+	float button = ImGui::GetFrameHeight(), spacing = ImGui::GetStyle().ItemSpacing.x;
+	ImGui::SetNextItemWidth(floorf((ImGui::GetContentRegionAvail().x - (button + spacing) * 2 - spacing) * 0.45f));
 	if(ImGui::BeginCombo("##presets", _("Presets"))){
 		for(size_t i = 0; i < gPresets.size(); i++){
 			ImGui::PushID((int)i);
@@ -629,11 +632,11 @@ uiPresets(void)
 		ImGui::EndCombo();
 	}
 	ImGui::SameLine();
-	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.5f);
+	ImGui::SetNextItemWidth(std::max(ImGui::GetFontSize() * 4.0f, ImGui::GetContentRegionAvail().x - (button + spacing) * 2));
 	ImGui::InputTextWithHint("##preset_name", _("Preset name"), name, sizeof(name));
 	ImGui::SameLine();
 	ImGui::BeginDisabled(name[0] == '\0' || strchr(name, '|') != nil);
-	if(ImGui::SmallButton(ICON_FA_FLOPPY_DISK "##save_preset")){
+	if(ImGui::Button(ICON_FA_FLOPPY_DISK "##save_preset", ImVec2(button, button))){
 		std::string text = filtersText(gFilters);
 		bool replaced = false;
 		for(Preset &p : gPresets)
@@ -649,7 +652,7 @@ uiPresets(void)
 	ImGui::SetItemTooltip("%s", _("Save the filters under this name (an existing preset is replaced)."));
 	ImGui::SameLine();
 	ImGui::BeginDisabled(name[0] == '\0');
-	if(ImGui::SmallButton(ICON_FA_TRASH "##delete_preset"))
+	if(ImGui::Button(ICON_FA_TRASH "##delete_preset", ImVec2(button, button)))
 		gPresets.erase(std::remove_if(gPresets.begin(), gPresets.end(),
 			[](const Preset &p){ return p.name == name; }), gPresets.end());
 	ImGui::EndDisabled();
@@ -703,6 +706,47 @@ SortObjectResults(int *ids, int n)
 	});
 }
 
+static bool gFiltersOpen;
+
+static void
+filtersButtonLabel(char *buf, size_t size)
+{
+	int n = (int)activeChips(gFilters).size();
+	if(n == 0)
+		snprintf(buf, size, ICON_FA_FILTER " %s###object_filters", _("Filters"));
+	else
+		snprintf(buf, size, ICON_FA_FILTER " %s (%d)###object_filters", _("Filters"), n);
+}
+
+bool
+ObjectFiltersOpen(void)
+{
+	return gFiltersOpen;
+}
+
+float
+ObjectFiltersButtonWidth(void)
+{
+	char label[96];
+	filtersButtonLabel(label, sizeof(label));
+	return ImGui::CalcTextSize(label, nil, true).x + ImGui::GetStyle().FramePadding.x * 2.0f;
+}
+
+void
+uiObjectFiltersButton(float width)
+{
+	char label[96];
+	filtersButtonLabel(label, sizeof(label));
+	bool hiding = !activeChips(gFilters).empty();
+	// Open: the accent wash, like a ribbon toggle; hiding models: warning text.
+	bool open = gFiltersOpen;
+	if(open) ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+	if(hiding) ImGui::PushStyleColor(ImGuiCol_Text, UiSemanticColor(UI_COLOR_WARNING));
+	if(ImGui::Button(label, ImVec2(width, 0)))
+		gFiltersOpen = !gFiltersOpen;
+	ImGui::PopStyleColor((open ? 1 : 0) + (hiding ? 1 : 0));
+}
+
 void
 uiObjectFiltersPanel(void)
 {
@@ -710,15 +754,7 @@ uiObjectFiltersPanel(void)
 	if(needsDetails(f))
 		RequestModelMetaDetails();
 	std::vector<Chip> chips = activeChips(f);
-	char header[96];
-	if(chips.empty())
-		snprintf(header, sizeof(header), ICON_FA_FILTER " %s###object_filters", _("Filters"));
-	else
-		snprintf(header, sizeof(header), ICON_FA_FILTER " %s (%d)###object_filters", _("Filters"), (int)chips.size());
-	// Filters that hide models show it on the header itself.
-	if(!chips.empty()) ImGui::PushStyleColor(ImGuiCol_Text, UiSemanticColor(UI_COLOR_WARNING));
-	bool open = ImGui::CollapsingHeader(header);
-	if(!chips.empty()) ImGui::PopStyleColor();
+	bool open = gFiltersOpen;
 
 	// What is on, always in view: click a chip to remove it.
 	if(!chips.empty()){
@@ -770,33 +806,26 @@ uiObjectFiltersPanel(void)
 		ImGui::TreePop();
 	}
 	if(ImGui::TreeNode(L("Collision and detail"))){
-		ImGui::RadioButton(L("Any collision"), &f.collision, 0);
-		ImGui::SameLine();
-		ImGui::RadioButton(L("Has collision"), &f.collision, 1);
-		ImGui::SameLine();
-		ImGui::RadioButton(L("None"), &f.collision, 2);
-		ImGui::Checkbox(L("Two-sided (no backface culling)"), &f.twoSided);
-		ImGui::RadioButton(L("Any detail"), &f.lod, 0);
-		ImGui::SameLine();
-		ImGui::RadioButton(L("Full detail"), &f.lod, 1);
-		ImGui::SameLine();
-		ImGui::RadioButton(L("Far versions (LOD)"), &f.lod, 2);
-		ImGui::RadioButton(L("With or without a far version"), &f.hasLod, 0);
-		ImGui::RadioButton(L("Has a far version"), &f.hasLod, 1);
-		ImGui::SameLine();
-		ImGui::RadioButton(L("Has none"), &f.hasLod, 2);
+		// Three choices each: rows with their name on the left.
+		const char *collisions[] = { _("Any collision"), _("Has collision"), _("None") };
+		UiCombo(L("Collision"), &f.collision, collisions, 3);
+		const char *details[] = { _("Any detail"), _("Full detail"), _("Far versions (LOD)") };
+		UiCombo(L("Detail"), &f.lod, details, 3);
+		const char *farVersions[] = { _("With or without a far version"), _("Has a far version"), _("Has none") };
+		UiCombo(L("Far version"), &f.hasLod, farVersions, 3);
 		rangeInputs(L("Draw distance (m)"), f.drawDistance, 10.0f);
+		UiCheckbox(L("Two-sided (no backface culling)"), &f.twoSided);
 		ImGui::TreePop();
 	}
 	if(ImGui::TreeNode(L("Type"))){
 		for(int t = 0; t < NUM_TYPES; t++)
 			bitCheckbox(L(kTypeNames[t]), f.types, t);
 		bool atHour = f.hour >= 0;
-		if(ImGui::Checkbox(L("Shown at"), &atHour))
+		if(UiCheckbox(L("Shown at"), &atHour))
 			f.hour = atHour ? 0 : -1;
 		if(atHour){
 			ImGui::SameLine();
-			ImGui::SetNextItemWidth(ImGui::GetFontSize() * 6.0f);
+			ImGui::SetNextItemWidth(-FLT_MIN);
 			ImGui::SliderInt("##hour", &f.hour, 0, 23, "%02d:00");
 			ImGui::SetItemTooltip("%s", _("Timed models (day or night) that the game draws at this hour."));
 		}
@@ -820,15 +849,15 @@ uiObjectFiltersPanel(void)
 	}
 
 	// Sort, and presets.
-	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.45f);
-	if(ImGui::BeginCombo(L("Sort by"), _(kSortNames[f.sort]))){
+	ImGui::Spacing();
+	if(UiBeginCombo(L("Sort by"), _(kSortNames[f.sort]))){
 		for(int s = 0; s < NUM_OBJECT_SORTS; s++)
 			if(ImGui::Selectable(L(kSortNames[s]), s == f.sort))
 				f.sort = s;
 		ImGui::EndCombo();
 	}
-	ImGui::SameLine();
-	ImGui::Checkbox(L("Descending"), &f.descending);
+	UiCheckbox(L("Descending"), &f.descending);
+	ImGui::Spacing();
 	uiPresets();
 	ImGui::PopID();
 }

@@ -43,7 +43,7 @@ click_world 1479.554688 -1639.609375 13.648438 right
 click_item '*' 'Find instances'
 wait 5
 assert discovery_count 4206 == 151
-click_item 'Object Browser' 'Select all'
+click_item 'Asset Browser' 'Select all'
 wait 5
 assert selected == 151
 assert selected_world == 151

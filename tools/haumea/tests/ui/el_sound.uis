@@ -2,13 +2,13 @@
 open "$UI_FIXTURES/ui_floor.pwn"
 shortcut window_browser
 wait 5
-click_item 'Object Browser' '##browser_source'
+click_item 'Asset Browser' '##browser_source'
 wait 3
 click_item '*' 'Text & audio'
 wait 3
-click_item 'Object Browser' '##place Sound'
+click_item 'Asset Browser' '##place Sound'
 wait 3
-click_item 'Object Browser' '##element_place'
+click_item 'Asset Browser' '##element_place'
 wait 3
 click_world 2000 -3000 4
 wait 5
@@ -27,9 +27,9 @@ set_item 'Object Info' 'Radius' "15"
 wait 3
 click_item 'Object Info' 'Stop when the player leaves'
 wait 3
-click_item 'Object Browser' '##place Sound'
+click_item 'Asset Browser' '##place Sound'
 wait 3
-click_item 'Object Browser' '##element_place'
+click_item 'Asset Browser' '##element_place'
 wait 3
 click_world 2003 -3000 4
 wait 5
@@ -49,6 +49,6 @@ reopen
 wait 10
 assert objects == 3
 assert pawn_contains "AddSound(1062, "
-assert pawn_contains ", 15.00, false, -1, -1); // sound"
+assert pawn_contains ", 15.0, false, -1, -1); // sound"
 assert pawn_contains "PlayAudioStreamForPlayer(playerid, \"http://example.com/radio.mp3\", "
-assert pawn_contains ", 30.00, true); // sound"
+assert pawn_contains ", 30.0, true); // sound"

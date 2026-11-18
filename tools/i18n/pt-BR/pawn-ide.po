@@ -82,4 +82,3 @@ msgstr "Este arquivo mudou no disco. Use Salvar como para manter suas edições 
 
 msgid "Unsaved code"
 msgstr "Código não salvo"
-

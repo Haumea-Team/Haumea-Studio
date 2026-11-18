@@ -228,6 +228,14 @@ class MultiplayerTests(EditorsMixin, unittest.TestCase):
                                       'move_speed=2').get('ok'))
         wait_for(lambda: (self.find(host, 1590.0, -1930.0) or {}).get('properties', {}).get('move_speed') == 2,
                  'the object\'s movement on the host')
+        # Made a gate on the host: its key, range and delay reach the guest.
+        gate = self.find(host, 1590.0, -1930.0)
+        self.assertTrue(host.command('properties', gate['instance_id'], 'move_trigger=key', 'gate_key=262144',
+                                     'gate_range=12', 'gate_close_delay=3000').get('ok'))
+        wait_for(lambda: (lambda p: p.get('move_trigger') == 'key' and p.get('gate_key') == 262144 and
+                          p.get('gate_range') == 12 and p.get('gate_close_delay') == 3000)(
+                     (self.find(guest, 1590.0, -1930.0) or {}).get('properties', {})),
+                 'the gate on the guest')
         def race(client):
             return [i['properties'] for i in self.items(client) if i['properties'].get('race')]
         checkpoint = next(i for i in self.items(host) if i['properties'].get('race'))

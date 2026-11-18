@@ -3,6 +3,8 @@ open "$UI_FIXTURES/ui_map.pwn"
 camera 2010 -3060 45 2010 -3000 5
 shortcut window_tools
 wait 6
+click_item 'Tools' '###tools_create'
+wait 2
 click_item 'Tools' 'Paths & curves'
 click_item 'Tools' 'Shape'
 click_item '*' 'Loop'

@@ -22,52 +22,52 @@
 
 stock Haumea_hv_samp_RemoveWorldObjectsForPlayer(playerid)
 {
-	RemoveBuildingForPlayer(playerid, 3563, 2063.132812, -1731.781250, 15.273438, 0.25); // LODpmedhos2_LAe
+	RemoveBuildingForPlayer(playerid, 3563, 2063.1328, -1731.7812, 15.273438, 0.25); // LODpmedhos2_LAe
 }
 
 static gate_zone = -1;
 
 stock Haumea_hv_samp_CreateObjects()
 {
-	new wall = CreateObject(19353, 1600.000000, -1890.000000, 14.000000, 0.000000, 0.000000, 90.000000, 300.00); // wall001
+	new wall = CreateObject(19353, 1600.0, -1890.0, 14.0, 0.0, 0.0, 90.0, 300.0); // wall001
 	SetObjectMaterial(wall, 0, 19297, "matcolours", "white", 0xFFFF0000);
 
-	new base = CreateObject(1271, 1616.000000, -1890.000000, 13.500000, 0.000000, 0.000000, 45.000000); // gunbox
+	new base = CreateObject(1271, 1616.0, -1890.0, 13.5, 0.0, 0.0, 45.0); // gunbox
 
-	new crate = CreateObject(1271, 1616.000000, -1890.000000, 14.300000, 15.000000, 25.000000, 80.000000); // gunbox
+	new crate = CreateObject(1271, 1616.0, -1890.0, 14.3, 15.0, 25.0, 80.0); // gunbox
 
-	AddStaticVehicle(411, 1610.000000, -1880.000000, 13.300000, 90.000000, 1, 1); // infernus
-	AddStaticVehicleEx(560, 1615.000000, -1880.000000, 13.300000, 180.000000, 3, 3, 120); // sultan
+	AddStaticVehicle(411, 1610.0, -1880.0, 13.3, 90.0, 1, 1); // infernus
+	AddStaticVehicleEx(560, 1615.0, -1880.0, 13.3, 180.0, 3, 3, 120); // sultan
 
-	new bike = AddStaticVehicleEx(468, 1625.000000, -1880.000000, 13.300000, 0.000000, 1, 1, 60); // sanchez
+	new bike = AddStaticVehicleEx(468, 1625.0, -1880.0, 13.3, 0.0, 1, 1, 60); // sanchez
 	#pragma unused bike
 
-	new car = CreateVehicle(522, 1620.000000, -1880.000000, 13.300000, 0.000000, 6, 6, 60); // nrg500
+	new car = CreateVehicle(522, 1620.0, -1880.0, 13.3, 0.0, 6, 6, 60); // nrg500
 	LinkVehicleToInterior(car, 1);
 
-	CreatePickup(1240, 2, 1600.000000, -1900.000000, 13.500000, 0); // health [pickup]
-	Create3DTextLabel("Welcome", 0xFFFF00FF, 1602.000000, -1900.000000, 14.000000, 25.00, 0, true); // info [3D text label]
+	CreatePickup(1240, 2, 1600.0, -1900.0, 13.5, 0); // health [pickup]
+	Create3DTextLabel("Welcome", 0xFFFF00FF, 1602.0, -1900.0, 14.0, 25.0, 0, true); // info [3D text label]
 
-	new clerk = CreateActor(179, 1605.000000, -1900.000000, 13.500000, 180.000000); // WMYAMMO [actor]
+	new clerk = CreateActor(179, 1605.0, -1900.0, 13.5, 180.0); // WMYAMMO [actor]
 	SetActorInvulnerable(clerk, false);
-	SetActorHealth(clerk, 50.00);
-	ApplyActorAnimation(clerk, "DEALER", "DEALER_IDLE", 4.10, true, false, false, false, 0);
+	SetActorHealth(clerk, 50.0);
+	ApplyActorAnimation(clerk, "DEALER", "DEALER_IDLE", 4.1, true, false, false, false, 0);
 
-	AddPlayerClass(0, 1610.000000, -1900.000000, 13.500000, 90.000000, WEAPON_FIST, 0, WEAPON_FIST, 0, WEAPON_FIST, 0); // CJ [player class]
-	AddPlayerClassEx(2, 105, 1612.000000, -1900.000000, 13.500000, -90.000000, WEAPON_DEAGLE, 100, WEAPON_M4, 300, WEAPON_FIST, 0); // FAM1 [player class]
-	AddPlayerClass(1, 1614.000000, -1900.000000, 13.500000, 0.000000, WEAPON_NITESTICK, 1, WEAPON_NIGHT_VISION_GOGGLES, 1, WEAPON_MOLTOV, 5); // truth [player class]
+	AddPlayerClass(0, 1610.0, -1900.0, 13.5, 90.0, WEAPON_FIST, 0, WEAPON_FIST, 0, WEAPON_FIST, 0); // CJ [player class]
+	AddPlayerClassEx(2, 105, 1612.0, -1900.0, 13.5, -90.0, WEAPON_DEAGLE, 100, WEAPON_M4, 300, WEAPON_FIST, 0); // FAM1 [player class]
+	AddPlayerClass(1, 1614.0, -1900.0, 13.5, 0.0, WEAPON_NITESTICK, 1, WEAPON_NIGHT_VISION_GOGGLES, 1, WEAPON_MOLTOV, 5); // truth [player class]
 
-	gate_zone = GangZoneCreate(1590.000000, -1910.000000, 1630.000000, -1870.000000); // gangzone [gang zone]
+	gate_zone = GangZoneCreate(1590.0, -1910.0, 1630.0, -1870.0); // gangzone [gang zone]
 
-	new sign = CreateObject(19353, 1604.000000, -1890.000000, 14.000000, 0.000000, 0.000000, 90.000000); // wall001
+	new sign = CreateObject(19353, 1604.0, -1890.0, 14.0, 0.0, 0.0, 90.0); // wall001
 	SetObjectMaterialText(sign, "OPEN", 0, OBJECT_MATERIAL_SIZE_256x128, "Arial", 24, true, 0xFFFFFFFF, 0xFF000000, OBJECT_MATERIAL_TEXT_ALIGN_CENTER);
 
 	// ---- attachments ----
-	AttachObjectToObject(crate, base, 0.000000, 0.000000, 0.800000, 15.000000, 25.000000, 35.000000, true);
+	AttachObjectToObject(crate, base, 0.0, 0.0, 0.8, 15.0, 25.0, 35.0, true);
 }
 
 stock Haumea_hv_samp_ShowForPlayer(playerid)
 {
 	GangZoneShowForPlayer(playerid, gate_zone, 0xFF000088); // gangzone
-	SetPlayerMapIcon(playerid, 0, 1600.000000, -1880.000000, 13.500000, 6, 0x00000000, MAPICON_LOCAL); // mapicon [map icon]
+	SetPlayerMapIcon(playerid, 0, 1600.0, -1880.0, 13.5, 6, 0x00000000, MAPICON_LOCAL); // mapicon [map icon]
 }

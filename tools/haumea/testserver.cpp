@@ -7,6 +7,7 @@
 #include "workspace.h"
 #include "encoding.h"
 #include "childprocess.h"
+#include "serverdownload.h"
 
 #include <math.h>
 #include <stdarg.h>
@@ -36,10 +37,12 @@ extern char **environ;
 
 // The test server lives in <config>/testserver/server. Its files come from a
 // source server: the package set in Preferences (a server folder, or a Linux
-// .tar.gz / Windows .zip extracted once to <config>/testserver/package), or
-// else the workspace server. Only open.mp's own components are copied, plus
-// the streamer plugin, recordings, node files and custom models when the map
-// needs them.
+// .tar.gz / Windows .zip extracted once to <config>/testserver/package), the
+// workspace server, or else the latest open.mp release, which Test in game
+// downloads to <config>/testserver/download the first time it needs it (and
+// the streamer plugin there too, for a map that uses it and has none). Only
+// open.mp's own components are copied, plus the streamer plugin, recordings,
+// node files and custom models when the map needs them.
 
 // ---- paths ----------------------------------------------------------------
 
@@ -385,6 +388,16 @@ tsServerDir(void)
 	return tsJoin(tsJoin(tsConfigDir(), "testserver"), "server");
 }
 
+// Where Test in game downloads open.mp and the streamer when nothing has them.
+static std::string
+tsDownloadDir(void)
+{
+	return tsJoin(tsJoin(tsConfigDir(), "testserver"), "download");
+}
+
+static int gTsDownloadFormat = -1;	// the Pawn format to run once the download is in
+static int gTsDownloaded;	// SERVER_DOWNLOAD_* already fetched this session: not again
+
 static bool
 tsHasServer(const std::string &dir, bool *windows)
 {
@@ -482,16 +495,49 @@ tsFindSource(TsSource *source, std::string *error)
 		source->label = "workspace " + workspace;
 		return true;
 	}
+	if(tsFindServerIn(tsDownloadDir(), 0, source)){
+		source->label = "downloaded " + tsDownloadDir();
+		return true;
+	}
 	*error = N_("set an open.mp server package (folder, .tar.gz or .zip) in Preferences > Test server");
+	return false;
+}
+
+// Where the streamer's plugin and include can come from, first found first.
+static std::vector<std::string>
+tsStreamerPluginDirs(const TsSource &source)
+{
+	std::string workspace = tsWorkspaceDir();
+	return { tsJoin(source.dir, "plugins"), workspace.empty() ? "" : tsJoin(workspace, "plugins"),
+		tsJoin(tsDownloadDir(), "plugins") };
+}
+
+static std::vector<std::string>
+tsStreamerIncludeDirs(const TsSource &source)
+{
+	std::string workspace = tsWorkspaceDir();
+	return { tsJoin(tsJoin(source.dir, "qawno"), "include"),
+		workspace.empty() ? "" : tsJoin(tsJoin(workspace, "qawno"), "include"),
+		workspace.empty() ? "" : tsJoin(tsJoin(workspace, "pawno"), "include"),
+		tsJoin(tsJoin(tsDownloadDir(), "qawno"), "include") };
+}
+
+static bool
+tsHasFirst(const std::vector<std::string> &dirs, const char *name)
+{
+	for(const std::string &dir : dirs)
+		if(!dir.empty() && tsIsFile(tsFindName(dir, name)))
+			return true;
 	return false;
 }
 
 // What the map uses, from its exported code.
 struct TsNeeds {
 	bool npcs, streamer, customModels;
+	bool registersModels;	// the map's own AddSimpleModel/AddCharModel calls
 	std::string prefix;
 	bool removeWorldObjects, showForPlayer;
-	bool textDraws, soundTick, soundArea;	// helpers the gamemode has to call
+	bool textDraws, soundTick, soundArea, gates;	// helpers the gamemode has to call
 	bool races;	// playable races: haumea_races.inc beside the gamemode, and /race
 	std::string textDrawFile;	// the textdraw file's prefix, when it has textdraws
 };
@@ -514,7 +560,10 @@ tsScanMap(const std::string &code)
 	needs.textDraws = code.find("stock " + needs.prefix + "_CreateTextDraws(") != std::string::npos;
 	needs.soundTick = code.find("stock " + needs.prefix + "_SoundTick(") != std::string::npos;
 	needs.soundArea = code.find("stock " + needs.prefix + "_SoundArea(") != std::string::npos;
+	needs.gates = code.find("stock " + needs.prefix + "_Gates(") != std::string::npos;
 	needs.races = code.find("\tMapRace_Create(") != std::string::npos;
+	needs.registersModels = code.find("AddSimpleModel") != std::string::npos ||
+		code.find("AddCharModel(") != std::string::npos;
 	return needs;
 }
 
@@ -559,7 +608,8 @@ tsSetup(const TsSource &source, TsNeeds *needs, std::string *error)
 	std::vector<std::string> components(tsBaseComponents,
 		tsBaseComponents + sizeof(tsBaseComponents)/sizeof(tsBaseComponents[0]));
 	std::string customModels = workspace.empty() ? "" : ServerArtworkDirectory(workspace);
-	needs->customModels = !customModels.empty() && tsIsFile(tsJoin(customModels, "artconfig.txt"));
+	needs->customModels = !customModels.empty() &&
+		(needs->registersModels || tsIsFile(tsJoin(customModels, "artconfig.txt")));
 	if(needs->npcs){
 		components.push_back("NPCs");
 		components.push_back("Recordings");
@@ -586,16 +636,12 @@ tsSetup(const TsSource &source, TsNeeds *needs, std::string *error)
 	std::vector<std::string> plugins;
 	if(needs->streamer){
 		std::string plugin = std::string("streamer") + ext;
-		if(tsCopyFirst({ tsJoin(source.dir, "plugins"), workspace.empty() ? "" : tsJoin(workspace, "plugins") },
-		               plugin.c_str(), tsJoin(tsJoin(server, "plugins"), plugin)))
+		if(tsCopyFirst(tsStreamerPluginDirs(source), plugin.c_str(), tsJoin(tsJoin(server, "plugins"), plugin)))
 			plugins.push_back("streamer");
 		else
 			tsLogf("No %s in the package or workspace plugins folder; streamer objects will not load", plugin.c_str());
 		std::string include = tsJoin(tsJoin(tsJoin(server, "qawno"), "include"), "streamer.inc");
-		if(!tsCopyFirst({ tsJoin(tsJoin(source.dir, "qawno"), "include"),
-		                  workspace.empty() ? "" : tsJoin(tsJoin(workspace, "qawno"), "include"),
-		                  workspace.empty() ? "" : tsJoin(tsJoin(workspace, "pawno"), "include") },
-		                "streamer.inc", include)){
+		if(!tsCopyFirst(tsStreamerIncludeDirs(source), "streamer.inc", include)){
 			*error = N_("the map uses the streamer, but no streamer.inc was found in the package or workspace");
 			return false;
 		}
@@ -749,6 +795,15 @@ tsGamemode(const TsNeeds &needs)
 			"public OnPlayerLeaveDynamicArea(playerid, areaid)\n"
 			"{\n"
 			"\t" + p + "_SoundArea(playerid, areaid, false);\n"
+			"\treturn 1;\n"
+			"}\n"
+			"\n";
+	// open.mp's include tags the keys; the map's helper takes them plain.
+	if(needs.gates)
+		code +=
+			"public OnPlayerKeyStateChange(playerid, KEY:newkeys, KEY:oldkeys)\n"
+			"{\n"
+			"\t" + p + "_Gates(playerid, _:newkeys, _:oldkeys);\n"
 			"\treturn 1;\n"
 			"}\n"
 			"\n";
@@ -991,15 +1046,41 @@ tsFail(const std::string &message)
 	ToastFor(TOAST_SAVE, 6.0f, _("Test in game: %s"), _(message.c_str()));
 }
 
+// Fetches what Test in game is missing, then runs the map again.
+static bool
+tsDownload(int what, int pawnFormat)
+{
+	if(gTsDownloaded & what)
+		return false;	// fetched once already, and still missing: say what is
+	if(ServerDownloadStatus(nil, nil, nil) == SERVER_DOWNLOAD_RUNNING){
+		tsFail(N_("a server download is running; try again when it finishes"));
+		return true;
+	}
+	if(!tsMakeDirs(tsDownloadDir()))
+		return false;
+	ServerDownloadStart(tsDownloadDir().c_str(), what, SERVER_DOWNLOAD_FOR_TEST_SERVER);
+	gTsDownloadFormat = pawnFormat;
+	gTsStatus = what & SERVER_DOWNLOAD_OPENMP ? N_("Downloading the open.mp server...")
+		: N_("Downloading the streamer plugin...");
+	tsLogf("%s (into %s)", gTsStatus.c_str(), tsDownloadDir().c_str());
+	ToastFor(TOAST_SAVE, 6.0f, _("Test in game: %s"), _(gTsStatus.c_str()));
+	return true;
+}
+
 void
 TestServerRunMap(int pawnFormat)
 {
 	tsLoadSettings();
-	if(gTsState == TS_COMPILING)
+	if(gTsState == TS_COMPILING || gTsDownloadFormat >= 0)
 		return;
 	std::string error;
 	TsSource source;
 	if(!tsFindSource(&source, &error)){
+		// Nothing set and no workspace server: the latest open.mp, and the
+		// streamer with it, since most maps use it.
+		if(gTsSettings.package[0] == '\0' &&
+		   tsDownload(SERVER_DOWNLOAD_OPENMP | SERVER_DOWNLOAD_STREAMER, pawnFormat))
+			return;
 		tsFail(error);
 		return;
 	}
@@ -1033,6 +1114,13 @@ TestServerRunMap(int pawnFormat)
 			return;
 		}
 		needs.textDrawFile = TextDrawFilePrefix(tdPath.c_str());
+	}
+	if(needs.streamer){
+		std::string plugin = std::string("streamer") + (source.windows ? ".dll" : ".so");
+		if((!tsHasFirst(tsStreamerPluginDirs(source), plugin.c_str()) ||
+		    !tsHasFirst(tsStreamerIncludeDirs(source), "streamer.inc")) &&
+		   tsDownload(SERVER_DOWNLOAD_STREAMER, pawnFormat))
+			return;
 	}
 	if(!tsSetup(source, &needs, &error)){
 		tsFail(error);
@@ -1248,6 +1336,22 @@ TestServerLaunchGame(void)
 void
 TestServerUpdate(void)
 {
+	// Test in game's download is in: run the map, or say why not.
+	if(gTsDownloadFormat >= 0 && ServerDownloadOwner() == SERVER_DOWNLOAD_FOR_TEST_SERVER){
+		std::string message;
+		int state = ServerDownloadStatus(nil, &message, nil);
+		if(state == SERVER_DOWNLOAD_DONE || state == SERVER_DOWNLOAD_FAILED){
+			int format = gTsDownloadFormat;
+			gTsDownloadFormat = -1;
+			ServerDownloadAcknowledge();
+			if(state == SERVER_DOWNLOAD_DONE){
+				gTsDownloaded |= SERVER_DOWNLOAD_OPENMP | SERVER_DOWNLOAD_STREAMER;
+				tsLogf("Downloaded %s into %s", message.c_str(), tsDownloadDir().c_str());
+				TestServerRunMap(format);
+			}else
+				tsFail("could not download the server: " + message);
+		}
+	}
 	if(gTsState == TS_COMPILING &&
 	   !tsPoll(&gTsCompiler, [](const std::string &line){ tsLogLine(line); tsParseCompilerLine(line); })){
 		int errors = 0, warnings = 0;
@@ -1308,7 +1412,8 @@ void
 TestServerGetReport(TestServerReport *report, int logLines)
 {
 	tsLoadSettings();
-	report->state = gTsState == TS_COMPILING ? "compiling" : tsRunning(&gTsServer) ? "running" : "idle";
+	report->state = gTsState == TS_COMPILING ? "compiling" : gTsDownloadFormat >= 0 ? "downloading" :
+		tsRunning(&gTsServer) ? "running" : "idle";
 	report->status = gTsStatus;
 	report->source = gTsSource.label;
 	report->port = gTsSettings.port;
@@ -1330,10 +1435,15 @@ TestServerShutdown(void)
 
 // ---- UI -------------------------------------------------------------------
 
+// Run the open map on a private open.mp server and watch it: start or reload
+// it (the foot), stop, restart or join it, read the compiler and the server's
+// log; the server's settings are the second view.
 void
 TestServerWindow(bool *open, int pawnFormat)
 {
-	if(!ImGui::Begin(LI(ICON_FA_GAMEPAD, "Test server"), open)){
+	const char *title = LI(ICON_FA_GAMEPAD, "Test server");
+	ImGuiWindowFlags flags = UiPlaceToolWindow(title, 30.0f, false);
+	if(!ImGui::Begin(title, open, flags)){
 		ImGui::End();
 		return;
 	}
@@ -1348,60 +1458,98 @@ TestServerWindow(bool *open, int pawnFormat)
 		snprintf(status, sizeof(status), _("Running on 127.0.0.1:%d"), port);
 	else
 		snprintf(status, sizeof(status), "%s", _(gTsStatus.c_str()));
-	ImGui::TextUnformatted(status);
-	if(!gTsSource.label.empty()){
-		ImGui::SameLine();
-		ImGui::TextDisabled("(%s)", gTsSource.label.c_str());
-	}
 	bool running = tsRunning(&gTsServer);
-	if(ImGui::Button(running ? TI(ICON_FA_ROTATE, "Reload map") : TI(ICON_FA_PLAY, "Test in game")))
-		TestServerRunMap(pawnFormat);
-	ImGui::SameLine();
-	ImGui::BeginDisabled(!running);
-	if(ImGui::Button(TI(ICON_FA_STOP, "Stop")))
-		TestServerStop();
-	ImGui::EndDisabled();
-	ImGui::SameLine();
-	ImGui::BeginDisabled(gTsState == TS_COMPILING);
-	if(ImGui::Button(TI(ICON_FA_ROTATE, "Restart")))
-		TestServerRestart();
-	ImGui::EndDisabled();
-	ImGui::SameLine();
-	if(ImGui::Button(TI(ICON_FA_GAMEPAD, "Launch game")))
-		TestServerLaunchGame();
-	ImGui::SameLine();
-	if(ImGui::Button(_("Clear log")))
-		gTsLog.clear();
+	bool failed = gTsStatus.compare(0, 8, "Failed: ") == 0;
+	if(failed)
+		ImGui::PushStyleColor(ImGuiCol_Text, UiSemanticColor(UI_COLOR_ERROR));
+	else if(running)
+		ImGui::PushStyleColor(ImGuiCol_Text, UiSemanticColor(UI_COLOR_SUCCESS));
+	UiInfoRow(_("Status"), status);
+	if(failed || running)
+		ImGui::PopStyleColor();
+	if(!gTsSource.label.empty())
+		UiInfoRow(_("Source"), gTsSource.label.c_str());
 
-	if(!gTsCompileMessages.empty()){
-		ImGui::SeparatorText(_("Compiler"));
-		for(size_t i = 0; i < gTsCompileMessages.size(); i++){
-			const TsCompileMessage &m = gTsCompileMessages[i];
-			ImGui::TextColored(m.error ? ImVec4(1.0f, 0.45f, 0.4f, 1.0f) : ImVec4(1.0f, 0.8f, 0.35f, 1.0f),
-				"%s:%d", m.file.c_str(), m.line);
-			ImGui::SameLine();
-			ImGui::TextWrapped("%s", m.text.c_str());
-		}
+	// The server's other actions, side by side at equal widths.
+	ImGuiStyle &style = ImGui::GetStyle();
+	{
+		float avail = ImGui::GetContentRegionAvail().x;
+		ImVec2 third(floorf((avail - style.ItemSpacing.x*2.0f) / 3.0f), 0);
+		ImGui::BeginDisabled(!running);
+		if(ImGui::Button(TI(ICON_FA_STOP, "Stop"), third))
+			TestServerStop();
+		ImGui::EndDisabled();
+		ImGui::SameLine();
+		ImGui::BeginDisabled(gTsState == TS_COMPILING);
+		if(ImGui::Button(TI(ICON_FA_ROTATE, "Restart"), third))
+			TestServerRestart();
+		ImGui::EndDisabled();
+		ImGui::SameLine();
+		if(ImGui::Button(TI(ICON_FA_GAMEPAD, "Launch game"), third))
+			TestServerLaunchGame();
 	}
-	ImGui::SeparatorText(_("Server log"));
-	ImGui::BeginChild("##testserverlog", UiFillRest(UiListMinHeight()), ImGuiChildFlags_Borders,
-		ImGuiWindowFlags_HorizontalScrollbar);
-	ImGuiListClipper clipper;
-	clipper.Begin((int)gTsLog.size());
-	while(clipper.Step())
-		for(int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++){
-			const std::string &line = gTsLog[i];
-			bool bad = line.find("rror") != std::string::npos || line.find("arning") != std::string::npos;
-			if(bad)
-				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.6f, 0.4f, 1.0f));
-			ImGui::TextUnformatted(line.c_str());
-			if(bad)
-				ImGui::PopStyleColor();
+
+	// What it said, or its settings; Clear at the right end for the log.
+	static int view = 0;	// 0 log, 1 settings
+	const char *views[] = { L("Server log"), L("Preferences") };
+	ImGui::Spacing();
+	float rowX = ImGui::GetCursorPosX(), rowWidth = ImGui::GetContentRegionAvail().x;
+	UiSegmented("##ts_view", views, 2, &view, false);
+	if(view == 0){
+		float h = ImGui::GetFrameHeight();
+		ImGui::SameLine();
+		ImGui::SetCursorPosX(rowX + rowWidth - h);
+		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
+		ImGui::BeginDisabled(gTsLog.empty());
+		if(ImGui::Button(ICON_FA_TRASH "##clearlog", ImVec2(h, h)))
+			gTsLog.clear();
+		ImGui::EndDisabled();
+		ImGui::PopStyleColor();
+		ImGui::SetItemTooltip("%s", _("Clear log"));
+	}
+	ImGui::Spacing();
+
+	if(view == 1)
+		TestServerPreferences();
+	else{
+		if(!gTsCompileMessages.empty() && UiSection(_("Compiler"), ImGuiTreeNodeFlags_DefaultOpen)){
+			for(size_t i = 0; i < gTsCompileMessages.size(); i++){
+				const TsCompileMessage &m = gTsCompileMessages[i];
+				ImGui::TextColored(UiSemanticColor(m.error ? UI_COLOR_ERROR : UI_COLOR_WARNING),
+					"%s:%d", m.file.c_str(), m.line);
+				ImGui::SameLine();
+				ImGui::TextWrapped("%s", m.text.c_str());
+			}
 		}
-	if(gTsLogScroll && ImGui::GetScrollY() >= ImGui::GetScrollMaxY() - ImGui::GetTextLineHeight() * 4)
-		ImGui::SetScrollHereY(1.0f);
-	gTsLogScroll = false;
-	ImGui::EndChild();
+		// The log fills the window down to the foot's button.
+		float footer = ImGui::GetFrameHeight() + style.ItemSpacing.y;
+		float listHeight = std::max(ImGui::GetContentRegionAvail().y - footer, UiListMinHeight());
+		ImGui::BeginChild("##testserverlog", ImVec2(0, listHeight), ImGuiChildFlags_Borders,
+			ImGuiWindowFlags_HorizontalScrollbar);
+		if(gTsLog.empty()){
+			ImGui::TextDisabled("%s", _("No output yet."));
+			ImGui::TextDisabled("%s", _("Test in game starts the server; what it prints shows here."));
+		}
+		ImGuiListClipper clipper;
+		clipper.Begin((int)gTsLog.size());
+		while(clipper.Step())
+			for(int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++){
+				const std::string &line = gTsLog[i];
+				bool bad = line.find("rror") != std::string::npos || line.find("arning") != std::string::npos;
+				if(bad)
+					ImGui::PushStyleColor(ImGuiCol_Text, UiSemanticColor(UI_COLOR_WARNING));
+				ImGui::TextUnformatted(line.c_str());
+				if(bad)
+					ImGui::PopStyleColor();
+			}
+		if(gTsLogScroll && ImGui::GetScrollY() >= ImGui::GetScrollMaxY() - ImGui::GetTextLineHeight() * 4)
+			ImGui::SetScrollHereY(1.0f);
+		gTsLogScroll = false;
+		ImGui::EndChild();
+	}
+
+	if(UiFooterButton(running ? TI(ICON_FA_ROTATE, "Reload map") : TI(ICON_FA_PLAY, "Test in game")))
+		TestServerRunMap(pawnFormat);
 	ImGui::End();
 }
 
@@ -1410,21 +1558,22 @@ TestServerPreferences(void)
 {
 	tsLoadSettings();
 	bool changed = false;
-	changed |= ImGui::InputTextWithHint(_("Server package"), _("folder, open.mp .tar.gz or .zip"),
+	changed |= UiInputTextWithHint(_("Server package"), _("folder, open.mp .tar.gz or .zip"),
 		gTsSettings.package, sizeof(gTsSettings.package));
 	ImGui::SetItemTooltip(_("Test in game runs the map on a private open.mp server in Haumea's config\n"
-		"folder. Its files come from this package, or from the workspace server when empty."));
-	changed |= ImGui::InputInt(_("Port"), &gTsSettings.port);
+		"folder. Its files come from this package, or when empty from the workspace server,\n"
+		"or else from the latest open.mp release, downloaded the first time."));
+	changed |= UiInputInt(_("Port"), &gTsSettings.port);
 	gTsSettings.port = clamp(gTsSettings.port, 1024, 65535);
-	changed |= ImGui::InputText(_("Nickname"), gTsSettings.nickname, sizeof(gTsSettings.nickname));
+	changed |= UiInputText(_("Nickname"), gTsSettings.nickname, sizeof(gTsSettings.nickname));
 	const char *clients[NUM_TS_CLIENTS] = { _("open.mp launcher (SA-MP if not found)"), _("open.mp launcher only"),
 		_("SA-MP (samp.exe)") };
-	changed |= ImGui::Combo(_("Launch game with"), &gTsSettings.client, clients, NUM_TS_CLIENTS);
+	changed |= UiCombo(_("Launch game with"), &gTsSettings.client, clients, NUM_TS_CLIENTS);
 	ImGui::SetItemTooltip("%s", _("open.mp's launcher joins with the open.mp client, which some games need\n"
 		"(SA-MP's can crash where open.mp's doesn't)."));
 	if(gTsSettings.client != TS_CLIENT_SAMP){
 		std::string found = tsFindLauncher();
-		changed |= ImGui::InputTextWithHint(_("open.mp launcher"),
+		changed |= UiInputTextWithHint(_("open.mp launcher"),
 			found.empty() ? _("omp-launcher.exe: not found") : found.c_str(),
 			gTsSettings.launcher, sizeof(gTsSettings.launcher));
 		ImGui::SetItemTooltip("%s", _("Empty: the game folder's, or where its installer puts it\n"
@@ -1432,7 +1581,7 @@ TestServerPreferences(void)
 	}
 #ifndef _WIN32
 	std::string prefix = tsWinePrefix();
-	changed |= ImGui::InputTextWithHint(_("Wine prefix"), prefix.empty() ? _("for the game") : prefix.c_str(),
+	changed |= UiInputTextWithHint(_("Wine prefix"), prefix.empty() ? _("for the game") : prefix.c_str(),
 		gTsSettings.winePrefix, sizeof(gTsSettings.winePrefix));
 #endif
 	if(changed)

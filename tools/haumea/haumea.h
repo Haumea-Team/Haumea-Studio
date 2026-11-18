@@ -41,6 +41,11 @@ int EditorModelId(int pawnId);
 bool IsCustomModel(int editorId);
 void ListCustomSimpleModels(std::vector<int> &pawnIds);	// AddSimpleModel's, -1000 to -30000
 void LoadCustomModelsForMap(const char *mapPath, const std::string &source);
+// Reads every custom model's files and the model lists again; how many were read.
+int ReloadCustomModels(void);
+void CustomModelsTick(void);	// reloads custom models whose files changed on disk
+// Loaded, and its DFF has no collision: Haumea's is made from the triangles, the game has none.
+bool CustomModelHasNoGameCollision(int editorId);
 const char *GetCustomModelsDir(void);	// the server's models folder, or nil
 const char *GetCustomModelDffPath(int editorId);
 const char *GetCustomModelTxdPath(int txdSlot);
@@ -62,6 +67,9 @@ const char *GetCustomModelsMapPath(void);
 // Multiplayer: the custom models as artconfig.txt lines naming files by
 // their own names, sorted, with those files (name -> path)...
 std::string CustomModelsSessionList(std::map<std::string, std::string> &files);
+// A map's own registrations of the custom models it uses (editor IDs):
+// AddSimpleModel/AddCharModel lines, less those the server's artconfig.txt has.
+std::string CustomModelRegistrations(const std::vector<int> &editorIds, const char *indent);
 // ...and a session's, its files in dir: the ones not here yet are added.
 int AddSessionCustomModels(const std::string &dir, const std::string &artconfig);
 // Models a map uses that were old modloader/Haumea imports, moved into the
@@ -69,6 +77,9 @@ int AddSessionCustomModels(const std::string &dir, const std::string &artconfig)
 int FindLegacyImports(const std::vector<int> &unknownIds, std::vector<int> &legacyIds);
 bool MigrateLegacyImports(const std::vector<int> &ids, std::string &err);
 int RemapLegacyModel(int id);	// the custom model an old import became, or -1
+// The Add custom model dialog without it: copies dff and txd into the server's
+// models and adds the artconfig.txt line. Returns the Pawn id, or 0 with err.
+int AddCustomModelToServer(const char *dff, const char *txd, bool character, int id, int baseId, std::string &err);
 
 // SA-MP vehicle extras (vehiclemods.cpp)
 #define VEHICLE_PLATE_LEN 33	// SetVehicleNumberPlate takes up to 32 characters
@@ -117,6 +128,37 @@ bool UiThemeIsLight(void);	// dark text on a light background
 rw::RGBA UiThemePreviewBackground(void);	// behind model previews and thumbnails
 ImVec4 UiSemanticColor(int color);
 ImVec4 UiAccentFill(void);	// filled accent background for white text
+// A panel section's folding title (in place of ImGui::CollapsingHeader).
+bool UiSection(const char *label, int flags = 0);
+// A group's title that doesn't fold (in place of ImGui::SeparatorText).
+void UiHeading(const char *label);
+// Fields with their name on the left, as a properties panel lays them out
+// (in place of ImGui's, which put it on the right): the same arguments.
+void UiFieldLabel(const char *label, char *id, size_t size);
+// An on/off option as a switch (in place of ImGui::Checkbox).
+bool UiCheckbox(const char *label, bool *value);
+// A segmented switch: the choices side by side in one well, the current one
+// raised. True when the choice changed. Each choice's label is its ID.
+bool UiSegmented(const char *id, const char *const *labels, int count, int *current, bool fill = true);
+// A window's main action along its foot: full width, the accent fill.
+bool UiFooterButton(const char *label, bool enabled = true);
+// A small window, placed each time it opens at the 3D view's top left beside
+// the left panel; fit: as tall as its contents (returns AlwaysAutoResize for
+// Begin's flags), else a list's size. Nothing while it is docked.
+ImGuiWindowFlags UiPlaceToolWindow(const char *name, float widthEm, bool fit);
+// The height the 3D view's bottom pill takes, for other overlays to clear it.
+float ViewportBottomOverlayInset(void);
+// A read-only detail row: name, value, a copy button on hover. True when copied.
+bool UiInfoRow(const char *label, const char *value, const char *tooltip = nullptr);
+#define UI_FIELD(name) \
+	template<typename... A> static inline bool Ui##name(const char *label, A... args) \
+	{ char id[256]; UiFieldLabel(label, id, sizeof(id)); return ImGui::name(id, args...); }
+UI_FIELD(InputInt) UI_FIELD(InputInt2) UI_FIELD(InputFloat) UI_FIELD(InputFloat2) UI_FIELD(InputFloat3)
+UI_FIELD(DragFloat) UI_FIELD(DragFloat2) UI_FIELD(DragFloat3) UI_FIELD(DragInt) UI_FIELD(DragInt2)
+UI_FIELD(DragFloatRange2) UI_FIELD(SliderInt) UI_FIELD(SliderFloat) UI_FIELD(SliderFloat2)
+UI_FIELD(Combo) UI_FIELD(InputText) UI_FIELD(InputTextWithHint) UI_FIELD(ColorEdit3) UI_FIELD(ColorEdit4)
+UI_FIELD(BeginCombo)
+#undef UI_FIELD
 // The rest of the window's height for a list, never less than minHeight: in a
 // short panel the panel scrolls instead of squeezing the list to a sliver.
 ImVec2 UiFillRest(float minHeight);
@@ -158,6 +200,19 @@ bool GetInitialEditorWindowRect(int *x, int *y, int *width, int *height, bool *c
 void GetEditorWindowRect(int *x, int *y, int *width, int *height);
 void SetEditorWindowRect(int x, int y, int width, int height, bool setPosition);
 void SetEditorWindowDecorated(bool decorated);
+// titlebar.cpp: the window's own title bar in place of the system's.
+bool TitleBarOwned(void);
+void TitleBarInstall(void);
+void TitleBarSetLayout(float height, float captionX0, float captionX1);	// client pixels
+void TitleBarUpdate(void);
+bool TitleBarMaximized(void);
+void TitleBarMinimize(void);
+void TitleBarToggleMaximize(void);
+void TitleBarRoundCorners(void);	// just before a frame is shown
+#ifdef _WIN32
+bool TitleBarWindowProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam, LRESULT *result);
+#endif
+rw::Texture *GetHaumeaLogoTexture(void);	// main.cpp
 void ShowEditorWindow(void);
 void HideEditorWindow(void);
 void SyncEditorWindowSize(void);
@@ -412,6 +467,10 @@ enum {
 	NUM_SAMP_ZONE_MODES
 };
 
+// When an object with moveEnabled moves.
+enum { MOVE_ON_LOAD, MOVE_ON_KEY, MOVE_ON_HORN };
+enum { GATE_DEFAULT_KEY = 65536 };	// KEY_YES
+
 // What a sound place plays.
 enum {
 	SAMP_SOUND_STREAM,	// PlayAudioStreamForPlayer, started in _ShowForPlayer
@@ -448,6 +507,14 @@ struct ObjectPawnProperties
 	rw::V3d moveRotation;	// degrees, SA-MP Euler order
 	bool moveRotates;
 	float moveSpeed;	// metres a second
+	// A gate (moveTrigger MOVE_ON_KEY or MOVE_ON_HORN) makes that move when a
+	// player within gateRange of it presses gateKey, or a driver sounds the
+	// horn, and moves back gateCloseDelay ms after it gets there.
+	int moveTrigger;
+	int gateKey;	// a KEY_* value
+	float gateRange;	// metres
+	int gateCloseDelay;	// milliseconds
+	bool gateSilent;	// no garage door sounds as it starts and stops
 
 	// SA-MP element settings; elementKind is SAMP_ELEMENT_OBJECT for objects
 	// and vehicles. The world, draw and stream distances above apply too.
@@ -580,6 +647,8 @@ void RenderCullZones(void);
 // and a zone's GXT key (several zones share one name).
 int FindNavigZone(rw::V3d p);
 const char *GetNavigZoneText(int zone);
+int GetNumNavigZones(void);
+void GetNavigZoneBox(int zone, rw::V3d *min, rw::V3d *max);
 // The map zone (map.zon) level at a point: 1 Los Santos, 2 San Fierro,
 // 3 Las Venturas, 0 elsewhere.
 int GetMapZoneLevel(rw::V3d p);
@@ -974,6 +1043,27 @@ int ExportPawnCode(const char *path, PawnCodeFormat format, bool selectedOnly,
 	int *numSkipped = nil);
 int BuildPawnCode(const char *pathHint, PawnCodeFormat format, bool selectedOnly,
 	std::string &code, int *numSkipped = nil);
+// File > Export as Pawn: centred writes what is exported around the origin
+// (its middle at its lowest point), which *centre gets.
+int ExportPawnCodeCentred(const char *path, int format, bool selectedOnly, bool centred,
+	int *numSkipped, rw::V3d *centre, bool *wasCentred);
+
+// The editor's panels without the panels, for Namaka (gui.cpp).
+struct SavedSelectionInfo { std::string name; std::vector<int> ids; };
+std::vector<SavedSelectionInfo> GetSavedSelections(void);
+void SaveSelectionSet(const char *name, const std::vector<struct ObjectInst*> &objects);
+bool SelectSavedSelection(const char *name, bool add);
+bool DeleteSavedSelection(const char *name);
+int CustomImportModel(const char *dff, const char *txd, const char *col, int objectId, const char *modelName,
+	const char *txdName, float drawDist, int ideFlags, std::string *error);
+int SuggestCustomImportId(void);
+std::vector<std::string> GetRecentMapList(void);
+std::vector<std::string> GetAutosaveList(void);	// newest first
+std::string WorkspaceRacesIncludePath(void);
+bool ReloadGameFiles(void);	// restarts Haumea
+bool EditorHasUnsavedChanges(void);
+void SetEditorWorkspaceMode(int mode);	// 0 map, 1 TextDraws, 2 Pawn IDE
+int GetEditorWorkspaceMode(void);
 int ImportPawnCode(const char *path, int *numSkipped = nil);
 // keepRotationNumbers: the source is a map's own Pawn, whose rx, ry, rz are
 // written back as they are while unchanged (not for converted maps).
@@ -1223,11 +1313,13 @@ bool GetGroundPlacementSurface(rw::V3d pos, rw::V3d *hitPos, rw::V3d *hitNormal 
 // Vehicles, peds and the elements drawn as peds or markers stand on the ground.
 bool ModelStandsOnGround(int modelId, int elementKind);
 bool InstStandsOnGround(const ObjectInst *inst);
+// The game collision under a ped standing at pos, within maxDrop below its feet.
+bool FindGameSurfaceBelow(rw::V3d pos, float maxDrop, rw::V3d *hitPos = nil, ObjectInst **under = nil);
 bool GetPlacementSurfaceHit(rw::V3d *hitPos, rw::V3d *hitNormal);
 rw::V3d GetPlacementPosition(void);
 float GetPlacementBaseOffset(int objectId);
 
-// Object Browser categories & favourites
+// Asset Browser categories & favourites
 void InitObjectCategories(void);
 int GetObjectCategory(int modelId);
 void SetObjectCategory(int modelId, int category);
@@ -1286,6 +1378,7 @@ TxdDef *GetTxdDef(int i);
 int FindTxdSlot(const char *name);
 int AddTxdSlot(const char *name);
 bool RemoveTxdSlot(int i);
+void UnloadTxd(int i);	// the next LoadTxd reads the file again
 int GetNumTxdSlots(void);
 int GetTxdTextureCount(int i);
 rw::Texture *GetTxdTexture(int i, int textureIndex);
@@ -1407,9 +1500,16 @@ struct ObjectDef
 };
 ObjectDef *AddObjectDef(int id);
 void RemoveObjectDef(int id);
+void UnloadObjectDefModel(int id);	// drops its loaded DFF and collision, keeps the definition
+// Reads these models (and TXD slots) from their files again and rebuilds
+// the instances drawing them; returns how many instances were rebuilt.
+int ReloadModelsInPlace(const std::vector<int> &modelIds, const std::vector<int> &txdSlots);
 ObjectDef *GetObjectDef(int id);
 ObjectDef *GetObjectDef(const char *name, int *id);
-bool CreateObjectPreviewRwObject(int id, rw::Atomic **atomicOut, rw::Clump **clumpOut);
+struct Effect;
+// effects: when given, the model's 2dfx effects (its own, or read for the preview).
+bool CreateObjectPreviewRwObject(int id, rw::Atomic **atomicOut, rw::Clump **clumpOut,
+	std::vector<Effect> *effects = nullptr);
 
 
 struct FileObjectInstance
@@ -1470,6 +1570,7 @@ struct ObjectInst
 	int m_highlight;	// various ways to highlight this object
 	bool m_isDeleted;	// marked for deletion (commented out in IPL)
 	bool m_editorHidden;	// hidden in the viewport by the user; editor-only, never saved
+	int m_replayRank;	// its place in the build replay, from 1; 0 when not in one
 	uint8 m_playerView;	// player view's verdict this frame (playerview.cpp)
 	bool m_isAdded;		// newly created text IPL instance not yet saved to disk
 	bool m_isDirty;		// position/rotation was modified since the last save
@@ -1579,6 +1680,10 @@ void HandleMapFileDrop(const char *path);
 bool OpenPawnMapFile(const char *path);
 int MergeMapFile(const char *path, int *skipped);
 void NewPawnMapDocument(void);
+// The open map's file was rewritten by something else since it was opened or saved.
+bool PawnMapChangedOnDisk(void);
+// Autosaves unsaved work before it is discarded; the path, or empty.
+std::string AutosaveBeforeDiscard(void);
 bool SavePawnMapTo(const char *path, int format);
 bool ExportOpenPawnMap(const char *path);	// a copy to path; the map keeps its own path
 const char *GetPawnMapPath(void);	// empty while untitled
@@ -1717,6 +1822,10 @@ namespace Effects {
 extern Effect *hoveredEffect, *guiHoveredEffect;
 extern Effect *selectedEffect;
 void AddEffect(Effect e);
+// While set, AddEffect (and a model load's 2dfx) go to this list instead of
+// the objects: a preview's own copy of a model's effects.
+void SetEffectCapture(std::vector<Effect> *capture);
+bool EffectCaptureActive(void);
 Effect *GetEffect(int idx);
 void RenderLights(void);
 void Render(void);
@@ -1969,8 +2078,10 @@ void RenderDebugLines(void);
 void SplashProgress(float progress, const char *status);
 void SplashKeepAlive(void);
 extern ImFont *gCodeFont;
+extern ImFont *gIconFont;
 extern ImFont *gTerminalFont;	// the same face, with what terminals print beyond Latin
 extern ImFont *gTitleFont;
+extern ImFont *gBoldFont;
 void RenderLinesNow(const rw::V3d *points, int numPoints, rw::RGBA col);
 // Selected objects that move (MoveObject): a line to where they go, a ghost
 // there, and one gliding between at their speed.

@@ -10,7 +10,8 @@
 // from OnPlayerEnterDynamicArea and Haumea_showcase_SoundArea(playerid, areaid, false) from
 // OnPlayerLeaveDynamicArea.
 // The NPC_* calls need open.mp with its NPCs component; SA-MP 0.3.7 has no NPC natives.
-// Uses custom models: needs SA-MP 0.3.DL or open.mp with the server's models/artconfig.txt.
+// Uses custom models: their DFF and TXD go in the server's models folder, with artwork
+// on; players need the SA-MP 0.3.DL client.
 // Call Haumea_showcase_RemoveWorldObjectsForPlayer(playerid) from OnPlayerConnect.
 // Deleted world objects have a removal line but no CreateObject call.
 // Call Haumea_showcase_CreateTextDraws() from OnGameModeInit and Haumea_showcase_ShowTextDraws(playerid)
@@ -38,10 +39,10 @@ new Text:Haumea_showcase_td0;
 
 stock Haumea_showcase_RemoveWorldObjectsForPlayer(playerid)
 {
-	RemoveBuildingForPlayer(playerid, 4206, 1479.554688, -1639.609375, 13.648438, 0.25); // PershingPool_LAn
+	RemoveBuildingForPlayer(playerid, 4206, 1479.5547, -1639.6094, 13.648438, 0.25); // PershingPool_LAn
 }
 
-static Haumea_showcase_zone_3 = -1;
+static Haumea_showcase_zone_1 = -1;
 
 static Haumea_showcase_soundId[1], Float:Haumea_showcase_soundAt[1][4], bool:Haumea_showcase_soundStop[1], Haumea_showcase_numSounds;
 static Haumea_showcase_soundArea[1];
@@ -72,78 +73,92 @@ stock Haumea_showcase_SoundArea(playerid, {DynamicArea, _}:areaid, bool:entered)
 
 stock Haumea_showcase_CreateObjects()
 {
+	new objectid;
+
 	// ---- NPC paths (open.mp) ----
 	new plazawalk = NPC_CreatePath();
-	NPC_AddPointToPath(plazawalk, 1470.000000, -1630.000000, 14.067998, 0.20); // path point
-	NPC_AddPointToPath(plazawalk, 1489.000000, -1630.000000, 14.067998, 0.20); // path point
-	NPC_AddPointToPath(plazawalk, 1489.000000, -1652.000000, 14.067998, 0.20); // path point
-	NPC_AddPointToPath(plazawalk, 1470.000000, -1652.000000, 14.067998, 0.20); // path point
+	NPC_AddPointToPath(plazawalk, 1470.0, -1630.0, 14.067998, 0.2); // path point
+	NPC_AddPointToPath(plazawalk, 1489.0, -1630.0, 14.067998, 0.2); // path point
+	NPC_AddPointToPath(plazawalk, 1489.0, -1652.0, 14.067998, 0.2); // path point
+	NPC_AddPointToPath(plazawalk, 1470.0, -1652.0, 14.067998, 0.2); // path point
 
 	// ---- race checkpoints (streamer) ----
-	CreateDynamicRaceCP(0, 1450.000000, -1600.000000, 12.546875, 1450.000000, -1680.000000, 13.041992, 6.00, -1, -1, -1, STREAMER_RACE_CP_SD); // checkpoint @race("plazarace")
-	CreateDynamicRaceCP(0, 1450.000000, -1680.000000, 13.041992, 1510.000000, -1680.000000, 13.046875, 6.00, -1, -1, -1, STREAMER_RACE_CP_SD); // checkpoint @race("plazarace")
-	CreateDynamicRaceCP(1, 1510.000000, -1680.000000, 13.046875, 0.000000, 0.000000, 0.000000, 6.00, -1, -1, -1, STREAMER_RACE_CP_SD); // checkpoint @race("plazarace")
+	CreateDynamicRaceCP(0, 1450.0, -1600.0, 12.546875, 1450.0, -1680.0, 13.041992, 6.0, -1, -1, -1, STREAMER_RACE_CP_SD); // checkpoint @race("plazarace")
+	CreateDynamicRaceCP(0, 1450.0, -1680.0, 13.041992, 1510.0, -1680.0, 13.046875, 6.0, -1, -1, -1, STREAMER_RACE_CP_SD); // checkpoint @race("plazarace")
+	CreateDynamicRaceCP(1, 1510.0, -1680.0, 13.046875, 0.0, 0.0, 0.0, 6.0, -1, -1, -1, STREAMER_RACE_CP_SD); // checkpoint @race("plazarace")
 
-	new Haumea_showcase_obj_0 = CreateDynamicObject(19377, 1479.599976, -1639.599976, 13.400000, 0.000000, 0.000000, 0.000000, -1, -1, -1); // wall025
-	SetDynamicObjectMaterial(Haumea_showcase_obj_0, 0, 8391, "ballys01", "ws_floortiles4", 0x00000000);
-	new Haumea_showcase_obj_1 = CreateDynamicObject(19353, 1479.599976, -1644.400024, 15.000000, 0.000000, 0.000000, 0.000000, -1, -1, -1); // wall001
-	SetDynamicObjectMaterialText(Haumea_showcase_obj_1, 0, "HAUMEA PLAZA", OBJECT_MATERIAL_SIZE_256x128, "Arial", 40, true, 0xFFFFCC00, 0xFF202020, OBJECT_MATERIAL_TEXT_ALIGN_CENTER);
-	CreateDynamicObject(1408, 1462.000000, -1618.000000, 14.384433, 0.000000, 0.000000, 0.000000, -1, -1, -1); // DYN_F_WOOD_2
-	CreateDynamicObject(1408, 1467.451172, -1618.000000, 13.642245, 0.000000, 0.000000, 0.000000, -1, -1, -1); // DYN_F_WOOD_2
-	CreateDynamicObject(1408, 1472.902344, -1618.000000, 13.642245, 0.000000, 0.000000, 0.000000, -1, -1, -1); // DYN_F_WOOD_2
-	CreateDynamicObject(1408, 1478.353516, -1618.000000, 13.642245, 0.000000, 0.000000, 0.000000, -1, -1, -1); // DYN_F_WOOD_2
-	CreateDynamicObject(1408, 1483.804810, -1618.000000, 13.642245, 0.000000, 0.000000, 0.000000, -1, -1, -1); // DYN_F_WOOD_2
-	CreateDynamicObject(1408, 1489.255981, -1618.000000, 13.642245, 0.000000, 0.000000, 0.000000, -1, -1, -1); // DYN_F_WOOD_2
-	CreateDynamicObject(1408, 1494.707153, -1618.000000, 13.642245, 0.000000, 0.000000, 0.000000, -1, -1, -1); // DYN_F_WOOD_2
-	CreateDynamicObject(1655, 1466.000000, -1640.000000, 14.854311, 0.000000, 0.000000, 90.000000, -1, -1, -1); // waterjumpx2
-	CreateDynamicObject(1271, 1466.000000, -1645.000000, 13.396875, 0.000000, 0.000000, 90.000000, -1, -1, -1); // gunbox
-	CreateDynamicObject(1271, 1493.199951, -1645.000000, 13.396875, 0.000000, 0.000000, -90.000000, -1, -1, -1); // gunbox
-	CreateDynamicObject(1655, 1493.199951, -1640.000000, 14.854311, 0.000000, 0.000000, -90.000000, -1, -1, -1); // waterjumpx2
-	new Haumea_showcase_vehicle_2 = AddStaticVehicleEx(560, 1470.000000, -1610.000000, 13.047363, 90.000000, 1, 0, 100); // sultan
-	ChangeVehiclePaintjob(Haumea_showcase_vehicle_2, 1);
-	AddVehicleComponent(Haumea_showcase_vehicle_2, 1010);
-	AddVehicleComponent(Haumea_showcase_vehicle_2, 1080);
-	SetVehicleNumberPlate(Haumea_showcase_vehicle_2, "HAUMEA");
-	AddStaticVehicleEx(411, 1489.000000, -1610.000000, 13.047363, -90.000000, 6, 6, 120); // infernus
-	CreateDynamicPickup(1242, 2, 1479.599976, -1650.000000, 13.241343, -1, -1, -1, STREAMER_PICKUP_SD); // bodyarmour [pickup]
-	CreateDynamic3DTextLabel("Welcome to {FFCC00}Haumea Plaza", 0xFFFFFFFF, 1479.599976, -1644.000000, 17.500000, 30.00, INVALID_PLAYER_ID, INVALID_VEHICLE_ID, false, -1, -1, -1, STREAMER_3D_TEXT_LABEL_SD); // info [3D text label]
-	Haumea_showcase_zone_3 = GangZoneCreate(1449.599976, -1670.000000, 1509.599976, -1610.000000); // gangzone [gang zone]
-	CreateDynamicMapIcon(1479.599976, -1640.000000, 13.545351, 23, 0xFFFFFFFF, -1, -1, -1, STREAMER_MAP_ICON_SD, MAPICON_LOCAL); // mapicon [map icon]
-	Haumea_showcase_AddSound(1097, 1479.599976, -1636.000000, 13.644751, 25.00, true, -1, -1); // sound
-	new Haumea_showcase_actor_4 = CreateDynamicActor(179, 1484.000000, -1644.000000, 14.046875, 180.000000, 1, 100.00, -1, -1, -1, STREAMER_ACTOR_SD); // WMYAMMO [actor]
-	ApplyDynamicActorAnimation(Haumea_showcase_actor_4, "DEALER", "DEALER_IDLE", 4.10, 1, 0, 0, 0, 0);
-	new Haumea_showcase_npc_5 = NPC_Create("Walker"); // WMYST [NPC]
+	objectid = CreateDynamicObject(19377, 1479.6, -1639.6, 13.4, 0.0, 0.0, 0.0, -1, -1, -1); // wall025
+	SetDynamicObjectMaterial(objectid, 0, 8391, "ballys01", "ws_floortiles4", 0x00000000);
+
+	objectid = CreateDynamicObject(19353, 1479.6, -1644.4, 15.0, 0.0, 0.0, 0.0, -1, -1, -1); // wall001
+	SetDynamicObjectMaterialText(objectid, 0, "HAUMEA PLAZA", OBJECT_MATERIAL_SIZE_256x128, "Arial", 40, true, 0xFFFFCC00, 0xFF202020, OBJECT_MATERIAL_TEXT_ALIGN_CENTER);
+
+	CreateDynamicObject(1408, 1462.0, -1618.0, 14.384433, 0.0, 0.0, 0.0, -1, -1, -1); // DYN_F_WOOD_2
+	CreateDynamicObject(1408, 1467.4512, -1618.0, 13.642245, 0.0, 0.0, 0.0, -1, -1, -1); // DYN_F_WOOD_2
+	CreateDynamicObject(1408, 1472.9023, -1618.0, 13.642245, 0.0, 0.0, 0.0, -1, -1, -1); // DYN_F_WOOD_2
+	CreateDynamicObject(1408, 1478.3535, -1618.0, 13.642245, 0.0, 0.0, 0.0, -1, -1, -1); // DYN_F_WOOD_2
+	CreateDynamicObject(1408, 1483.8048, -1618.0, 13.642245, 0.0, 0.0, 0.0, -1, -1, -1); // DYN_F_WOOD_2
+	CreateDynamicObject(1408, 1489.256, -1618.0, 13.642245, 0.0, 0.0, 0.0, -1, -1, -1); // DYN_F_WOOD_2
+	CreateDynamicObject(1408, 1494.7072, -1618.0, 13.642245, 0.0, 0.0, 0.0, -1, -1, -1); // DYN_F_WOOD_2
+	CreateDynamicObject(1655, 1466.0, -1640.0, 14.854311, 0.0, 0.0, 90.0, -1, -1, -1); // waterjumpx2
+	CreateDynamicObject(1271, 1466.0, -1645.0, 13.396875, 0.0, 0.0, 90.0, -1, -1, -1); // gunbox
+	CreateDynamicObject(1271, 1493.2, -1645.0, 13.396875, 0.0, 0.0, -90.0, -1, -1, -1); // gunbox
+	CreateDynamicObject(1655, 1493.2, -1640.0, 14.854311, 0.0, 0.0, -90.0, -1, -1, -1); // waterjumpx2
+
+	new Haumea_showcase_vehicle_0 = AddStaticVehicleEx(560, 1470.0, -1610.0, 13.047363, 90.0, 1, 0, 100); // sultan
+	ChangeVehiclePaintjob(Haumea_showcase_vehicle_0, 1);
+	AddVehicleComponent(Haumea_showcase_vehicle_0, 1010);
+	AddVehicleComponent(Haumea_showcase_vehicle_0, 1080);
+	SetVehicleNumberPlate(Haumea_showcase_vehicle_0, "HAUMEA");
+
+	AddStaticVehicleEx(411, 1489.0, -1610.0, 13.047363, -90.0, 6, 6, 120); // infernus
+	CreateDynamicPickup(1242, 2, 1479.6, -1650.0, 13.241343, -1, -1, -1, STREAMER_PICKUP_SD); // bodyarmour [pickup]
+	CreateDynamic3DTextLabel("Welcome to {FFCC00}Haumea Plaza", 0xFFFFFFFF, 1479.6, -1644.0, 17.5, 30.0, INVALID_PLAYER_ID, INVALID_VEHICLE_ID, false, -1, -1, -1, STREAMER_3D_TEXT_LABEL_SD); // info [3D text label]
+
+	Haumea_showcase_zone_1 = GangZoneCreate(1449.6, -1670.0, 1509.6, -1610.0); // gangzone [gang zone]
+
+	CreateDynamicMapIcon(1479.6, -1640.0, 13.545351, 23, 0xFFFFFFFF, -1, -1, -1, STREAMER_MAP_ICON_SD, MAPICON_LOCAL); // mapicon [map icon]
+	Haumea_showcase_AddSound(1097, 1479.6, -1636.0, 13.644751, 25.0, true, -1, -1); // sound
+
+	new Haumea_showcase_actor_2 = CreateDynamicActor(179, 1484.0, -1644.0, 14.046875, 180.0, 1, 100.0, -1, -1, -1, STREAMER_ACTOR_SD); // WMYAMMO [actor]
+	ApplyDynamicActorAnimation(Haumea_showcase_actor_2, "DEALER", "DEALER_IDLE", 4.1, 1, 0, 0, 0, 0);
+
+	new Haumea_showcase_npc_3 = NPC_Create("Walker"); // WMYST [NPC]
+	NPC_Spawn(Haumea_showcase_npc_3);
+	NPC_SetSkin(Haumea_showcase_npc_3, 101);
+	NPC_SetPos(Haumea_showcase_npc_3, 1470.0, -1630.0, 14.046875);
+	NPC_SetFacingAngle(Haumea_showcase_npc_3, 0.0);
+
+	new Haumea_showcase_npc_4 = NPC_Create("Wanderer"); // male01 [NPC]
+	NPC_Spawn(Haumea_showcase_npc_4);
+	NPC_SetSkin(Haumea_showcase_npc_4, 7);
+	NPC_SetPos(Haumea_showcase_npc_4, 1465.0, -1600.0, 13.546875);
+	NPC_SetFacingAngle(Haumea_showcase_npc_4, 0.0);
+
+	new Haumea_showcase_npc_5 = NPC_Create("Driver"); // WMYCH [NPC]
 	NPC_Spawn(Haumea_showcase_npc_5);
-	NPC_SetSkin(Haumea_showcase_npc_5, 101);
-	NPC_SetPos(Haumea_showcase_npc_5, 1470.000000, -1630.000000, 14.046875);
-	NPC_SetFacingAngle(Haumea_showcase_npc_5, 0.000000);
-	new Haumea_showcase_npc_6 = NPC_Create("Wanderer"); // male01 [NPC]
-	NPC_Spawn(Haumea_showcase_npc_6);
-	NPC_SetSkin(Haumea_showcase_npc_6, 7);
-	NPC_SetPos(Haumea_showcase_npc_6, 1465.000000, -1600.000000, 13.546875);
-	NPC_SetFacingAngle(Haumea_showcase_npc_6, 0.000000);
-	new Haumea_showcase_npc_7 = NPC_Create("Driver"); // WMYCH [NPC]
-	NPC_Spawn(Haumea_showcase_npc_7);
-	NPC_SetSkin(Haumea_showcase_npc_7, 255);
-	NPC_SetPos(Haumea_showcase_npc_7, 2868.441895, 1253.979126, 12.076000);
-	NPC_SetFacingAngle(Haumea_showcase_npc_7, 180.000000);
-	CreateDynamicObject(-2100, 1484.000000, -1648.000000, 13.046875, 0.000000, 0.000000, 0.000000, -1, -1, -1); // showbarrel
-	new Haumea_showcase_vehicle_8 = AddStaticVehicleEx(538, 2864.750000, 1254.159058, 12.126000, 180.000000, -1, -1, 100); // streak
+	NPC_SetSkin(Haumea_showcase_npc_5, 255);
+	NPC_SetPos(Haumea_showcase_npc_5, 2868.442, 1253.9791, 12.076);
+	NPC_SetFacingAngle(Haumea_showcase_npc_5, 180.0);
+
+	CreateDynamicObject(-2100, 1484.0, -1648.0, 13.046875, 0.0, 0.0, 0.0, -1, -1, -1); // showbarrel
+
+	new Haumea_showcase_vehicle_6 = AddStaticVehicleEx(538, 2864.75, 1254.159, 12.126, 180.0, -1, -1, 100); // streak
 
 	// ---- NPCs in vehicles ----
-	NPC_PutInVehicle(Haumea_showcase_npc_7, Haumea_showcase_vehicle_8, 0);
+	NPC_PutInVehicle(Haumea_showcase_npc_5, Haumea_showcase_vehicle_6, 0);
 
 	// ---- NPC movement ----
 	NPC_OpenNode(13); // scriptfiles/NPCs/nodes/NODES13.DAT
-	NPC_MoveByPath(Haumea_showcase_npc_5, plazawalk, NPC_MOVE_TYPE_WALK, NPC_MOVE_SPEED_AUTO, false);
+	NPC_MoveByPath(Haumea_showcase_npc_3, plazawalk, NPC_MOVE_TYPE_WALK, NPC_MOVE_SPEED_AUTO, false);
 	NPC_SetNodePoint(13, 0);
-	NPC_PlayNode(Haumea_showcase_npc_6, 13, NPC_MOVE_TYPE_WALK, NPC_MOVE_SPEED_AUTO, 0.00, true);
-	NPC_StartPlayback(Haumea_showcase_npc_7, "TRAIN_LINDEN_TO_UNITY", true, 0.000000, 0.000000, 0.000000, 0.0, 0.0, 0.0);
+	NPC_PlayNode(Haumea_showcase_npc_4, 13, NPC_MOVE_TYPE_WALK, NPC_MOVE_SPEED_AUTO, 0.0, true);
+	NPC_StartPlayback(Haumea_showcase_npc_5, "TRAIN_LINDEN_TO_UNITY", true, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
 }
 
 stock Haumea_showcase_ShowForPlayer(playerid)
 {
-	GangZoneShowForPlayer(playerid, Haumea_showcase_zone_3, 0x33CC3388); // gangzone
+	GangZoneShowForPlayer(playerid, Haumea_showcase_zone_1, 0x33CC3388); // gangzone
 }
 
 stock Haumea_showcase_CreateTextDraws()

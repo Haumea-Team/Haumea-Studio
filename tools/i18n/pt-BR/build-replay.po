@@ -1,0 +1,15 @@
+#: tools/haumea/gui.cpp
+msgid "Build Replay"
+msgstr "Replay da construção"
+
+#: tools/haumea/gui.cpp
+msgid "Plays the map being built, element by element in the order they were added, while the camera circles it."
+msgstr "Mostra o mapa sendo construído, elemento por elemento na ordem em que foram adicionados, enquanto a câmera gira em volta dele."
+
+#: tools/haumea/buildreplay.cpp
+msgid "Elements built so far. Drag to scrub."
+msgstr "Elementos construídos até agora. Arraste para avançar ou voltar."
+
+#: tools/haumea/buildreplay.cpp
+msgid "Circle the map. Moving the camera stops it."
+msgstr "Girar em volta do mapa. Mover a câmera interrompe."

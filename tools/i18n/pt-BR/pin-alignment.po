@@ -96,4 +96,3 @@ msgstr "Ajustes da régua"
 
 msgid "Show pins and guides"
 msgstr "Mostrar pins e guias"
-

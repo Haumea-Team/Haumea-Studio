@@ -11,6 +11,7 @@
 #include "version.h"
 #include "versionutil.h"
 #include "haumea_icon.h"
+#include "haumea_mark.h"
 #include "updater.h"
 #include "telemetry.h"
 #include "modloader.h"
@@ -994,6 +995,27 @@ ConvertTxd(rw::TexDictionary *txd)
 	}
 }
 
+// The Haumea mark, without its tile, for the title bar: made once.
+rw::Texture*
+GetHaumeaLogoTexture(void)
+{
+	static rw::Texture *logo;
+	static bool made;
+	if(made)
+		return logo;
+	made = true;
+	rw::Image *img = rw::Image::create(64, 64, 32);
+	img->pixels = (uint8*)haumeaMark64;
+	img->stride = 64*4;	// create() leaves it 0: every row would read the first
+	rw::Raster *ras = rw::Raster::createFromImage(img);
+	img->destroy();
+	if(ras){
+		logo = rw::Texture::create(ras);
+		logo->setFilter(rw::Texture::LINEAR);
+	}
+	return logo;
+}
+
 #ifdef LIBRW_GLFW
 // The Haumea mark as the window icon. Wayland compositors take icons only
 // from the desktop entry named by the app ID, so skip it there.
@@ -1029,6 +1051,12 @@ InitRW(void)
 	if(glfwInit()){
 		glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
 		glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
+#ifndef _WIN32
+		// Our own title bar has rounded corners: they need a see-through
+		// framebuffer (TitleBarRoundCorners makes the rest opaque).
+		if(TitleBarOwned())
+			glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER, GLFW_TRUE);
+#endif
 		// Taskbars find the icon through this name (haumea.desktop on Wayland).
 #ifdef GLFW_WAYLAND_APP_ID
 		glfwWindowHintString(GLFW_WAYLAND_APP_ID, "haumea");
@@ -1255,6 +1283,12 @@ AppEventHandler(sk::Event e, void *param)
 		// prefer it and open on the user's desktop instead.
 		if(getenv("HAUMEA_TEST_XVFB") && strcmp(getenv("HAUMEA_TEST_XVFB"), "1") == 0)
 			glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_X11);
+#endif
+#if defined(LIBRW_GLFW) && defined(GLFW_WAYLAND_LIBDECOR)
+		// Our own title bar draws the frame; without libdecor GLFW keeps the
+		// window's xdg_toplevel, which moving and resizing need (titlebar.cpp).
+		if(TitleBarOwned())
+			glfwInitHint(GLFW_WAYLAND_LIBDECOR, GLFW_WAYLAND_DISABLE_LIBDECOR);
 #endif
 /*
 		AllocConsole();

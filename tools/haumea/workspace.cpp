@@ -2,6 +2,7 @@
 #include "haumea.h"
 #include "i18n.h"
 #include "workspace.h"
+#include "icons.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -920,16 +921,20 @@ PickFileDialog(char *dst, size_t size, const char *title, const char *kind, cons
 static void
 folderField(const char *label, const char *id, char *buffer, size_t size, const char *dialogTitle)
 {
-	ImGui::TextUnformatted(label);
+	// Its name on the left (above when long), the path, a browse button at the end.
 	ImGui::PushID(id);
-	float browse = ImGui::CalcTextSize(_("Browse...")).x + ImGui::GetStyle().FramePadding.x * 2;
+	char unusedId[256];
+	UiFieldLabel(label, unusedId, sizeof(unusedId));
+	float browse = ImGui::GetFrameHeight();
 	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - browse - ImGui::GetStyle().ItemSpacing.x);
 	ImGui::InputText("##path", buffer, size);
 	ImGui::SameLine();
 	// The first-run window draws no toasts, so say it here too.
 	ImGuiStorage *storage = ImGui::GetStateStorage();
 	ImGuiID noDialog = ImGui::GetID("no dialog");
-	if(ImGui::Button(_("Browse..."))){
+	bool pressed = ImGui::Button(ICON_FA_FOLDER_OPEN "##browse", ImVec2(browse, 0));
+	ImGui::SetItemTooltip("%s", _("Browse..."));
+	if(pressed){
 		char picked[1024];
 		if(PickFolderDialog(picked, sizeof(picked), dialogTitle, buffer))
 			snprintf(buffer, size, "%s", picked);
@@ -945,8 +950,7 @@ statusLine(bool ok, const std::string &message, bool warningOnly)
 {
 	if(message.empty())
 		return;
-	ImVec4 colour = ok ? ImVec4(0.45f, 0.85f, 0.5f, 1.0f) :
-		warningOnly ? ImVec4(1.0f, 0.8f, 0.35f, 1.0f) : ImVec4(1.0f, 0.45f, 0.4f, 1.0f);
+	ImVec4 colour = UiSemanticColor(ok ? UI_COLOR_SUCCESS : warningOnly ? UI_COLOR_WARNING : UI_COLOR_ERROR);
 	ImGui::PushStyleColor(ImGuiCol_Text, colour);
 	ImGui::PushTextWrapPos(0.0f);
 	ImGui::TextUnformatted(message.c_str());
@@ -998,16 +1002,15 @@ uiWorkspaceSettings(void)
 		statusLine(gameOk, gameOk ? _("GTA San Andreas found.") : problem, false);
 	if(gameEdited){
 		ImGui::BeginDisabled(!gameOk);
-		if(ImGui::Button(_("Use this game folder"))){
+		if(ImGui::Button(_("Use this game folder"), ImVec2(-FLT_MIN, 0))){
 			SetGameDir(game, nil);
 			restartNeeded = changedGame = true;
 		}
 		ImGui::EndDisabled();
 	}
 	if(restartNeeded){
-		ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.35f, 1.0f), _("The new game folder loads when Haumea restarts."));
-		ImGui::SameLine();
-		if(ImGui::SmallButton(_("Restart now")))
+		ImGui::TextColored(UiSemanticColor(UI_COLOR_WARNING), "%s", _("The new game folder loads when Haumea restarts."));
+		if(ImGui::Button(_("Restart now"), ImVec2(-FLT_MIN, 0)))
 			RestartHaumea();
 	}
 	ImGui::Spacing();
@@ -1018,16 +1021,19 @@ uiWorkspaceSettings(void)
 	if(!serverOk || workspace[0])
 		statusLine(serverOk, serverOk ? _("Server folder found.") : warning, true);
 	bool edited = normalizeDir(workspace) != gWorkspaceDir;
-	if(edited && ImGui::Button(_("Use this workspace")))
+	// Use and No workspace: an even pair, or one full-width button.
+	int buttons = (edited ? 1 : 0) + (!gWorkspaceDir.empty() ? 1 : 0);
+	float width = buttons == 2 ? floorf((ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x) * 0.5f) : -FLT_MIN;
+	if(edited && ImGui::Button(_("Use this workspace"), ImVec2(width, 0)))
 		SetWorkspaceDir(workspace);
 	if(!gWorkspaceDir.empty()){
-		// Beside Use, not after the status line, where it ran off the window.
 		if(edited)
 			ImGui::SameLine();
-		if(ImGui::Button(_("No workspace")))
+		if(ImGui::Button(_("No workspace"), ImVec2(width, 0)))
 			SetWorkspaceDir(nil);
 	}
-	ImGui::TextDisabled(_("Settings and editor data: %s"), GetConfigDir());
+	ImGui::Spacing();
+	UiInfoRow(_("Editor data"), GetConfigDir());
 	ImGui::PopID();
 	return changedGame;
 }

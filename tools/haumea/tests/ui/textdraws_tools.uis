@@ -2,11 +2,13 @@
 # box is a column, two strips and four corners), models
 # can be browsed, and the still frame can be taken at a preset place.
 open "$UI_FIXTURES/ui_map.pwn"
+click_item '*' '##editor'
+wait 2
 click_item '*' 'TextDraws'
 wait 8
 click_item 'TextDraws' 'Shape'
 wait 3
-click_item '*' 'Add the shape'
+click_item '*' 'Rounded box'
 wait 5
 assert textdraws == 7
 click_item 'TextDraws' 'Model'

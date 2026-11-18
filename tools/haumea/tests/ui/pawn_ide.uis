@@ -1,20 +1,20 @@
 # The Code workspace edits a document, rather than the map serializer's preview.
 open "$UI_FIXTURES/ui_map.pwn"
 wait 5
-# The menu and command rows leave one entry for each workspace.
-assert work_area_top < 90
+# The title row and the ribbon: one entry for each workspace, in the editor tile's list.
+assert work_area_top < 140
 # TextDraws and Code show a "new" dot until first opened.
 assert new_dot textdraws == 1
 assert new_dot code == 1
+click_item '*' '##editor'
+wait 2
 assert item_count 'Map' == 1
-assert item_count 'TextDraws' == 1
-assert item_count 'Code' == 1
-click_item '*' 'Windows'
-wait 3
 assert item_count 'TextDraws' == 1
 assert item_count 'Code' == 1
 close_popup
 wait 3
+click_item '*' '##editor'
+wait 2
 click_item '*' 'Code'
 wait 8
 assert window 'PawnIDE'
@@ -22,7 +22,7 @@ assert new_dot code == 0
 assert file_contains "$XDG_CONFIG_HOME/haumea/savesettings.txt" 'show_code_hint 0'
 assert ide_contains 'CreateObject('
 assert ide_dirty == 0
-assert no_window 'Object Browser'
+assert no_window 'Asset Browser'
 # Actual keyboard input goes into the native editor and never triggers map tools.
 click 500 300
 key Ctrl+Home
@@ -44,17 +44,23 @@ wait 3
 assert ide_contains 'X// manual Pawn edit'
 key Ctrl+Z
 wait 3
+click_item '*' '##editor'
+wait 2
 click_item '*' 'Map'
 wait 5
 assert no_window 'PawnIDE'
+click_item '*' '##editor'
+wait 2
 click_item '*' 'TextDraws'
 wait 5
-assert window 'TextDraws'
+assert window 'Layers'
 assert new_dot textdraws == 0
 assert file_contains "$XDG_CONFIG_HOME/haumea/savesettings.txt" 'show_textdraws_hint 0'
+click_item '*' '##editor'
+wait 2
 click_item '*' 'Code'
 wait 5
-assert no_window 'TextDraws'
+assert no_window 'Layers'
 assert ide_contains '// manual Pawn edit'
 # A changed map must not regenerate an edited document.
 open "$UI_FIXTURES/ui_floor.pwn"

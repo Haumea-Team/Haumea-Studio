@@ -248,6 +248,15 @@ class HaumeaService:
 	                 "map_merge", "maptool", "textdraw_add", "textdraw_set", "textdraw_delete",
 	                 "undo", "redo", "clear", "suppress_world_models"}
 	AUTO_SESSION = "agent-edits"
+	# Commands with an operation, and the operations of theirs that change the map.
+	EDIT_OPS = {"world": {"restore", "convert"}, "clipboard": {"cut", "paste", "paste_in_place"},
+	            "history": {"goto"}, "radar_layers": {"delete"},
+	            "textdraw_tool": {"board_new", "board_rename", "board_duplicate", "board_delete", "code_target",
+	                              "guide_add", "guides_clear", "guide_layout", "arrange", "shape", "image", "import"},
+	            "layout_path": {"new", "set", "add_point", "insert_point", "remove_point", "move_point",
+	                            "generate", "detach", "delete"}}
+	# Their fields the editor decodes like material text (any text, newlines too).
+	TEXT_FIELDS = {"name", "text", "source", "filter", "group"}
 
 	def _ensure_session(self) -> bool:
 		"""Begin an edit session if none is active; True when one was started."""
@@ -258,7 +267,8 @@ class HaumeaService:
 
 	def engine(self, command: str, fields: list[Any] | None = None) -> dict:
 		fields = fields or []
-		started = command in self.EDIT_COMMANDS and self._ensure_session()
+		started = (command in self.EDIT_COMMANDS or
+		           (fields and str(fields[0]) in self.EDIT_OPS.get(command, ()))) and self._ensure_session()
 		if command in {"transform", "transform3d", "delete", "fit_terrain", "properties",
 		               "material", "material_text", "material_clear"} and fields:
 			state, _, _ = self._load_composition()
@@ -274,6 +284,28 @@ class HaumeaService:
 			result["session"] = ("an edit session was started for this edit; save_map commits it, "
 			                     "finish_edit_session(commit=False) undoes everything since")
 		return result
+
+	def editor_op(self, command: str, op: str, /, **fields) -> dict:
+		"""One of the editor's windows: command, its operation and key=value fields (None left out)."""
+		lines = [op]
+		for key, value in fields.items():
+			if value is None:
+				continue
+			if isinstance(value, bool):
+				text = "1" if value else "0"
+			elif isinstance(value, (list, tuple)):
+				if value and isinstance(value[0], (list, tuple)):
+					text = ";".join(",".join(f"{float(c):g}" for c in point) for point in value)
+				else:
+					text = ",".join(f"{v:g}" if isinstance(v, float) else str(v) for v in value)
+			elif key in self.TEXT_FIELDS or (command == "textdraw_tool" and key == "path"):
+				text = self._material_field(str(value), key)
+			else:
+				text = str(value)
+			if "\n" in text or "\r" in text:
+				raise ValueError(f"{key} must be one line")
+			lines.append(f"{key}={text}")
+		return self.engine(command, lines)
 
 	# SA-MP object materials. Colours are ARGB like Pawn; material colour 0
 	# keeps the model's colour, any other value also removes its vertex lighting.
@@ -409,7 +441,8 @@ class HaumeaService:
 	# Tools > Array, Mirror, Align & distribute, Drop & copy as Pawn, Along a line
 	# and Radar art from objects.
 	MAP_TOOL_OPS = ("array", "mirror", "align", "distribute", "snap_rotations",
-	                "drop", "relative", "lay_along", "radar_art", "duplicate")
+	                "drop", "relative", "lay_along", "radar_art", "duplicate", "duplicates",
+	                "center_parent", "align_to_guide")
 
 	def map_tool(self, op: str, ids: list[int] | None = None, **params) -> dict:
 		op = str(op).strip().lower()
@@ -424,7 +457,7 @@ class HaumeaService:
 			if others:
 				raise ValueError(f"op='radar_art' takes its settings in radar_art, not {', '.join(others)}")
 			return self._radar_art(ids, radar or {})
-		if op != "lay_along":
+		if op not in ("lay_along", "duplicates"):
 			if not ids:
 				raise ValueError("ids: the objects to work on; the first is the reference")
 			if op != "relative":
@@ -527,21 +560,42 @@ class HaumeaService:
 		self._close_session_for_document(discard_changes)
 		return self.engine("map_open", [str(resolved), int(bool(discard_changes))])
 
+	# multiplayer_admin's operations (mpprotocol.h MP_ADMIN_*), by name.
+	MULTIPLAYER_ADMIN = {"invite": 1, "set_role": 2, "kick": 3, "lock": 4, "delete_room": 5, "users": 6,
+	                     "agents": 7, "rooms": 9}
+
 	def multiplayer(self, action: str, *, address: str | None = None, port: int = 7790,
-	                password: str | None = None, name: str = "Namaka", discard_changes: bool = False) -> dict:
+	                password: str | None = None, name: str = "Namaka", discard_changes: bool = False,
+	                open_router_port: bool = True, room: str | None = None, empty_map: bool = False,
+	                admin: str | None = None, args: list[str] | None = None) -> dict:
 		"""Multiplayer editing (File > Multiplayer): join a session, host the open map, leave, or status."""
 		if action == "status":
 			return self.engine("multiplayer_status")
 		if action == "leave":
 			return self.engine("multiplayer_leave")
+		if action == "enter":
+			# A room on a server with rooms ("" back to the lobby); a new one starts with the open map or empty.
+			if room is None:
+				raise ValueError("enter needs room (\"\" for the lobby)")
+			return self.engine("multiplayer_enter", [room, password or "", "empty" if empty_map else ""])
+		if action == "admin":
+			if admin not in self.MULTIPLAYER_ADMIN:
+				raise ValueError(f"admin is one of {', '.join(self.MULTIPLAYER_ADMIN)}")
+			fields = [str(a) for a in (args or [])][:3]
+			if any("\n" in f for f in fields):
+				raise ValueError("args must be one line each")
+			self.engine("multiplayer_admin", [self.MULTIPLAYER_ADMIN[admin], *fields])
+			# The server answers in a moment, in the status's admin_reply.
+			time.sleep(0.5)
+			return self.engine("multiplayer_status")
 		if action not in ("join", "host"):
-			raise ValueError("action is join, host, leave or status")
+			raise ValueError("action is join, host, enter, admin, leave or status")
 		if action == "join" and not (address and password):
 			raise ValueError("join needs the address and the host's code or the server's password")
 		# Joining replaces the open map, and hosting starts from it: both end the edit session.
 		self._close_session_for_document(discard_changes)
 		if action == "host":
-			return self.engine("multiplayer_host", [int(port), name])
+			return self.engine("multiplayer_host", [int(port), name, 1 if open_router_port else 0])
 		self.engine("multiplayer_join", [address, int(port), password, name])
 		deadline = time.time() + 60
 		while True:
@@ -664,8 +718,8 @@ class HaumeaService:
 
 	def test_in_game(self, action: str = "status", log_lines: int = 40) -> dict:
 		"""File > Test in game: run, status, stop or restart the private test server."""
-		if action not in ("run", "status", "stop", "restart"):
-			raise ValueError("test_in_game takes run, status, stop or restart")
+		if action not in ("run", "status", "stop", "restart", "launch"):
+			raise ValueError("test_in_game takes run, status, stop, restart or launch")
 		return self.engine("test_in_game", [action, int(log_lines)])
 
 	def merge_map(self, path: str) -> dict:

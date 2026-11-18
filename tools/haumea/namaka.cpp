@@ -720,105 +720,129 @@ mcpServersJson(void)
 
 // ---- The panel ----
 
+// A line of text in a theme colour, wrapping at the panel's edge.
+static void
+colouredLine(int color, const char *text)
+{
+	ImGui::PushStyleColor(ImGuiCol_Text, UiSemanticColor(color));
+	ImGui::TextWrapped("%s", text);
+	ImGui::PopStyleColor();
+}
+
+static void
+dimLine(const char *text)
+{
+	ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+	ImGui::TextWrapped("%s", text);
+	ImGui::PopStyleColor();
+}
+
+// One coloured line saying where Namaka stands, then its facts as rows and
+// what stands in the way of installing it.
 static void
 statusSection(void)
 {
 	std::string bundle = bundleDir();
-	std::string bundled = bundle.empty() ? "" : wheelVersion(wheelIn(bundle));
 	bool installed = NamakaInstalled();
-	ImGui::PushTextWrapPos(0.0f);	// long paths and advice wrap at the panel's edge
-	ImGui::SeparatorText(_("Status"));
 	if(installed){
-		ImGui::TextColored(ImVec4(0.45f, 0.85f, 0.5f, 1.0f), TI(ICON_FA_CHECK, "Namaka %s is installed"),
-			wheelVersion(installedWheel()).c_str());
-		if(gTools >= 0){
-			ImGui::SameLine();
-			ImGui::TextDisabled(_("(%d tools)"), gTools);
-		}
-		ImGui::TextDisabled("%s", venvDir().c_str());
+		char text[256];
+		snprintf(text, sizeof(text), TI(ICON_FA_CHECK, "Namaka %s is installed"), wheelVersion(installedWheel()).c_str());
+		ImGui::TextColored(UiSemanticColor(UI_COLOR_SUCCESS), "%s", text);
 	}else
 		ImGui::TextUnformatted(_("Namaka is not installed."));
-	if(bundle.empty())
-		ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.35f, 1.0f),
-			_("This Haumea has no Namaka bundle (a developer build): use a release, or set HAUMEA_NAMAKA_BUNDLE."));
-	else{
-		ImGui::TextDisabled(_("Bundled: Namaka %s"), bundled.c_str());
-		ImGui::SetItemTooltip("%s", bundle.c_str());
+	ImGui::SetItemTooltip("%s", _("Namaka lets an AI assistant (Claude Code, Codex, Claude Desktop or another MCP client) "
+		"look at and edit the map open in Haumea."));
+	if(installed && gTools >= 0){
+		ImGui::SameLine();
+		ImGui::TextDisabled(_("(%d tools)"), gTools);
 	}
+	ImGui::Spacing();
+	if(installed)
+		UiInfoRow(_("Folder"), venvDir().c_str());
+	if(gProbing)
+		UiInfoRow(_("Python"), _("Looking for Python..."));
+	else if(gPython >= 0)
+		UiInfoRow(_("Python"), pythonLabel().substr(7).c_str(), pythonIsOffline() ?
+			_("Installs offline from the bundle.") :
+			_("Downloads the parts the bundle has only for Python 3.14 (needs internet)."));
+	if(!bundle.empty())
+		UiInfoRow(_("Bundled"), wheelVersion(wheelIn(bundle)).c_str(), bundle.c_str());
+
+	// What stands in the way, in its colour.
+	if(bundle.empty())
+		colouredLine(UI_COLOR_WARNING,
+			_("This Haumea has no Namaka bundle (a developer build): use a release, or set HAUMEA_NAMAKA_BUNDLE."));
+	if(!gProbing && gPython < 0){
+		colouredLine(UI_COLOR_ERROR, _("No Python 3.10 or newer found."));
+		dimLine(pythonAdvice());
+	}else if(!gProbing && !installed && !pythonIsOffline())
+		colouredLine(UI_COLOR_WARNING, _("Downloads the parts the bundle has only for Python 3.14 (needs internet)."));
 	std::string legacy = legacyVenv();
 	if(!legacy.empty()){
-		ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.35f, 1.0f), _("Agent Alpha is also installed (it still works):"));
-		ImGui::TextDisabled("%s", legacy.c_str());
-		ImGui::SetItemTooltip(_("Install Namaka, point your MCP client at it (Copy below), then delete this folder."));
-	}
-
-	ImGui::SeparatorText(_("Python"));
-	if(gProbing)
-		ImGui::TextDisabled(_("Looking for Python..."));
-	else if(gPython >= 0){
-		ImGui::TextUnformatted(pythonLabel().c_str());
-		if(pythonIsOffline())
-			ImGui::TextColored(ImVec4(0.45f, 0.85f, 0.5f, 1.0f), _("Installs offline from the bundle."));
-		else
-			ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.35f, 1.0f),
-				_("Downloads the parts the bundle has only for Python 3.14 (needs internet)."));
-	}else{
-		ImGui::TextColored(ImVec4(1.0f, 0.45f, 0.4f, 1.0f), _("No Python 3.10 or newer found."));
-		ImGui::TextUnformatted(pythonAdvice());
-	}
-	ImGui::PopTextWrapPos();
-	if(!gProbing){
-		if(ImGui::SmallButton(_("Look again")))
-			startPythonProbe();
+		colouredLine(UI_COLOR_WARNING, _("Agent Alpha is also installed (it still works):"));
+		ImGui::SetItemTooltip("%s\n\n%s", legacy.c_str(),
+			_("Install Namaka, point your MCP client at it (Copy below), then delete this folder."));
 	}
 }
 
+// The installer's progress or how it went, then Repair and Uninstall, with
+// Look again and the log as buttons at the row's end.
 static void
-actionsSection(void)
+maintenanceSection(void)
 {
-	ImGui::SeparatorText(_("Install and update"));
 	bool busy = gJob != JOB_NONE;
 	bool installed = NamakaInstalled();
 	bool canRun = !busy && !gProbing && gPython >= 0 && !bundleDir().empty();
-	std::string error;
-	ImGui::BeginDisabled(!canRun);
-	if(!installed){
-		if(ImGui::Button(LI(ICON_FA_PLUS, "Install")) && !startJob(JOB_INSTALL, &error))
-			ToastFor(TOAST_SAVE, 6.0f, "Namaka: %s", error.c_str());
-	}else{
-		if(NamakaUpdateAvailable()){
-			if(ImGui::Button(LI(ICON_FA_ROTATE, "Update")) && !startJob(JOB_UPDATE, &error))
-				ToastFor(TOAST_SAVE, 6.0f, "Namaka: %s", error.c_str());
-			ImGui::SameLine();
-		}
-		if(ImGui::Button(LI(ICON_FA_WRENCH, "Repair")) && !startJob(JOB_REPAIR, &error))
-			ToastFor(TOAST_SAVE, 6.0f, "Namaka: %s", error.c_str());
-		ImGui::SetItemTooltip(_("Installs it again from the bundle; the old install stays until the new one works."));
-	}
-	ImGui::EndDisabled();
-	if(installed){
-		ImGui::SameLine();
-		ImGui::BeginDisabled(busy);
-		if(ImGui::Button(LI(ICON_FA_TRASH, "Uninstall")) && !startJob(JOB_UNINSTALL, &error))
-			ToastFor(TOAST_SAVE, 6.0f, "Namaka: %s", error.c_str());
-		ImGui::EndDisabled();
-	}
 	if(busy){
-		ImGui::SameLine();
-		if(ImGui::Button(LI(ICON_FA_XMARK, "Cancel")))
-			cancelJob();
 		float progress = gStepCount > 0 ? (gStepNumber - 0.5f) / gStepCount : 0.0f;
 		ImGui::ProgressBar(std::max(0.02f, progress), ImVec2(-FLT_MIN, 0), gStep.c_str());
 		if(!gLines.empty())
-			ImGui::TextDisabled("%s", gLines.back().substr(0, 120).c_str());
+			UiElidedText(gLines.back().substr(0, 120).c_str(), ImGui::GetContentRegionAvail().x);
 	}else if(!gResult.empty())
-		ImGui::TextColored(gResultOk ? ImVec4(0.45f, 0.85f, 0.5f, 1.0f) : ImVec4(1.0f, 0.45f, 0.4f, 1.0f),
-			"%s", gResult.c_str());
-	if(isFile(logPath())){
-		if(ImGui::SmallButton(_("Open the log")))
-			openExternally(logPath());
-		ImGui::SetItemTooltip("%s", logPath().c_str());
+		colouredLine(gResultOk ? UI_COLOR_SUCCESS : UI_COLOR_ERROR, gResult.c_str());
+
+	ImGuiStyle &style = ImGui::GetStyle();
+	float h = ImGui::GetFrameHeight();
+	bool hasLog = isFile(logPath());
+	int icons = (gProbing ? 0 : 1) + (hasLog ? 1 : 0);
+	float avail = ImGui::GetContentRegionAvail().x;
+	float iconsWidth = icons * (h + style.ItemSpacing.x);
+	bool first = true;
+	std::string error;
+	if(installed){
+		ImVec2 half(floorf((avail - iconsWidth - style.ItemSpacing.x) / 2.0f), 0);
+		ImGui::BeginDisabled(!canRun);
+		if(ImGui::Button(LI(ICON_FA_WRENCH, "Repair"), half) && !startJob(JOB_REPAIR, &error))
+			ToastFor(TOAST_SAVE, 6.0f, "Namaka: %s", error.c_str());
+		ImGui::EndDisabled();
+		ImGui::SetItemTooltip(_("Installs it again from the bundle; the old install stays until the new one works."));
+		ImGui::SameLine();
+		ImGui::BeginDisabled(busy);
+		if(ImGui::Button(LI(ICON_FA_TRASH, "Uninstall"), half) && !startJob(JOB_UNINSTALL, &error))
+			ToastFor(TOAST_SAVE, 6.0f, "Namaka: %s", error.c_str());
+		ImGui::EndDisabled();
+		first = false;
+	}else if(icons > 0){
+		// Nothing else on the row: the icons go to its right end.
+		ImGui::SetCursorPosX(ImGui::GetCursorPosX() + avail - iconsWidth + style.ItemSpacing.x);
 	}
+	ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
+	if(!gProbing){
+		if(!first)
+			ImGui::SameLine();
+		first = false;
+		if(ImGui::Button(ICON_FA_MAGNIFYING_GLASS "###Look again", ImVec2(h, h)))
+			startPythonProbe();
+		ImGui::SetItemTooltip("%s", _("Look again"));
+	}
+	if(hasLog){
+		if(!first)
+			ImGui::SameLine();
+		if(ImGui::Button(ICON_FA_LIST "###Open the log", ImVec2(h, h)))
+			openExternally(logPath());
+		ImGui::SetItemTooltip("%s\n%s", _("Open the log"), logPath().c_str());
+	}
+	ImGui::PopStyleColor();
 }
 
 // "Let Namaka connect", in the panel and Preferences.
@@ -827,53 +851,57 @@ NamakaListenSwitch(void)
 {
 	bool on = NamakaListenEnabled();
 	std::string label = std::string(_("Let Namaka connect")) + "###namaka_listen";
-	if(ImGui::Checkbox(label.c_str(), &on))
+	if(UiCheckbox(label.c_str(), &on))
 		SetNamakaListenEnabled(on);
 	ImGui::SetItemTooltip(_("When Namaka is installed, Haumea listens for it on its own socket\n"
 		"(only your user can use it). Changes apply from the next start."));
 }
 
+// Whether Haumea is listening for Namaka, then the commands that connect an
+// assistant to it, two to a row.
 static void
 connectSection(void)
 {
-	ImGui::SeparatorText(_("Connect an AI assistant"));
+	UiHeading(_("Connect an AI assistant"));
 	NamakaListenSwitch();
-	ImGui::PushTextWrapPos(0.0f);
-	if(AgentBridgeSocketPath()[0])
-		ImGui::TextColored(ImVec4(0.45f, 0.85f, 0.5f, 1.0f), TI(ICON_FA_CHECK, "Listening for Namaka on %s"),
-			AgentBridgeSocketPath());
-	else if(AgentBridgeListening())	// loopback TCP (Windows)
-		ImGui::TextColored(ImVec4(0.45f, 0.85f, 0.5f, 1.0f), TI(ICON_FA_CHECK, "Listening for Namaka"));
+	char text[512];
+	if(AgentBridgeSocketPath()[0]){
+		snprintf(text, sizeof(text), TI(ICON_FA_CHECK, "Listening for Namaka on %s"), AgentBridgeSocketPath());
+		colouredLine(UI_COLOR_SUCCESS, text);
+	}else if(AgentBridgeListening())	// loopback TCP (Windows)
+		colouredLine(UI_COLOR_SUCCESS, TI(ICON_FA_CHECK, "Listening for Namaka"));
 	else if(AgentBridgeSocketBusy())
-		ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.35f, 1.0f),
+		colouredLine(UI_COLOR_WARNING,
 			_("Another Haumea is using the Namaka socket, so this one isn't listening. "
 			"Close the other one and start this again to connect here."));
 	else if(!NamakaInstalled())
-		ImGui::TextDisabled(_("Once Namaka is installed, Haumea listens for it from its next start."));
+		dimLine(_("Once Namaka is installed, Haumea listens for it from its next start."));
 	else if(!NamakaListenEnabled())
-		ImGui::TextDisabled(_("Not listening: \"Let Namaka connect\" is off."));
+		dimLine(_("Not listening: \"Let Namaka connect\" is off."));
 	else
-		ImGui::TextDisabled(_("Haumea starts listening for Namaka from its next start."));
-	ImGui::PopTextWrapPos();
+		dimLine(_("Haumea starts listening for Namaka from its next start."));
+	ImGui::Spacing();
+	float avail = ImGui::GetContentRegionAvail().x;
+	ImVec2 half(floorf((avail - ImGui::GetStyle().ItemSpacing.x) / 2.0f), 0);
 	ImGui::BeginDisabled(!NamakaInstalled());
-	if(ImGui::Button(LI(ICON_FA_COPY, "Copy for Claude Code"))){
+	if(ImGui::Button(LI(ICON_FA_COPY, "Copy for Claude Code"), half)){
 		ImGui::SetClipboardText(claudeCodeConfig().c_str());
 		Toast(TOAST_COPY_PASTE, _("Copied the claude mcp add command"));
 	}
 	ImGui::SetItemTooltip("%s", claudeCodeConfig().c_str());
 	ImGui::SameLine();
-	if(ImGui::Button(LI(ICON_FA_COPY, "Copy for Codex"))){
+	if(ImGui::Button(LI(ICON_FA_COPY, "Copy for Codex"), half)){
 		ImGui::SetClipboardText(codexConfig().c_str());
 		Toast(TOAST_COPY_PASTE, _("Copied the codex mcp add command"));
 	}
 	ImGui::SetItemTooltip(_("%s\n\nOr in ~/.codex/config.toml:\n%s"), codexConfig().c_str(), codexToml().c_str());
-	if(ImGui::Button(LI(ICON_FA_COPY, "Copy for Claude Desktop"))){
+	if(ImGui::Button(LI(ICON_FA_COPY, "Copy for Claude Desktop"), half)){
 		ImGui::SetClipboardText(mcpServersJson().c_str());
 		Toast(TOAST_COPY_PASTE, _("Copied the claude_desktop_config.json entry"));
 	}
 	ImGui::SetItemTooltip("%s", mcpServersJson().c_str());
 	ImGui::SameLine();
-	if(ImGui::Button(LI(ICON_FA_COPY, "Copy MCP JSON"))){
+	if(ImGui::Button(LI(ICON_FA_COPY, "Copy MCP JSON"), half)){
 		ImGui::SetClipboardText(mcpServersJson().c_str());
 		Toast(TOAST_COPY_PASTE, _("Copied the mcpServers entry"));
 	}
@@ -881,6 +909,9 @@ connectSection(void)
 	ImGui::EndDisabled();
 }
 
+// Let an AI assistant work on the open map: install Namaka once (the foot's
+// button), then copy the command that connects your assistant to Haumea;
+// update, repair or remove it when needed.
 void
 DrawNamakaWindow(bool *open)
 {
@@ -891,15 +922,38 @@ DrawNamakaWindow(bool *open)
 		return;
 	if(!gPythonsProbed && !gProbing)
 		startPythonProbe();
-	ImGui::SetNextWindowSize(ImVec2(ImGui::GetFontSize() * 34.0f, 0.0f), ImGuiCond_FirstUseEver);
-	if(!ImGui::Begin(ICON_FA_BOLT " Namaka###namaka", open)){
+	const char *title = ICON_FA_BOLT " Namaka###namaka";
+	ImGuiWindowFlags flags = UiPlaceToolWindow(title, 30.0f, true);
+	if(!ImGui::Begin(title, open, flags)){
 		ImGui::End();
 		return;
 	}
-	ImGui::TextWrapped(_("Namaka lets an AI assistant (Claude Code, Codex, Claude Desktop or another MCP client) "
-		"look at and edit the map open in Haumea."));
+	UiFitItemsToPanel();
+	bool installed = NamakaInstalled();
 	statusSection();
-	actionsSection();
-	connectSection();
+	// Installed, connecting is what the window is for; until then, installing.
+	if(installed){
+		connectSection();
+		UiHeading(_("Install and update"));
+	}else{
+		ImGui::Spacing();
+		NamakaListenSwitch();
+	}
+	maintenanceSection();
+
+	// The main action: Cancel while the installer runs, else Install or Update.
+	bool busy = gJob != JOB_NONE;
+	bool canRun = !busy && !gProbing && gPython >= 0 && !bundleDir().empty();
+	std::string error;
+	if(busy){
+		if(UiFooterButton(LI(ICON_FA_XMARK, "Cancel")))
+			cancelJob();
+	}else if(!installed){
+		if(UiFooterButton(LI(ICON_FA_PLUS, "Install"), canRun) && !startJob(JOB_INSTALL, &error))
+			ToastFor(TOAST_SAVE, 6.0f, "Namaka: %s", error.c_str());
+	}else if(NamakaUpdateAvailable()){
+		if(UiFooterButton(LI(ICON_FA_ROTATE, "Update"), canRun) && !startJob(JOB_UPDATE, &error))
+			ToastFor(TOAST_SAVE, 6.0f, "Namaka: %s", error.c_str());
+	}
 	ImGui::End();
 }

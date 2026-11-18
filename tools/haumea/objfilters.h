@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 
-// The Object Browser's filters: size, source, collision, type, appearance,
+// The Asset Browser's filters: size, source, collision, type, appearance,
 // where the world uses a model, and the user's own (favourites, recent, the
 // open map, the workspace), with a sort. They combine with the search and
 // the category, update as they change and last for the editor session;
@@ -16,7 +16,12 @@ bool ObjectPassesFilters(int id);
 bool ObjectFiltersActive(void);
 // Sorts the browser's results in place by the chosen order.
 void SortObjectResults(int *ids, int n);
-// The collapsible panel with its chips, drawn under the category picker.
+// The Filters button for the browser's toolbar (warning-tinted with a count
+// while filters hide models), its natural width, and the panel it unfolds:
+// the active chips, always, and the filters themselves while it is open.
+void uiObjectFiltersButton(float width);
+float ObjectFiltersButtonWidth(void);
+bool ObjectFiltersOpen(void);
 void uiObjectFiltersPanel(void);
 
 // Presets, one settings line each ("name|key=value;...").

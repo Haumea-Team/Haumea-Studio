@@ -7,6 +7,3 @@ msgstr "Não é possível mudar IDs de modelo de objetos ligados a um LOD ou for
 
 msgid "%-3s %-20s  Model ID %d -> %d"
 msgstr "%-3s %-20s  ID do modelo %d -> %d"
-
-msgid "Model ID changes: %d"
-msgstr "Alterações de ID do modelo: %d"

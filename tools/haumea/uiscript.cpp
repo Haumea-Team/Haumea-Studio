@@ -71,7 +71,7 @@
 //   click_item 'Window' 'Label' [N] [right]   '*' for any window; N: the Nth match, -1 the last
 //   hover_item 'Window' 'Label'
 //   set_item 'Window' 'Label' "text" [N] [tab] [ctrl] types into a field ('Colour/##X' = red)
-//   close_popup                         clicks the empty end of the menu bar
+//   close_popup                         clicks an empty stretch of the top bar
 //   reopen                              opens the map file again
 //   click_world X Y Z [shift|right]    looks at a world point and clicks it
 //   scroll_until 'Window' 'Label'      scrolls the window until the item shows ('*': the open popup)
@@ -218,18 +218,38 @@ nameMatches(const std::string &raw, const std::string &name, bool part)
 			std::string plain = plainLabel(*t);
 			if(*t == n || plain == n || (part && plain.find(n) != std::string::npos))
 				return true;
+			// UiSection/UiHeading show the name in capitals (ASCII toupper).
+			std::string caps = plainLabel(n);
+			for(char &ch : caps)
+				if((unsigned char)ch < 0x80) ch = (char)toupper((unsigned char)ch);
+			if(t == &shown && caps != plainLabel(n) && plain == caps)
+				return true;
 		}
 	}
 	return false;
 }
 
+// While set, '*' means only this popup (findItem's first pass).
+static std::string gPopupPass;
+
 static bool
 windowMatches(const UiItem &item, const std::string &window)
 {
+	if((window == "*" || window.empty()) && !gPopupPass.empty())
+		return item.rootWindowName == gPopupPass || item.windowName == gPopupPass;
 	if(window == "*" || window.empty())
 		return true;
-	return nameMatches(item.windowName, window, true) ||
-		nameMatches(item.rootWindowName, window, true);
+	if(nameMatches(item.windowName, window, true) || nameMatches(item.rootWindowName, window, true))
+		return true;
+	// Older names scripts use: the TextDraw editor's one window is now its
+	// Layers and Properties panels, and its commands and the Code editor's
+	// are on the ribbon (##EditorCommands).
+	auto rootIs = [&](const char *id){ return item.rootWindowName.find(id) != std::string::npos; };
+	if(window == "TextDraws")
+		return rootIs("###textdraws") || rootIs("###td_properties") || rootIs("##EditorCommands");
+	if(window == "PawnIDE")
+		return rootIs("##EditorCommands");
+	return false;
 }
 
 static const UiItem *findItem(const std::string &window, const std::string &label, int nth = 1);
@@ -281,6 +301,18 @@ findPart(const std::string &window, const std::string &widget, const std::string
 static const UiItem*
 findItem(const std::string &window, const std::string &label, int nth)
 {
+	// '*' with a popup open: the popup's items first (its list), not a
+	// control of the same name behind it.
+	if(window == "*" && gPopupPass.empty()){
+		ImGuiContext &g = *GImGui;
+		if(g.OpenPopupStack.Size > 0 && g.OpenPopupStack.back().Window){
+			gPopupPass = g.OpenPopupStack.back().Window->Name;
+			const UiItem *inPopup = findItem(window, label, nth);
+			gPopupPass.clear();
+			if(inPopup)
+				return inPopup;
+		}
+	}
 	size_t slash = label.rfind('/');
 	if(slash != std::string::npos && slash > 0 && slash + 1 < label.size()){
 		const UiItem *part = findPart(window, label.substr(0, slash), label.substr(slash + 1), nth);
@@ -321,7 +353,9 @@ findItem(const std::string &window, const std::string &label, int nth)
 		if(!windowMatches(it, window))
 			continue;
 		if(it.label.empty()){
-			if(idIs(it, label))
+			// No text of its own: its ID, hashed, or the English name after
+			// its "###" (a field whose name a row shows beside it, UiFieldLabel).
+			if(idIs(it, label) || (!it.rawLabel.empty() && nameMatches(it.rawLabel, label, false)))
 				return &it;
 			continue;
 		}
@@ -1606,9 +1640,10 @@ nextCommand(void)
 			addChord({ tab ? sk::KEY_TAB : sk::KEY_ENTER });
 			return;
 		}else if(cmd == "close_popup"){
-			// Click the empty end of the menu bar: closes an open combo or menu.
+			// Click an empty stretch of the top bar: closes an open combo or
+			// menu. Not its right end: our own title bar's Close is there.
 			ImGuiIO &io = ImGui::GetIO();
-			addStep(Step::MOVE, (int)io.DisplaySize.x - 4, 6);
+			addStep(Step::MOVE, (int)(io.DisplaySize.x * 0.78f), 6);
 			addStep(Step::NOP);
 			addStep(Step::DOWN, 0, 0, 1);
 			addStep(Step::UP, 0, 0, 1);
@@ -1946,9 +1981,11 @@ UiScriptTick(void)
 			}
 			for(int i = 0; i < g.Windows.Size; i++){
 				ImGuiWindow *w = g.Windows[i];
+				// At the bottom already: back to the top, as it may be above.
 				if(w->WasActive && !plainLabel(visibleTitle(w->Name)).empty() &&
 				   nameMatches(w->Name, gScrollWindow, true))
-					ImGui::SetScrollY(w, std::min(w->Scroll.y + 60.0f, w->ScrollMax.y));
+					ImGui::SetScrollY(w, w->ScrollMax.y > 0.0f && w->Scroll.y >= w->ScrollMax.y - 0.5f ?
+						0.0f : std::min(w->Scroll.y + 60.0f, w->ScrollMax.y));
 			}
 			return;
 		}
@@ -1979,8 +2016,10 @@ UiScriptTick(void)
 				for(int i = 0; i < g.Windows.Size; i++){
 					ImGuiWindow *w = g.Windows[i];
 					// Docked panels count as child windows in ImGui: match by name only.
+					// At the bottom already: back to the top, as it may be above.
 					if(w->WasActive && nameMatches(w->Name, next.window, true))
-						ImGui::SetScrollY(w, std::min(w->Scroll.y + 80.0f, w->ScrollMax.y));
+						ImGui::SetScrollY(w, w->ScrollMax.y > 0.0f && w->Scroll.y >= w->ScrollMax.y - 0.5f ?
+							0.0f : std::min(w->Scroll.y + 80.0f, w->ScrollMax.y));
 				}
 			}
 			itemWait++;

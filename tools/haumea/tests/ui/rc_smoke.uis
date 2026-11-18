@@ -16,19 +16,19 @@ click_item 'Welcome to Haumea Studio' 'Open workspace'
 wait 10
 assert no_window "Welcome to Haumea Studio"
 assert objects == 0
-# Place a crate from the Object Browser
+# Place a crate from the Asset Browser
 shortcut window_browser
 wait 5
-click_item 'Object Browser' '##browser_source'
+click_item 'Asset Browser' '##browser_source'
 wait 3
 click_item '*' 'Objects'
 wait 3
-click_item 'Object Browser' '##search_objects'
+click_item 'Asset Browser' '##search_objects'
 type "1271"
 wait 5
-click_item 'Object Browser' '##tile'
+click_item 'Asset Browser' '##tile'
 wait 3
-click_item 'Object Browser' 'Place'
+click_item 'Asset Browser' 'Place'
 wait 3
 click_world 2000 -3000 4
 wait 5

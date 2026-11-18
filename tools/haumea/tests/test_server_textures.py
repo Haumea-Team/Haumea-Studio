@@ -89,6 +89,8 @@ class ServerSpriteTests(unittest.TestCase):
                     script = work / 'server.uis'
                     script.write_text('''wait 30
 assert objects == 0
+click_item '*' '##editor'
+wait 2
 click_item '*' 'TextDraws'
 wait 5
 click_item 'TextDraws' 'Sprite'
@@ -135,20 +137,18 @@ wait 3
 shortcut save_map_as
 wait 5
 set_item 'Save TextDraws As' 'Path' '$TD_OUTPUT'
-click_item 'Save TextDraws As' 'Save'
 wait 5
 assert file_contains '$TD_OUTPUT' '"mdl-2018:'
 assert file_contains '$TD_OUTPUT.xml' 'serverTxd="txd/UI.TXD"'
 move 550 200
 wheel 100
 wait 8
-click_item 'TextDraws' '###New'
+click_item 'TextDraws' 'td_new'
 wait 5
 assert textdraws == 0
-click_item 'TextDraws' '###Open...'
+click_item 'TextDraws' 'td_open'
 wait 5
 set_item 'tdfile' 'Path' '$TD_OUTPUT'
-click_item 'tdfile' 'Open'
 wait 5
 assert textdraw.0.texture_loaded == 1
 assert textdraw.0.server_txd 'txd/UI.TXD'

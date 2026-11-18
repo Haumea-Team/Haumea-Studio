@@ -2,11 +2,13 @@
 # proportions), the panel changes them, aligning moves one as a whole, and
 # a guide dragged from a ruler is saved with the file.
 open "$UI_FIXTURES/ui_map.pwn"
+click_item '*' '##editor'
+wait 2
 click_item '*' 'TextDraws'
 wait 8
 click_item 'TextDraws' 'Shape'
 wait 3
-click_item '*' 'Add the shape'
+click_item '*' 'Rounded box'
 wait 5
 # A rounded box, 160 x 90 in the middle: a column, two strips, four corners.
 assert textdraws == 7
@@ -39,9 +41,7 @@ set_item 'TextDraws' 'Border' 4
 wait 5
 assert textdraws == 14
 # One shape on its own aligns to the screen, as one.
-click_item 'TextDraws' 'Arrange'
-wait 3
-click_item 'TextDraws' '##align0'
+click_item 'TextDraws' 'td_align_left'
 wait 5
 assert textdraws == 14
 # A copy is a shape of its own.

@@ -110,9 +110,6 @@ msgstr ""
 "%d SA-MP öğesi, %d araç\n"
 "%s"
 
-msgid "%d added, %d deleted, %d moved, %d rotated, %d material"
-msgstr "%d eklendi, %d silindi, %d taşındı, %d döndürüldü, %d malzeme"
-
 msgid "%d attached or referenced objects excluded from cleanup."
 msgstr "%d eklenmiş veya başvurulmuş nesne temizlikten hariç tutuldu."
 
@@ -151,9 +148,6 @@ msgstr "%d öğe San Andreas haritasının (±%d) ötesinde. Çalışırlar, anc
 
 msgid "%d element(s) outside SA-MP's world bounds (±%d): the server clamps or ignores those positions."
 msgstr "%d öğe SA-MP'nin dünya sınırlarının (±%d) dışında: sunucu bu konumları sınırlar veya yok sayar."
-
-msgid "%d element(s) use custom models: the server needs them in models/artconfig.txt (or AddSimpleModel) and artwork enabled%s; players need SA-MP 0.3.DL or an open.mp client.%s"
-msgstr "%d öğe özel model kullanıyor: sunucunun bunları models/artconfig.txt (veya AddSimpleModel) içinde ve artwork etkin%s olarak tanımlaması gerekir; oyuncuların SA-MP 0.3.DL veya bir open.mp istemcisi kullanması gerekir.%s"
 
 msgid "%d elements share the variable name \"%s\": the Pawn code won't compile."
 msgstr "%d öğe \"%s\" değişken adını paylaşıyor: Pawn kodu derlenmez."
@@ -221,6 +215,9 @@ msgstr "Editörün tanımadığı modellere sahip %d nesne harita açılırken d
 msgid "%d objects"
 msgstr "%d nesne"
 
+msgid "%d particles"
+msgstr "%d parçacık"
+
 msgid "%d objects along this path"
 msgstr "Bu yol boyunca %d nesne"
 
@@ -248,9 +245,6 @@ msgstr "%d / %d"
 msgid "%d of %d objects (%s): the rest of the gamemode has little room left."
 msgstr "%d / %d nesne (%s): gamemode'un kalanına az yer kaldı."
 
-msgid "%d of those models were imported into the game's modloader/Haumea folder, which SA-MP players don't have. They can become custom models in the server's models folder (SA-MP 0.3.DL / open.mp)."
-msgstr "Bu modellerden %d tanesi oyunun modloader/Haumea klasörüne aktarıldı; SA-MP oyuncularında bu klasör yok. Bunlar sunucunun models klasöründe özel model olabilir (SA-MP 0.3.DL / open.mp)."
-
 msgid "%d per-player or streamed gang zone(s): CreatePlayerGangZone only compiles and runs on open.mp, not on a SA-MP 0.3.7 server. For 0.3.7, set them to Global (Object Info > Shown as, or radar art's Shown as)."
 msgstr "%d oyuncu başına veya stream edilen gang zone: CreatePlayerGangZone yalnızca open.mp'de derlenir ve çalışır, SA-MP 0.3.7 sunucusunda çalışmaz. 0.3.7 için bunları Genel yapın (Nesne bilgisi > Şu olarak gösterilir veya radar art'taki Şu olarak gösterilir ayarı)."
 
@@ -268,9 +262,6 @@ msgstr "%d seçili"
 
 msgid "%d selected world object(s) will be replaced in the map."
 msgstr "Seçili %d dünya nesnesi haritada değiştirilecek."
-
-msgid "%d selected · Drag gizmo to move or rotate · %s deletes."
-msgstr "%d seçili · Taşımak veya döndürmek için gizmoyu sürükle · %s siler."
 
 msgid "%d selected, %d of this kind"
 msgstr "%d seçili, bu türden %d"
@@ -432,9 +423,6 @@ msgstr "%s (eksik)"
 
 msgid "%s (you)"
 msgstr "%s (siz)"
-
-msgid "%s Browse · %s Map objects · %s Save · %s Shortcuts"
-msgstr "%s Gözat · %s Harita nesneleri · %s Kaydet · %s Kısayollar"
 
 msgid "%s The update installs the next time Haumea starts."
 msgstr "%s Güncelleme Haumea'nın bir sonraki başlatılışında kurulur."
@@ -637,14 +625,8 @@ msgstr "(sürüm bilinmiyor)"
 msgid ", %d removed"
 msgstr ", %d kaldırıldı"
 
-msgid ", %d restored"
-msgstr ", %d geri yüklendi"
-
 msgid ", and it has none"
 msgstr ", ve hiç yok"
-
-msgid ", but config.json has artwork.enable off"
-msgstr ", ama config.json'da artwork.enable kapalı"
 
 msgid ""
 "-1 keeps the original texture, 0 is SA-MP's blank white texture.\n"
@@ -898,13 +880,6 @@ msgstr "Yalnızca textdraw içeren bir .pwn veya .inc dosyası; gamemode'unuz on
 msgid "A copy of the shape under it, this far down and right. 0 for none."
 msgstr "Altındaki şeklin bir kopyası, bu kadar aşağıda ve sağda. Yoksa 0."
 
-msgid ""
-"A custom model's texture: players on 0.3.DL and open.mp download it;\n"
-"0.3.7 players see nothing there."
-msgstr ""
-"Özel bir modelin dokusu: 0.3.DL ve open.mp oyuncuları indirir;\n"
-"0.3.7 oyuncuları orada hiçbir şey görmez."
-
 msgid "A driver recording: the NPC must be in a vehicle"
 msgstr "Sürücü kaydı: NPC'nin bir araçta olması gerekir"
 
@@ -998,9 +973,6 @@ msgstr "Aktörler"
 msgid "Add"
 msgstr "Ekle"
 
-msgid "Add Custom Model (SA-MP 0.3.DL / open.mp)"
-msgstr "Özel model ekle (SA-MP 0.3.DL / open.mp)"
-
 msgid "Add a marker to the radar."
 msgstr "Radara bir işaret ekle."
 
@@ -1037,9 +1009,6 @@ msgstr "Seçili modeli ekle"
 msgid "Add text in the 3D world."
 msgstr "3D dünyaya metin ekle."
 
-msgid "Add the shape"
-msgstr "Şekli ekle"
-
 msgid "Add to Favourites"
 msgstr "Favorilere ekle"
 
@@ -1058,8 +1027,8 @@ msgstr "Eklenen"
 msgid "Added %d object(s) and %d removed building(s)."
 msgstr "%d nesne ve %d kaldırılmış bina eklendi."
 
-msgid "Added %d to the server: Object Browser > Custom models"
-msgstr "Sunucuya %d eklendi: Nesne tarayıcısı > Özel modeller"
+msgid "Added %d to the server: Asset Browser > Custom models"
+msgstr "Sunucuya %d eklendi: Varlık tarayıcısı > Özel modeller"
 
 msgid "Added the node, but couldn't link it: %s"
 msgstr "Node eklendi, ancak bağlanamadı: %s"
@@ -1085,9 +1054,6 @@ msgstr "Başka bir .pwn veya .inc dosyasındaki, bir Texture Studio haritasında
 
 msgid "Adjust FOV zoom"
 msgstr "FOV yakınlaştırmasını ayarla"
-
-msgid "Admin"
-msgstr "Yönetici"
 
 msgid "Admin password"
 msgstr "Yönetici parolası"
@@ -1350,9 +1316,6 @@ msgstr "Y etrafında"
 msgid "Around Z"
 msgstr "Z etrafında"
 
-msgid "Arrange"
-msgstr "Düzenle"
-
 msgid "Array"
 msgstr "Dizi"
 
@@ -1417,12 +1380,6 @@ msgstr "Hedefe bağla"
 msgid "Attached %d object(s) to the selected target."
 msgstr "%d nesne seçili hedefe bağlandı."
 
-msgid "Attached to %s"
-msgstr "%s öğesine bağlı"
-
-msgid "Attached to player preview (skin %d)"
-msgstr "Oyuncu önizlemesine bağlı (skin %d)"
-
 msgid "Attachment"
 msgstr "Attachment"
 
@@ -1483,9 +1440,6 @@ msgstr "Mevcut prefab'lar:"
 
 msgid "Axis"
 msgstr "Eksen"
-
-msgid "BRUSH"
-msgstr "FIRÇA"
 
 msgid "Back"
 msgstr "Geri"
@@ -1748,9 +1702,6 @@ msgstr "Yapı taşları"
 msgid "Building the world"
 msgstr "Dünya oluşturuluyor"
 
-msgid "Bundled: Namaka %s"
-msgstr "Dahili: Namaka %s"
-
 msgid "Burger Shot"
 msgstr "Burger Shot"
 
@@ -1801,9 +1752,6 @@ msgstr "Kamera hedefi"
 
 msgid "Can't add a node: %s"
 msgstr "Node eklenemiyor: %s"
-
-msgid "Can't be dragged or resized on the canvas. The fields here still change it."
-msgstr "Tuval üzerinde sürüklenemez veya yeniden boyutlandırılamaz. Buradaki alanlar yine de değiştirir."
 
 msgid "Can't link: %s"
 msgstr "Bağlanamıyor: %s"
@@ -2123,9 +2071,6 @@ msgstr ""
 "Bağlamak için önce bir node'a, sonra başka bir node'a tıklayın.\n"
 "Bağlı iki node'a tıklamak bağlantıyı kaldırır. Sağ tık veya Esc durdurur."
 
-msgid "Click or drag to paint · %s stops."
-msgstr "Boyamak için tıklayın veya sürükleyin · %s durdurur."
-
 msgid ""
 "Click points in the world one after another.\n"
 "Right-click or Esc stops."
@@ -2163,9 +2108,6 @@ msgstr "Kilitlilerin içinden tıkla"
 
 msgid "Click to place the pin. Esc cancels."
 msgstr "İğneyi yerleştirmek için tıklayın. Esc iptal eder."
-
-msgid "Click to place · Shift+click repeats · %s stops."
-msgstr "Yerleştirmek için tıkla · Shift+tık tekrarlar · %s durdurur."
 
 msgid "Click to place. Q/E or the wheel turn it, Esc stops."
 msgstr "Yerleştirmek için tıkla. Q/E veya tekerlek döndürür, Esc durdurur."
@@ -2224,9 +2166,6 @@ msgstr "Çarpışma ve detay"
 
 msgid "Collisions"
 msgstr "Çarpışmalar"
-
-msgid "Color 0: the model's own color is kept."
-msgstr "Renk 0: modelin kendi rengi korunur."
 
 msgid "Colour"
 msgstr "Renk"
@@ -2336,9 +2275,6 @@ msgstr "Kopyalar"
 msgid "Copies of the selection, not counting it."
 msgstr "Seçimin kopyaları, kendisi sayılmadan."
 
-msgid "Copies the DFF and TXD into the server's models folder and adds them to models/artconfig.txt, so SA-MP 0.3.DL and open.mp send them to players. Nothing is written into the game folder."
-msgstr "DFF ve TXD dosyalarını sunucunun models klasörüne kopyalar ve models/artconfig.txt dosyasına ekler, böylece SA-MP 0.3.DL ve open.mp bunları oyunculara gönderir. Oyun klasörüne hiçbir şey yazılmaz."
-
 msgid "Copies the lines shown, to paste in a bug report"
 msgstr "Gösterilen satırları hata raporuna yapıştırmak için kopyalar"
 
@@ -2418,9 +2354,6 @@ msgstr "Kamera konumunu kopyala"
 
 msgid "Copy the visible X Y Z values"
 msgstr "Görünen X Y Z değerlerini kopyala"
-
-msgid "Copy transform"
-msgstr "Dönüşümü kopyala"
 
 msgid "Copy: %s"
 msgstr "Kopyalama: %s"
@@ -2603,9 +2536,6 @@ msgstr "Eğri tutamaçları"
 msgid "Custom"
 msgstr "Özel"
 
-msgid "Custom Model... (0.3.DL)"
-msgstr "Özel model... (0.3.DL)"
-
 msgid "Custom import is wired for GTA San Andreas only in this v1."
 msgstr "Özel içe aktarma bu v1'de yalnızca GTA San Andreas için bağlanmıştır."
 
@@ -2614,9 +2544,6 @@ msgstr "Özel içe aktarma için aynı klasörde eşleşen .dff ve .txd gerekir"
 
 msgid "Custom models"
 msgstr "Özel modeller"
-
-msgid "Custom models (0.3.DL)"
-msgstr "Özel modeller (0.3.DL)"
 
 msgid "Custom models that couldn't be loaded: %d (see the log)"
 msgstr "Yüklenemeyen özel modeller: %d (günlüğe bakın)"
@@ -2855,9 +2782,6 @@ msgstr "Noktalar"
 msgid "Double-click: look from where they were when they wrote this."
 msgstr "Çift tıkla: bunu yazdıklarında bulundukları yerden bak."
 
-msgid "Down"
-msgstr "Aşağı"
-
 msgid "Download updates automatically"
 msgstr "Güncellemeleri otomatik indir"
 
@@ -2905,9 +2829,6 @@ msgstr "Uç noktayı taşımak için sürükle"
 msgid "Drag to move pin"
 msgstr "İğneyi taşımak için sürükle"
 
-msgid "Drag to move · drag a corner to resize · %s stops."
-msgstr "Taşımak için sürükleyin · yeniden boyutlandırmak için bir köşeyi sürükleyin · %s durdurur."
-
 msgid "Drag to move, wheel to zoom, double-click to fly there."
 msgstr "Taşımak için sürükle, yakınlaştırmak için tekerlek, oraya uçmak için çift tıkla."
 
@@ -2937,17 +2858,8 @@ msgstr "Çizim mesafesi"
 msgid "Draw Last"
 msgstr "En son çiz"
 
-msgid "Draw dist:"
-msgstr "Çizim mes.:"
-
 msgid "Draw distance"
 msgstr "Çizim mesafesi"
-
-msgid "Draw distance %.0f"
-msgstr "Çizim mesafesi %.0f"
-
-msgid "Draw distance %.0f  ·  LOD %s"
-msgstr "Çizim mesafesi %.0f  ·  LOD %s"
 
 msgid "Draw distance (m)"
 msgstr "Çizim mesafesi (m)"
@@ -3051,9 +2963,6 @@ msgstr "Her nokta bir textdraw'dır: SA-MP 2048 genel ve oyuncu başına 256 tex
 
 msgid "Edit"
 msgstr "Düzenle"
-
-msgid "Edit Pawn · Ctrl+S saves · Ctrl+F searches."
-msgstr "Pawn düzenle · Ctrl+S kaydeder · Ctrl+F arar."
 
 msgid "Edit all selected"
 msgstr "Seçilenlerin hepsini düzenle"
@@ -3399,11 +3308,8 @@ msgstr "Kopyaları bul"
 msgid "Find instances"
 msgstr "Örnekleri bul"
 
-msgid "Find it in Object Browser > Custom models and place it like any object."
-msgstr "Nesne tarayıcısı > Özel modeller içinde bulun ve diğer nesneler gibi yerleştirin."
-
-msgid "Find objects by model or TXD"
-msgstr "Nesneleri model veya TXD'ye göre bul"
+msgid "Find it in Asset Browser > Custom models and place it like any object."
+msgstr "Varlık tarayıcısı > Özel modeller içinde bulun ve diğer nesneler gibi yerleştirin."
 
 msgid "Find similar models"
 msgstr "Benzer modelleri bul"
@@ -3494,9 +3400,6 @@ msgstr "Klasör"
 
 msgid "Folder for NODES*.DAT (a server's scriptfiles/NPCs/nodes)"
 msgstr "NODES*.DAT için klasör (bir sunucunun scriptfiles/NPCs/nodes klasörü)"
-
-msgid "Folder missing"
-msgstr "Klasör eksik"
 
 msgid "Folder with the server's .rec files; empty: the workspace's npcmodes/recordings"
 msgstr "Sunucunun .rec dosyalarının klasörü; boşsa: workspace'in npcmodes/recordings klasörü"
@@ -3603,9 +3506,6 @@ msgstr "Buradan"
 msgid "From textures"
 msgstr "Dokulardan"
 
-msgid "From the workspace's models/artconfig.txt."
-msgstr "Workspace'in models/artconfig.txt dosyasından."
-
 msgid "Front"
 msgstr "Ön"
 
@@ -3653,9 +3553,6 @@ msgstr "GTA dünya nesnesi"
 
 msgid "Game HUD"
 msgstr "Oyun HUD'u"
-
-msgid "Game folder"
-msgstr "Oyun klasörü"
 
 msgid "Game nodes"
 msgstr "Oyun node'ları"
@@ -3795,9 +3692,6 @@ msgstr "Başka bir odaya git: onun haritası burada sizinkinin yerini alır."
 
 msgid "Go to coordinates (pasted x, y, z)"
 msgstr "Koordinatlara git (yapıştırılan x, y, z)"
-
-msgid "Go to node"
-msgstr "Node'a git"
 
 msgid "Golf club"
 msgstr "Golf sopası"
@@ -4080,14 +3974,8 @@ msgstr "At yarışı (0.3.7-R2)"
 msgid "Hospital"
 msgstr "Hastane"
 
-msgid "Host"
-msgstr "Barındır"
-
 msgid "Host this map"
 msgstr "Bu haritayı barındır"
-
-msgid "Hosting on port %d"
-msgstr "%d bağlantı noktasında barındırılıyor"
 
 msgid "Hour"
 msgstr "Saat"
@@ -4165,9 +4053,6 @@ msgstr "ID %d zaten kullanılıyor"
 
 msgid "ID %d is out of range"
 msgstr "ID %d aralık dışında"
-
-msgid "ID: %d\n"
-msgstr "ID: %d\n"
 
 msgid "IDE"
 msgstr "IDE"
@@ -4252,9 +4137,6 @@ msgstr ""
 
 msgid "In canvas units: 0 to 640 across, 0 to 448 down."
 msgstr "Tuval birimleriyle: yatay 0 ile 640, dikey 0 ile 448 arası."
-
-msgid "In game: SetPlayerTime(playerid, %d, %d); SetPlayerWeather(playerid, %d);"
-msgstr "Oyunda: SetPlayerTime(playerid, %d, %d); SetPlayerWeather(playerid, %d);"
 
 msgid "In room %s on %s, as %s"
 msgstr "%s odasında, %s üzerinde, %s olarak"
@@ -4395,9 +4277,6 @@ msgstr "Yalıtılmış görünüm"
 msgid "Isolated the selection, %d other instance(s) hidden | %s: show all"
 msgstr "Seçim yalıtıldı, diğer %d örnek gizlendi | %s: tümünü göster"
 
-msgid "It goes into the workspace's models folder and artconfig.txt."
-msgstr "Workspace'in models klasörüne ve artconfig.txt dosyasına gider."
-
 msgid "It installs the next time Haumea starts."
 msgstr "Haumea'nın bir sonraki başlatılışında kurulur."
 
@@ -4409,9 +4288,6 @@ msgstr "180'in üzerinde bir açıyla bir yönde, 180'e kadar diğer yönde gide
 
 msgid "Its account's: the server knows it from the agent's token."
 msgstr "Hesabınınki: sunucu onu ajanın belirtecinden tanır."
-
-msgid "Its password is kept on this computer."
-msgstr "Parolası bu bilgisayarda saklanır."
 
 msgid "Its player name, shown over its head and in the player list."
 msgstr "Oyuncu adı, başının üzerinde ve oyuncu listesinde gösterilir."
@@ -4541,9 +4417,6 @@ msgstr "Oyunu başlat ona katılır. Değişikliklerden sonra Test sunucusu penc
 
 msgid "Launch game with"
 msgstr "Oyunu şununla başlat"
-
-msgid "Layers - %s"
-msgstr "Katmanlar - %s"
 
 msgid "Layout"
 msgstr "Düzen"
@@ -4770,9 +4643,6 @@ msgstr "Grubu kilitle veya kilidini aç"
 
 msgid "Lock this room"
 msgstr "Bu odayı kilitle"
-
-msgid "Locked"
-msgstr "Kilitli"
 
 msgid "Locked external reference — reopen its source IPL to edit it."
 msgstr "Kilitli dış başvuru — düzenlemek için kaynak IPL'sini yeniden açın."
@@ -5049,9 +4919,6 @@ msgstr "Orta nokta"
 msgid "Min"
 msgstr "Min"
 
-msgid "Min Draw dist: %.0f"
-msgstr "Min. çizim mesafesi: %.0f"
-
 msgid "Mine"
 msgstr "Benimkiler"
 
@@ -5131,9 +4998,6 @@ msgstr "Model 0: SA-MP'nin düz beyaz \"blanktex\" dokusu; TXD ve doku adları y
 msgid "Model ID"
 msgstr "Model ID"
 
-msgid "Model ID changes: %d"
-msgstr "Model ID değişiklikleri: %d"
-
 msgid "Model IDs can't be changed for objects linked to an LOD or outside the active map."
 msgstr "Model ID'leri, bir LOD'a bağlı veya etkin haritanın dışındaki nesneler için değiştirilemez."
 
@@ -5182,9 +5046,6 @@ msgstr "Daha fazla eylem"
 
 msgid "More bands blend more smoothly. Each band is a textdraw."
 msgstr "Daha fazla bant daha yumuşak karışır. Her bant bir textdraw'dır."
-
-msgid "More display and snapping options"
-msgstr "Daha fazla görüntü ve yapışma seçeneği"
 
 msgid "Motor, stopping"
 msgstr "Motor, duruyor"
@@ -5261,9 +5122,6 @@ msgstr "Nesneleri yolun karşısına, sağına taşır; sola için negatif."
 
 msgid "Moves when hit"
 msgstr "Vurulunca hareket eder"
-
-msgid "Moves when the map loads"
-msgstr "Harita yüklendiğinde hareket eder"
 
 msgid "Moving this object updates the offset; moving the parent carries it along."
 msgstr "Bu nesneyi taşımak kaydırmayı günceller; üst nesneyi taşımak onu da götürür."
@@ -5603,9 +5461,6 @@ msgstr "Node seçilmedi. Görünüm alanında birine tıklayın."
 msgid "No object is in a group."
 msgstr "Hiçbir nesne bir grupta değil."
 
-msgid "No object selected"
-msgstr "Nesne seçilmedi"
-
 msgid "No parts fit this model."
 msgstr "Bu modele uyan parça yok."
 
@@ -5745,8 +5600,8 @@ msgstr "Notlar"
 msgid "Nothing matches."
 msgstr "Eşleşen yok."
 
-msgid "Nothing placed yet. Pick an object in the Object Browser and click Place."
-msgstr "Henüz bir şey yerleştirilmedi. Nesne tarayıcısında bir nesne seçin ve Yerleştir'e tıklayın."
+msgid "Nothing placed yet. Pick an object in the Asset Browser and click Place."
+msgstr "Henüz bir şey yerleştirilmedi. Varlık tarayıcısında bir nesne seçin ve Yerleştir'e tıklayın."
 
 msgid "Nothing selected"
 msgstr "Seçili bir şey yok"
@@ -5822,17 +5677,17 @@ msgstr "Nesne"
 msgid "Object (AddSimpleModel)"
 msgstr "Nesne (AddSimpleModel)"
 
-msgid "Object Browser"
-msgstr "Nesne tarayıcısı"
+msgid "Asset Browser"
+msgstr "Varlık tarayıcısı"
 
-msgid "Object Browser (%s): pick an object, Place, then click in the world."
-msgstr "Nesne tarayıcısı (%s): bir nesne seçin, Yerleştir'e basın, sonra dünyada tıklayın."
+msgid "Asset Browser (%s): pick an object, Place, then click in the world."
+msgstr "Varlık tarayıcısı (%s): bir nesne seçin, Yerleştir'e basın, sonra dünyada tıklayın."
 
-msgid "Object Browser (%s): pick something to place."
-msgstr "Nesne tarayıcısı (%s): yerleştirmek için bir şey seçin."
+msgid "Asset Browser (%s): pick something to place."
+msgstr "Varlık tarayıcısı (%s): yerleştirmek için bir şey seçin."
 
-msgid "Object Browser list"
-msgstr "Nesne tarayıcısı listesi"
+msgid "Asset Browser list"
+msgstr "Varlık tarayıcısı listesi"
 
 msgid "Object ID"
 msgstr "Nesne ID"
@@ -5895,13 +5750,6 @@ msgid ""
 msgstr ""
 "Kapalıyken kaydedildiği yerde oynatır. Açıkken tüm rotayı, NPC'nin\n"
 "durduğu yerden başlayacak şekilde taşır (NPC_StartPlayback'in başlangıç konumu)."
-
-msgid ""
-"Off: the outer ones stay and the gaps between come out equal.\n"
-"On: each is this far from the one before, from the first."
-msgstr ""
-"Kapalı: dıştakiler yerinde kalır, aralarındaki boşluklar eşit olur.\n"
-"Açık: her biri, ilkten başlayarak bir öncekinden bu kadar uzaktadır."
 
 msgid "Off: world X, Y and Z. On: the first selected object's axes."
 msgstr "Kapalı: dünya X, Y ve Z. Açık: ilk seçili nesnenin eksenleri."
@@ -5995,9 +5843,6 @@ msgstr "Yalnızca 0 ve 1 numaralı ikonlar kullanır (renkli işaretçiler)."
 
 msgid "Opacity"
 msgstr "Opaklık"
-
-msgid "Opacity of the red overlay drawn on selected objects."
-msgstr "Seçili nesneler üzerine çizilen kırmızı kaplamanın opaklığı."
 
 msgid "Open"
 msgstr "Aç"
@@ -6124,15 +5969,6 @@ msgstr "Orijin"
 msgid "Original"
 msgstr "Orijinal"
 
-msgid ""
-"Others join with this computer's address, the port and the session code.\n"
-"Over the internet the port must be forwarded to this computer, or use a VPN such as Tailscale.\n"
-"For a session that stays up without you, run haumea-server where your SA-MP server runs."
-msgstr ""
-"Diğerleri bu bilgisayarın adresi, port ve oturum kodu ile katılır.\n"
-"İnternet üzerinden port bu bilgisayara yönlendirilmeli ya da Tailscale gibi bir VPN kullanılmalıdır.\n"
-"Siz olmadan açık kalan bir oturum için haumea-server'ı SA-MP sunucunuzun çalıştığı yerde çalıştırın."
-
 msgid "Outgoing"
 msgstr "Giden"
 
@@ -6151,32 +5987,14 @@ msgstr "Kenarlık"
 msgid "Outline every map object"
 msgstr "Tüm harita nesnelerini çerçevele"
 
-msgid "Outline map objects"
-msgstr "Harita nesnelerini çerçevele"
-
 msgid "Outline map objects (%s)"
 msgstr "Harita nesnelerini çerçevele (%s)"
-
-msgid "Outline selected and hovered objects"
-msgstr "Seçili ve üzerine gelinen nesneleri çerçevele"
 
 msgid "Outline selected objects"
 msgstr "Seçili nesneleri çerçevele"
 
-msgid "Output: %s"
-msgstr "Çıktı: %s"
-
 msgid "Over IPv6, others can join at %s when your router lets them in."
 msgstr "IPv6 üzerinden, yönlendiriciniz izin verdiğinde diğerleri %s adresinden katılabilir."
-
-msgid "Over the internet, others join at %s"
-msgstr "İnternet üzerinden diğerleri %s adresinden katılır"
-
-msgid "PLACE"
-msgstr "PLACE"
-
-msgid "PREFAB"
-msgstr "PREFAB"
 
 msgid "Page %d of %d (%d models)"
 msgstr "Sayfa %d / %d (%d model)"
@@ -6189,9 +6007,6 @@ msgstr "Seçili nesneyi yüzeye boya"
 
 msgid "Painted %d x %s"
 msgstr "Fırçayla %d x %s yerleştirildi"
-
-msgid "Painting: %s"
-msgstr "Fırça: %s"
 
 msgid "Paintjob"
 msgstr "Paintjob"
@@ -6236,6 +6051,9 @@ msgstr "Paraşüt açılışı"
 msgid "Particle effects"
 msgstr "Parçacık efektleri"
 
+msgid "Particles"
+msgstr "Parçacıklar"
+
 msgid ""
 "Parts of the objects below the water's surface (a rock's\n"
 "wide base, a pier's legs) aren't drawn, as the radar shows the water there."
@@ -6257,9 +6075,6 @@ msgstr "Yerinde yapıştır"
 
 msgid "Paste in front of the camera"
 msgstr "Kameranın önüne yapıştır"
-
-msgid "Paste transform"
-msgstr "Dönüşümü yapıştır"
 
 msgid "Paste where it was copied"
 msgstr "Kopyalandığı yere yapıştır"
@@ -6815,13 +6630,6 @@ msgstr "Seçimi bir gruba koy"
 msgid "Put what is placed in a group named after the prefab."
 msgstr "Yerleştirilenleri prefab adıyla bir gruba koyun."
 
-msgid ""
-"Puts a DFF and TXD in the server's models folder and artconfig.txt,\n"
-"so SA-MP 0.3.DL and open.mp players get it. The game folder isn't touched."
-msgstr ""
-"Bir DFF ve TXD'yi sunucunun models klasörüne ve artconfig.txt dosyasına koyar,\n"
-"böylece SA-MP 0.3.DL ve open.mp oyuncuları alır. Oyun klasörüne dokunulmaz."
-
 msgid "Puts back the version before the last update, then restarts."
 msgstr "Son güncellemeden önceki sürümü geri koyar, sonra yeniden başlatır."
 
@@ -6839,9 +6647,6 @@ msgstr "Python"
 
 msgid "Quarry"
 msgstr "Taş ocağı"
-
-msgid "READY"
-msgstr "HAZIR"
 
 msgid "RMB"
 msgstr "RMB"
@@ -6981,9 +6786,6 @@ msgstr "Çokgenler ve dokular okunuyor..."
 msgid "Ready"
 msgstr "Hazır"
 
-msgid "Ready: %s"
-msgstr "Hazır: %s"
-
 msgid "Rebuild objects"
 msgstr "Nesneleri yeniden oluştur"
 
@@ -7062,12 +6864,6 @@ msgstr "Haritadan yenile"
 
 msgid "Refused: "
 msgstr "Reddedildi: "
-
-msgid "Related timed: %s\n"
-msgstr "İlgili zamanlı: %s\n"
-
-msgid "Related: %s\n"
-msgstr "İlgili: %s\n"
 
 msgid "Release page"
 msgstr "Sürüm sayfası"
@@ -7195,9 +6991,6 @@ msgstr "Rapor"
 
 msgid "Reports waiting: %d"
 msgstr "Bekleyen raporlar: %d"
-
-msgid "Requested: %s"
-msgstr "İstenen: %s"
 
 msgid "Required"
 msgstr "Gerekli"
@@ -7363,9 +7156,6 @@ msgstr "%s sürümüne geri dönüldü: kullanmak için Haumea'yı yeniden başl
 msgid "Rooftop"
 msgstr "Çatı"
 
-msgid "Room"
-msgstr "Oda"
-
 msgid "Room password"
 msgstr "Oda parolası"
 
@@ -7446,9 +7236,6 @@ msgstr "Çalışıyor"
 msgid "Running on 127.0.0.1:%d"
 msgstr "127.0.0.1:%d üzerinde çalışıyor"
 
-msgid "Running: %s"
-msgstr "Çalışıyor: %s"
-
 msgid ""
 "Runs the map as it is now on a private open.mp test server.\n"
 "Your map file and your own server are not touched."
@@ -7492,9 +7279,6 @@ msgstr ""
 "(96 x 82, ekran yüksekliğine göre boyutlanır). Oyuncu kapatmadıkça açıktır\n"
 "(sa-mp.cfg içinde nohudscalefix=1). Radarı kendisi boyutlandıran Widescreen Fix ile geçerli değildir."
 
-msgid "SA-MP 0.3.DL and open.mp clients download custom models."
-msgstr "SA-MP 0.3.DL ve open.mp istemcileri özel modelleri indirir."
-
 msgid "SA-MP chat"
 msgstr "SA-MP sohbeti"
 
@@ -7518,9 +7302,6 @@ msgstr "SA-MP varsayılanları"
 
 msgid "SA-MP's own objects won't show without its client files."
 msgstr "SA-MP'nin kendi nesneleri, istemci dosyaları olmadan görünmez."
-
-msgid "SELECT"
-msgstr "SELECT"
 
 msgid "Safe area (5%)"
 msgstr "Güvenli alan (%5)"
@@ -7757,9 +7538,6 @@ msgstr "Koltuk"
 msgid "Seconds. -1 with a static vehicle writes AddStaticVehicle."
 msgstr "Saniye. Statik araçla -1, AddStaticVehicle yazar."
 
-msgid "Section"
-msgstr "Bölüm"
-
 msgid "See-through (alpha)"
 msgstr "Şeffaf (alfa)"
 
@@ -7928,17 +7706,11 @@ msgstr "Sunucu günlüğü"
 msgid "Server package"
 msgstr "Sunucu paketi"
 
-msgid "Server: %s"
-msgstr "Sunucu: %s"
-
 msgid "Servers"
 msgstr "Sunucular"
 
 msgid "Session code"
 msgstr "Oturum kodu"
-
-msgid "Session code: %s"
-msgstr "Oturum kodu: %s"
 
 msgid "Set X, Y and Z rotation to zero."
 msgstr "X, Y ve Z dönüşünü sıfıra ayarla."
@@ -7951,9 +7723,6 @@ msgstr "SetVehicleNumberPlate, en fazla 32 karakter. Boş bırakılırsa oyunun 
 
 msgid "Sets the interior of all %d selected."
 msgstr "Seçili %d öğenin interior'unu ayarlar."
-
-msgid "Settings and editor data: %s"
-msgstr "Ayarlar ve editör verileri: %s"
 
 msgid "Setup, elements, NPCs, textdraws, testing and saving, with screenshots."
 msgstr "Kurulum, öğeler, NPC'ler, textdraw'lar, test ve kaydetme; ekran görüntüleriyle."
@@ -8041,9 +7810,6 @@ msgstr "Kılavuzları göster:"
 
 msgid "Show material indexes"
 msgstr "Materyal indekslerini göster"
-
-msgid "Show object edges, including invisible and see-through objects."
-msgstr "Görünmez ve şeffaf nesneler dahil nesne kenarlarını göster."
 
 msgid "Show only the target and its attachments against an empty background."
 msgstr "Boş bir arka plan önünde yalnızca hedefi ve eklentilerini göster."
@@ -8548,17 +8314,11 @@ msgstr "Switched Off"
 msgid "Sync rotation"
 msgstr "Dönüşü eşitle"
 
-msgid "TEXTDRAW"
-msgstr "TEXTDRAW"
-
 msgid "TXD"
 msgstr "TXD"
 
 msgid "TXD \"%s\" was not found; the original texture stays."
 msgstr "\"%s\" TXD'si bulunamadı; orijinal doku kalır."
-
-msgid "TXD %s"
-msgstr "TXD %s"
 
 msgid "TXD contains"
 msgstr "TXD içerir"
@@ -8594,9 +8354,6 @@ msgstr "Hedef node"
 msgid "Target picking failed. Click again or cancel."
 msgstr "Hedef seçimi başarısız. Tekrar tıklayın veya iptal edin."
 
-msgid "Target: %s"
-msgstr "Hedef: %s"
-
 msgid "Tattoo"
 msgstr "Dövme"
 
@@ -8620,10 +8377,12 @@ msgstr "Oyunda test et (%s), haritayı özel bir open.mp sunucusunda çalıştı
 
 msgid ""
 "Test in game runs the map on a private open.mp server in Haumea's config\n"
-"folder. Its files come from this package, or from the workspace server when empty."
+"folder. Its files come from this package, or when empty from the workspace server,\n"
+"or else from the latest open.mp release, downloaded the first time."
 msgstr ""
 "Oyunda test et, haritayı Haumea'nın yapılandırma klasöründeki özel bir open.mp sunucusunda\n"
-"çalıştırır. Dosyaları bu paketten gelir, boşsa workspace sunucusundan."
+"çalıştırır. Dosyaları bu paketten gelir, boşsa workspace sunucusundan,\n"
+"o da yoksa ilk seferde indirilen son open.mp sürümünden."
 
 msgid "Test in game: %s"
 msgstr "Oyunda test: %s"
@@ -9136,9 +8895,6 @@ msgstr "Zaman ve hava"
 msgid "Time (ms)"
 msgstr "Süre (ms)"
 
-msgid "Time: %d %d (visible now: %s)"
-msgstr "Saat: %d %d (şimdi görünür: %s)"
-
 msgid "Timed (day or night)"
 msgstr "Zamanlı (gündüz veya gece)"
 
@@ -9168,9 +8924,6 @@ msgstr "O dosyanın kendisini düzenlemek için Dosya > Harita aç'ı kullanın.
 
 msgid "To everyone (TextDrawCreate)"
 msgstr "Herkese (TextDrawCreate)"
-
-msgid "To keep them: a SA-MP 0.3.DL or open.mp custom model goes in the workspace's models/artconfig.txt (AddSimpleModel) with its DFF and TXD; anything else needs a similar game or SA-MP object in its place (search the Object Browser)."
-msgstr "Onları korumak için: SA-MP 0.3.DL veya open.mp özel modeli, DFF ve TXD'siyle workspace'in models/artconfig.txt dosyasına (AddSimpleModel) gider; başka her şey yerine benzer bir oyun veya SA-MP nesnesi gerektirir (Nesne tarayıcısında arayın)."
 
 msgid "To the key one"
 msgstr "Anahtar olana"
@@ -9326,9 +9079,6 @@ msgstr "Arayüz ölçeği"
 msgid "URL"
 msgstr "URL"
 
-msgid "Uncapped"
-msgstr "Sınırsız"
-
 msgid ""
 "Unchanged world objects are not saved in the map. Once you move,\n"
 "rotate, retexture or delete one, the map removes the original with\n"
@@ -9410,9 +9160,6 @@ msgstr "Kaydedilmemiş textdraw'lar"
 
 msgid "Untitled map"
 msgstr "Adsız harita"
-
-msgid "Up"
-msgstr "Yukarı"
 
 msgid "Up / Down"
 msgstr "Yukarı / Aşağı"
@@ -9819,9 +9566,6 @@ msgstr "Dünya"
 msgid "World & streaming"
 msgstr "Dünya ve streaming"
 
-msgid "World object: it stays unchanged and is omitted from Pawn export. If you move, rotate, delete, or edit its materials, export removes the original per player and creates the scripted replacement."
-msgstr "Dünya nesnesi: değişmeden kalır ve Pawn dışa aktarımına dahil edilmez. Taşır, döndürür, silerseniz veya materyallerini düzenlerseniz, dışa aktarım orijinali oyuncu başına kaldırır ve betikli yedeği oluşturur."
-
 msgid "World origin"
 msgstr "Dünya orijini"
 
@@ -10142,9 +9886,6 @@ msgstr "textdraw'lar düzenleniyor"
 msgid "empty text can crash 0.3.7 clients; use \"_\" for nothing."
 msgstr "boş metin 0.3.7 istemcilerini çökertebilir; hiçbir şey için \"_\" kullanın."
 
-msgid "empty: pick from the list"
-msgstr "boş: listeden seçin"
-
 msgid "fit to at least one zone"
 msgstr "en az bir zone'a sığdır"
 
@@ -10240,9 +9981,6 @@ msgstr "yeni yol adı"
 
 msgid "new room's name"
 msgstr "yeni odanın adı"
-
-msgid "no"
-msgstr "hayır"
 
 msgid "no NODES*.DAT files in %s"
 msgstr "%s içinde NODES*.DAT dosyası yok"
@@ -10425,9 +10163,6 @@ msgstr "nesneler seçiliyor"
 msgid "set an open.mp server package (folder, .tar.gz or .zip) in Preferences > Test server"
 msgstr "Tercihler > Test sunucusu'nda bir open.mp sunucu paketi (klasör, .tar.gz veya .zip) ayarlayın"
 
-msgid "show"
-msgstr "göster"
-
 msgid "sphere"
 msgstr "küre"
 
@@ -10556,9 +10291,6 @@ msgstr "izleyiciler"
 
 msgid "walks NODES%d.DAT from point %d"
 msgstr "NODES%d.DAT içinde %d noktasından başlayarak yürür"
-
-msgid "yes"
-msgstr "evet"
 
 msgid "yesterday"
 msgstr "dün"
@@ -10743,8 +10475,8 @@ msgstr "Adet:"
 msgid "Number of objects scattered per click when Radius > 0."
 msgstr "Yarıçap > 0 olduğunda tıklama başına dağıtılan nesne sayısı."
 
-msgid "Pick the object to paint in the Object Browser first."
-msgstr "Önce Nesne tarayıcısında boyanacak nesneyi seçin."
+msgid "Pick the object to paint in the Asset Browser first."
+msgstr "Önce Varlık tarayıcısında boyanacak nesneyi seçin."
 
 msgid "Radius:"
 msgstr "Yarıçap:"
@@ -10767,8 +10499,8 @@ msgstr "Tüm TXD'lerde %d doku bulundu"
 msgid "A saved selection has this name: saving replaces it."
 msgstr "Bu adda kayıtlı bir seçim var: kaydetmek onu değiştirir."
 
-msgid "Brush\nPaint copies of the Object Browser's object onto the world. Its settings are over the 3D view."
-msgstr "Fırça\nNesne Tarayıcısı'ndaki nesnenin kopyalarını dünyaya boyar. Ayarları 3B görünümün üzerindedir."
+msgid "Brush\nPaint copies of the Asset Browser's object onto the world. Its settings are over the 3D view."
+msgstr "Fırça\nVarlık Tarayıcısı'ndaki nesnenin kopyalarını dünyaya boyar. Ayarları 3B görünümün üzerindedir."
 
 msgid "Click to select these objects; Ctrl+click adds them to the selection."
 msgstr "Bu nesneleri seçmek için tıklayın; Ctrl+tık onları seçime ekler."
@@ -10836,9 +10568,6 @@ msgstr "Seçimi kaydet..."
 msgid "Saved selections"
 msgstr "Kayıtlı seçimler"
 
-msgid "Saved selections: keep a selection under a name and select it again later."
-msgstr "Kayıtlı seçimler: bir seçimi adla saklayın ve sonra yeniden seçin."
-
 msgid "Saved the selection \"%s\" (%d object(s))"
 msgstr "\"%s\" seçimi kaydedildi (%d nesne)"
 
@@ -10857,11 +10586,375 @@ msgstr "%d nesne seçildi (\"%s\" içinden)"
 msgid "Selection %d"
 msgstr "Seçim %d"
 
-msgid "Selections"
-msgstr "Seçimler"
-
 msgid "To ground"
 msgstr "Zemine"
 
 msgid "blank white"
 msgstr "düz beyaz"
+
+msgid "New"
+msgstr "Yeni"
+
+msgid "Open..."
+msgstr "Aç..."
+
+msgid "Switch between the map, TextDraws and Code editors."
+msgstr "Harita, TextDraws ve Kod düzenleyicileri arasında geçiş yapar."
+
+msgid "The screen, previews, background, HUD, guides and nudging."
+msgstr "Ekran, önizlemeler, arka plan, HUD, kılavuzlar ve kaydırma."
+
+msgid "Zoom in"
+msgstr "Yakınlaştır"
+
+msgid "Zoom out"
+msgstr "Uzaklaştır"
+
+msgid "Layers"
+msgstr "Katmanlar"
+
+msgid "Off: the outer ones stay and the gaps between come out equal.\nOn: each is this far from the one before, from the first."
+msgstr "Kapalı: uçtakiler yerinde kalır, aradaki boşluklar eşitlenir.\nAçık: her biri, ilkinden başlayarak öncekinden bu kadar uzakta olur."
+
+msgid "Properties"
+msgstr "Özellikler"
+
+msgid "Same height"
+msgstr "Aynı yükseklik"
+
+msgid "Same width"
+msgstr "Aynı genişlik"
+
+msgid "The gap, in canvas units. Drag or double-click to type."
+msgstr "Boşluk, tuval biriminde. Sürükleyin ya da yazmak için çift tıklayın."
+
+msgid "File missing"
+msgstr "Dosya yok"
+
+msgid "Open or close a panel."
+msgstr "Bir paneli açar veya kapatır."
+
+msgid "Panels"
+msgstr "Paneller"
+
+msgid "Arrow keys"
+msgstr "Ok tuşları"
+
+msgid "Attached to"
+msgstr "Bağlı olduğu"
+
+msgid "Detail"
+msgstr "Ayrıntı"
+
+msgid "Far version"
+msgstr "Uzak sürüm"
+
+msgid "Grid size"
+msgstr "Izgara boyutu"
+
+msgid "Hidden at the editor's time now."
+msgstr "Editörün saatinde şu an gizli."
+
+msgid "Hours"
+msgstr "Saatler"
+
+msgid "In game"
+msgstr "Oyunda"
+
+msgid "Now"
+msgstr "Şimdi"
+
+msgid "Opacity of the tint drawn on selected objects."
+msgstr "Seçili nesnelere çizilen tonun opaklığı."
+
+msgid "Output"
+msgstr "Çıktı"
+
+msgid "Player preview (skin %d)"
+msgstr "Oyuncu önizlemesi (skin %d)"
+
+msgid "Related"
+msgstr "İlgili"
+
+msgid "Related timed"
+msgstr "Saate bağlı ilgili"
+
+msgid "Screen"
+msgstr "Ekran"
+
+msgid "Shown at the editor's time now."
+msgstr "Editörün saatinde şu an görünür."
+
+msgid "Shows from"
+msgstr "Şuradan görünür"
+
+msgid "Sign in with"
+msgstr "Giriş yöntemi"
+
+msgid "The model is only drawn from this far away."
+msgstr "Model ancak bu uzaklıktan itibaren çizilir."
+
+msgid "Trip"
+msgstr "Yol"
+
+msgid "Editor data"
+msgstr "Editör verileri"
+
+msgid "Selection outline"
+msgstr "Seçim dış hattı"
+
+msgid "Build Replay"
+msgstr "İnşa tekrarı"
+
+msgid "Plays the map being built, element by element in the order they were added, while the camera circles it."
+msgstr "Kamera haritanın etrafında dönerken haritanın eklenme sırasına göre öğe öğe inşa edilişini oynatır."
+
+msgid "Elements built so far. Drag to scrub."
+msgstr "Şu ana kadar inşa edilen öğeler. İleri geri sarmak için sürükleyin."
+
+msgid "Circle the map. Moving the camera stops it."
+msgstr "Haritanın etrafında dön. Kamerayı hareket ettirmek bunu durdurur."
+
+msgid "Add one with + above, or from the ribbon."
+msgstr "Yukarıdaki + ile ya da şeritten ekleyin."
+
+msgid "Admin"
+msgstr "Yönetim"
+
+msgid "All lines, warnings and errors, or errors only"
+msgstr "Tüm satırlar, uyarılar ve hatalar ya da yalnızca hatalar"
+
+msgid "Also list what is fine but worth knowing."
+msgstr "Sorunsuz ama bilinmesi iyi olanları da listele."
+
+msgid "An admin of this server makes them."
+msgstr "Bunları bu sunucunun bir yöneticisi oluşturur."
+
+msgid "Arrange"
+msgstr "Düzenle"
+
+msgid "Bundled"
+msgstr "Paketle gelen"
+
+msgid "Click to fill in the form; double-click to join."
+msgstr "Formu doldurmak için tıklayın; katılmak için çift tıklayın."
+
+msgid "Click to fill in the form; double-click to join. Its password is kept on this computer."
+msgstr "Formu doldurmak için tıklayın; katılmak için çift tıklayın. Parolası bu bilgisayarda saklanır."
+
+msgid "Create"
+msgstr "Oluştur"
+
+msgid "Everything the browser can show"
+msgstr "Tarayıcının gösterebileceği her şey"
+
+msgid "Find objects"
+msgstr "Nesne bul"
+
+msgid "Go to this view"
+msgstr "Bu görünüme git"
+
+msgid "Join a session"
+msgstr "Oturuma katıl"
+
+msgid "Keeps this view: the camera, the time, the weather and the interior."
+msgstr "Bu görünümü saklar: kamera, saat, hava ve iç mekân."
+
+msgid "Make one with the + button above."
+msgstr "Yukarıdaki + düğmesiyle oluşturun."
+
+msgid "Maximize"
+msgstr "Ekranı kapla"
+
+msgid "Minimize"
+msgstr "Simge durumuna küçült"
+
+msgid "Name the current view and Save it to come back to it."
+msgstr "Geçerli görünüme ad verip kaydedin, sonra ona dönebilirsiniz."
+
+msgid "No messages yet."
+msgstr "Henüz mesaj yok."
+
+msgid "No one else here yet."
+msgstr "Burada henüz başka kimse yok."
+
+msgid "No output yet."
+msgstr "Henüz çıktı yok."
+
+msgid "No saved views yet."
+msgstr "Henüz kayıtlı görünüm yok."
+
+msgid "Only textures from TXDs whose name matches"
+msgstr "Yalnızca adı eşleşen TXD'lerdeki dokular"
+
+msgid "Others join with this computer's address, the port and the session code shown once you host."
+msgstr "Diğerleri bu bilgisayarın adresi, port ve barındırınca görünen oturum koduyla katılır."
+
+msgid ""
+"Over the internet the port must be forwarded to this computer, or use a VPN such as Tailscale.\n"
+"For a session that stays up without you, run haumea-server where your SA-MP server runs."
+msgstr ""
+"İnternet üzerinden port bu bilgisayara yönlendirilmeli ya da Tailscale gibi bir VPN kullanın.\n"
+"Siz olmadan açık kalan bir oturum için SA-MP sunucunuzun çalıştığı yerde haumea-server çalıştırın."
+
+msgid "Restore"
+msgstr "Geri yükle"
+
+msgid "Send them the port and session code above."
+msgstr "Onlara yukarıdaki portu ve oturum kodunu gönderin."
+
+msgid "Show the target point"
+msgstr "Hedef noktasını göster"
+
+msgid "Snap to steps"
+msgstr "Adımlara yasla"
+
+msgid "Test in game starts the server; what it prints shows here."
+msgstr "Oyunda test et sunucuyu başlatır; yazdıkları burada görünür."
+
+msgid "Type a model ID and press Enter to swap the model. Custom models use their negative Pawn IDs."
+msgstr "Modeli değiştirmek için bir model kimliği yazıp Enter'a basın. Özel modeller negatif Pawn kimliklerini kullanır."
+
+msgid "Moves"
+msgstr "Hareket eder"
+
+msgid "Starts"
+msgstr "Başlar"
+
+msgid "When the map loads"
+msgstr "Harita yüklenince"
+
+msgid "When a player presses a key"
+msgstr "Bir oyuncu bir tuşa basınca"
+
+msgid "When a driver sounds the horn"
+msgstr "Bir sürücü korna çalınca"
+
+msgid "A gate: it moves back after a while. The map's code needs\n<map>_Gates(playerid, newkeys, oldkeys) called from OnPlayerKeyStateChange;\nTest in game does that."
+msgstr "Bir kapı: bir süre sonra geri döner. Haritanın kodu\n<map>_Gates(playerid, newkeys, oldkeys) çağrısını OnPlayerKeyStateChange içinde yapmalı;\nOyunda test et bunu yapar."
+
+msgid "Closes after"
+msgstr "Kapanma süresi"
+
+msgid "Seconds it stands open."
+msgstr "Açık kaldığı saniye."
+
+msgid "Garage door sounds"
+msgstr "Garaj kapısı sesleri"
+
+msgid "The open.mp server (%s) is in %s."
+msgstr "open.mp sunucusu (%s) şurada: %s."
+
+msgid "Could not download the open.mp server: %s"
+msgstr "open.mp sunucusu indirilemedi: %s"
+
+msgid "Download the open.mp server into it"
+msgstr "İçine open.mp sunucusunu indir"
+
+msgid "The latest open.mp release from GitHub, so Test in game and pawncc work in it.\nFiles already in the folder are kept."
+msgstr "GitHub'daki en yeni open.mp sürümü; Oyunda test et ve pawncc bunun içinde çalışır.\nKlasörde zaten olan dosyalar korunur."
+
+msgid "Downloading the open.mp server: %.1f MB"
+msgstr "open.mp sunucusu indiriliyor: %.1f MB"
+
+msgid "It already has a server."
+msgstr "Zaten bir sunucusu var."
+
+msgid "%d of those models were imported into the game's modloader/Haumea folder, which SA-MP players don't have. They can become custom models in the server's models folder."
+msgstr "Bu modellerden %d tanesi oyunun modloader/Haumea klasörüne aktarılmış; SA-MP oyuncularında bu klasör yok. Sunucunun models klasöründe özel model olabilirler."
+
+msgid ", but artwork is off in the server's config (Add Custom Model turns it on)"
+msgstr ", ancak sunucu yapılandırmasında artwork kapalı (Özel model ekle bunu açar)"
+
+msgid "A custom model's texture: players on the SA-MP 0.3.DL client download it;\n0.3.7 players see nothing there."
+msgstr "Özel model dokusu: SA-MP 0.3.DL istemcisindeki oyuncular bunu indirir;\n0.3.7 oyuncuları orada hiçbir şey görmez."
+
+msgid "Add Custom Model"
+msgstr "Özel model ekle"
+
+msgid "Artwork is off on this server: players won't get custom models."
+msgstr "Bu sunucuda artwork kapalı: oyuncular özel modelleri almayacak."
+
+msgid "Artwork is on in %s."
+msgstr "%s içinde artwork açık."
+
+msgid "Custom Model..."
+msgstr "Özel model..."
+
+msgid "Players on the SA-MP 0.3.DL client download custom models."
+msgstr "SA-MP 0.3.DL istemcisindeki oyuncular özel modelleri indirir."
+
+msgid "Sets artwork.enable in config.json (open.mp), or useartwork 1 in server.cfg (SA-MP)."
+msgstr "config.json içinde artwork.enable (open.mp) veya server.cfg içinde useartwork 1 (SA-MP) ayarlar."
+
+msgid "Turn on artwork"
+msgstr "Artwork'ü aç"
+
+msgid "%d element(s) use custom models: their DFF and TXD go in the server's models folder, with artwork enabled%s; players need the SA-MP 0.3.DL client.%s"
+msgstr "%d öğe özel model kullanıyor: DFF ve TXD dosyaları sunucunun models klasörüne, artwork açık olarak konur%s; oyuncuların SA-MP 0.3.DL istemcisine ihtiyacı var.%s"
+
+msgid "In the workspace's models folder."
+msgstr "Çalışma alanının models klasöründe."
+
+msgid "It goes into the workspace's models folder; maps that use it register it in their code."
+msgstr "Çalışma alanının models klasörüne gider; onu kullanan haritalar kendi kodlarında kaydeder."
+
+msgid "Puts your DFF and TXD in the server's models folder; maps that use it register it\nin their own code. Players on the SA-MP 0.3.DL client download it. The game folder isn't touched."
+msgstr "DFF ve TXD dosyalarını sunucunun models klasörüne koyar; onu kullanan haritalar kendi\nkodlarında kaydeder. SA-MP 0.3.DL istemcisindeki oyuncular indirir. Oyun klasörüne dokunulmaz."
+
+msgid "To keep them: add it as a custom model (File > Import > Custom Model) with its DFF and TXD; anything else needs a similar game or SA-MP object in its place (search the Asset Browser)."
+msgstr "Korumak için: DFF ve TXD'siyle özel model olarak ekleyin (Dosya > İçe aktar > Özel model); diğerlerinin yerine benzer bir oyun veya SA-MP nesnesi gerekir (Varlık Tarayıcısı'nda arayın)."
+
+msgid "Your own DFF and TXD, copied into the server's models folder. Maps that use them register them in their own code (AddSimpleModel, AddCharModel); the server (open.mp, or SA-MP 0.3.DL) sends them to players as they join, and players need the SA-MP 0.3.DL client. Nothing is written into the game folder."
+msgstr "Kendi DFF ve TXD dosyaların; sunucunun models klasörüne kopyalanır. Onları kullanan haritalar kendi kodlarında kaydeder (AddSimpleModel, AddCharModel); sunucu (open.mp veya SA-MP 0.3.DL) bunları oyunculara katılırken gönderir ve oyuncuların SA-MP 0.3.DL istemcisine ihtiyacı var. Oyun klasörüne hiçbir şey yazılmaz."
+
+msgid "Custom models changed on disk were reloaded"
+msgstr "Diskte değişen özel modeller yeniden yüklendi"
+
+msgid "Reload custom models"
+msgstr "Özel modelleri yeniden yükle"
+
+msgid "Custom models reloaded: %d"
+msgstr "Yeniden yüklenen özel modeller: %d"
+
+msgid "Reads the models' DFF and TXD files and the AddSimpleModel lines again. Files rebuilt on disk are also picked up by themselves."
+msgstr "Modellerin DFF ve TXD dosyalarını ve AddSimpleModel satırlarını yeniden okur. Diskte yeniden oluşturulan dosyalar da kendiliğinden alınır."
+
+msgid "Map changed on disk"
+msgstr "Harita diskte değişti"
+
+msgid "%s was changed outside Haumea since it was opened."
+msgstr "%s, açıldığından beri Haumea dışında değiştirildi."
+
+msgid "Saving now replaces those changes with the map as it is here."
+msgstr "Şimdi kaydetmek bu değişiklikleri haritanın buradaki hâliyle değiştirir."
+
+msgid "Reload from disk"
+msgstr "Diskten yeniden yükle"
+
+msgid "Overwrite"
+msgstr "Üzerine yaz"
+
+msgid "%s changed on disk and was opened again"
+msgstr "%s diskte değişti ve yeniden açıldı"
+
+msgid "%s changed on disk outside Haumea: saving will ask before replacing it"
+msgstr "%s Haumea dışında diskte değişti: kaydetme, değiştirmeden önce soracak"
+
+msgid "Unsaved changes were kept in an autosave (File > Recover Autosave)"
+msgstr "Kaydedilmemiş değişiklikler bir otomatik kayda alındı (Dosya > Otomatik kaydı kurtar)"
+
+msgid "%d object(s) of custom model %d (%s): its DFF has no collision, so in the game players, actors and cars go through it. Haumea makes one from its shape only for clicking and snapping here. Embed a COL in the DFF."
+msgstr "%d nesne, özel model %d (%s): DFF'sinde çarpışma yok, bu yüzden oyunda oyuncular, aktörler ve araçlar içinden geçer. Haumea yalnızca burada tıklamak ve yaslamak için şeklinden bir tane oluşturur. DFF'ye bir COL gömün."
+
+msgid "%s has nothing to stand on within 2 m under its feet: in the game it falls until it lands on something. Custom models without collision in their DFF don't count."
+msgstr "%s ayaklarının 2 m altında basacak bir şey yok: oyunda bir şeye konana kadar düşer. DFF'sinde çarpışma olmayan özel modeller sayılmaz."
+
+msgid "Downloading the open.mp server..."
+msgstr "open.mp sunucusu indiriliyor..."
+
+msgid "Downloading the streamer plugin..."
+msgstr "streamer eklentisi indiriliyor..."
+
+msgid "a server download is running; try again when it finishes"
+msgstr "bir sunucu indirmesi sürüyor; bittiğinde tekrar deneyin"

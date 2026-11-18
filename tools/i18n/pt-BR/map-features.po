@@ -102,9 +102,6 @@ msgstr "MoveObject (MoveDynamicObject com o streamer) logo depois de o objeto se
 msgid "Moves the objects across the path, to its right; negative for its left."
 msgstr "Move os objetos para o lado do caminho, à direita; negativo para a esquerda."
 
-msgid "Moves when the map loads"
-msgstr "Move-se quando o mapa carrega"
-
 msgid "Next checkpoint"
 msgstr "Próximo checkpoint"
 

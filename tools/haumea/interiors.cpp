@@ -256,67 +256,126 @@ interiorPawn(const GameInterior &in)
 	return code;
 }
 
+std::vector<GameInteriorInfo>
+FindGameInteriors(const char *filter)
+{
+	if(!gInteriorsLoaded)
+		loadInteriors();
+	std::vector<GameInteriorInfo> found;
+	for(size_t i = 0; i < gInteriors.size(); i++)
+		if(matches(gInteriors[i], filter ? filter : ""))
+			found.push_back({ (int)i, gInteriors[i].id, gInteriors[i].key, gInteriors[i].name,
+				gInteriors[i].pos, gInteriors[i].angle });
+	return found;
+}
+
+bool
+GoToGameInterior(int index)
+{
+	if(!gInteriorsLoaded)
+		loadInteriors();
+	if(index < 0 || index >= (int)gInteriors.size())
+		return false;
+	goToInterior(gInteriors[index]);
+	return true;
+}
+
+std::string
+GameInteriorPawn(int index)
+{
+	if(!gInteriorsLoaded)
+		loadInteriors();
+	return index >= 0 && index < (int)gInteriors.size() ? interiorPawn(gInteriors[index]) : std::string();
+}
+
+// Find a GTA interior by name, key or ID and go there; copy where it is as Pawn.
 void
 InteriorsWindow(bool *open)
 {
-	ImGui::SetNextWindowSize(ImVec2(ImGui::GetFontSize() * 26.0f, ImGui::GetFontSize() * 30.0f), ImGuiCond_FirstUseEver);
-	if(!ImGui::Begin(LI(ICON_FA_MAP_PIN, "Interiors"), open)){
+	char title[128];
+	snprintf(title, sizeof(title), "%s", LI(ICON_FA_MAP_PIN, "Interiors"));
+	ImGuiWindowFlags flags = UiPlaceToolWindow(title, 26.0f, false);
+	if(!ImGui::Begin(title, open, flags)){
 		ImGui::End();
 		return;
 	}
 	UiFitItemsToPanel();
 	if(!gInteriorsLoaded)
 		loadInteriors();
+
+	// The toolbar: the search filling the row, reload at its end.
 	static char filter[64];
-	ImGui::SetNextItemWidth(-ImGui::GetFontSize() * 4.0f);
+	const ImGuiStyle &style = ImGui::GetStyle();
+	float h = ImGui::GetFrameHeight();
+	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - h - style.ItemSpacing.x);
 	ImGui::InputTextWithHint("##interiorsearch", TI(ICON_FA_MAGNIFYING_GLASS, "Name, key or ID"), filter, sizeof(filter));
 	ImGui::SetItemTooltip(_("Click an interior to go there and show it. Right-click to copy it as Pawn."));
 	ImGui::SameLine();
-	if(ImGui::Button(ICON_FA_ROTATE "##reloadinteriors"))
+	if(ImGui::Button(ICON_FA_ROTATE "##reloadinteriors", ImVec2(h, h)))
 		loadInteriors();
 	ImGui::SetItemTooltip(_("Read the interiors from the game files again."));
-	if(gInteriors.empty())
-		ImGui::TextDisabled(_("No interiors found in the game's data/maps IPL files."));
 
-	if(ImGui::BeginTable("##interiors", 3, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY |
-	                     ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_SizingStretchProp)){
-		ImGui::TableSetupScrollFreeze(0, 1);
-		ImGui::TableSetupColumn(_("ID"), ImGuiTableColumnFlags_WidthFixed, ImGui::GetFontSize() * 2.0f);
-		ImGui::TableSetupColumn(_("Name"), ImGuiTableColumnFlags_WidthStretch, 2.0f);
-		ImGui::TableSetupColumn(_("Position"), ImGuiTableColumnFlags_WidthStretch, 2.0f);
-		ImGui::TableHeadersRow();
-		for(size_t i = 0; i < gInteriors.size(); i++){
-			const GameInterior &in = gInteriors[i];
-			if(!matches(in, filter))
-				continue;
-			ImGui::PushID((int)i);
-			ImGui::TableNextRow();
-			ImGui::TableNextColumn();
-			char id[16];
-			snprintf(id, sizeof(id), "%d", in.id);
-			bool here = params.numAreas && currentArea == in.id &&
-				fabsf(TheCamera.m_target.x - in.pos.x) < 0.01f && fabsf(TheCamera.m_target.y - in.pos.y) < 0.01f;
-			if(ImGui::Selectable(id, here, ImGuiSelectableFlags_SpanAllColumns))
-				goToInterior(in);
-			if(ImGui::BeginPopupContextItem()){
-				if(ImGui::MenuItem(TI(ICON_FA_COPY, "Copy as Pawn")))
-					ImGui::SetClipboardText(interiorPawn(in).c_str());
-				if(ImGui::MenuItem(TI(ICON_FA_LOCATION_DOT, "Go there")))
-					goToInterior(in);
-				ImGui::EndPopup();
-			}
-			ImGui::TableNextColumn();
-			ImGui::TextUnformatted(in.name.c_str());
-			if(in.name != in.key){
-				// Many places share a name ("House"); the key tells them apart.
-				ImGui::SameLine();
-				ImGui::TextDisabled("%s", in.key.c_str());
-			}
-			ImGui::TableNextColumn();
-			ImGui::TextDisabled("%.1f, %.1f, %.1f", in.pos.x, in.pos.y, in.pos.z);
-			ImGui::PopID();
-		}
-		ImGui::EndTable();
+	if(gInteriors.empty()){
+		ImGui::Spacing();
+		ImGui::TextDisabled("%s", _("No interiors found in the game's data/maps IPL files."));
+		ImGui::End();
+		return;
 	}
+
+	// The list: a row each, the interior's ID, its name and GXT key; a click
+	// goes there, the copy button shows on the row under the mouse.
+	ImGui::BeginChild("##interiors", UiFillRest(UiListMinHeight()));
+	float idWidth = ImGui::CalcTextSize("000").x + style.ItemSpacing.x;
+	int shown = 0;
+	for(size_t i = 0; i < gInteriors.size(); i++){
+		const GameInterior &in = gInteriors[i];
+		if(!matches(in, filter))
+			continue;
+		shown++;
+		ImGui::PushID((int)i);
+		ImVec2 rowAt = ImGui::GetCursorPos();
+		float rowW = ImGui::GetContentRegionAvail().x;
+		// The ID is the row's label, so UI scripts find a row by it.
+		char id[24];
+		snprintf(id, sizeof(id), "%d##interior", in.id);
+		bool here = params.numAreas && currentArea == in.id &&
+			fabsf(TheCamera.m_target.x - in.pos.x) < 0.01f && fabsf(TheCamera.m_target.y - in.pos.y) < 0.01f;
+		if(ImGui::Selectable(id, here, ImGuiSelectableFlags_AllowOverlap, ImVec2(rowW, h)))
+			goToInterior(in);
+		bool rowHovered = ImGui::IsItemHovered();
+		ImGui::SetItemTooltip("%s\n%.1f, %.1f, %.1f", in.name.c_str(), in.pos.x, in.pos.y, in.pos.z);
+		if(ImGui::BeginPopupContextItem()){
+			if(ImGui::MenuItem(TI(ICON_FA_COPY, "Copy as Pawn")))
+				ImGui::SetClipboardText(interiorPawn(in).c_str());
+			if(ImGui::MenuItem(TI(ICON_FA_LOCATION_DOT, "Go there")))
+				goToInterior(in);
+			ImGui::EndPopup();
+		}
+		// The name, and its key: many places share a name ("House").
+		ImGui::SetCursorPos(ImVec2(rowAt.x + idWidth, rowAt.y));
+		ImGui::AlignTextToFramePadding();
+		float right = rowAt.x + rowW - h - style.ItemSpacing.x;
+		float room = right - ImGui::GetCursorPosX();
+		float nameW = ImGui::CalcTextSize(in.name.c_str()).x;
+		UiElidedText(in.name.c_str(), room);
+		if(in.name != in.key && nameW + style.ItemSpacing.x < room){
+			ImGui::SameLine();
+			ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+			UiElidedText(in.key.c_str(), right - ImGui::GetCursorPosX());
+			ImGui::PopStyleColor();
+		}
+		if(rowHovered || ImGui::IsItemHovered()){
+			ImGui::SetCursorPos(ImVec2(rowAt.x + rowW - h, rowAt.y));
+			if(ImGui::Button(ICON_FA_COPY "##copy", ImVec2(h, h)))
+				ImGui::SetClipboardText(interiorPawn(in).c_str());
+			ImGui::SetItemTooltip("%s", TI(ICON_FA_COPY, "Copy as Pawn"));
+		}
+		ImGui::SetCursorPos(ImVec2(rowAt.x, rowAt.y + h + style.ItemSpacing.y));
+		ImGui::Dummy(ImVec2(0, 0));
+		ImGui::PopID();
+	}
+	if(shown == 0)
+		ImGui::TextDisabled("%s", _("Nothing matches."));
+	ImGui::EndChild();
 	ImGui::End();
 }

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #include "haumea.h"
 #include "i18n.h"
+#include "icons.h"
 #include "rec.h"
 #include "workspace.h"
 #include "anim.h"
@@ -731,7 +732,9 @@ uiRecPlayer(ObjectInst *inst, char *recName, size_t size)
 	static int listedFrame = -1000;
 	bool relist = strcmp(listedFolder, recFolder) != 0 ||
 		ImGui::GetFrameCount() - listedFrame > 120;
-	float browseWidth = ImGui::CalcTextSize(_("Browse...")).x + ImGui::GetStyle().FramePadding.x*2;
+	char folderId[64];
+	UiFieldLabel(_("Folder"), folderId, sizeof(folderId));
+	float browseWidth = ImGui::GetFrameHeight();
 	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - browseWidth - ImGui::GetStyle().ItemSpacing.x);
 	if(ImGui::InputTextWithHint("##folder", _("npcmodes/recordings folder"), recFolder, sizeof(recFolder),
 			ImGuiInputTextFlags_EnterReturnsTrue) || ImGui::IsItemDeactivatedAfterEdit()){
@@ -741,7 +744,7 @@ uiRecPlayer(ObjectInst *inst, char *recName, size_t size)
 	if(ImGui::IsItemHovered())
 		ImGui::SetTooltip(_("Folder with the server's .rec files; empty: the workspace's npcmodes/recordings"));
 	ImGui::SameLine();
-	if(ImGui::Button(_("Browse..."))){
+	if(ImGui::Button(ICON_FA_FOLDER_OPEN "##browse", ImVec2(browseWidth, 0))){
 		char picked[1024];
 		if(PickFolderDialog(picked, sizeof(picked), "Recordings folder", recFolder)){
 			snprintf(recFolder, sizeof(recFolder), "%s", picked);
@@ -749,6 +752,7 @@ uiRecPlayer(ObjectInst *inst, char *recName, size_t size)
 			relist = true;
 		}
 	}
+	ImGui::SetItemTooltip("%s", _("Browse..."));
 	if(relist){
 		listRecordings(recFolder, names);
 		snprintf(listedFolder, sizeof(listedFolder), "%s", recFolder);
@@ -757,7 +761,7 @@ uiRecPlayer(ObjectInst *inst, char *recName, size_t size)
 
 	// Recording
 	const char *preview = recName[0] ? recName : _("(none)");
-	if(ImGui::BeginCombo(_("Recording"), preview, ImGuiComboFlags_HeightLarge)){
+	if(UiBeginCombo(_("Recording"), preview, ImGuiComboFlags_HeightLarge)){
 		if(ImGui::Selectable(_("(none)"), recName[0] == '\0') && recName[0]){
 			recName[0] = '\0';
 			changed = true;
@@ -784,11 +788,12 @@ uiRecPlayer(ObjectInst *inst, char *recName, size_t size)
 		return changed;
 	}
 	if(!p->loaded){
+		ImVec4 bad = UiSemanticColor(UI_COLOR_ERROR);
 		if(p->rec.type == REC_NONE && doesFileExist(p->rec.path))
-			ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.4f, 1.0f), _("Not an NPC recording (unknown type)"));
+			ImGui::TextColored(bad, _("Not an NPC recording (unknown type)"));
 		else
-			ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.4f, 1.0f), _("%s.rec is not in the recordings folder"), recName);
-		if(ImGui::SmallButton(_("Reload")))
+			ImGui::TextColored(bad, _("%s.rec is not in the recordings folder"), recName);
+		if(ImGui::Button(TI(ICON_FA_ROTATE, "Reload"), ImVec2(-FLT_MIN, 0)))
 			loadForName(p, inst, recName);
 		ImGui::PopID();
 		return changed;
@@ -800,14 +805,16 @@ uiRecPlayer(ObjectInst *inst, char *recName, size_t size)
 	ImGui::TextDisabled(_("%s, %d frames, %s, %.0f m"), RecTypeName(p->rec.type),
 		(int)p->rec.frames.size(), durText, p->rec.distance);
 	if(p->rec.type == REC_DRIVER && !inst->m_isVehicle)
-		ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.3f, 1.0f), _("A driver recording: the NPC must be in a vehicle"));
+		ImGui::TextColored(UiSemanticColor(UI_COLOR_WARNING), _("A driver recording: the NPC must be in a vehicle"));
 	else if(p->rec.type == REC_ONFOOT && inst->m_isVehicle)
-		ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.3f, 1.0f), _("An on-foot recording on a vehicle"));
+		ImGui::TextColored(UiSemanticColor(UI_COLOR_WARNING), _("An on-foot recording on a vehicle"));
 	if(p->rec.trailingBytes)
 		ImGui::TextDisabled(_("%d trailing bytes ignored"), p->rec.trailingBytes);
 
-	// Transport
-	if(ImGui::Button(p->playing ? _("Pause") : _("Play"), ImVec2(70, 0))){
+	// Transport: Play and Stop share the row, the options below them.
+	ImGui::Spacing();
+	float half = floorf((ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x) / 2.0f);
+	if(ImGui::Button(p->playing ? _("Pause") : _("Play"), ImVec2(half, 0))){
 		if(!p->playing && p->time >= duration && !p->rec.frames.empty())
 			p->time = p->rec.frames[0].time / 1000.0f;
 		p->playing = !p->playing;
@@ -816,20 +823,22 @@ uiRecPlayer(ObjectInst *inst, char *recName, size_t size)
 	}
 	ImGui::SameLine();
 	ImGui::BeginDisabled(!p->applied);
-	if(ImGui::Button(_("Stop"))){
+	if(ImGui::Button(_("Stop"), ImVec2(half, 0))){
 		restore(p, inst);
 		p->time = p->rec.frames.empty() ? 0.0f : p->rec.frames[0].time / 1000.0f;
 	}
 	ImGui::EndDisabled();
 	if(ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
 		ImGui::SetTooltip(_("Stop and put the element back where it was"));
-	ImGui::SameLine();
-	ImGui::Checkbox(_("Loop"), &p->loop);
-	ImGui::SameLine();
-	ImGui::Checkbox(_("Route"), &p->showRoute);
-	ImGui::SameLine();
+	auto checkboxWidth = [](const char *label){
+		return ImGui::GetFrameHeight() + ImGui::GetStyle().ItemInnerSpacing.x + ImGui::CalcTextSize(label, nil, true).x;
+	};
+	UiCheckbox(_("Loop"), &p->loop);
+	UiSameLineIfFits(checkboxWidth(_("Route")));
+	UiCheckbox(_("Route"), &p->showRoute);
+	UiSameLineIfFits(checkboxWidth(_("From here")));
 	bool startAtInst = p->startAtInst;
-	if(ImGui::Checkbox(_("From here"), &startAtInst)){
+	if(UiCheckbox(_("From here"), &startAtInst)){
 		p->startAtInst = startAtInst;
 		if(p->applied)
 			applySample(p, inst);
@@ -839,6 +848,7 @@ uiRecPlayer(ObjectInst *inst, char *recName, size_t size)
 			"with a start position. Off plays it where it was recorded."));
 
 	// Timeline
+	ImGui::Spacing();
 	char timeText[32], label[80];
 	formatTime(timeText, sizeof(timeText), p->time);
 	snprintf(label, sizeof(label), "%s / %s", timeText, durText);

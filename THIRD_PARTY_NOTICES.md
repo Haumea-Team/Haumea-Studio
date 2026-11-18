@@ -23,9 +23,13 @@ reads everything else from your own game folder.
 | LodePNG (in librw) | zlib | Copyright (c) 2005-2020 Lode Vandevenne | https://github.com/lvandeve/lodepng |
 | GLFW (linked into the Windows build, bundled on macOS) | zlib | Copyright (c) 2002-2006 Marcus Geelnard; Copyright (c) 2006-2019 Camilla Löwy | https://www.glfw.org |
 | Inter 4.001 (the UI font, `fonts/Inter-Regular.ttf`) | SIL Open Font License 1.1 | Copyright (c) 2016 The Inter Project Authors | https://github.com/rsms/inter |
+| Manrope (the UI font, Regular and SemiBold, embedded in `tools/haumea/manrope_data.h`) | SIL Open Font License 1.1 (`tools/haumea/fonts/OFL-Manrope.txt`) | Copyright 2018 The Manrope Project Authors | https://github.com/googlefonts/manrope |
+| JetBrains Mono (the code font, embedded in `tools/haumea/manrope_data.h`) | SIL Open Font License 1.1 (`tools/haumea/fonts/OFL-JetBrainsMono.txt`) | Copyright 2020 The JetBrains Mono Project Authors | https://github.com/JetBrains/JetBrainsMono |
+| Lucide icons (the ribbon's outline icons, a subset embedded in `tools/haumea/lucide_data.h`) | ISC | Copyright (c) Lucide Contributors 2022; portions Copyright (c) Cole Bemis 2013-2022 (Feather, MIT) | https://lucide.dev |
 | Noto Sans SC Regular 2.004 (Chinese UI, `fonts/NotoSansSC-Regular.otf`) | SIL Open Font License 1.1 (`fonts/LICENSE-NotoSansSC.txt`) | Copyright (c) 2014-2021 Adobe | https://github.com/notofonts/noto-cjk |
 | Font Awesome Free 6.7.2 (icons, `fonts/fa-solid-900.ttf`) | Font files: SIL Open Font License 1.1; icons: CC BY 4.0 | Copyright (c) Font Awesome (Fonticons, Inc.) | https://fontawesome.com |
 | open.mp SDK tables: animation names (`anim_ids.h`), vehicle colours and components (`vehicle_tables.h`) | MPL-2.0 | open.mp team and contributors | https://github.com/openmultiplayer/open.mp |
+| SA Map Studio's track tables: where SA-MP's tubes and stunt roads join (`track_data.h`, made by `gen_track_data.py` from `roadTubes.js` and `roadMRoad.js`) | MPL-2.0 (text under "open.mp SDK tables" below) | Walter Correa; the tables come from the tools TBR (Adr1 Tube Connector 1.10) and Road Construction 1.0 by adri1 | https://github.com/Walter-Correa/SA-Map-Studio |
 | Liberation Sans, Serif and Mono 2.1.5, Regular and Bold (material text, `fonts/material/Liberation*.ttf`) | SIL Open Font License 1.1 (`fonts/material/LICENSE-Liberation.txt`) | Digitized data copyright (c) 2010 Google Corporation; Copyright (c) 2012 Red Hat, Inc. | https://github.com/liberationfonts/liberation-fonts |
 | SA-MP fonts GTAWEAPON3 (`fonts/material/gtaweap3.ttf`) and SampAux3 (`fonts/material/sampaux3.ttf`), included so material text renders as in the SA-MP client | Not under the GPL; redistributed as part of SA-MP's client files | © their respective owners | https://sa-mp.mp |
 
@@ -85,6 +89,7 @@ Martijn Laan. Its original copyright notices remain in the setup program.
 | Data | Source |
 |---|---|
 | Texture Studio's index list (`tstudio_textures.h`), kept exact so Texture Studio maps (`.db`) open with the right textures | Texture Studio's `alltextures.pwn` (https://github.com/Pottus/Texture-Studio) |
+| Sound, skin and animation descriptions (`wiki_data.h`, made by `gen_wiki_data.py`) | The open.mp wiki's Sound IDs, Skins and Animations pages (https://github.com/openmultiplayer/web) |
 
 ## License texts
 

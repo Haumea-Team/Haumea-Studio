@@ -1,0 +1,14 @@
+# The Game HUD row in the Canvas popup ends with its settings button, inside
+# the popup: the full-width toggle row once pushed it past the popup's edge.
+open "$UI_FIXTURES/ui_map.pwn"
+click_item '*' '##editor'
+wait 2
+click_item '*' 'TextDraws'
+wait 8
+click_item '*' 'Canvas'
+wait 3
+assert item_fully_visible '*' '##hud_settings'
+click_item '*' '##hud_settings'
+wait 3
+assert item '*' 'Radar'
+assert item '*' 'Widescreen Fix'

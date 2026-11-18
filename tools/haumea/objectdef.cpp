@@ -245,9 +245,10 @@ GetNameAndDamage(char *nodename, char *name, int *n)
 }
 
 // lightUnprelit: an atomic model (an object), not a part of a ped, vehicle or
-// other clump, which keep the pipeline they always had.
+// other clump, which keep the pipeline they always had. customModel: a
+// 0.3.DL/open.mp custom model, lit as the game lights it (below).
 static void
-SetupAtomic(rw::Atomic *atm, bool lightUnprelit)
+SetupAtomic(rw::Atomic *atm, bool lightUnprelit, bool customModel = false)
 {
 	// Make sure we are not pre-instanced
 	gta::attachCustomPipelines(atm);	// attach xbox pipelines, which we want to uninstance
@@ -265,6 +266,8 @@ SetupAtomic(rw::Atomic *atm, bool lightUnprelit)
 
 //	rw::MatFX::disableEffects(atm);	// so cloning won't reattach any MatFX pipes
 
+	// Asked before SetupBuildingPipe, which marks every atomic as a building.
+	bool buildingInGame = IsBuildingPipeAttached(atm);
 	if(params.neoWorldPipe)
 		atm->pipeline = neoWorldPipe;
 	else if(params.leedsPipe)
@@ -285,9 +288,14 @@ SetupAtomic(rw::Atomic *atm, bool lightUnprelit)
 	// ambient and the sun. The building pipeline only has prelighting to go
 	// on, so it came out black in daylight. Light it as the game lights
 	// objects; it is not instanced yet, so the pipeline can still change.
+	// A custom model with prelighting but no night colours or building
+	// pipeline ID is lit that way too in the game: its baked shading plus the
+	// ambient and the sun on its faces (gta-reversed CustomBuildingRenderer
+	// only takes the building pipe for those). Stock objects keep theirs.
 	rw::Geometry *geo = atm->geometry;
+	bool lit = geo && (!(geo->flags & rw::Geometry::PRELIT) || (customModel && !buildingInGame));
 	if(lightUnprelit && params.daynightPipe && !params.neoWorldPipe && !params.leedsPipe && geo &&
-	   !(geo->flags & rw::Geometry::PRELIT) && (geo->flags & rw::Geometry::NORMALS) &&
+	   lit && (geo->flags & rw::Geometry::NORMALS) &&
 	   !(geo->flags & rw::Geometry::NATIVE) && geo->instData == nil){
 		atm->pipeline = nil;
 		gta::setPipelineID(atm, 0);
@@ -400,7 +408,7 @@ ObjectDef::LoadAtomic(void)
 	char *nodename;
 	char name[MODELNAMELEN];
 	int n;
-	bool populate2dfx = m_effectIndex < 0 && m_numEffects == 0;
+	bool populate2dfx = (m_effectIndex < 0 && m_numEffects == 0) || Effects::EffectCaptureActive();
 
 	const char *loosePath = GetCustomModelDffPath(this->m_id);
 	if(loosePath == nil)
@@ -433,7 +441,7 @@ ObjectDef::LoadAtomic(void)
 			SetAtomic(n, atomic);
 			atomic->clump->removeAtomic(atomic);
 			atomic->setFrame(rw::Frame::create());
-			SetupAtomic(atomic, true);
+			SetupAtomic(atomic, true, looseFile && GetCustomModelDffPath(m_id) != nil);
 		}
 		clump->destroy();
 		if(m_atomics[0] == nil)
@@ -502,7 +510,7 @@ ObjectDef::LoadClump(void)
 	rw::StreamMemory stream;
 	rw::Clump *clump;
 	rw::Atomic *atomic;
-	bool populate2dfx = m_effectIndex < 0 && m_numEffects == 0;
+	bool populate2dfx = (m_effectIndex < 0 && m_numEffects == 0) || Effects::EffectCaptureActive();
 
 	const char *loosePath = GetCustomModelDffPath(this->m_id);
 	if(loosePath == nil)
@@ -594,7 +602,7 @@ cloneLoadedObjectForPreview(ObjectDef *obj, rw::Atomic **atomicOut, rw::Clump **
 }
 
 bool
-CreateObjectPreviewRwObject(int id, rw::Atomic **atomicOut, rw::Clump **clumpOut)
+CreateObjectPreviewRwObject(int id, rw::Atomic **atomicOut, rw::Clump **clumpOut, std::vector<Effect> *effects)
 {
 	if(atomicOut == nil || clumpOut == nil)
 		return false;
@@ -604,6 +612,9 @@ CreateObjectPreviewRwObject(int id, rw::Atomic **atomicOut, rw::Clump **clumpOut
 	ObjectDef *obj = GetObjectDef(id);
 	if(obj == nil || obj->m_cantLoad)
 		return false;
+	if(effects)
+		for(int i = 0; obj->m_effectIndex >= 0 && i < obj->m_numEffects; i++)
+			effects->push_back(*Effects::GetEffect(obj->m_effectIndex + i));
 	if(obj->IsLoaded())
 		return cloneLoadedObjectForPreview(obj, atomicOut, clumpOut);
 
@@ -619,9 +630,14 @@ CreateObjectPreviewRwObject(int id, rw::Atomic **atomicOut, rw::Clump **clumpOut
 	preview.m_numEffects = 0;
 	preview.m_hasPreRendered = false;
 
+	// Its effects read into the caller's list (when it has none known yet),
+	// never onto the object.
+	if(effects && effects->empty())
+		Effects::SetEffectCapture(effects);
 	TxdPush();
 	preview.Load();
 	TxdPop();
+	Effects::SetEffectCapture(nil);
 	bool ok = cloneLoadedObjectForPreview(&preview, atomicOut, clumpOut);
 
 	if(preview.m_clump){
@@ -805,6 +821,32 @@ RemoveObjectDef(int id)
 
 	delete obj;
 	objdefs[id] = nil;
+}
+
+// Drops what was loaded for a model (its DFF and collision), keeping the
+// definition: the next request reads the file again. Instances drawing it
+// must have let go of their RW objects first (ReloadModelsInPlace).
+void
+UnloadObjectDefModel(int id)
+{
+	ObjectDef *obj = GetObjectDef(id);
+	if(obj == nil)
+		return;
+	if(obj->m_clump){
+		obj->m_clump->destroy();
+		obj->m_clump = nil;
+	}
+	for(int i = 0; i < nelem(obj->m_atomics); i++){
+		if(obj->m_atomics[i]){
+			destroyDetachedAtomic(obj->m_atomics[i]);
+			obj->m_atomics[i] = nil;
+		}
+	}
+	if(obj->m_colModel){
+		delete obj->m_colModel;
+		obj->m_colModel = nil;
+	}
+	obj->m_cantLoad = false;
 }
 
 ObjectDef*

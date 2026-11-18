@@ -91,9 +91,6 @@ msgstr "%d elemento(s) fora dos limites do mundo do SA-MP (±%d): o servidor lim
 
 #: tools/haumea/mapcheck.cpp:837
 #, c-format
-msgid "%d element(s) use custom models: the server needs them in models/artconfig.txt (or AddSimpleModel) and artwork enabled%s; players need SA-MP 0.3.DL or an open.mp client.%s"
-msgstr "%d elemento(s) usam modelos personalizados: o servidor precisa deles no models/artconfig.txt (ou AddSimpleModel) e do artwork ativado%s; os jogadores precisam do SA-MP 0.3.DL ou de um cliente open.mp.%s"
-
 #: tools/haumea/mapcheck.cpp:538
 #, c-format
 msgid "%d elements share the variable name \"%s\": the Pawn code won't compile."
@@ -396,10 +393,6 @@ msgstr "(versão desconhecida)"
 msgid ", and it has none"
 msgstr ", e não tem nenhuma"
 
-#: tools/haumea/mapcheck.cpp:840
-msgid ", but config.json has artwork.enable off"
-msgstr ", mas o config.json está com artwork.enable desligado"
-
 #: tools/haumea/mapcheck.cpp:431
 msgid ". Custom IDs not in artconfig.txt or AddSimpleModel: "
 msgstr ". IDs personalizados fora do artconfig.txt e do AddSimpleModel: "
@@ -492,11 +485,6 @@ msgstr "Procurar..."
 #: tools/haumea/haumea.cpp:2644
 msgid "Building the world"
 msgstr "Montando o mundo"
-
-#: tools/haumea/namaka.cpp:708
-#, c-format
-msgid "Bundled: Namaka %s"
-msgstr "No pacote: Namaka %s"
 
 #: tools/haumea/shortcuts.cpp:81
 msgid "Camera"
@@ -716,10 +704,6 @@ msgstr "Freight (537)"
 #: tools/haumea/rec.cpp:832
 msgid "From here"
 msgstr "Daqui"
-
-#: tools/haumea/startscreen.cpp:297
-msgid "From the workspace's models/artconfig.txt."
-msgstr "Do models/artconfig.txt do workspace."
 
 #: tools/haumea/startscreen.cpp:259
 msgid "GTA San Andreas"
@@ -1082,8 +1066,8 @@ msgid "OK"
 msgstr "OK"
 
 #: tools/haumea/shortcuts.cpp:75
-msgid "Object Browser"
-msgstr "Navegador de objetos"
+msgid "Asset Browser"
+msgstr "Navegador de recursos"
 
 #: tools/haumea/shortcuts.cpp:76
 msgid "Object Info"
@@ -1414,11 +1398,6 @@ msgstr "Pasta do servidor"
 msgid "Server folder found."
 msgstr "Pasta do servidor encontrada."
 
-#: tools/haumea/workspace.cpp:910
-#, c-format
-msgid "Settings and editor data: %s"
-msgstr "Configurações e dados do editor: %s"
-
 #: tools/haumea/shortcuts.cpp:62
 msgid "Show everything hidden"
 msgstr "Mostrar tudo o que está oculto"
@@ -1602,10 +1581,6 @@ msgstr "Hora e clima"
 #, c-format
 msgid "Tip: %s"
 msgstr "Dica: %s"
-
-#: tools/haumea/mapcheck.cpp:433
-msgid "To keep them: a SA-MP 0.3.DL or open.mp custom model goes in the workspace's models/artconfig.txt (AddSimpleModel) with its DFF and TXD; anything else needs a similar game or SA-MP object in its place (search the Object Browser)."
-msgstr "Para mantê-los: um modelo personalizado do SA-MP 0.3.DL ou do open.mp vai no models/artconfig.txt do workspace (AddSimpleModel) com o DFF e o TXD; o resto precisa de um objeto parecido do jogo ou do SA-MP no lugar (procure no Navegador de objetos)."
 
 #: tools/haumea/shortcuts.cpp:78
 msgid "Tools"

@@ -1,6 +1,8 @@
 # Guides as in Photoshop: a preset of four columns inside 20 unit margins
 # (columns 142.5 wide, 10 apart), and one typed at an exact place.
 open "$UI_FIXTURES/ui_map.pwn"
+click_item '*' '##editor'
+wait 2
 click_item '*' 'TextDraws'
 wait 8
 click_item '*' 'Canvas'

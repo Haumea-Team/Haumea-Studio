@@ -1325,6 +1325,78 @@ CrashReportsError(const char *where, const char *fmt, ...)
 	}
 }
 
+// A button in the theme's accent with white text: a row's main action.
+static bool
+accentButton(const char *label)
+{
+	ImVec4 fill = UiAccentFill();
+	ImGui::PushStyleColor(ImGuiCol_Button, fill);
+	ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(fill.x*1.12f, fill.y*1.12f, fill.z*1.12f, 1.0f));
+	ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(fill.x*0.9f, fill.y*0.9f, fill.z*0.9f, 1.0f));
+	ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 1, 1, 1));
+	bool pressed = ImGui::Button(label);
+	ImGui::PopStyleColor(4);
+	return pressed;
+}
+
+static float
+buttonWidth(const char *label)
+{
+	return ImGui::CalcTextSize(label, nil, true).x + ImGui::GetStyle().FramePadding.x * 2.0f;
+}
+
+// The report viewer: every waiting report, searchable, filling the window.
+static void
+reportViewer(void)
+{
+	std::string titleText = std::string(_("Report")) + "###crash_report_viewer";
+	const char *title = titleText.c_str();
+	ImGuiWindowFlags placed = UiPlaceToolWindow(title, 40.0f, false);
+	if(ImGui::Begin(title, &gShowViewer, placed)){
+		static char search[128];
+		if(!TelemetryInstallId().empty())
+			ImGui::TextDisabled("%s", _("Sent with your install ID too, since the daily ping is on."));
+		ImGui::SetNextItemWidth(-FLT_MIN);
+		ImGui::InputTextWithHint("##report_search", _("Search"), search, sizeof(search));
+		ImGui::BeginChild("##report_list", ImVec2(0, 0), ImGuiChildFlags_Borders);
+		bool any = false;
+		for(const std::string &name : gPending){
+			std::string body;
+			readFile(joinDir(pendingDir(), name.c_str()), &body);
+			if(search[0] == '\0'){
+				any = true;
+				if(UiSection(name.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
+					ImGui::TextWrapped("%s", body.c_str());
+				continue;
+			}
+			// While searching: each report's lines that match, under its name.
+			std::string lowered = body, needle = search;
+			for(char &c : lowered) c = (char)tolower((unsigned char)c);
+			for(char &c : needle) c = (char)tolower((unsigned char)c);
+			if(lowered.find(needle) == std::string::npos)
+				continue;
+			any = true;
+			if(!UiSection(name.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
+				continue;
+			for(size_t at = 0; at < body.size();){
+				size_t eol = body.find('\n', at);
+				if(eol == std::string::npos)
+					eol = body.size();
+				if(lowered.substr(at, eol - at).find(needle) != std::string::npos)
+					ImGui::TextWrapped("%.*s", (int)(eol - at), body.c_str() + at);
+				at = eol + 1;
+			}
+		}
+		if(!any)
+			ImGui::TextDisabled("%s", _("Nothing matches."));
+		ImGui::EndChild();
+	}
+	ImGui::End();
+}
+
+// After a crash or an error: send the waiting reports or not. What happened
+// and what is left out, then View report at the left and the answers at the
+// right, Send in the accent.
 void
 CrashReportsDrawBanner(void)
 {
@@ -1338,13 +1410,17 @@ CrashReportsDrawBanner(void)
 	if(ImGui::Begin((std::string(_("Send a report?")) + "###crash_reports").c_str(), nil, flags)){
 		ImGui::TextUnformatted(gPending.size() == 1 ? _("Haumea Studio closed unexpectedly or hit an error. A report can help fix it.") :
 			_("Haumea Studio closed unexpectedly or hit errors. Reports can help fix them."));
-		ImGui::TextDisabled(_("Your folders, user name and map names are left out."));
+		ImGui::TextDisabled("%s", gSending ? _("Sending...") : _("Your folders, user name and map names are left out."));
+		ImGui::Spacing();
 		if(ImGui::Button(_("View report")))
 			gShowViewer = true;
+		// The answers at the row's right end: Don't send, Always send, Send.
+		float spacing = ImGui::GetStyle().ItemSpacing.x;
+		float answers = buttonWidth(_("Don't send")) + buttonWidth(_("Always send")) + buttonWidth(_("Send")) + spacing * 2.0f;
+		float right = ImGui::GetWindowContentRegionMax().x;
 		ImGui::SameLine();
-		if(ImGui::Button(_("Send")))
-			sendPending();
-		ImGui::SameLine();
+		if(ImGui::GetCursorPosX() < right - answers)
+			ImGui::SetCursorPosX(right - answers);
 		if(ImGui::Button(_("Don't send"))){
 			deletePending();
 			gBannerDismissed = true;
@@ -1355,31 +1431,21 @@ CrashReportsDrawBanner(void)
 			saveSettings();
 			sendPending();
 		}
-		if(gSending)
-			ImGui::TextDisabled(_("Sending..."));
+		ImGui::SetItemTooltip("%s", _("Preferences > Privacy changes it later."));
+		ImGui::SameLine();
+		if(accentButton(_("Send")))
+			sendPending();
 	}
 	ImGui::End();
-	if(gShowViewer){
-		ImGui::SetNextWindowSize(ImVec2(ImGui::GetFontSize() * 40.0f, ImGui::GetFontSize() * 24.0f), ImGuiCond_FirstUseEver);
-		if(ImGui::Begin((std::string(_("Report")) + "###crash_report_viewer").c_str(), &gShowViewer)){
-			if(!TelemetryInstallId().empty())
-				ImGui::TextDisabled(_("Sent with your install ID too, since the daily ping is on."));
-			for(const std::string &name : gPending){
-				std::string body;
-				readFile(joinDir(pendingDir(), name.c_str()), &body);
-				ImGui::SeparatorText(name.c_str());
-				ImGui::TextWrapped("%s", body.c_str());
-			}
-		}
-		ImGui::End();
-	}
+	if(gShowViewer)
+		reportViewer();
 }
 
 void
 CrashReportsPreferences(void)
 {
 	loadSettings();
-	ImGui::SeparatorText(_("Crash and error reports"));
+	UiHeading(_("Crash and error reports"));
 	int mode = gSendMode;
 	bool changed = ImGui::RadioButton(_("Ask"), &mode, SEND_ASK);
 	ImGui::SameLine();
@@ -1394,13 +1460,15 @@ CrashReportsPreferences(void)
 		else if(mode == SEND_ALWAYS)
 			sendPending();
 	}
+	ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
 	ImGui::TextWrapped(_("After a crash or an error: the version, system and graphics card, where in Haumea's "
 		"code it happened and the last lines of its log, with your folders, user name and map names left out. "
 		"With the daily ping on, the install ID too. Reports not sent are deleted after %d days."), KEEP_DAYS);
+	ImGui::PopStyleColor();
 	if(!gPending.empty())
 		ImGui::TextDisabled(_("Reports waiting: %d"), (int)gPending.size());
 	ImGui::PushID("reports");
-	if(ImGui::SmallButton(_("What is sent and kept...")))
+	if(ImGui::Button(_("What is sent and kept...")))
 		OpenInFileManager(PRIVACY_URL);
 	ImGui::PopID();
 }

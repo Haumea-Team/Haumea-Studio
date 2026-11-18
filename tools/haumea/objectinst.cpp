@@ -1,4 +1,5 @@
 #include "haumea.h"
+#include "particles.h"
 #include "coordinatepin.h"
 #include "haumea_races_inc.h"
 #include "maptools.h"
@@ -2096,10 +2097,27 @@ normalizeObjectPawnProperties(ObjectPawnProperties *properties)
 		}
 		if(!properties->moveRotates)
 			properties->moveRotation = { 0.0f, 0.0f, 0.0f };
+		properties->moveTrigger = clamp(properties->moveTrigger, (int)MOVE_ON_LOAD, (int)MOVE_ON_HORN);
 	}else{
 		properties->moveOffset = properties->moveRotation = { 0.0f, 0.0f, 0.0f };
 		properties->moveRotates = false;
 		properties->moveSpeed = 0.0f;
+		properties->moveTrigger = MOVE_ON_LOAD;
+	}
+	if(properties->moveTrigger == MOVE_ON_LOAD){
+		properties->gateKey = 0;
+		properties->gateRange = 0.0f;
+		properties->gateCloseDelay = 0;
+		properties->gateSilent = false;
+	}else{
+		// One KEY_* bit (KEY_ACTION 1 ... KEY_CTRL_BACK 262144; 32768 is
+		// none); the horn is KEY_CROUCH, read from a driver.
+		int key = properties->gateKey;
+		bool oneKey = key > 0 && key <= 262144 && key != 32768 && (key & (key - 1)) == 0;
+		properties->gateKey = properties->moveTrigger == MOVE_ON_HORN ? 2 : oneKey ? key : (int)GATE_DEFAULT_KEY;
+		properties->gateRange = std::isfinite(properties->gateRange) && properties->gateRange > 0.0f ?
+			clamp(properties->gateRange, 1.0f, 200.0f) : 10.0f;
+		properties->gateCloseDelay = clamp(properties->gateCloseDelay, 0, 600000);
 	}
 	if(properties->attachParent == -1){
 		properties->attachParent = -1;
@@ -2769,8 +2787,10 @@ setMaterialPipeline(rw::Atomic *atomic, bool privateCopy)
 	// Only a private copy can lose its prelighting; a shared base geometry
 	// keeps the pipeline it was set up with (ObjectDef: lit when the model has
 	// no prelighting at all, the building pipeline otherwise).
+	// (A custom model is lit with its prelighting too: it stays lit.)
 	bool unlitModel = !(atomic->geometry->flags & rw::Geometry::PRELIT);
-	bool lit = privateCopy ? unlitModel : unlitModel && atomic->renderCB == LitObjectRenderCB;
+	bool wasLit = atomic->renderCB == LitObjectRenderCB;
+	bool lit = privateCopy ? unlitModel || wasLit : wasLit;
 	if(lit && atomic->renderCB != LitObjectRenderCB){
 		atomic->pipeline = nil;
 		gta::setPipelineID(atomic, 0);
@@ -3579,6 +3599,56 @@ destroyInstanceRwObject(ObjectInst *inst, ObjectDef *obj)
 	inst->m_rwObjectSerial = NextRwObjectSerial();
 }
 
+int
+ReloadModelsInPlace(const std::vector<int> &modelIds, const std::vector<int> &txdSlots)
+{
+	if(modelIds.empty() && txdSlots.empty())
+		return 0;
+	// Every model drawn with one of these TXDs is rebuilt too: its
+	// materials point at the old textures.
+	std::vector<int> ids = modelIds;
+	for(int slot : txdSlots)
+		for(int id = 0; id < NUMOBJECTDEFS; id++){
+			ObjectDef *obj = GetObjectDef(id);
+			if(obj && obj->m_txdSlot == slot && obj->IsLoaded() &&
+			   std::find(ids.begin(), ids.end(), id) == ids.end())
+				ids.push_back(id);
+		}
+	std::vector<ObjectInst*> rebuilt;
+	for(CPtrNode *p = instances.first; p; p = p->next){
+		ObjectInst *inst = (ObjectInst*)p->item;
+		if(std::find(ids.begin(), ids.end(), inst->m_objectId) == ids.end())
+			continue;
+		ObjectDef *obj = GetObjectDef(inst->m_objectId);
+		if(obj == nil)
+			continue;
+		destroyInstanceRwObject(inst, obj);
+		inst->m_materialGeometryApplied = false;
+		if(inst->m_isDeleted)
+			continue;	// drawn again (from the new files) if it comes back
+		// Its bounds come from the collision, which may have changed.
+		RemoveInstFromSectors(inst);
+		rebuilt.push_back(inst);
+	}
+	for(int id : ids)
+		UnloadObjectDefModel(id);
+	for(int slot : txdSlots)
+		UnloadTxd(slot);
+	for(int id : ids)
+		RequestObject(id);
+	LoadAllRequestedObjects();
+	for(ObjectInst *inst : rebuilt){
+		ObjectDef *obj = GetObjectDef(inst->m_objectId);
+		if(obj && obj->IsLoaded())
+			inst->CreateRwObject();
+		if(obj && obj->m_colModel)
+			InsertInstIntoSectors(inst);
+		else
+			outOfBoundsSector.buildings.InsertItem(inst);
+	}
+	return (int)rebuilt.size();
+}
+
 ObjectInst*
 GetAttachmentWorkspacePlayerPreview(void)
 {
@@ -3925,8 +3995,15 @@ bool
 CanChangeInstanceModelId(ObjectInst *inst)
 {
 	if(inst == nil || inst->m_isDeleted || inst->m_isVehicle ||
-	   GetSampElementKind(inst) != SAMP_ELEMENT_OBJECT || !IsInstInIplMapDocument(inst) ||
-	   inst->m_lodId >= 0 || inst->m_lod != nil)
+	   GetSampElementKind(inst) != SAMP_ELEMENT_OBJECT || !IsInstInIplMapDocument(inst))
+		return false;
+	// A LOD of its own, in the map (a duplicated GTA building brings one):
+	// changing the model drops it (ChangeInstanceModelId). One from the
+	// game's files, or not found, keeps the model as it is.
+	if(inst->m_lod != nil){
+		if(!inst->m_lod->m_isDeleted && !IsInstInIplMapDocument(inst->m_lod))
+			return false;
+	}else if(inst->m_lodId >= 0)
 		return false;
 	for(CPtrNode *p = instances.first; p; p = p->next){
 		ObjectInst *other = (ObjectInst*)p->item;
@@ -3991,6 +4068,22 @@ ChangeInstanceModelId(ObjectInst *inst, int editorModelId, bool recordUndo)
 
 	if(recordUndo)
 		UndoBeginGroup();
+	// Its LOD is the old model seen from afar: it goes (undoably), unless
+	// another object shares it. Delete() would take this object with it.
+	if(ObjectInst *lod = inst->m_lod){
+		bool shared = false;
+		for(CPtrNode *p = instances.first; p && !shared; p = p->next){
+			ObjectInst *other = (ObjectInst*)p->item;
+			shared = other != inst && !other->m_isDeleted && other->m_lod == lod;
+		}
+		if(!lod->m_isDeleted && !shared){
+			lod->m_isDeleted = true;
+			StampChangeSeq(lod);
+			lod->Deselect();
+			if(recordUndo)
+				UndoRecordDelete(&lod, 1);
+		}
+	}
 	if(recordUndo)
 		for(int slot = 0; slot < MAX_PAWN_MATERIALS; slot++){
 			const ObjectMaterialOverride *material = GetObjectMaterialOverride((const ObjectInst*)inst, slot);
@@ -4476,7 +4569,7 @@ GetPrefabPlacePath(void)
 	return prefabPlacePath;
 }
 
-// Object Browser categories: categories.cpp
+// Asset Browser categories: categories.cpp
 
 // Favourites
 static bool favourites[NUMOBJECTDEFS];
@@ -5091,6 +5184,28 @@ ReadPrefabEntries(const char *path, PrefabEntry *entries, int maxEntries, int *n
 				el.moveRotation = { values[4], values[5], values[6] };
 				continue;
 			}
+			if(strcmp(type, "gate") == 0){
+				int objectIndex = -1, values[5] = {};
+				float range = 0.0f;
+				bool valid = prefabNextToken(&cursor, token, sizeof(token)) &&
+					prefabParseIntToken(token, &objectIndex) && objectIndex >= 0 && objectIndex < numEntries;
+				for(int v = 0; valid && v < 5; v++){
+					valid = prefabNextToken(&cursor, token, sizeof(token));
+					if(valid && v == 2)
+						range = (float)atof(token);
+					else if(valid)
+						valid = prefabParseIntToken(token, &values[v]);
+				}
+				if(!valid)
+					continue;
+				ObjectPawnProperties &el = entries[objectIndex].properties;
+				el.moveTrigger = values[0];
+				el.gateKey = values[1];
+				el.gateRange = range;
+				el.gateCloseDelay = values[3];
+				el.gateSilent = values[4] == 0;
+				continue;
+			}
 			if(strcmp(type, "attach") == 0){
 				// v3: attach <index> <parent index> <x y z> <rx ry rz> <sync>
 				// v4 adds bone, slot, scale, material colours and preview skin.
@@ -5497,6 +5612,18 @@ previewBackground(void)
 	return UiThemePreviewBackground();
 }
 
+// A preview's light: white ambient, except for a prelit model (its baked
+// shading drawn by the building pipeline, which adds the ambient to it),
+// whose prelighting is the light, as in the game. White on top of it washed
+// every such model out flat and too bright.
+static void
+setPreviewAmbient(rw::Atomic *atm)
+{
+	bool prelit = atm && atm->geometry && (atm->geometry->flags & rw::Geometry::PRELIT);
+	float a = prelit ? 0.0f : 1.0f;
+	pAmbient->setColor(a, a, a);
+}
+
 static bool
 renderObjectToRaster(int objectId, rw::Raster *colorRaster, rw::Raster *depthRaster,
 	int size, float angle, char *error = nil, size_t errorSize = 0, bool pngOrientation = false)
@@ -5509,7 +5636,8 @@ renderObjectToRaster(int objectId, rw::Raster *colorRaster, rw::Raster *depthRas
 
 	rw::Atomic *atm = nil;
 	rw::Clump *clump = nil;
-	if(!CreateObjectPreviewRwObject(objectId, &atm, &clump)){
+	std::vector<Effect> effects;
+	if(!CreateObjectPreviewRwObject(objectId, &atm, &clump, &effects)){
 		setObjectPreviewError(error, errorSize, "preview geometry clone failed");
 		return false;
 	}
@@ -5525,6 +5653,25 @@ renderObjectToRaster(int objectId, rw::Raster *colorRaster, rw::Raster *depthRas
 		radius = obj->m_colModel->boundingSphere.radius;
 	}
 	if(radius < 0.25f) radius = 0.25f;
+	// Fire, smoke, fountains: the picture takes in where the particles go.
+	rw::V3d fxCentre;
+	float fxRadius;
+	bool particles = ParticlePreview::PreviewModelParticles(objectId, effects, &fxCentre, &fxRadius);
+	if(particles){
+		if(!haveBounds || radius <= 0.3f){
+			target = fxCentre;
+			radius = fxRadius;
+		}else{
+			// The sphere around both.
+			float d = length(sub(fxCentre, target));
+			if(d + fxRadius > radius){
+				float r = (radius + d + fxRadius) * 0.5f;
+				if(d > 1e-4f)
+					target = add(target, scale(sub(fxCentre, target), (r - radius) / d));
+				radius = r;
+			}
+		}
+	}
 	rw::V3d eye;
 	float dist;
 	if(pngOrientation){
@@ -5575,7 +5722,7 @@ renderObjectToRaster(int objectId, rw::Raster *colorRaster, rw::Raster *depthRas
 	// one-sided faces of wedges and panels show from either side.
 	uint32 oldCull = rw::GetRenderState(rw::CULLMODE);
 	rw::SetRenderState(rw::CULLMODE, rw::CULLNONE);
-	pAmbient->setColor(1.0f, 1.0f, 1.0f);
+	setPreviewAmbient(atm);
 	pDirect->setColor(0.0f, 0.0f, 0.0f);
 
 	rw::Matrix ident;
@@ -5587,6 +5734,8 @@ renderObjectToRaster(int objectId, rw::Raster *colorRaster, rw::Raster *depthRas
 		clump->getFrame()->transform(&ident, rw::COMBINEREPLACE);
 		clump->render();
 	}
+	if(particles)
+		ParticlePreview::RenderModelParticles(objectId, eye, target, up);
 
 	cam->endUpdate();
 
@@ -5684,7 +5833,7 @@ RenderModelPreviewToRaster(int objectId, rw::V3d rot, float zoom, int colour1, i
 	// one-sided faces of wedges and panels show from either side.
 	uint32 oldCull = rw::GetRenderState(rw::CULLMODE);
 	rw::SetRenderState(rw::CULLMODE, rw::CULLNONE);
-	pAmbient->setColor(1.0f, 1.0f, 1.0f);
+	setPreviewAmbient(atm);
 	pDirect->setColor(0.0f, 0.0f, 0.0f);
 	if(atm){
 		atm->getFrame()->transform(&m, rw::COMBINEREPLACE);
@@ -6249,7 +6398,7 @@ RenderPreviewObject(int objectId)
 	// one-sided faces of wedges and panels show from either side.
 	uint32 oldCull = rw::GetRenderState(rw::CULLMODE);
 	rw::SetRenderState(rw::CULLMODE, rw::CULLNONE);
-	pAmbient->setColor(1.0f, 1.0f, 1.0f);
+	setPreviewAmbient(previewAtm);
 	pDirect->setColor(0.0f, 0.0f, 0.0f);
 
 	rw::Matrix ident;
@@ -7769,6 +7918,10 @@ ExportPrefabEx(const char *path, int origin, const char *tags)
 			fprintf(f, "move %d %f %f %f %f %d %f %f %f\n", i, properties->moveOffset.x, properties->moveOffset.y,
 				properties->moveOffset.z, properties->moveSpeed, properties->moveRotates ? 1 : 0,
 				properties->moveRotation.x, properties->moveRotation.y, properties->moveRotation.z);
+		// gate <index> <trigger> <key> <range> <close delay ms> <sound>
+		if(properties->moveEnabled && properties->moveTrigger != MOVE_ON_LOAD)
+			fprintf(f, "gate %d %d %d %f %d %d\n", i, properties->moveTrigger, properties->gateKey,
+				properties->gateRange, properties->gateCloseDelay, properties->gateSilent ? 0 : 1);
 	}
 
 	fclose(f);
@@ -8263,6 +8416,29 @@ pawnWriteMaterialCalls(FILE *f, const ObjectInst *inst, PawnCodeFormat format,
 	}
 }
 
+// A number for Pawn code: the fewest decimals (1 to 6) that read back as the
+// same value, so 899.65 stays 899.65 and not the float's 899.650024. Never
+// more digits than the %.6f it replaces, and always a float literal.
+struct PawnNumberText { char s[64]; };
+
+static PawnNumberText
+PawnNum(double v)
+{
+	PawnNumberText out;
+	if(v == 0.0)
+		v = 0.0;	// no -0.0
+	bool single = (double)(float)v == v;
+	for(int p = 1; p <= 6; p++){
+		snprintf(out.s, sizeof(out.s), "%.*f", p, v);
+		double back = strtod(out.s, nil);
+		if(back == v || (single && (float)back == (float)v))
+			break;
+	}
+	if(strcmp(out.s, "-0.0") == 0)
+		strcpy(out.s, "0.0");
+	return out;
+}
+
 // The comment after a call: the model name, then Haumea's group and note.
 static void
 pawnWriteTrailingTags(FILE *f, const char *name, const char *extra,
@@ -8277,7 +8453,7 @@ static void
 pawnWriteDistance(FILE *f, float distance, const char *defaultName)
 {
 	if(distance > 0.0f)
-		fprintf(f, "%.2f", distance);
+		fprintf(f, "%s", PawnNum(distance).s);
 	else
 		fputs(defaultName, f);
 }
@@ -8302,7 +8478,7 @@ pawnWriteAnimationArgs(FILE *f, const ObjectPawnProperties *properties, bool boo
 	fputs(", ", f);
 	pawnWriteQuotedString(f, properties->animName);
 	const char *t = bools ? "true" : "1", *n = bools ? "false" : "0";
-	fprintf(f, ", %.2f, %s, %s, %s, %s, %d);\n", properties->animDelta,
+	fprintf(f, ", %s, %s, %s, %s, %s, %d);\n", PawnNum(properties->animDelta).s,
 		properties->animLoop ? t : n, properties->animLockX ? t : n,
 		properties->animLockY ? t : n, properties->animFreeze ? t : n, properties->animTime);
 }
@@ -8352,30 +8528,30 @@ pawnWriteAreaCall(FILE *f, const ObjectInst *inst, const char *handle)
 	fprintf(f, "\tnew const %s = ", handle);	// as hand-written maps do
 	switch(properties->areaShape){
 	case SAMP_AREA_CIRCLE:
-		fprintf(f, "CreateDynamicCircle(%.6f, %.6f, %.6f", p.x, p.y, r);
+		fprintf(f, "CreateDynamicCircle(%s, %s, %s", PawnNum(p.x).s, PawnNum(p.y).s, PawnNum(r).s);
 		break;
 	case SAMP_AREA_CYLINDER:
-		fprintf(f, "CreateDynamicCylinder(%.6f, %.6f, %.6f, %.6f, %.6f", p.x, p.y, p.z, p.z + h, r);
+		fprintf(f, "CreateDynamicCylinder(%s, %s, %s, %s, %s", PawnNum(p.x).s, PawnNum(p.y).s, PawnNum(p.z).s, PawnNum(p.z + h).s, PawnNum(r).s);
 		break;
 	case SAMP_AREA_SPHERE:
-		fprintf(f, "CreateDynamicSphere(%.6f, %.6f, %.6f, %.6f", p.x, p.y, p.z, r);
+		fprintf(f, "CreateDynamicSphere(%s, %s, %s, %s", PawnNum(p.x).s, PawnNum(p.y).s, PawnNum(p.z).s, PawnNum(r).s);
 		break;
 	case SAMP_AREA_RECTANGLE:
-		fprintf(f, "CreateDynamicRectangle(%.6f, %.6f, %.6f, %.6f", p.x - hx, p.y - hy, p.x + hx, p.y + hy);
+		fprintf(f, "CreateDynamicRectangle(%s, %s, %s, %s", PawnNum(p.x - hx).s, PawnNum(p.y - hy).s, PawnNum(p.x + hx).s, PawnNum(p.y + hy).s);
 		break;
 	case SAMP_AREA_CUBOID:
 	case SAMP_AREA_CUBE:
-		fprintf(f, "%s(%.6f, %.6f, %.6f, %.6f, %.6f, %.6f",
+		fprintf(f, "%s(%s, %s, %s, %s, %s, %s",
 			properties->areaShape == SAMP_AREA_CUBE ? "CreateDynamicCube" : "CreateDynamicCuboid",
-			p.x - hx, p.y - hy, p.z, p.x + hx, p.y + hy, p.z + properties->areaSize.z);
+			PawnNum(p.x - hx).s, PawnNum(p.y - hy).s, PawnNum(p.z).s, PawnNum(p.x + hx).s, PawnNum(p.y + hy).s, PawnNum(p.z + properties->areaSize.z).s);
 		break;
 	case SAMP_AREA_POLYGON:
 		fputs("CreateDynamicPolygon(Float:{", f);
 		for(int i = 0; i < properties->areaPointCount; i++)
-			fprintf(f, "%s%.6f, %.6f", i ? ", " : "", p.x + properties->areaPoints[i][0],
-				p.y + properties->areaPoints[i][1]);
+			fprintf(f, "%s%s, %s", i ? ", " : "", PawnNum(p.x + properties->areaPoints[i][0]).s,
+				PawnNum(p.y + properties->areaPoints[i][1]).s);
 		if(h > 0.0f)
-			fprintf(f, "}, %.6f, %.6f, %d", p.z, p.z + h, properties->areaPointCount * 2);
+			fprintf(f, "}, %s, %s, %d", PawnNum(p.z).s, PawnNum(p.z + h).s, properties->areaPointCount * 2);
 		else
 			fprintf(f, "}, -FLOAT_INFINITY, FLOAT_INFINITY, %d", properties->areaPointCount * 2);
 		break;
@@ -8412,23 +8588,23 @@ pawnWriteElementCall(FILE *f, const ObjectInst *inst, PawnCodeFormat format,
 	switch(kind){
 	case SAMP_ELEMENT_PICKUP:
 		if(streamer){
-			fprintf(f, "CreateDynamicPickup(%d, %d, %.6f, %.6f, %.6f, %d, %d, -1, ",
-				properties->elementModel, properties->pickupType, p.x, p.y, p.z,
+			fprintf(f, "CreateDynamicPickup(%d, %d, %s, %s, %s, %d, %d, -1, ",
+				properties->elementModel, properties->pickupType, PawnNum(p.x).s, PawnNum(p.y).s, PawnNum(p.z).s,
 				properties->virtualWorld, interior);
 			pawnWriteDistance(f, properties->streamDistance, "STREAMER_PICKUP_SD");
 			pawnWriteAreaArg(f, properties);
 			fputs(");", f);
 		}else
-			fprintf(f, "CreatePickup(%d, %d, %.6f, %.6f, %.6f, %d);",
-				properties->elementModel, properties->pickupType, p.x, p.y, p.z,
+			fprintf(f, "CreatePickup(%d, %d, %s, %s, %s, %d);",
+				properties->elementModel, properties->pickupType, PawnNum(p.x).s, PawnNum(p.y).s, PawnNum(p.z).s,
 				properties->virtualWorld);
 		pawnWriteTrailingTags(f, name, " [pickup]", properties);
 		break;
 	case SAMP_ELEMENT_LABEL:
 		fputs(streamer ? "CreateDynamic3DTextLabel(" : "Create3DTextLabel(", f);
 		pawnWriteQuotedString(f, properties->labelText);
-		fprintf(f, ", 0x%08X, %.6f, %.6f, %.6f, %.2f, ", properties->labelColor,
-			p.x, p.y, p.z, properties->drawDistance > 0.0f ? properties->drawDistance : 20.0f);
+		fprintf(f, ", 0x%08X, %s, %s, %s, %s, ", properties->labelColor,
+			PawnNum(p.x).s, PawnNum(p.y).s, PawnNum(p.z).s, PawnNum(properties->drawDistance > 0.0f ? properties->drawDistance : 20.0f).s);
 		if(streamer){
 			fprintf(f, "INVALID_PLAYER_ID, INVALID_VEHICLE_ID, %s, %d, %d, -1, ",
 				properties->labelTestLOS ? "true" : "false", properties->virtualWorld, interior);
@@ -8443,9 +8619,9 @@ pawnWriteElementCall(FILE *f, const ObjectInst *inst, PawnCodeFormat format,
 		break;
 	case SAMP_ELEMENT_ACTOR:
 		if(streamer){
-			fprintf(f, "CreateDynamicActor(%d, %.6f, %.6f, %.6f, %.6f, %d, %.2f, %d, %d, -1, ",
-				properties->elementModel, p.x, p.y, p.z, e.z, properties->actorInvulnerable ? 1 : 0,
-				properties->actorHealth, properties->virtualWorld, interior);
+			fprintf(f, "CreateDynamicActor(%d, %s, %s, %s, %s, %d, %s, %d, %d, -1, ",
+				properties->elementModel, PawnNum(p.x).s, PawnNum(p.y).s, PawnNum(p.z).s, PawnNum(e.z).s, properties->actorInvulnerable ? 1 : 0,
+				PawnNum(properties->actorHealth).s, properties->virtualWorld, interior);
 			pawnWriteDistance(f, properties->streamDistance, "STREAMER_ACTOR_SD");
 			pawnWriteAreaArg(f, properties);
 			fputs(");", f);
@@ -8455,8 +8631,8 @@ pawnWriteElementCall(FILE *f, const ObjectInst *inst, PawnCodeFormat format,
 				pawnWriteAnimationArgs(f, properties, false);
 			}
 		}else{
-			fprintf(f, "CreateActor(%d, %.6f, %.6f, %.6f, %.6f);",
-				properties->elementModel, p.x, p.y, p.z, e.z);
+			fprintf(f, "CreateActor(%d, %s, %s, %s, %s);",
+				properties->elementModel, PawnNum(p.x).s, PawnNum(p.y).s, PawnNum(p.z).s, PawnNum(e.z).s);
 			pawnWriteTrailingTags(f, name, " [actor]", properties);
 			if(handle && handle[0]){
 				if(properties->virtualWorld > 0)
@@ -8464,7 +8640,7 @@ pawnWriteElementCall(FILE *f, const ObjectInst *inst, PawnCodeFormat format,
 				if(!properties->actorInvulnerable)
 					fprintf(f, "\tSetActorInvulnerable(%s, false);\n", handle);
 				if(properties->actorHealth != 100.0f)
-					fprintf(f, "\tSetActorHealth(%s, %.2f);\n", handle, properties->actorHealth);
+					fprintf(f, "\tSetActorHealth(%s, %s);\n", handle, PawnNum(properties->actorHealth).s);
 				if(properties->animName[0]){
 					fprintf(f, "\tApplyActorAnimation(%s, ", handle);
 					pawnWriteAnimationArgs(f, properties, true);
@@ -8477,7 +8653,7 @@ pawnWriteElementCall(FILE *f, const ObjectInst *inst, PawnCodeFormat format,
 			fprintf(f, "AddPlayerClassEx(%d, ", properties->classTeam);
 		else
 			fputs("AddPlayerClass(", f);
-		fprintf(f, "%d, %.6f, %.6f, %.6f, %.6f", properties->elementModel, p.x, p.y, p.z, e.z);
+		fprintf(f, "%d, %s, %s, %s, %s", properties->elementModel, PawnNum(p.x).s, PawnNum(p.y).s, PawnNum(p.z).s, PawnNum(e.z).s);
 		for(int i = 0; i < PAWN_CLASS_WEAPONS; i++){
 			fputs(", ", f);
 			pawnWriteWeapon(f, properties->classWeapons[i]);
@@ -8489,7 +8665,7 @@ pawnWriteElementCall(FILE *f, const ObjectInst *inst, PawnCodeFormat format,
 	case SAMP_ELEMENT_GANGZONE: {
 		float minX, minY, maxX, maxY;
 		pawnGangZoneBounds(inst, properties, &minX, &minY, &maxX, &maxY);
-		fprintf(f, "GangZoneCreate(%.6f, %.6f, %.6f, %.6f);", minX, minY, maxX, maxY);
+		fprintf(f, "GangZoneCreate(%s, %s, %s, %s);", PawnNum(minX).s, PawnNum(minY).s, PawnNum(maxX).s, PawnNum(maxY).s);
 		if(IsRadarArtStandIn(inst))
 			pawnWriteTrailingTags(f, "gangzone", "", properties);
 		else
@@ -8498,8 +8674,8 @@ pawnWriteElementCall(FILE *f, const ObjectInst *inst, PawnCodeFormat format,
 	}
 	case SAMP_ELEMENT_CHECKPOINT:
 		// Only reached with the streamer, for plain checkpoints.
-		fprintf(f, "CreateDynamicCP(%.6f, %.6f, %.6f, %.2f, %d, %d, -1, ", p.x, p.y, p.z,
-			properties->cpSize, properties->virtualWorld, interior);
+		fprintf(f, "CreateDynamicCP(%s, %s, %s, %s, %d, %d, -1, ", PawnNum(p.x).s, PawnNum(p.y).s, PawnNum(p.z).s,
+			PawnNum(properties->cpSize).s, properties->virtualWorld, interior);
 		pawnWriteDistance(f, properties->streamDistance, "STREAMER_CP_SD");
 		pawnWriteAreaArg(f, properties);
 		fputs(");", f);
@@ -8507,8 +8683,8 @@ pawnWriteElementCall(FILE *f, const ObjectInst *inst, PawnCodeFormat format,
 		break;
 	case SAMP_ELEMENT_MAPICON:
 		// Only reached with the streamer; native icons are set per player.
-		fprintf(f, "CreateDynamicMapIcon(%.6f, %.6f, %.6f, %d, 0x%08X, %d, %d, -1, ",
-			p.x, p.y, p.z, properties->mapIconType, properties->mapIconColor,
+		fprintf(f, "CreateDynamicMapIcon(%s, %s, %s, %d, 0x%08X, %d, %d, -1, ",
+			PawnNum(p.x).s, PawnNum(p.y).s, PawnNum(p.z).s, properties->mapIconType, properties->mapIconColor,
 			properties->virtualWorld, interior);
 		pawnWriteDistance(f, properties->streamDistance, "STREAMER_MAP_ICON_SD");
 		fputs(", ", f);
@@ -8526,16 +8702,16 @@ pawnWriteElementCall(FILE *f, const ObjectInst *inst, PawnCodeFormat format,
 		pawnWriteTrailingTags(f, name, " [NPC]", properties);
 		fprintf(f, "\tNPC_Spawn(%s);\n", handle);
 		fprintf(f, "\tNPC_SetSkin(%s, %d);\n", handle, properties->elementModel);
-		fprintf(f, "\tNPC_SetPos(%s, %.6f, %.6f, %.6f);\n", handle, p.x, p.y, p.z);
-		fprintf(f, "\tNPC_SetFacingAngle(%s, %.6f);\n", handle, e.z);
+		fprintf(f, "\tNPC_SetPos(%s, %s, %s, %s);\n", handle, PawnNum(p.x).s, PawnNum(p.y).s, PawnNum(p.z).s);
+		fprintf(f, "\tNPC_SetFacingAngle(%s, %s);\n", handle, PawnNum(e.z).s);
 		if(inst->m_area > 0)
 			fprintf(f, "\tNPC_SetInterior(%s, %d);\n", handle, inst->m_area);
 		if(properties->virtualWorld > 0)
 			fprintf(f, "\tNPC_SetVirtualWorld(%s, %d);\n", handle, properties->virtualWorld);
 		if(properties->actorHealth != 100.0f)
-			fprintf(f, "\tNPC_SetHealth(%s, %.2f);\n", handle, properties->actorHealth);
+			fprintf(f, "\tNPC_SetHealth(%s, %s);\n", handle, PawnNum(properties->actorHealth).s);
 		if(properties->npcArmour > 0.0f)
-			fprintf(f, "\tNPC_SetArmour(%s, %.2f);\n", handle, properties->npcArmour);
+			fprintf(f, "\tNPC_SetArmour(%s, %s);\n", handle, PawnNum(properties->npcArmour).s);
 		if(properties->npcWeapon > 0){
 			fprintf(f, "\tNPC_SetWeapon(%s, WEAPON:%d);\n", handle, properties->npcWeapon);
 			fprintf(f, "\tNPC_SetAmmo(%s, %d);\n", handle, properties->npcAmmo);
@@ -8589,16 +8765,16 @@ pawnWriteObjectCall(FILE *f, const ObjectInst *inst, PawnCodeFormat format,
 		else
 			fputs("\t", f);
 		if(inst->m_vehicleStatic && inst->m_vehicleRespawnDelay < 0){
-			fprintf(f, "AddStaticVehicle(%d, %.6f, %.6f, %.6f, %.6f, %d, %d); // %s\n",
+			fprintf(f, "AddStaticVehicle(%d, %s, %s, %s, %s, %d, %d); // %s\n",
 				inst->m_objectId,
-				inst->m_translation.x, inst->m_translation.y, inst->m_translation.z,
-				e.z, inst->m_vehicleColor1, inst->m_vehicleColor2, name);
+				PawnNum(inst->m_translation.x).s, PawnNum(inst->m_translation.y).s, PawnNum(inst->m_translation.z).s,
+				PawnNum(e.z).s, inst->m_vehicleColor1, inst->m_vehicleColor2, name);
 		}else{
-			fprintf(f, "%s(%d, %.6f, %.6f, %.6f, %.6f, %d, %d, %d); // %s\n",
+			fprintf(f, "%s(%d, %s, %s, %s, %s, %d, %d, %d); // %s\n",
 				inst->m_vehicleStatic ? "AddStaticVehicleEx" : "CreateVehicle",
 				inst->m_objectId,
-				inst->m_translation.x, inst->m_translation.y, inst->m_translation.z,
-				e.z, inst->m_vehicleColor1, inst->m_vehicleColor2,
+				PawnNum(inst->m_translation.x).s, PawnNum(inst->m_translation.y).s, PawnNum(inst->m_translation.z).s,
+				PawnNum(e.z).s, inst->m_vehicleColor1, inst->m_vehicleColor2,
 				inst->m_vehicleRespawnDelay, name);
 		}
 		if(handle && handle[0] && inst->m_area > 0)
@@ -8624,30 +8800,30 @@ pawnWriteObjectCall(FILE *f, const ObjectInst *inst, PawnCodeFormat format,
 	const ObjectPawnProperties *properties = GetObjectPawnProperties(inst);
 	if(format == PAWN_CODE_STREAMER){
 		int interior = pawnStreamerInterior(inst);
-		fprintf(f, "CreateDynamicObject(%d, %.6f, %.6f, %.6f, %.6f, %.6f, %.6f, %d, %d, -1",
+		fprintf(f, "CreateDynamicObject(%d, %s, %s, %s, %s, %s, %s, %d, %d, -1",
 			PawnModelId(inst->m_objectId),
-			inst->m_translation.x, inst->m_translation.y, inst->m_translation.z,
-			e.x, e.y, e.z, properties->virtualWorld, interior);
+			PawnNum(inst->m_translation.x).s, PawnNum(inst->m_translation.y).s, PawnNum(inst->m_translation.z).s,
+			PawnNum(e.x).s, PawnNum(e.y).s, PawnNum(e.z).s, properties->virtualWorld, interior);
 		// areaid comes after both distances, so an area writes them out.
 		if(properties->streamDistance > 0.0f || properties->drawDistance > 0.0f || pawnHasArea(properties)){
 			if(properties->streamDistance > 0.0f)
-				fprintf(f, ", %.2f", properties->streamDistance);
+				fprintf(f, ", %s", PawnNum(properties->streamDistance).s);
 			else
 				fputs(", STREAMER_OBJECT_SD", f);
 			if(properties->drawDistance > 0.0f)
-				fprintf(f, ", %.2f", properties->drawDistance);
+				fprintf(f, ", %s", PawnNum(properties->drawDistance).s);
 			else
 				fputs(", STREAMER_OBJECT_DD", f);
 			pawnWriteAreaArg(f, properties);
 		}
 		fputs(");", f);
 	}else{
-		fprintf(f, "CreateObject(%d, %.6f, %.6f, %.6f, %.6f, %.6f, %.6f",
+		fprintf(f, "CreateObject(%d, %s, %s, %s, %s, %s, %s",
 			PawnModelId(inst->m_objectId),
-			inst->m_translation.x, inst->m_translation.y, inst->m_translation.z,
-			e.x, e.y, e.z);
+			PawnNum(inst->m_translation.x).s, PawnNum(inst->m_translation.y).s, PawnNum(inst->m_translation.z).s,
+			PawnNum(e.x).s, PawnNum(e.y).s, PawnNum(e.z).s);
 		if(properties->drawDistance > 0.0f)
-			fprintf(f, ", %.2f", properties->drawDistance);
+			fprintf(f, ", %s", PawnNum(properties->drawDistance).s);
 		fputs(");", f);
 	}
 	pawnWriteTrailingTags(f, name, worldTag, properties);
@@ -8657,11 +8833,11 @@ static void
 pawnWritePlayerAttachedObject(FILE *f, const ObjectInst *inst, const char *playerVar)
 {
 	const ObjectPawnProperties *properties = GetObjectPawnProperties(inst);
-	fprintf(f, "\tSetPlayerAttachedObject(%s, %d, %d, %d, %.6f, %.6f, %.6f, %.6f, %.6f, %.6f, %.6f, %.6f, %.6f, 0x%08X, 0x%08X);\n",
+	fprintf(f, "\tSetPlayerAttachedObject(%s, %d, %d, %d, %s, %s, %s, %s, %s, %s, %s, %s, %s, 0x%08X, 0x%08X);\n",
 		playerVar, properties->attachSlot, PawnModelId(inst->m_objectId), properties->attachBone,
-		properties->attachOffset.x, properties->attachOffset.y, properties->attachOffset.z,
-		properties->attachRotation.x, properties->attachRotation.y, properties->attachRotation.z,
-		properties->attachScale.x, properties->attachScale.y, properties->attachScale.z,
+		PawnNum(properties->attachOffset.x).s, PawnNum(properties->attachOffset.y).s, PawnNum(properties->attachOffset.z).s,
+		PawnNum(properties->attachRotation.x).s, PawnNum(properties->attachRotation.y).s, PawnNum(properties->attachRotation.z).s,
+		PawnNum(properties->attachScale.x).s, PawnNum(properties->attachScale.y).s, PawnNum(properties->attachScale.z).s,
 		properties->attachColor1, properties->attachColor2);
 }
 
@@ -8761,6 +8937,113 @@ pawnWritePlayerZoneHelpers(FILE *f, const char *prefix, int count)
 	fprintf(f, "\t%s_pzoneAt[i][0] = minx; %s_pzoneAt[i][1] = miny; %s_pzoneAt[i][2] = maxx; %s_pzoneAt[i][3] = maxy;\n",
 		p, p, p, p);
 	fprintf(f, "\t%s_pzoneColour[i] = colour;\n}\n\n", p);
+}
+
+// The KEY_* constants a gate can wait for, by value.
+static const struct { int value; const char *name; } pawnGateKeys[] = {
+	{ 1, "KEY_ACTION" }, { 2, "KEY_CROUCH" }, { 4, "KEY_FIRE" }, { 8, "KEY_SPRINT" },
+	{ 16, "KEY_SECONDARY_ATTACK" }, { 32, "KEY_JUMP" }, { 64, "KEY_LOOK_RIGHT" }, { 128, "KEY_HANDBRAKE" },
+	{ 256, "KEY_LOOK_LEFT" }, { 512, "KEY_SUBMISSION" }, { 1024, "KEY_WALK" }, { 2048, "KEY_ANALOG_UP" },
+	{ 4096, "KEY_ANALOG_DOWN" }, { 8192, "KEY_ANALOG_LEFT" }, { 16384, "KEY_ANALOG_RIGHT" },
+	{ 65536, "KEY_YES" }, { 131072, "KEY_NO" }, { 262144, "KEY_CTRL_BACK" },
+};
+
+static const char*
+pawnGateKeyName(int value)
+{
+	for(const auto &k : pawnGateKeys)
+		if(k.value == value)
+			return k.name;
+	return "KEY_YES";
+}
+
+static int
+pawnGateKeyValue(const char *name)
+{
+	for(const auto &k : pawnGateKeys)
+		if(rw::strcmp_ci(k.name, name) == 0)
+			return k.value;
+	if(rw::strcmp_ci(name, "KEY_HORN") == 0)
+		return 2;
+	return atoi(name);
+}
+
+static bool
+isPawnGate(const ObjectInst *inst)
+{
+	const ObjectPawnProperties *p = GetObjectPawnProperties(inst);
+	return !inst->m_isDeleted && !inst->m_isVehicle && GetSampElementKind(inst) == SAMP_ELEMENT_OBJECT &&
+		!IsPlayerAttachedObject(inst) && p->moveEnabled && p->moveTrigger != MOVE_ON_LOAD;
+}
+
+// Gates: <prefix>_AddGate keeps each one, as it is made, with where it
+// stands closed; <prefix>_Gates, called from OnPlayerKeyStateChange, opens a
+// closed one when its key is pressed near it (the horn: KEY_CROUCH from a
+// driver), and a timer takes it back once it has stood open.
+static void
+pawnWriteGateHelpers(FILE *f, const char *prefix, int count, bool streamer)
+{
+	const char *p = prefix;
+	const char *move = streamer ? "MoveDynamicObject" : "MoveObject";
+	fprintf(f, "// Closed x y z rx ry rz, open x y z rx ry rz (-1000: it doesn't turn), speed, range.\n");
+	fprintf(f, "static %s_gateObject[%d], Float:%s_gateAt[%d][14], %s_gateKey[%d], %s_gateDelay[%d],\n"
+		"\tbool:%s_gateSound[%d], %s_gateState[%d], %s_numGates;\n\n",
+		p, count, p, count, p, count, p, count, p, count, p, count, p);
+	fprintf(f, "stock %s_AddGate(objectid, Float:x, Float:y, Float:z, Float:speed, Float:rx, Float:ry, Float:rz,\n"
+		"\tkey, Float:range, closeDelay, bool:sound)\n{\n", p);
+	fprintf(f, "\tif(%s_numGates == sizeof %s_gateObject)\n\t\treturn;\n", p, p);
+	fprintf(f, "\tnew i = %s_numGates++;\n", p);
+	fprintf(f, "\t%s_gateObject[i] = objectid;\n", p);
+	fprintf(f, "\t%s(objectid, %s_gateAt[i][0], %s_gateAt[i][1], %s_gateAt[i][2]);\n",
+		streamer ? "GetDynamicObjectPos" : "GetObjectPos", p, p, p);
+	fprintf(f, "\t%s(objectid, %s_gateAt[i][3], %s_gateAt[i][4], %s_gateAt[i][5]);\n",
+		streamer ? "GetDynamicObjectRot" : "GetObjectRot", p, p, p);
+	fprintf(f, "\t%s_gateAt[i][6] = x; %s_gateAt[i][7] = y; %s_gateAt[i][8] = z;\n", p, p, p);
+	fprintf(f, "\t%s_gateAt[i][9] = rx; %s_gateAt[i][10] = ry; %s_gateAt[i][11] = rz;\n", p, p, p);
+	fprintf(f, "\t%s_gateAt[i][12] = speed; %s_gateAt[i][13] = range;\n", p, p);
+	fprintf(f, "\t%s_gateKey[i] = key; %s_gateDelay[i] = closeDelay; %s_gateSound[i] = sound; %s_gateState[i] = 0;\n}\n\n",
+		p, p, p, p);
+
+	// The sound plays for whoever is near when the gate starts and stops.
+	fprintf(f, "stock %s_GateSound(i, soundid)\n{\n", p);
+	fprintf(f, "\tif(!%s_gateSound[i])\n\t\treturn;\n", p);
+	fprintf(f, "\tnew Float:x, Float:y, Float:z;\n");
+	fprintf(f, "\t%s(%s_gateObject[i], x, y, z);\n", streamer ? "GetDynamicObjectPos" : "GetObjectPos", p);
+	fputs("\tfor(new playerid = 0; playerid < MAX_PLAYERS; playerid++)\n"
+		"\t\tif(IsPlayerConnected(playerid) && IsPlayerInRangeOfPoint(playerid, 60.0, x, y, z))\n"
+		"\t\t\tPlayerPlaySound(playerid, soundid, x, y, z);\n}\n\n", f);
+
+	// state: 0 closed, 1 opening, 2 open, 3 closing.
+	fprintf(f, "stock %s_MoveGate(i, bool:open)\n{\n", p);
+	fprintf(f, "\tnew at = open ? 6 : 0, Float:rx = %s_gateAt[i][9], Float:ry = %s_gateAt[i][10], Float:rz = %s_gateAt[i][11];\n",
+		p, p, p);
+	fprintf(f, "\tif(!open && rx > -999.0){\n"
+		"\t\trx = %s_gateAt[i][3]; ry = %s_gateAt[i][4]; rz = %s_gateAt[i][5];\n\t}\n", p, p, p);
+	fprintf(f, "\t%s_gateState[i] = open ? 1 : 3;\n", p);
+	fprintf(f, "\t%s_GateSound(i, 1153);\n", p);
+	fprintf(f, "\tnew time = %s(%s_gateObject[i], %s_gateAt[i][at], %s_gateAt[i][at + 1], %s_gateAt[i][at + 2],\n"
+		"\t\t%s_gateAt[i][12], rx, ry, rz);\n", move, p, p, p, p, p);
+	fprintf(f, "\tSetTimerEx(\"%s_GateMoved\", time > 0 ? time : 1, false, \"i\", i);\n}\n\n", p);
+
+	fprintf(f, "forward %s_GateMoved(i);\npublic %s_GateMoved(i)\n{\n", p, p);
+	fprintf(f, "\t%s_GateSound(i, 1154);\n", p);
+	fprintf(f, "\tif(%s_gateState[i] == 1){\n", p);
+	fprintf(f, "\t\t%s_gateState[i] = 2;\n", p);
+	fprintf(f, "\t\tSetTimerEx(\"%s_GateClose\", %s_gateDelay[i] > 0 ? %s_gateDelay[i] : 1, false, \"i\", i);\n", p, p, p);
+	fprintf(f, "\t}else\n\t\t%s_gateState[i] = 0;\n\treturn 1;\n}\n\n", p);
+
+	fprintf(f, "forward %s_GateClose(i);\npublic %s_GateClose(i)\n{\n", p, p);
+	fprintf(f, "\tif(%s_gateState[i] == 2)\n\t\t%s_MoveGate(i, false);\n\treturn 1;\n}\n\n", p, p);
+
+	fprintf(f, "stock %s_Gates(playerid, newkeys, oldkeys)\n{\n", p);
+	fprintf(f, "\tfor(new i = 0; i < %s_numGates; i++){\n", p);
+	fprintf(f, "\t\tnew key = %s_gateKey[i];\n", p);
+	fprintf(f, "\t\tif(%s_gateState[i] != 0 || !(newkeys & key) || (oldkeys & key))\n\t\t\tcontinue;\n", p);
+	fputs("\t\t// The horn is KEY_CROUCH in a car: only a driver sounds it.\n", f);
+	fputs("\t\tif(key == 2 && GetPlayerState(playerid) != PLAYER_STATE_DRIVER)\n\t\t\tcontinue;\n", f);
+	fprintf(f, "\t\tif(IsPlayerInRangeOfPoint(playerid, %s_gateAt[i][13], %s_gateAt[i][0], %s_gateAt[i][1], %s_gateAt[i][2]))\n"
+		"\t\t\t%s_MoveGate(i, true);\n", p, p, p, p, p);
+	fputs("\t}\n\treturn 1;\n}\n\n", f);
 }
 
 // Streamed gang zones (open.mp only, with the streamer): a streamer
@@ -8943,6 +9226,13 @@ pawnWriteCode(FILE *f, const char *path, PawnCodeFormat format, bool selectedOnl
 	if(numRepeating > 0)
 		fprintf(f, "// NPCs that walk their path again: call %s_OnNPCFinishMovePath(npcid, pathid)\n"
 			"// from OnNPCFinishMovePath(npcid, pathid), or they stop at the end.\n", prefix);
+	int numGates = 0;
+	for(size_t i = 0; i < insts.size(); i++)
+		if(isPawnGate(insts[i]))
+			numGates++;
+	if(numGates > 0)
+		fprintf(f, "// Gates open with a key or the horn: call %s_Gates(playerid, newkeys, oldkeys)\n"
+			"// from OnPlayerKeyStateChange.\n", prefix);
 	int numCheckpoints = 0;
 	// Playable races (haumea_races.inc), by name; their checkpoints are
 	// written for the include in either format, not as markers.
@@ -8962,21 +9252,27 @@ pawnWriteCode(FILE *f, const char *path, PawnCodeFormat format, bool selectedOnl
 		fprintf(f, "// %d checkpoint(s) not written: map checkpoints need the streamer (natively a player\n"
 			"// has one checkpoint at a time, set with SetPlayerCheckpoint). Save as streamer code.\n",
 			numCheckpoints);
-	bool hasCustomModels = false;
-	for(size_t i = 0; i < insts.size() && !hasCustomModels; i++){
+	// The custom models the map uses: objects, skins, material textures.
+	std::vector<int> customModels;
+	auto noteCustom = [&customModels](int id){
+		if(IsCustomModel(id) && std::find(customModels.begin(), customModels.end(), id) == customModels.end())
+			customModels.push_back(id);
+	};
+	for(size_t i = 0; i < insts.size(); i++){
 		const ObjectInst *inst = insts[i];
 		if(inst->m_isDeleted)
 			continue;
-		hasCustomModels = IsCustomModel(inst->m_objectId) ||
-			IsCustomModel(GetObjectPawnProperties(inst)->elementModel);
-		for(int slot = 0; slot < MAX_PAWN_MATERIALS && !hasCustomModels; slot++){
+		noteCustom(inst->m_objectId);
+		noteCustom(GetObjectPawnProperties(inst)->elementModel);
+		for(int slot = 0; slot < MAX_PAWN_MATERIALS; slot++){
 			const ObjectMaterialOverride *material = GetObjectMaterialOverride(inst, slot);
-			hasCustomModels = material && material->active && material->hasTexture &&
-				IsCustomModel(material->sourceModel);
+			if(material && material->active && material->hasTexture)
+				noteCustom(material->sourceModel);
 		}
 	}
+	bool hasCustomModels = !customModels.empty();
 	if(hasCustomModels)
-		fprintf(f, "// Uses custom models: needs SA-MP 0.3.DL or open.mp with the server's models/artconfig.txt.\n");
+		fprintf(f, "// Uses custom models: their DFF and TXD go in the server's models folder, with artwork\n// on; players need the SA-MP 0.3.DL client.\n");
 	if(numWorldObjects > 0){
 		fprintf(f, "// Call %s_RemoveWorldObjectsForPlayer(playerid) from OnPlayerConnect.\n", prefix);
 		fprintf(f, "// Deleted world objects have a removal line but no CreateObject call.\n");
@@ -9026,17 +9322,17 @@ pawnWriteCode(FILE *f, const char *path, PawnCodeFormat format, bool selectedOnl
 	if(numWorldObjects > 0){
 		fprintf(f, "stock %s_RemoveWorldObjectsForPlayer(playerid)\n{\n", prefix);
 		for(const PawnAreaRemoval &r : areaRemovals)
-			fprintf(f, "\tRemoveBuildingForPlayer(playerid, -1, %.6f, %.6f, %.6f, %.6f); // everything in the area\n",
-				r.x, r.y, r.z, r.radius);
+			fprintf(f, "\tRemoveBuildingForPlayer(playerid, -1, %s, %s, %s, %s); // everything in the area\n",
+				PawnNum(r.x).s, PawnNum(r.y).s, PawnNum(r.z).s, PawnNum(r.radius).s);
 		for(size_t i = 0; i < insts.size(); i++){
 			ObjectInst *inst = insts[i];
 			if(!pawnIsWorldObject(inst) || coveredByArea(inst))
 				continue;
 			ObjectDef *obj = GetObjectDef(inst->m_objectId);
 			const char *name = obj && obj->m_name[0] ? obj->m_name : "unknown";
-			fprintf(f, "\tRemoveBuildingForPlayer(playerid, %d, %.6f, %.6f, %.6f, 0.25); // %s\n",
+			fprintf(f, "\tRemoveBuildingForPlayer(playerid, %d, %s, %s, %s, 0.25); // %s\n",
 				inst->m_objectId,
-				inst->m_origTranslation.x, inst->m_origTranslation.y, inst->m_origTranslation.z,
+				PawnNum(inst->m_origTranslation.x).s, PawnNum(inst->m_origTranslation.y).s, PawnNum(inst->m_origTranslation.z).s,
 				name);
 		}
 		fprintf(f, "}\n\n");
@@ -9210,6 +9506,8 @@ pawnWriteCode(FILE *f, const char *path, PawnCodeFormat format, bool selectedOnl
 		pawnWriteSoundHelpers(f, prefix, (int)gameSounds.size(), format);
 	if(numRepeating > 0)
 		pawnWriteNpcRepeatHelpers(f, prefix, numRepeating);
+	if(numGates > 0)
+		pawnWriteGateHelpers(f, prefix, numGates, format == PAWN_CODE_STREAMER);
 	if(!playerZones.empty())
 		pawnWritePlayerZoneHelpers(f, prefix, (int)playerZones.size());
 	if(!streamedZones.empty())
@@ -9223,6 +9521,11 @@ pawnWriteCode(FILE *f, const char *path, PawnCodeFormat format, bool selectedOnl
 			sharedHandle = true;
 	if(sharedHandle)
 		fprintf(f, "\tnew %s;\n\n", PAWN_SHARED_OBJECT_HANDLE);
+	// Its custom models first, registered in its own code as open.mp does it
+	// (those the server's artconfig.txt has are left out).
+	std::string registrations = CustomModelRegistrations(customModels, "\t");
+	if(!registrations.empty())
+		fprintf(f, "\t// ---- custom models ----\n%s\n", registrations.c_str());
 	// Dynamic areas first (streamer only): items name them as their areaid.
 	gPawnAreaHandles.clear();
 	std::vector<ObjectInst*> areas;
@@ -9260,8 +9563,8 @@ pawnWriteCode(FILE *f, const char *path, PawnCodeFormat format, bool selectedOnl
 			for(size_t j = 0; j < points.size(); j++){
 				const rw::V3d &p = points[j]->m_translation;
 				const ObjectPawnProperties *properties = GetObjectPawnProperties(points[j]);
-				fprintf(f, "\tNPC_AddPointToPath(%s, %.6f, %.6f, %.6f, %.2f);", handle,
-					p.x, p.y, p.z, properties->pathStopRange);
+				fprintf(f, "\tNPC_AddPointToPath(%s, %s, %s, %s, %s);", handle,
+					PawnNum(p.x).s, PawnNum(p.y).s, PawnNum(p.z).s, PawnNum(properties->pathStopRange).s);
 				pawnWriteTrailingTags(f, "path point", "", properties);
 			}
 		}
@@ -9295,8 +9598,8 @@ pawnWriteCode(FILE *f, const char *path, PawnCodeFormat format, bool selectedOnl
 					next = race[j + 1]->m_translation;
 				else if(properties->cpRaceMode == SAMP_RACE_CIRCUIT && race.size() >= 2)
 					next = race[0]->m_translation;
-				fprintf(f, "\tCreateDynamicRaceCP(%d, %.6f, %.6f, %.6f, %.6f, %.6f, %.6f, %.2f, %d, %d, -1, ",
-					GetRaceCheckpointShownType(race[j]), p.x, p.y, p.z, next.x, next.y, next.z, properties->cpSize,
+				fprintf(f, "\tCreateDynamicRaceCP(%d, %s, %s, %s, %s, %s, %s, %s, %d, %d, -1, ",
+					GetRaceCheckpointShownType(race[j]), PawnNum(p.x).s, PawnNum(p.y).s, PawnNum(p.z).s, PawnNum(next.x).s, PawnNum(next.y).s, PawnNum(next.z).s, PawnNum(properties->cpSize).s,
 					properties->virtualWorld, race[j]->m_area > 0 ? race[j]->m_area : -1);
 				pawnWriteDistance(f, properties->streamDistance, "STREAMER_RACE_CP_SD");
 				pawnWriteAreaArg(f, properties);
@@ -9325,8 +9628,8 @@ pawnWriteCode(FILE *f, const char *path, PawnCodeFormat format, bool selectedOnl
 			for(ObjectInst *c : race){
 				const ObjectPawnProperties *properties = GetObjectPawnProperties(c);
 				const rw::V3d &p = c->m_translation;
-				fprintf(f, "\tMapRace_AddCheckpoint(%s_race_%s, %.6f, %.6f, %.6f, %.2f, %d);", prefix, name.c_str(),
-					p.x, p.y, p.z, std::max(properties->cpSize, 0.25f), properties->cpRaceType);
+				fprintf(f, "\tMapRace_AddCheckpoint(%s_race_%s, %s, %s, %s, %s, %d);", prefix, name.c_str(),
+					PawnNum(p.x).s, PawnNum(p.y).s, PawnNum(p.z).s, PawnNum(std::max(properties->cpSize, 0.25f)).s, properties->cpRaceType);
 				pawnWriteTrailingTags(f, "checkpoint", "", properties);
 			}
 		}
@@ -9350,8 +9653,8 @@ pawnWriteCode(FILE *f, const char *path, PawnCodeFormat format, bool selectedOnl
 			if(kind == SAMP_ELEMENT_SOUND){
 				if(properties->soundKind == SAMP_SOUND_GAME){
 					const rw::V3d &p = inst->m_translation;
-					fprintf(f, "\t%s_AddSound(%d, %.6f, %.6f, %.6f, %.2f, %s, %d, %d);", prefix,
-						properties->soundId, p.x, p.y, p.z, properties->soundRadius,
+					fprintf(f, "\t%s_AddSound(%d, %s, %s, %s, %s, %s, %d, %d);", prefix,
+						properties->soundId, PawnNum(p.x).s, PawnNum(p.y).s, PawnNum(p.z).s, PawnNum(properties->soundRadius).s,
 						properties->soundStopOnLeave ? "true" : "false", properties->virtualWorld,
 						inst->m_area > 0 ? inst->m_area : -1);
 					pawnWriteTrailingTags(f, "sound", "", properties);
@@ -9361,9 +9664,9 @@ pawnWriteCode(FILE *f, const char *path, PawnCodeFormat format, bool selectedOnl
 			if(kind == SAMP_ELEMENT_GANGZONE && properties->zoneMode != SAMP_ZONE_GLOBAL){
 				float minX, minY, maxX, maxY;
 				pawnGangZoneBounds(inst, properties, &minX, &minY, &maxX, &maxY);
-				fprintf(f, "\t%s_%s(%.6f, %.6f, %.6f, %.6f, 0x%08X);", prefix,
+				fprintf(f, "\t%s_%s(%s, %s, %s, %s, 0x%08X);", prefix,
 					properties->zoneMode == SAMP_ZONE_PLAYER ? "AddPlayerZone" : "AddStreamedZone",
-					minX, minY, maxX, maxY, properties->zoneColor);
+					PawnNum(minX).s, PawnNum(minY).s, PawnNum(maxX).s, PawnNum(maxY).s, properties->zoneColor);
 				pawnWriteTrailingTags(f, "gangzone", "", properties);
 				continue;
 			}
@@ -9395,11 +9698,11 @@ pawnWriteCode(FILE *f, const char *path, PawnCodeFormat format, bool selectedOnl
 			const char *attachName = vehicle ? (format == PAWN_CODE_STREAMER ?
 				"AttachDynamicObjectToVehicle" : "AttachObjectToVehicle") :
 				(format == PAWN_CODE_STREAMER ? "AttachDynamicObjectToObject" : "AttachObjectToObject");
-			fprintf(f, "\t%s(%s, %s, %.6f, %.6f, %.6f, %.6f, %.6f, %.6f", attachName,
+			fprintf(f, "\t%s(%s, %s, %s, %s, %s, %s, %s, %s", attachName,
 				handles[it->first].c_str(), handles[it->second].c_str(),
-				properties->attachOffset.x, properties->attachOffset.y, properties->attachOffset.z,
-				properties->attachRotation.x, properties->attachRotation.y,
-				properties->attachRotation.z);
+				PawnNum(properties->attachOffset.x).s, PawnNum(properties->attachOffset.y).s, PawnNum(properties->attachOffset.z).s,
+				PawnNum(properties->attachRotation.x).s, PawnNum(properties->attachRotation.y).s,
+				PawnNum(properties->attachRotation.z).s);
 			if(!vehicle)
 				fprintf(f, ", %s", properties->attachSyncRotation ? "true" : "false");
 			fputs(");\n", f);
@@ -9411,11 +9714,24 @@ pawnWriteCode(FILE *f, const char *path, PawnCodeFormat format, bool selectedOnl
 		for(ObjectInst *inst : movers){
 			const ObjectPawnProperties *properties = GetObjectPawnProperties(inst);
 			rw::V3d to = add(inst->m_translation, properties->moveOffset);
-			fprintf(f, "\t%s(%s, %.6f, %.6f, %.6f, %.6f", format == PAWN_CODE_STREAMER ? "MoveDynamicObject" : "MoveObject",
-				handles[inst].c_str(), to.x, to.y, to.z, properties->moveSpeed);
+			if(properties->moveTrigger != MOVE_ON_LOAD){
+				// A gate that only turns still moves a millimetre: MoveObject
+				// turns an object while it moves.
+				if(length(properties->moveOffset) < 0.001f)
+					to.z += 0.001f;
+				rw::V3d r = properties->moveRotates ? properties->moveRotation :
+					rw::V3d{ -1000.0f, -1000.0f, -1000.0f };
+				fprintf(f, "\t%s_AddGate(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %d, %s);\n",
+					prefix, handles[inst].c_str(), PawnNum(to.x).s, PawnNum(to.y).s, PawnNum(to.z).s, PawnNum(properties->moveSpeed).s, PawnNum(r.x).s, PawnNum(r.y).s, PawnNum(r.z).s,
+					pawnGateKeyName(properties->gateKey), PawnNum(properties->gateRange).s, properties->gateCloseDelay,
+					properties->gateSilent ? "false" : "true");
+				continue;
+			}
+			fprintf(f, "\t%s(%s, %s, %s, %s, %s", format == PAWN_CODE_STREAMER ? "MoveDynamicObject" : "MoveObject",
+				handles[inst].c_str(), PawnNum(to.x).s, PawnNum(to.y).s, PawnNum(to.z).s, PawnNum(properties->moveSpeed).s);
 			if(properties->moveRotates)
-				fprintf(f, ", %.6f, %.6f, %.6f", properties->moveRotation.x, properties->moveRotation.y,
-					properties->moveRotation.z);
+				fprintf(f, ", %s, %s, %s", PawnNum(properties->moveRotation.x).s, PawnNum(properties->moveRotation.y).s,
+					PawnNum(properties->moveRotation.z).s);
 			fputs(");\n", f);
 		}
 	}
@@ -9489,7 +9805,7 @@ pawnWriteCode(FILE *f, const char *path, PawnCodeFormat format, bool selectedOnl
 				start = inst->m_translation;
 			fprintf(f, "\tNPC_StartPlayback(%s, ", handles[inst].c_str());
 			pawnWriteQuotedString(f, properties->npcRecording);
-			fprintf(f, ", true, %.6f, %.6f, %.6f, 0.0, 0.0, 0.0);\n", start.x, start.y, start.z);
+			fprintf(f, ", true, %s, %s, %s, 0.0, 0.0, 0.0);\n", PawnNum(start.x).s, PawnNum(start.y).s, PawnNum(start.z).s);
 			continue;
 		}
 		if(properties->npcPlaysNode){
@@ -9501,7 +9817,7 @@ pawnWriteCode(FILE *f, const char *path, PawnCodeFormat format, bool selectedOnl
 				fputs("NPC_MOVE_SPEED_AUTO", f);
 			else
 				fprintf(f, "%.4f", properties->npcMoveSpeed);
-			fprintf(f, ", %.2f, %s);\n", properties->npcNodeRadius,
+			fprintf(f, ", %s, %s);\n", PawnNum(properties->npcNodeRadius).s,
 				properties->npcNodeSetAngle ? "true" : "false");
 			continue;
 		}
@@ -9572,8 +9888,8 @@ pawnWriteCode(FILE *f, const char *path, PawnCodeFormat format, bool selectedOnl
 		for(size_t i = 0; i < nativeMapIcons.size(); i++){
 			ObjectInst *inst = nativeMapIcons[i];
 			const ObjectPawnProperties *properties = GetObjectPawnProperties(inst);
-			fprintf(f, "\tSetPlayerMapIcon(playerid, %d, %.6f, %.6f, %.6f, %d, 0x%08X, ",
-				(int)i, inst->m_translation.x, inst->m_translation.y, inst->m_translation.z,
+			fprintf(f, "\tSetPlayerMapIcon(playerid, %d, %s, %s, %s, %d, 0x%08X, ",
+				(int)i, PawnNum(inst->m_translation.x).s, PawnNum(inst->m_translation.y).s, PawnNum(inst->m_translation.z).s,
 				properties->mapIconType, properties->mapIconColor);
 			pawnWriteMapIconStyle(f, properties->mapIconStyle);
 			fputs(");", f);
@@ -9584,8 +9900,8 @@ pawnWriteCode(FILE *f, const char *path, PawnCodeFormat format, bool selectedOnl
 			const ObjectPawnProperties *properties = GetObjectPawnProperties(inst);
 			fputs("\tPlayAudioStreamForPlayer(playerid, ", f);
 			pawnWriteQuotedString(f, properties->soundUrl);
-			fprintf(f, ", %.6f, %.6f, %.6f, %.2f, %s);", inst->m_translation.x, inst->m_translation.y,
-				inst->m_translation.z, properties->soundRadius, properties->soundUsePos ? "true" : "false");
+			fprintf(f, ", %s, %s, %s, %s, %s);", PawnNum(inst->m_translation.x).s, PawnNum(inst->m_translation.y).s,
+				PawnNum(inst->m_translation.z).s, PawnNum(properties->soundRadius).s, properties->soundUsePos ? "true" : "false");
 			pawnWriteTrailingTags(f, "sound", "", properties);
 		}
 		fprintf(f, "}\n");
@@ -9717,6 +10033,11 @@ struct PawnImportEntry
 	float moveTo[3], moveRotation[3];
 	bool moveRotates;
 	float moveSpeed;
+	// <prefix>_AddGate on its variable: it makes that move on a key instead.
+	int gateKey;	// 0: not a gate
+	float gateRange;
+	int gateCloseDelay;
+	bool gateSilent;
 };
 
 static std::string pawnTrimString(const std::string &value);
@@ -10928,6 +11249,7 @@ pawnParseSource(const std::string &rawSource, std::vector<PawnImportEntry> &entr
 		PAWN_CALL_ADD_STREAMED_ZONE,	// Haumea_<map>_AddStreamedZone, generated with the map
 		PAWN_CALL_NPC_MOVE_REPEAT,	// Haumea_<map>_MoveByPathRepeat, generated with the map
 		PAWN_CALL_MOVE,	// MoveObject, MoveDynamicObject, MovePlayerObject
+		PAWN_CALL_ADD_GATE,	// Haumea_<map>_AddGate, generated with the map
 		PAWN_CALL_MAPRACE_CREATE,	// haumea_races.inc
 		PAWN_CALL_MAPRACE_CHECKPOINT,
 	};
@@ -11021,6 +11343,7 @@ pawnParseSource(const std::string &rawSource, std::vector<PawnImportEntry> &entr
 		{ "_AddPlayerZone", 0, false, PAWN_CALL_ADD_PLAYER_ZONE },
 		{ "_AddStreamedZone", 0, false, PAWN_CALL_ADD_STREAMED_ZONE },
 		{ "_MoveByPathRepeat", 0, false, PAWN_CALL_NPC_MOVE_REPEAT },
+		{ "_AddGate", 0, false, PAWN_CALL_ADD_GATE },
 	};
 
 	// Each name's next occurrence, searched again only once passed: a name
@@ -11048,7 +11371,8 @@ pawnParseSource(const std::string &rawSource, std::vector<PawnImportEntry> &entr
 		if(strings.inStringAt(source, found))
 			continue;
 		if(call->kind == PAWN_CALL_ADD_SOUND || call->kind == PAWN_CALL_NPC_MOVE_REPEAT ||
-		   call->kind == PAWN_CALL_ADD_PLAYER_ZONE || call->kind == PAWN_CALL_ADD_STREAMED_ZONE){
+		   call->kind == PAWN_CALL_ADD_PLAYER_ZONE || call->kind == PAWN_CALL_ADD_STREAMED_ZONE ||
+		   call->kind == PAWN_CALL_ADD_GATE){
 			// The end of a Haumea_ name, and a call rather than the stock itself.
 			size_t start = found;
 			while(start > 0 && pawnCharIsIdentifier(source[start-1]))
@@ -11143,6 +11467,37 @@ pawnParseSource(const std::string &rawSource, std::vector<PawnImportEntry> &entr
 				continue;
 			}
 			mapRaces[pawnTrimString(args[offset])] = race;
+			continue;
+		}
+		if(call->kind == PAWN_CALL_ADD_GATE){
+			// Haumea_<map>_AddGate(obj, x, y, z, speed, rx, ry, rz, key, range, closeDelay, sound)
+			char target[64], key[64], sound[16];
+			float to[3], speed, rot[3], range;
+			int delay = 0;
+			bool valid = (int)args.size() >= offset + 12 &&
+				pawnParseToken(args[offset], target, sizeof(target)) &&
+				handleEntries.find(target) != handleEntries.end();
+			for(int k = 0; valid && k < 3; k++)
+				valid = pawnParseFloat(args[offset + 1 + k], &to[k]) && pawnParseFloat(args[offset + 5 + k], &rot[k]);
+			valid = valid && pawnParseFloat(args[offset + 4], &speed) &&
+				pawnParseToken(args[offset + 8], key, sizeof(key)) && pawnParseFloat(args[offset + 9], &range) &&
+				pawnParseElementInt(args[offset + 10], &delay) && pawnParseToken(args[offset + 11], sound, sizeof(sound));
+			PawnImportEntry *entry = valid ? &entries[handleEntries[target]] : nil;
+			if(entry == nil || entry->isVehicle || entry->elementKind != SAMP_ELEMENT_OBJECT || speed <= 0.0f){
+				if(numSkipped) (*numSkipped)++;
+				continue;
+			}
+			entry->moves = true;
+			memcpy(entry->moveTo, to, sizeof(to));
+			entry->moveSpeed = speed;
+			entry->moveRotates = rot[0] > -999.0f && rot[1] > -999.0f && rot[2] > -999.0f;
+			memcpy(entry->moveRotation, rot, sizeof(rot));
+			entry->gateKey = pawnGateKeyValue(key);
+			if(entry->gateKey <= 0)
+				entry->gateKey = GATE_DEFAULT_KEY;
+			entry->gateRange = range;
+			entry->gateCloseDelay = delay;
+			entry->gateSilent = rw::strcmp_ci(sound, "false") == 0 || strcmp(sound, "0") == 0;
 			continue;
 		}
 		if(call->kind == PAWN_CALL_MOVE){
@@ -12156,8 +12511,8 @@ pawnParseSource(const std::string &rawSource, std::vector<PawnImportEntry> &entr
 			if(numSkipped) (*numSkipped)++;
 			continue;
 		}
-		if(entry.streamDistance == 300.0f)
-			entry.streamDistance = 0.0f;	// STREAMER_OBJECT_SD
+		// An explicit 300.0 is STREAMER_OBJECT_SD's value, but stays as
+		// written: saving turned it into the constant, a noisy diff.
 		if(call->streamer && call->kind == PAWN_CALL_CREATE)
 			// ..., streamdistance, drawdistance, areaid, priority
 			entry.areaEntry = pawnAreaEntryFor(args, offset + 12, handleEntries, entries);
@@ -12583,6 +12938,16 @@ ImportPawnSource(const std::string &rawSource, const char *path, int *numSkipped
 					properties.moveRotates = e.moveRotates;
 					if(e.moveRotates)
 						properties.moveRotation = { e.moveRotation[0], e.moveRotation[1], e.moveRotation[2] };
+					if(e.gateKey > 0){
+						// The export moves a gate that only turns by a millimetre.
+						if(length(properties.moveOffset) < 0.0015f)
+							properties.moveOffset = { 0.0f, 0.0f, 0.0f };
+						properties.moveTrigger = e.gateKey == 2 ? MOVE_ON_HORN : MOVE_ON_KEY;
+						properties.gateKey = e.gateKey;
+						properties.gateRange = e.gateRange;
+						properties.gateCloseDelay = e.gateCloseDelay;
+						properties.gateSilent = e.gateSilent;
+					}
 				}
 				SetObjectPawnProperties(inst, properties, false);
 			}

@@ -14,8 +14,8 @@ msgstr "Quantidade:"
 msgid "Number of objects scattered per click when Radius > 0."
 msgstr "Número de objetos espalhados por clique quando o Raio > 0."
 
-msgid "Pick the object to paint in the Object Browser first."
-msgstr "Primeiro escolha no Navegador de objetos o objeto a pintar."
+msgid "Pick the object to paint in the Asset Browser first."
+msgstr "Primeiro escolha no Navegador de recursos o objeto a pintar."
 
 msgid "Radius:"
 msgstr "Raio:"

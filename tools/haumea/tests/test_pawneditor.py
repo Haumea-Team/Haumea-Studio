@@ -33,6 +33,8 @@ class PawnEditorRecoveryTests(unittest.TestCase):
 
             try:
                 play('''wait 10
+click_item '*' '##editor'
+wait 2
 click_item '*' 'Code'
 wait 5
 click 500 300
@@ -44,6 +46,8 @@ assert ide_dirty == 1
                 draft = Path(env['XDG_CONFIG_HOME'], 'haumea/pawn-ide/draft.pwn')
                 self.assertIn('// recovered manual code', draft.read_text())
                 play('''wait 10
+click_item '*' '##editor'
+wait 2
 click_item '*' 'Code'
 wait 5
 assert ide_dirty == 1
@@ -56,6 +60,8 @@ assert ide_dirty == 1
 ''')
                 self.assertEqual(draft.read_text(), '')
                 play('''wait 10
+click_item '*' '##editor'
+wait 2
 click_item '*' 'Code'
 wait 5
 assert ide_dirty == 1

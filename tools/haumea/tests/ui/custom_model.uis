@@ -1,7 +1,7 @@
 # File > Add Custom Model: copies a DFF/TXD into the workspace's models
 # needs: game
-# folder and adds the artconfig.txt line. $SERVER, $DFF and $TXD come from
-# the test runner.
+# folder and lists it in Haumea's haumea_models.txt (not artconfig.txt: maps
+# register it in their own code). $SERVER, $DFF and $TXD come from the runner.
 open "$UI_FIXTURES/ui_map.pwn"
 click_item '*' 'File'
 wait 3
@@ -9,7 +9,7 @@ click_item '*' 'Import'
 wait 3
 click_item '*' 'Custom Model'
 wait 5
-assert window "Add Custom Model (SA-MP 0.3.DL / open.mp)"
+assert window "Add Custom Model"
 click_item '*' '##dff'
 type "$DFF"
 click_item '*' '##txd'
@@ -18,10 +18,12 @@ wait 2
 click_item '*' 'Add to server'
 wait 10
 assert toast_contains "Added -1000"
-assert file_contains "$SERVER/models/artconfig.txt" "AddSimpleModel(-1, 19379, -1000,"
+assert file_contains "$SERVER/models/haumea_models.txt" "AddSimpleModel(-1, 19379, -1000,"
 # Its TXD gives 0.3.DL textdraw sprites, as mdl-1000:<texture>.
 key Escape
 wait 3
+click_item '*' '##editor'
+wait 2
 click_item '*' 'TextDraws'
 wait 8
 click_item 'TextDraws' 'Sprite'

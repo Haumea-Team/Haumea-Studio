@@ -237,14 +237,6 @@ msgstr "Local"
 msgid "Step snapping: hold Shift while dragging the gizmo\nto move in %g m steps or rotate in %g° steps.\nRight-click to change the steps."
 msgstr "Encaixe por passos: segure Shift ao arrastar o gizmo\npara mover em passos de %g m ou girar em passos de %g°.\nClique com o botão direito para mudar os passos."
 
-#: gui.cpp:2606
-msgid "Outline map objects"
-msgstr "Contornar objetos do mapa"
-
-#: gui.cpp:2607
-msgid "Outline selected and hovered objects"
-msgstr "Contornar objetos selecionados e sob o mouse"
-
 #: gui.cpp:2646
 msgid "Workspace"
 msgstr "Workspace"
@@ -344,14 +336,6 @@ msgstr "Prefab..."
 #: gui.cpp:2750
 msgid "Places the objects of a prefab file (.haumea) in this map."
 msgstr "Coloca neste mapa os objetos de um arquivo de prefab (.haumea)."
-
-#: gui.cpp:2751
-msgid "Custom Model... (0.3.DL)"
-msgstr "Modelo personalizado... (0.3.DL)"
-
-#: gui.cpp:2753
-msgid "Puts a DFF and TXD in the server's models folder and artconfig.txt,\nso SA-MP 0.3.DL and open.mp players get it. The game folder isn't touched."
-msgstr "Coloca um DFF e um TXD na pasta models do servidor e no artconfig.txt,\npara que jogadores do SA-MP 0.3.DL e do open.mp o recebam. A pasta do jogo não é alterada."
 
 #: gui.cpp:2756
 msgid "Export"
@@ -472,8 +456,8 @@ msgid "Windows"
 msgstr "Janelas"
 
 #: gui.cpp:2815
-msgid "Object Browser"
-msgstr "Navegador de objetos"
+msgid "Asset Browser"
+msgstr "Navegador de recursos"
 
 #: gui.cpp:2816
 msgid "Object Info"
@@ -867,10 +851,6 @@ msgstr "O CreateObject nativo é global e não tem parâmetro de interior."
 msgid "Streamer objects use world -1 and preserve positive editor interiors."
 msgstr "Objetos do Streamer usam o mundo -1 e preservam interiores positivos do editor."
 
-#: gui.cpp:3850
-msgid "Output: %s"
-msgstr "Saída: %s"
-
 #: gui.cpp:3858
 msgid "Exported %d Pawn object(s) (some skipped) to %s"
 msgstr "%d objeto(s) Pawn exportado(s) (alguns ignorados) para %s"
@@ -914,10 +894,6 @@ msgstr "%d linha(s) de material, anexo ou interior se referiam a objetos que for
 #: gui.cpp:3904
 msgid "Left out because SA-MP has no equivalent:"
 msgstr "Deixado de fora porque o SA-MP não tem equivalente:"
-
-#: gui.cpp:3928
-msgid "%d of those models were imported into the game's modloader/Haumea folder, which SA-MP players don't have. They can become custom models in the server's models folder (SA-MP 0.3.DL / open.mp)."
-msgstr "%d desses modelos foram importados para a pasta modloader/Haumea do jogo, que os jogadores do SA-MP não têm. Eles podem virar modelos personalizados na pasta models do servidor (SA-MP 0.3.DL / open.mp)."
 
 #: gui.cpp:3931
 msgid "Move them to the server's models folder"
@@ -1396,8 +1372,8 @@ msgid "Move selected object through current filtered list"
 msgstr "Percorrer a lista filtrada atual com o objeto selecionado"
 
 #: gui.cpp:4516
-msgid "Object Browser list"
-msgstr "Lista do Navegador de objetos"
+msgid "Asset Browser list"
+msgstr "Lista do Navegador de recursos"
 
 #: gui.cpp:4517
 msgid "Right-click object row"
@@ -1487,10 +1463,6 @@ msgstr "Mudar atalhos..."
 msgid "Preferences > Shortcuts"
 msgstr "Preferências > Atalhos"
 
-#: gui.cpp:4555
-msgid "Section"
-msgstr "Seção"
-
 #: gui.cpp:4556
 msgid "Shortcut"
 msgstr "Atalho"
@@ -1564,8 +1536,8 @@ msgid "Place objects, pickups, actors..."
 msgstr "Coloco objetos, pickups, atores..."
 
 #: gui.cpp:4641
-msgid "Object Browser (%s): pick an object, Place, then click in the world."
-msgstr "Navegador de objetos (%s): escolha um objeto, Colocar, e clique no mundo."
+msgid "Asset Browser (%s): pick an object, Place, then click in the world."
+msgstr "Navegador de recursos (%s): escolha um objeto, Colocar, e clique no mundo."
 
 #: gui.cpp:4644
 msgid "Click something to edit it in Object Info (%s). %s stops placing."
@@ -1595,21 +1567,13 @@ msgstr "Para as ruas do jogo, escolha \"Andar pelos nós\" (Janelas > Nós, %s).
 msgid "Use custom models"
 msgstr "Usar modelos personalizados"
 
-#: gui.cpp:4656
-msgid "SA-MP 0.3.DL and open.mp clients download custom models."
-msgstr "Os clientes SA-MP 0.3.DL e open.mp baixam modelos personalizados."
-
 #: gui.cpp:4657
 msgid "File > Import > Custom Model: pick a DFF and TXD and an ID."
 msgstr "Arquivo > Importar > Modelo personalizado: escolha um DFF, um TXD e um ID."
 
-#: gui.cpp:4658
-msgid "It goes into the workspace's models folder and artconfig.txt."
-msgstr "Ele vai para a pasta models do workspace e para o artconfig.txt."
-
 #: gui.cpp:4659
-msgid "Find it in Object Browser > Custom models and place it like any object."
-msgstr "Encontre-o em Navegador de objetos > Modelos personalizados e coloque-o como qualquer objeto."
+msgid "Find it in Asset Browser > Custom models and place it like any object."
+msgstr "Encontre-o em Navegador de recursos > Modelos personalizados e coloque-o como qualquer objeto."
 
 #: gui.cpp:4661
 msgid "Design a textdraw"
@@ -1723,10 +1687,6 @@ msgstr "Noite"
 msgid "Weather"
 msgstr "Clima"
 
-#: gui.cpp:4782
-msgid "In game: SetPlayerTime(playerid, %d, %d); SetPlayerWeather(playerid, %d);"
-msgstr "No jogo: SetPlayerTime(playerid, %d, %d); SetPlayerWeather(playerid, %d);"
-
 #: gui.cpp:4784
 msgid "The editor only previews these; they are not saved in the map."
 msgstr "O editor só pré-visualiza isso; não é salvo no mapa."
@@ -1834,10 +1794,6 @@ msgstr "A grade 8x8 das áreas NODES0-63.DAT (750 unidades cada).\nNós não pod
 #: gui.cpp:4858
 msgid "Highlight"
 msgstr "Destaque"
-
-#: gui.cpp:4859
-msgid "Opacity of the red overlay drawn on selected objects."
-msgstr "Opacidade da camada vermelha desenhada nos objetos selecionados."
 
 #: gui.cpp:4860
 msgid "Outline selected objects"
@@ -1963,14 +1919,6 @@ msgstr "Graus. Arraste para ajustar, clique duas vezes para digitar. A rotação
 msgid "Degrees. Drag to adjust, double-click to type."
 msgstr "Graus. Arraste para ajustar, clique duas vezes para digitar."
 
-#: gui.cpp:5239
-msgid "Copy transform"
-msgstr "Copiar transformação"
-
-#: gui.cpp:5266
-msgid "Paste transform"
-msgstr "Colar transformação"
-
 #: gui.cpp:5273
 msgid "Reset rotation"
 msgstr "Zerar rotação"
@@ -2059,10 +2007,6 @@ msgstr "Textura de %d x %d, como o SA-MP a renderiza"
 msgid "Vehicle colors and respawn settings are in the Instance panel."
 msgstr "As cores e as configurações de respawn do veículo estão no painel Instância."
 
-#: gui.cpp:5756
-msgid "World object: it stays unchanged and is omitted from Pawn export. If you move, rotate, delete, or edit its materials, export removes the original per player and creates the scripted replacement."
-msgstr "Objeto do mundo: ele fica inalterado e é omitido da exportação Pawn. Se você o mover, girar, excluir ou editar os materiais dele, a exportação remove o original por jogador e cria o substituto no script."
-
 #: gui.cpp:5760
 msgid "Material controls are locked for this object."
 msgstr "Os controles de material estão bloqueados para este objeto."
@@ -2122,10 +2066,6 @@ msgstr "Mudar cor"
 #: gui.cpp:5877
 msgid "As in game, a color removes the object's vertex lighting and reflections."
 msgstr "Como no jogo, uma cor remove a iluminação de vértices e os reflexos do objeto."
-
-#: gui.cpp:5879
-msgid "Color 0: the model's own color is kept."
-msgstr "Cor 0: a cor própria do modelo é mantida."
 
 #: gui.cpp:5883
 msgid "{RRGGBB} switches color (opaque) for the following text. Enter starts a new line."
@@ -2290,38 +2230,6 @@ msgstr "Só o interior 0"
 #: gui.cpp:6174
 msgid "Written as interiorid 0: streamed only to players in interior 0 (outside).\nOff: -1, every interior."
 msgstr "Gravado como interiorid 0: transmitido só para jogadores no interior 0 (exterior).\nDesligado: -1, todos os interiores."
-
-#: gui.cpp:6188
-msgid "ID: %d\n"
-msgstr "ID: %d\n"
-
-#: gui.cpp:6196
-msgid "Draw dist:"
-msgstr "Dist. de desenho:"
-
-#: gui.cpp:6201
-msgid "Min Draw dist: %.0f"
-msgstr "Dist. mín. de desenho: %.0f"
-
-#: gui.cpp:6204
-msgid "Time: %d %d (visible now: %s)"
-msgstr "Horário: %d %d (visível agora: %s)"
-
-#: gui.cpp:6206
-msgid "yes"
-msgstr "sim"
-
-#: gui.cpp:6206
-msgid "no"
-msgstr "não"
-
-#: gui.cpp:6210
-msgid "Related: %s\n"
-msgstr "Relacionado: %s\n"
-
-#: gui.cpp:6212
-msgid "Related timed: %s\n"
-msgstr "Relacionado com horário: %s\n"
 
 #: objectinst.cpp:2631
 msgid "Reference object — only the opened IPL is editable."

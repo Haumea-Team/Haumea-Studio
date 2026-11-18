@@ -27,6 +27,12 @@ bool GetHaumeaDataDirectory(char *path, size_t size);	// main.cpp
 #include "workspace.h"
 #include "keycast.h"
 #include "i18n.h"
+#include "coordinatepin.h"
+#include "interiors.h"
+#include "layoutpaths.h"
+#include "mapcleanup.h"
+#include "pawneditor.h"
+#include "textdraws.h"
 #ifdef RW_GL3
 #include <GLFW/glfw3.h>
 #endif
@@ -185,6 +191,7 @@ struct AgentSceneSnapshot
 	std::vector<std::pair<int, ObjectMaterialOverride>> materials;
 	int area;
 	int vehicleColor1, vehicleColor2, vehicleRespawnDelay;
+	bool vehicleStatic;
 	int vehiclePaintjob;
 	char vehiclePlate[VEHICLE_PLATE_LEN];
 	uint16 vehicleMods[VEHICLE_MOD_SLOTS];
@@ -1255,6 +1262,7 @@ captureAgentSnapshot(ObjectInst *inst)
 	snapshot.vehicleColor1 = inst->m_vehicleColor1;
 	snapshot.vehicleColor2 = inst->m_vehicleColor2;
 	snapshot.vehicleRespawnDelay = inst->m_vehicleRespawnDelay;
+	snapshot.vehicleStatic = inst->m_vehicleStatic;
 	snapshot.vehiclePaintjob = inst->m_vehiclePaintjob;
 	memcpy(snapshot.vehiclePlate, inst->m_vehiclePlate, sizeof(snapshot.vehiclePlate));
 	memcpy(snapshot.vehicleMods, inst->m_vehicleMods, sizeof(snapshot.vehicleMods));
@@ -1282,6 +1290,7 @@ restoreAgentState(ObjectInst *inst, const AgentSceneSnapshot &snapshot)
 		inst->RefreshVehicleColors();
 	}
 	inst->m_vehicleRespawnDelay = snapshot.vehicleRespawnDelay;
+	inst->m_vehicleStatic = snapshot.vehicleStatic;
 	memcpy(inst->m_vehiclePlate, snapshot.vehiclePlate, sizeof(inst->m_vehiclePlate));
 	if(inst->m_isVehicle && (inst->m_vehiclePaintjob != snapshot.vehiclePaintjob ||
 	   memcmp(inst->m_vehicleMods, snapshot.vehicleMods, sizeof(inst->m_vehicleMods)) != 0)){
@@ -1363,12 +1372,17 @@ rollbackAgentSession(void)
 		ObjectInst *inst = GetInstanceByID(snapshot.id);
 		if(inst == nil || MultiplayerChangedByOthers(inst) || changedByAnotherAgent(inst))
 			continue;
-		if(agentMapMode() && inst->m_isDeleted != snapshot.deleted){
-			// Removed through the Pawn map's normal delete.
-			if(snapshot.deleted)
-				inst->Delete();
-			else
-				inst->Undelete();
+		if(agentMapMode()){
+			// Removed (or put back) through the Pawn map's normal delete, or
+			// kept as a map object: its settings come back too.
+			if(inst->m_isDeleted != snapshot.deleted){
+				if(snapshot.deleted)
+					inst->Delete();
+				else
+					inst->Undelete();
+			}
+			if(!snapshot.deleted)
+				restoreAgentState(inst, snapshot);
 			continue;
 		}
 		// Native instances intentionally remain outside the editable IPL document,
@@ -1651,12 +1665,21 @@ agentPropertiesJson(ObjectInst *inst)
 			add("move_speed", jsonFloat(p.moveSpeed));
 			if(p.moveRotates)
 				add("move_rotation", jsonVector3(p.moveRotation));
+			if(p.moveTrigger != MOVE_ON_LOAD){
+				add("move_trigger", str(p.moveTrigger == MOVE_ON_HORN ? "horn" : "key"));
+				if(p.moveTrigger == MOVE_ON_KEY)
+					add("gate_key", std::to_string(p.gateKey));
+				add("gate_range", jsonFloat(p.gateRange));
+				add("gate_close_delay", std::to_string(p.gateCloseDelay));
+				add("gate_sounds", p.gateSilent ? "false" : "true");
+			}
 		}
 		break;
 	case AGENT_KIND_VEHICLE:
 		add("color1", std::to_string(inst->m_vehicleColor1));
 		add("color2", std::to_string(inst->m_vehicleColor2));
 		add("respawn_delay", std::to_string(inst->m_vehicleRespawnDelay));
+		add("static", inst->m_vehicleStatic ? "true" : "false");
 		add("paintjob", std::to_string(inst->m_vehiclePaintjob - 1));
 		add("plate", str(inst->m_vehiclePlate));
 		{
@@ -1871,6 +1894,8 @@ struct AgentInstanceEdit
 	int color1, color2;
 	bool setRespawn;
 	int respawnDelay;
+	bool setStatic;
+	bool vehicleStatic;
 	bool setAttach;
 	int32 attachTo;
 	bool setAttachBone;
@@ -1992,6 +2017,39 @@ applyAgentProperty(ObjectInst *inst, int kind, ObjectPawnProperties &p, AgentIns
 		if(!parseFloat(value, &f) || f <= 0.0f || f > 1000.0f) return fail("expects metres a second, above 0");
 		p.moveEnabled = true; p.moveSpeed = f; return true;
 	}
+	// A gate: the move starts on a key or the horn and goes back after a while.
+	if(key == "move_trigger"){
+		if(!only({ SAMP_ELEMENT_OBJECT })) return false;
+		std::string v = lowercase(value.c_str());
+		int trigger = v == "load" ? MOVE_ON_LOAD : v == "key" ? MOVE_ON_KEY : v == "horn" ? MOVE_ON_HORN : -1;
+		if(trigger < 0) return fail("expects load, key or horn");
+		if(p.moveTrigger == MOVE_ON_LOAD && trigger != MOVE_ON_LOAD){
+			p.gateKey = GATE_DEFAULT_KEY; p.gateRange = 10.0f; p.gateCloseDelay = 5000; p.gateSilent = false;
+		}
+		if(!p.moveEnabled && p.moveSpeed <= 0.0f){ p.moveSpeed = 2.0f; p.moveOffset = { 0.0f, 0.0f, 3.0f }; }
+		p.moveEnabled = true; p.moveTrigger = trigger; return true;
+	}
+	if(key == "gate_key"){
+		if(!only({ SAMP_ELEMENT_OBJECT })) return false;
+		if(!parseInt(value, &i) || i <= 0 || i > 262144 || i == 32768 || (i & (i - 1)))
+			return fail("expects one KEY_* value, e.g. 65536 (KEY_YES)");
+		p.gateKey = i; return true;
+	}
+	if(key == "gate_range"){
+		if(!only({ SAMP_ELEMENT_OBJECT })) return false;
+		if(!parseFloat(value, &f) || f < 1.0f || f > 200.0f) return fail("expects metres from 1 to 200");
+		p.gateRange = f; return true;
+	}
+	if(key == "gate_close_delay"){
+		if(!only({ SAMP_ELEMENT_OBJECT })) return false;
+		if(!parseInt(value, &i) || i < 0 || i > 600000) return fail("expects milliseconds from 0 to 600000");
+		p.gateCloseDelay = i; return true;
+	}
+	if(key == "gate_sounds"){
+		if(!only({ SAMP_ELEMENT_OBJECT })) return false;
+		if(!parseBoolField(value, &b)) return fail("expects true or false");
+		p.gateSilent = !b; return true;
+	}
 	if(key == "attach_offset" || key == "attach_rotation" || key == "attach_scale"){
 		if(!only({ SAMP_ELEMENT_OBJECT })) return false;
 		rw::V3d vector;
@@ -2032,6 +2090,13 @@ applyAgentProperty(ObjectInst *inst, int kind, ObjectPawnProperties &p, AgentIns
 		if(!only({ AGENT_KIND_VEHICLE })) return false;
 		if(!parseInt(value, &i)) return fail("expects seconds (-1: never)");
 		edit.setRespawn = true; edit.respawnDelay = i; return true;
+	}
+	if(key == "static"){
+		// AddStaticVehicleEx instead of CreateVehicle, like Object Info's checkbox.
+		if(!only({ AGENT_KIND_VEHICLE })) return false;
+		bool on;
+		if(!parseBoolField(value, &on)) return fail("expects true or false");
+		edit.setStatic = true; edit.vehicleStatic = on; return true;
 	}
 	if(key == "paintjob"){
 		if(!only({ AGENT_KIND_VEHICLE })) return false;
@@ -2503,6 +2568,13 @@ applyAgentProperties(ObjectInst *inst, const std::vector<std::string> &lines, si
 		StampChangeSeq(inst);
 		inst->m_isDirty = true;
 	}
+	if(edit.setStatic && inst->m_vehicleStatic != edit.vehicleStatic){
+		VehicleState before = GetVehicleState(inst);
+		inst->m_vehicleStatic = edit.vehicleStatic;
+		StampChangeSeq(inst);
+		inst->m_isDirty = true;
+		UndoRecordVehicle(inst, before);
+	}
 	return true;
 }
 
@@ -2608,6 +2680,7 @@ agentMapStatusJson(void)
 		",\"format\":\"" + (GetPawnMapFormat() == PAWN_CODE_STREAMER ? "streamer" : "native") +
 		"\",\"text_encoding\":\"" + (GetPawnTextEncoding() == PAWN_TEXT_UTF8 ? "utf-8" : "windows-1252") +
 		"\",\"unsaved_changes\":" + (PawnMapHasUnsavedChanges() ? "true" : "false") +
+		",\"changed_on_disk\":" + (PawnMapChangedOnDisk() ? "true" : "false") +
 		",\"agent_scope\":\"" + (agentMapMode() ? "pawn_map" : "scratch_ipl") +
 		"\",\"elements\":" + std::to_string(countAgentInstances(false)) +
 		",\"area_removals\":" + agentAreaRemovalsJson() + "}";
@@ -2659,7 +2732,8 @@ agentTextDrawJson(size_t index, const TextDraw &td)
 		td.previewModel, td.previewRotX, td.previewRotY, td.previewRotZ, td.previewZoom,
 		td.previewColour1, td.previewColour2);
 	return std::string(buf) + jsonEscapeBytes(td.text.c_str()) + "\",\"group\":\"" +
-		jsonEscapeBytes(td.group.c_str()) + "\"}";
+		jsonEscapeBytes(td.group.c_str()) + "\",\"board\":\"" +
+		jsonEscapeBytes(td.board.empty() ? "Main" : td.board.c_str()) + "\"}";
 }
 
 // key=value lines, as "properties" takes them.
@@ -2703,6 +2777,7 @@ applyTextDrawFields(TextDraw &td, const std::vector<std::string> &lines, size_t 
 		else if(key == "locked") { ok = parseBoolField(value, &b); td.locked = b; }
 		else if(key == "hidden") { ok = parseBoolField(value, &b); td.hidden = b; }
 		else if(key == "group") td.group = value;
+		else if(key == "board") td.board = value == "Main" ? std::string() : value;	// the artboard; "Main" is the first
 		else if(key == "preview_model") { ok = parseInt(value, &n); td.previewModel = n; }
 		else if(key == "preview_zoom") { ok = parseFloat(value, &f); td.previewZoom = f; }
 		else if(key == "preview_rot"){
@@ -2868,6 +2943,9 @@ handleRadarArt(const std::string &requestId, std::map<std::string, std::string> 
 	writeResponse(requestId, true, body + jsonEscapeBytes(params.outGroup) + "\"");
 }
 
+static bool agentIdList(const std::string &text, bool sceneOnly, std::vector<ObjectInst*> &out, std::string *error);
+static void selectOnlyThese(const std::vector<ObjectInst*> &objs);
+
 static void
 handleMapTool(const std::string &requestId, const std::vector<std::string> &lines)
 {
@@ -2906,6 +2984,40 @@ handleMapTool(const std::string &requestId, const std::vector<std::string> &line
 
 	if(op == "radar_art"){
 		handleRadarArt(requestId, f);
+		return;
+	}
+	if(op == "duplicates"){
+		// Tools > Clean up: copies of an object at the same place and turn.
+		// ids narrow it to those objects; remove deletes the copies (the
+		// first of each set stays). Returns the copies' ids before removal.
+		std::vector<ObjectInst*> objs;
+		std::string error;
+		if(f.count("ids") && !agentIdList(f["ids"], true, objs, &error)){
+			writeError(requestId, error.c_str());
+			return;
+		}
+		selectOnlyThese(objs);
+		std::string mode = f.count("mode") ? lowercase(f["mode"].c_str()) : "find";
+		if(mode != "find" && mode != "remove"){
+			ClearSelection();
+			writeError(requestId, "mode is find or remove");
+			return;
+		}
+		int groups = 0, kept = 0;
+		int copies = MapCleanupDuplicates(num("tolerance", 0.01f), !objs.empty(), flag("strict", true), false,
+			&groups, &kept);
+		std::string ids = "[";
+		int n = 0;
+		for(CPtrNode *p = selection.first; p; p = p->next)
+			ids += (n++ ? "," : "") + std::to_string(((ObjectInst*)p->item)->m_id);
+		if(mode == "remove" && copies > 0){
+			DeleteSelected();
+			gAgentSceneRevision++;
+		}
+		ClearSelection();
+		writeResponse(requestId, true, "\"result\":\"duplicates\",\"copies\":" + std::to_string(copies) +
+			",\"sets\":" + std::to_string(groups) + ",\"protected\":" + std::to_string(kept) +
+			",\"removed\":" + (mode == "remove" ? "true" : "false") + ",\"ids\":" + ids + "]");
 		return;
 	}
 	if(op != "lay_along"){
@@ -2986,7 +3098,34 @@ handleMapTool(const std::string &requestId, const std::vector<std::string> &line
 	}else if(op == "snap_rotations")
 		result = MapToolsSnapRotations(num("step", 90.0f), &error);
 	else if(op == "drop")
-		result = MapToolsDropToGround(&error);
+		// align: also tilt each to the slope under it (Object Info's Drop and align).
+		result = flag("align", false) ? SnapSelectedToGround(true) : MapToolsDropToGround(&error);
+	else if(op == "center_parent")
+		result = MapToolsCenterParent(&error);
+	else if(op == "align_to_guide"){
+		// The coordinate pin's alignment: to a point (start), or along the
+		// line to end; distribute spreads them between its ends.
+		std::string anchor = f.count("anchor") ? lowercase(f["anchor"].c_str()) : "centre";
+		int a = anchor == "min" ? 0 : anchor == "centre" || anchor == "center" ? 1 : anchor == "max" ? 2 :
+			anchor == "origin" ? 3 : -1;
+		std::string axes = f.count("axes") ? lowercase(f["axes"].c_str()) : "xy";
+		int mask = 0;
+		for(char c : axes)
+			mask |= c == 'x' ? 1 : c == 'y' ? 2 : c == 'z' ? 4 : 8;
+		rw::V3d start, end;
+		bool haveEnd = f.count("end") && parseAgentVector(f["end"], &end);
+		if(!f.count("start") || !parseAgentVector(f["start"], &start))
+			error = "start is x,y,z";
+		else if(f.count("end") && !haveEnd)
+			error = "end is x,y,z";
+		else if(a < 0 || mask == 0 || mask & 8)
+			error = "anchor is min, centre, max or origin; axes some of x, y, z";
+		else if(flag("distribute", false) && !haveEnd)
+			error = "distribute needs end";
+		else
+			result = MapToolsAlignToGuide(start, haveEnd ? &end : nil, mask, a, flag("distribute", false),
+				flag("face", false), &error);
+	}
 	else if(op == "relative"){
 		code = MapToolsRelativeOffsetsPawn(flag("attach", true), &error);
 		result = code.empty() ? -1 : 0;
@@ -3011,7 +3150,8 @@ handleMapTool(const std::string &requestId, const std::vector<std::string> &line
 			flag("on_ground", true), &error);
 	}else{
 		writeError(requestId, "unknown maptool operation (array, mirror, align, distribute, "
-			"snap_rotations, drop, relative, lay_along, radar_art, duplicate)");
+			"snap_rotations, drop, relative, lay_along, radar_art, duplicate, duplicates, center_parent, "
+			"align_to_guide)");
 		return;
 	}
 	if(result < 0){
@@ -3035,6 +3175,830 @@ handleMapTool(const std::string &requestId, const std::vector<std::string> &line
 	}
 	ClearSelection();
 	writeResponse(requestId, true, body + "]");
+}
+
+// ---- The rest of the editor ----
+// Everything a person can do in the editor's windows that the commands above
+// don't cover, one command per window or job, each with an operation:
+// world, clipboard, selection_sets, history, favourites, view, radar_layers,
+// export, custom_model, workspace, pawn_code, textdraw_tool, nodes,
+// interiors, layout_path and coordinate_pin. Their key=value fields come after
+// the operation, like maptool's.
+
+static std::map<std::string, std::string>
+agentFields(const std::vector<std::string> &lines, size_t first)
+{
+	std::map<std::string, std::string> fields;
+	for(size_t i = first; i < lines.size(); i++){
+		size_t eq = lines[i].find('=');
+		if(eq != std::string::npos && eq > 0)
+			fields[lowercase(lines[i].substr(0, eq).c_str())] = lines[i].substr(eq + 1);
+	}
+	return fields;
+}
+
+// "1,2,3" instance ids; any instance, or only the agent scene's.
+static bool
+agentIdList(const std::string &text, bool sceneOnly, std::vector<ObjectInst*> &out, std::string *error)
+{
+	for(size_t at = 0; at < text.size();){
+		size_t end = text.find(',', at);
+		if(end == std::string::npos) end = text.size();
+		int id;
+		if(!parseInt(text.substr(at, end - at), &id)){
+			*error = "ids must be instance ids separated by commas";
+			return false;
+		}
+		ObjectInst *inst = GetInstanceByID(id);
+		if(inst == nil || (sceneOnly && !isAgentSceneInstance(inst))){
+			*error = "instance " + std::to_string(id) + (sceneOnly ? " does not belong to the active agent scene" :
+				" is not in the map");
+			return false;
+		}
+		out.push_back(inst);
+		at = end + 1;
+	}
+	return true;
+}
+
+static void
+selectOnlyThese(const std::vector<ObjectInst*> &objs)
+{
+	ClearSelection();
+	for(ObjectInst *inst : objs)
+		if(!inst->m_isDeleted)
+			inst->Select();
+}
+
+// The selection's ids (after a paste, say), then an empty selection.
+static std::string
+takeSelectionIds(void)
+{
+	std::string ids = "[";
+	int n = 0;
+	for(CPtrNode *p = selection.first; p; p = p->next){
+		ObjectInst *inst = (ObjectInst*)p->item;
+		if(inst->m_isDeleted) continue;
+		if(n++) ids += ',';
+		ids += std::to_string(inst->m_id);
+	}
+	ClearSelection();
+	return ids + "]";
+}
+
+// A world building the session changes comes back as it was on rollback.
+static void
+noteAgentWorldEdit(ObjectInst *inst)
+{
+	for(const AgentSceneSnapshot &snapshot : gAgentScopedWorldSnapshot)
+		if(snapshot.id == inst->m_id)
+			return;
+	gAgentScopedWorldSnapshot.push_back(captureAgentSnapshot(inst));
+}
+
+static std::string
+agentBriefJson(ObjectInst *inst)
+{
+	char buf[256];
+	snprintf(buf, sizeof(buf), "{\"instance_id\":%d,\"model_id\":%d,\"position\":[%.3f,%.3f,%.3f],\"interior\":%d,"
+		"\"world_building\":%s,\"name\":\"", inst->m_id, PawnModelId(inst->m_objectId), inst->m_translation.x,
+		inst->m_translation.y, inst->m_translation.z, inst->m_area, IsPawnWorldObject(inst) ? "true" : "false");
+	ObjectDef *def = GetObjectDef(inst->m_objectId);
+	return buf + jsonEscapeBytes(def ? def->m_name : "") + "\"}";
+}
+
+static std::string
+jsonStringList(const std::vector<std::string> &items)
+{
+	std::string json = "[";
+	for(size_t i = 0; i < items.size(); i++)
+		json += (i ? ",\"" : "\"") + jsonEscapeBytes(items[i].c_str()) + "\"";
+	return json + "]";
+}
+
+static const char *
+undoTypeName(int type)
+{
+	static const char *names[] = { "move", "rotate", "delete", "paste", "transform", "material", "properties",
+		"world_conversion", "vehicle", "model", "nodes", "radar_art", "layout_paths" };
+	return type >= 0 && type < (int)(sizeof(names) / sizeof(names[0])) ? names[type] : "edit";
+}
+
+// true when the command was one of these (answered either way).
+static bool
+handleEditorTools(const std::string &requestId, const std::string &command, const std::vector<std::string> &lines)
+{
+	static const char *commands[] = { "world", "clipboard", "selection_sets", "history", "favourites", "view",
+		"radar_layers", "export", "custom_model", "workspace", "pawn_code", "textdraw_tool", "nodes",
+		"interiors", "layout_path", "coordinate_pin" };
+	bool known = false;
+	for(const char *c : commands)
+		known |= command == c;
+	if(!known)
+		return false;
+	std::string op = lines.size() > 2 ? lowercase(lines[2].c_str()) : "";
+	std::map<std::string, std::string> f = agentFields(lines, 3);
+	// Free text comes escaped like material text (service.py TEXT_FIELDS).
+	for(const char *key : { "name", "text", "source", "filter", "group" })
+		if(f.count(key))
+			f[key] = decodeAgentText(f[key]);
+	if(command == "textdraw_tool" && f.count("path"))
+		f["path"] = decodeAgentText(f["path"]);
+	auto has = [&](const char *key){ return f.count(key) > 0; };
+	auto get = [&](const char *key){ return has(key) ? f[key] : std::string(); };
+	auto flag = [&](const char *key, bool fallback){
+		bool value;
+		return has(key) && parseBoolField(f[key], &value) ? value : fallback;
+	};
+	auto integer = [&](const char *key, int fallback){
+		int value;
+		return has(key) && parseInt(f[key], &value) ? value : fallback;
+	};
+	auto fail = [&](const std::string &message){ writeError(requestId, message.c_str()); return true; };
+	auto reply = [&](const std::string &body){ writeResponse(requestId, true, body); return true; };
+	std::string error;
+
+	if(command == "world"){
+		// GTA's own buildings: the ones the map removes, putting them back,
+		// keeping them as map objects, and where a model stands everywhere.
+		if(op == "model_instances"){
+			int model;
+			if(!parseInt(get("model"), &model) || (model = EditorModelId(model)) < 0 || !GetObjectDef(model))
+				return fail("model: a model id");
+			int limit = std::max(1, std::min(integer("limit", 100), 256)), total = 0;
+			std::string items = "[";
+			for(CPtrNode *p = instances.first; p; p = p->next){
+				ObjectInst *inst = (ObjectInst*)p->item;
+				if(inst->m_isDeleted || inst->m_objectId != model)
+					continue;
+				if(total++ < limit)
+					items += (total > 1 ? "," : "") + agentBriefJson(inst);
+			}
+			return reply("\"instances\":" + items + "],\"total\":" + std::to_string(total));
+		}
+		if(!agentMapMode())
+			return fail("world buildings belong to a Pawn map; this is a scratch IPL scene");
+		if(op == "removed"){
+			int limit = std::max(1, std::min(integer("limit", 100), 256)), total = 0;
+			std::string items = "[";
+			for(CPtrNode *p = instances.first; p; p = p->next){
+				ObjectInst *inst = (ObjectInst*)p->item;
+				if(!inst->m_isDeleted || !IsPawnWorldObject(inst) || !IsInstInIplMapDocument(inst) ||
+				   inst->m_numChildren > 0)
+					continue;
+				if(total++ < limit)
+					items += (total > 1 ? "," : "") + agentBriefJson(inst);
+			}
+			return reply("\"removed\":" + items + "],\"total\":" + std::to_string(total));
+		}
+		if(op != "restore" && op != "convert")
+			return fail("world takes removed, restore, convert or model_instances");
+		if(!requireAgentSession(requestId)) return true;
+		std::vector<ObjectInst*> objs;
+		if(!agentIdList(get("ids"), false, objs, &error) || objs.empty())
+			return fail(error.empty() ? "ids: the buildings' instance ids" : error);
+		for(ObjectInst *inst : objs)
+			if(!IsPawnWorldObject(inst) || !IsInstInIplMapDocument(inst))
+				return fail("instance " + std::to_string(inst->m_id) + " is not a GTA world building");
+		if(op == "restore"){
+			// Undelete, recorded like a paste: undo removes them again.
+			std::vector<ObjectInst*> restored;
+			for(ObjectInst *inst : objs){
+				if(!inst->m_isDeleted)
+					continue;
+				noteAgentWorldEdit(inst);
+				inst->Undelete();
+				if(!inst->m_isDeleted)
+					restored.push_back(inst);
+			}
+			if(!restored.empty())
+				UndoRecordPaste(restored.data(), (int)restored.size());
+			gAgentSceneRevision++;
+			return reply("\"restored\":" + std::to_string(restored.size()));
+		}
+		// Kept in place as CreateObject (or CreateDynamicObject) plus
+		// RemoveBuildingForPlayer when the map is saved.
+		for(ObjectInst *inst : objs)
+			if(!inst->m_isDeleted)
+				noteAgentWorldEdit(inst);
+		int converted = ConvertWorldObjectsToMapObjects(objs);
+		gAgentSceneRevision++;
+		return reply("\"converted\":" + std::to_string(converted));
+	}
+
+	if(command == "clipboard"){
+		// Ctrl+C, Ctrl+X, Ctrl+V and Paste in place. Paste puts the copies at
+		// the placement point (where the camera looks); in place keeps them where
+		// the originals were.
+		if(op == "copy" || op == "cut"){
+			std::vector<ObjectInst*> objs;
+			if(op == "cut" && !requireAgentSession(requestId)) return true;
+			if(!agentIdList(get("ids"), op == "cut", objs, &error) || objs.empty())
+				return fail(error.empty() ? "ids: what to copy" : error);
+			selectOnlyThese(objs);
+			if(op == "copy")
+				CopySelected();
+			else{
+				CutSelected();
+				gAgentSceneRevision++;
+			}
+			ClearSelection();
+			return reply("\"result\":\"" + op + "\",\"count\":" + std::to_string(objs.size()));
+		}
+		if(op != "paste" && op != "paste_in_place")
+			return fail("clipboard takes copy, cut, paste or paste_in_place");
+		if(!requireAgentSession(requestId)) return true;
+		int pasted = op == "paste" ? PasteClipboard() : PasteClipboardInPlace();
+		if(pasted <= 0)
+			return fail("the clipboard is empty: copy first");
+		gAgentSceneRevision++;
+		return reply("\"result\":\"" + op + "\",\"ids\":" + takeSelectionIds());
+	}
+
+	if(command == "selection_sets"){
+		// Map Objects' saved selections: kept with the map in Haumea's settings.
+		if(op == "list"){
+			std::string json = "\"sets\":[";
+			std::vector<SavedSelectionInfo> sets = GetSavedSelections();
+			for(size_t i = 0; i < sets.size(); i++){
+				json += std::string(i ? "," : "") + "{\"name\":\"" + jsonEscapeBytes(sets[i].name.c_str()) + "\",\"ids\":[";
+				for(size_t k = 0; k < sets[i].ids.size(); k++)
+					json += (k ? "," : "") + std::to_string(sets[i].ids[k]);
+				json += "]}";
+			}
+			return reply(json + "]");
+		}
+		std::string name = get("name");
+		if(name.empty() || name.size() > 64 || name.find('\t') != std::string::npos)
+			return fail("name: 1-64 characters");
+		if(op == "save"){
+			std::vector<ObjectInst*> objs;
+			if(!agentIdList(get("ids"), false, objs, &error) || objs.empty())
+				return fail(error.empty() ? "ids: what the set holds" : error);
+			SaveSelectionSet(name.c_str(), objs);
+			return reply("\"saved\":\"" + jsonEscapeBytes(name.c_str()) + "\",\"count\":" + std::to_string(objs.size()));
+		}
+		if(op == "apply"){
+			if(!SelectSavedSelection(name.c_str(), flag("add", false)))
+				return fail("no saved selection by that name");
+			int count = 0;
+			for(CPtrNode *p = selection.first; p; p = p->next)
+				count++;
+			return reply("\"selected_count\":" + std::to_string(count));
+		}
+		if(op == "delete")
+			return DeleteSavedSelection(name.c_str()) ? reply("\"deleted\":true") :
+				fail("no saved selection by that name");
+		return fail("selection_sets takes list, save, apply or delete");
+	}
+
+	if(command == "history"){
+		// Edit > History: the undo steps and going to one; changes is the
+		// Changes for Pawn Export window: what the map changes about GTA's world.
+		if(op == "list"){
+			std::vector<UndoHistoryStep> steps;
+			int done = GetUndoHistory(steps);
+			std::string json = "\"steps\":[";
+			for(size_t i = 0; i < steps.size(); i++)
+				json += std::string(i ? "," : "") + "{\"step\":" + std::to_string(i + 1) + ",\"type\":\"" +
+					undoTypeName(steps[i].type) + "\",\"objects\":" + std::to_string(steps[i].objects) + "}";
+			return reply(json + "],\"done\":" + std::to_string(done));
+		}
+		if(op == "goto"){
+			if(!requireAgentSession(requestId)) return true;
+			if(otherAgentEditing())
+				return fail("another agent is editing this map too: finish_edit_session(commit=False) "
+					"takes back only your edits");
+			std::vector<UndoHistoryStep> steps;
+			GetUndoHistory(steps);
+			int done;
+			if(!parseInt(get("done"), &done) || done < 0 || done > (int)steps.size())
+				return fail("done: how many steps stay done, 0 to " + std::to_string(steps.size()));
+			GoToUndoStep(done);
+			ClearSelection();
+			gAgentSceneRevision++;
+			return reply("\"done\":" + std::to_string(GetUndoHistory(steps)));
+		}
+		if(op == "changes"){
+			static const char *flagNames[] = { "added", "deleted", "moved", "rotated", "restored", "material",
+				"properties", "model" };
+			int limit = std::max(1, std::min(integer("limit", 100), 256)), total = 0;
+			std::string items = "[";
+			for(CPtrNode *p = instances.first; p; p = p->next){
+				ObjectInst *inst = (ObjectInst*)p->item;
+				if(inst->m_numChildren > 0 || !IsPawnObjectSelectable(inst))
+					continue;
+				int flags = GetInstanceDiffFlags(inst);
+				if(flags == 0 || total++ >= limit)
+					continue;
+				std::string brief = agentBriefJson(inst);
+				brief.pop_back();
+				brief += ",\"changes\":[";
+				int n = 0;
+				for(int b = 0; b < 8; b++)
+					if(flags & (1 << b))
+						brief += std::string(n++ ? ",\"" : "\"") + flagNames[b] + "\"";
+				items += (total > 1 ? "," : "") + brief + "]}";
+			}
+			return reply("\"changed\":" + items + "],\"total\":" + std::to_string(total) +
+				",\"unsaved_changes\":" + (PawnMapHasUnsavedChanges() ? "true" : "false"));
+		}
+		return fail("history takes list, goto or changes");
+	}
+
+	if(command == "favourites"){
+		// The Asset Browser's stars.
+		std::vector<ObjectInst*> unused;
+		std::string list = get("models"), json = "\"favourites\":[";
+		bool set = op == "set", on = flag("on", true);
+		if(!set && op != "get")
+			return fail("favourites takes get or set");
+		int n = 0;
+		for(size_t at = 0; at < list.size();){
+			size_t end = list.find(',', at);
+			if(end == std::string::npos) end = list.size();
+			int model, id;
+			if(!parseInt(list.substr(at, end - at), &model) || (id = EditorModelId(model)) < 0 || !GetObjectDef(id))
+				return fail("models: model ids separated by commas");
+			if(set && IsFavourite(id) != on)
+				ToggleFavourite(id);
+			json += std::string(n++ ? "," : "") + "{\"model\":" + std::to_string(model) + ",\"favourite\":" +
+				(IsFavourite(id) ? "true" : "false") + "}";
+			at = end + 1;
+		}
+		if(n == 0)
+			return fail("models: model ids separated by commas");
+		return reply(json + "]");
+	}
+
+	if(command == "view"){
+		// View menu switches that change what the view and captures show.
+		if(op == "set"){
+			gNoTimeCull = flag("all_hours", gNoTimeCull);
+			gNoAreaCull = flag("all_interiors", gNoAreaCull);
+			gRenderCollision = flag("collision", gRenderCollision);
+			if(has("interior")){
+				int area = integer("interior", currentArea);
+				if(area < 0 || area > 255)	// gui.cpp MAX_INTERIOR_AREA_CODE
+					return fail("interior: 0 to 255");
+				currentArea = area;
+			}
+			if(has("radar_art_3d"))
+				SetRadarArtLayersShownIn3D(flag("radar_art_3d", RadarArtLayersShownIn3D()));
+		}else if(op != "get")
+			return fail("view takes get or set");
+		return reply(std::string("\"all_hours\":") + (gNoTimeCull ? "true" : "false") + ",\"all_interiors\":" +
+			(gNoAreaCull ? "true" : "false") + ",\"interior\":" + std::to_string(currentArea) +
+			",\"collision\":" + (gRenderCollision ? "true" : "false") + ",\"radar_art_3d\":" + (RadarArtLayersShownIn3D() ? "true" : "false"));
+	}
+
+	if(command == "radar_layers"){
+		// Radar art layers: the gang zones map_tool radar_art made, one layer per group.
+		const std::vector<RadarArtLayer> &layers = GetRadarArtLayers();
+		if(op == "delete"){
+			if(!requireAgentSession(requestId)) return true;
+			std::string group = get("group");
+			std::vector<RadarArtLayer> kept;
+			for(const RadarArtLayer &layer : layers)
+				if(group != layer.group)
+					kept.push_back(layer);
+			if(kept.size() == layers.size())
+				return fail("group: no radar art layer by that name");
+			SetRadarArtLayers(kept, true);
+			gAgentSceneRevision++;
+		}else if(op != "list")
+			return fail("radar_layers takes list or delete");
+		std::string json = "\"layers\":[";
+		for(size_t i = 0; i < GetRadarArtLayers().size(); i++){
+			const RadarArtLayer &layer = GetRadarArtLayers()[i];
+			json += std::string(i ? "," : "") + "{\"group\":\"" + jsonEscapeBytes(layer.group) + "\",\"zones\":" +
+				std::to_string(layer.zones.size()) + ",\"zone_mode\":\"" + (layer.zoneMode == SAMP_ZONE_PLAYER ?
+				"player" : layer.zoneMode == SAMP_ZONE_STREAMED ? "streamed" : "global") + "\"}";
+		}
+		return reply(json + "],\"shown_in_3d\":" + (RadarArtLayersShownIn3D() ? "true" : "false"));
+	}
+
+	if(command == "export"){
+		if(op == "dff" || op == "txd"){
+			// Object Info's Export DFF / Export TXD: the models' files, for a mod or a custom model.
+			std::vector<ObjectInst*> objs;
+			if(!agentIdList(get("ids"), false, objs, &error) || objs.empty())
+				return fail(error.empty() ? "ids: instances whose models to export" : error);
+			char dir[1024];
+			if(has("directory"))
+				snprintf(dir, sizeof(dir), "%s", get("directory").c_str());
+			else if(!GetHaumeaDataPath(dir, sizeof(dir), "dff-txd-exports"))
+				return fail("no export folder: pass directory");
+			if(IsInGameDir(dir))
+				return fail("directory: Haumea never writes into the game folder");
+			selectOnlyThese(objs);
+			int failed = 0;
+			int exported = op == "dff" ? ExportSelectedDffs(dir, &failed) : ExportSelectedTxds(dir, &failed);
+			ClearSelection();
+			if(exported <= 0 && failed > 0)
+				return fail("could not export the " + op + " files");
+			return reply("\"exported\":" + std::to_string(exported) + ",\"failed\":" + std::to_string(failed) +
+				",\"directory\":\"" + jsonEscape(dir) + "\"");
+		}
+		if(op == "races"){
+			// haumea_races.inc, which StartMapRace needs, into the workspace's include folder.
+			std::string path = has("path") ? get("path") : WorkspaceRacesIncludePath();
+			if(path.empty())
+				return fail("the workspace has no qawno/include or pawno/include: pass path");
+			if(IsInGameDir(path.c_str()) || !WriteHaumeaRacesInclude(path.c_str()))
+				return fail("could not write " + path);
+			return reply("\"path\":\"" + jsonEscapeBytes(path.c_str()) + "\"");
+		}
+		if(op == "pawn"){
+			// File > Export as Pawn: some or all of the map as a Pawn file, apart from the map.
+			std::string path = get("path");
+			if(path.empty()){
+				char dir[1024], full[1100];
+				std::string name = get("name");
+				if(name.empty() || name.find('/') != std::string::npos || name.find('\\') != std::string::npos ||
+				   !GetHaumeaDataPath(dir, sizeof(dir), "pawn-exports"))
+					return fail("path, or name: a file name for Haumea's pawn-exports folder");
+				if(name.size() < 4 || lowercase(name.substr(name.size() - 4).c_str()) != ".pwn")
+					name += ".pwn";
+				snprintf(full, sizeof(full), "%s/%s", dir, name.c_str());
+				path = full;
+			}
+			if(IsInGameDir(path.c_str()))
+				return fail("path: Haumea never writes into the game folder");
+			std::string format = has("format") ? lowercase(get("format").c_str()) : "";
+			int pawnFormat = format.empty() ? GetPawnMapFormat() : format == "native" ? PAWN_CODE_NATIVE :
+				format == "streamer" ? PAWN_CODE_STREAMER : -1;
+			if(pawnFormat < 0)
+				return fail("format is native or streamer");
+			std::vector<ObjectInst*> objs;
+			if(has("ids") && (!agentIdList(get("ids"), false, objs, &error) || objs.empty()))
+				return fail(error.empty() ? "ids: what to export (omit for the whole map)" : error);
+			selectOnlyThese(objs);
+			int skipped = 0;
+			rw::V3d centre;
+			bool centred = false;
+			int exported = ExportPawnCodeCentred(path.c_str(), pawnFormat, !objs.empty(), flag("centred", false),
+				&skipped, &centre, &centred);
+			ClearSelection();
+			if(exported < 0)
+				return fail("could not write " + path);
+			std::string body = "\"path\":\"" + jsonEscapeBytes(path.c_str()) + "\",\"exported\":" +
+				std::to_string(exported) + ",\"skipped\":" + std::to_string(skipped);
+			if(centred)
+				body += ",\"relative_to\":[" + jsonFloat(centre.x) + "," + jsonFloat(centre.y) + "," + jsonFloat(centre.z) + "]";
+			return reply(body);
+		}
+		return fail("export takes dff, txd, races or pawn");
+	}
+
+	if(command == "custom_model"){
+		if(op == "suggest_id")
+			return reply("\"import_id\":" + std::to_string(SuggestCustomImportId()));
+		if(op == "reload"){
+			// Rebuilt DFF/TXD files under the same IDs, and models registered since.
+			int reread = ReloadCustomModels();
+			return reply("\"reloaded\":" + std::to_string(reread));
+		}
+		if(op == "add"){
+			// 0.3.DL: AddSimpleModel / AddCharModel in the server's artconfig.txt.
+			std::string err;
+			int id = AddCustomModelToServer(get("dff").c_str(), get("txd").c_str(), flag("character", false),
+				integer("id", 0), integer("base_id", 0), err);
+			return id ? reply("\"model\":" + std::to_string(id)) : fail(err);
+		}
+		if(op == "migrate"){
+			// Old modloader imports a map uses, moved into the server's models.
+			std::vector<int> legacy;
+			if(has("models")){
+				std::string list = get("models");
+				for(size_t at = 0; at < list.size();){
+					size_t end = list.find(',', at);
+					if(end == std::string::npos) end = list.size();
+					int id;
+					if(!parseInt(list.substr(at, end - at), &id))
+						return fail("models: model ids separated by commas");
+					legacy.push_back(id);
+					at = end + 1;
+				}
+			}else
+				FindLegacyImports(GetLastPawnImportReport().unknownModels, legacy);
+			if(legacy.empty())
+				return fail("no old imports to move: the map's unknown models aren't modloader/Haumea ones");
+			std::string err;
+			if(!MigrateLegacyImports(legacy, err))
+				return fail(err);
+			std::string json = "\"migrated\":[";
+			for(size_t i = 0; i < legacy.size(); i++)
+				json += std::string(i ? "," : "") + "{\"old\":" + std::to_string(legacy[i]) + ",\"new\":" +
+					std::to_string(PawnModelId(RemapLegacyModel(legacy[i]))) + "}";
+			return reply(json + "],\"note\":\"open the map again to use the new ids\"");
+		}
+		if(op == "import"){
+			// File > Import custom model: a game object id (modloader/Haumea), placed once.
+			float drawDist = 0.0f;
+			if(has("draw_distance") && !parseFloat(get("draw_distance"), &drawDist))
+				return fail("draw_distance: metres");
+			int id = CustomImportModel(get("dff").c_str(), get("txd").c_str(), get("col").c_str(),
+				integer("id", -1), get("name").c_str(), get("txd_name").c_str(), drawDist, integer("ide_flags", 0), &error);
+			if(id < 0)
+				return fail(error);
+			gAgentSceneRevision++;
+			std::string body = "\"model\":" + std::to_string(PawnModelId(id)) + ",\"placed\":" + takeSelectionIds();
+			if(!error.empty())
+				body += ",\"warning\":\"" + jsonEscapeBytes(error.c_str()) + "\"";
+			return reply(body);
+		}
+		return fail("custom_model takes add, import, migrate or suggest_id");
+	}
+
+	if(command == "workspace"){
+		if(op == "set_workspace"){
+			std::string dir = get("directory"), warning;
+			if(!dir.empty())
+				CheckWorkspaceDir(dir.c_str(), &warning);
+			SetWorkspaceDir(dir.c_str());
+			if(!warning.empty())
+				return reply("\"workspace\":\"" + jsonEscape(GetWorkspaceDir()) + "\",\"warning\":\"" +
+					jsonEscapeBytes(warning.c_str()) + "\"");
+		}else if(op == "set_game"){
+			std::string problem;
+			if(!SetGameDir(get("directory").c_str(), &problem))
+				return fail(problem.empty() ? "not a GTA San Andreas folder" : problem);
+			return reply("\"game\":\"" + jsonEscapeBytes(get("directory").c_str()) +
+				"\",\"note\":\"used from the next start: reload_game restarts Haumea\"");
+		}else if(op == "reload_game"){
+			if(AgentBridgeSessionActive() || (EditorHasUnsavedChanges() && !flag("discard_changes", false)))
+				return fail("the map has unsaved changes: save first, or pass discard_changes");
+			writeResponse(requestId, true, "\"restarting\":true");
+			if(!ReloadGameFiles())
+				log("Agent: could not restart Haumea\n");
+			return true;
+		}else if(op != "get")
+			return fail("workspace takes get, set_workspace, set_game or reload_game");
+		std::string recent = "[";
+		std::vector<RecentWorkspace> workspaces = GetRecentWorkspaceList();
+		for(size_t i = 0; i < workspaces.size(); i++)
+			recent += std::string(i ? "," : "") + "{\"path\":\"" + jsonEscapeBytes(workspaces[i].path.c_str()) +
+				"\",\"pinned\":" + (workspaces[i].pinned ? "true" : "false") + "}";
+		std::vector<std::string> autosaves = GetAutosaveList();
+		if(autosaves.size() > 20)
+			autosaves.resize(20);
+		return reply("\"workspace\":\"" + jsonEscape(GetWorkspaceDir()) + "\",\"game\":\"" + jsonEscape(GetGameDir()) +
+			"\",\"recent_workspaces\":" + recent + "],\"recent_maps\":" + jsonStringList(GetRecentMapList()) +
+			",\"autosaves\":" + jsonStringList(autosaves));
+	}
+
+	if(command == "pawn_code"){
+		// The Pawn code editor (the IDE): its script, from the map or a file.
+		auto state = [&](void){
+			return std::string("\"file\":\"") + jsonEscapeBytes(PawnEditorAgentFile().c_str()) + "\",\"follows_map\":" +
+				(PawnEditorAgentFollowsMap() ? "true" : "false") + ",\"unsaved_changes\":" +
+				(PawnEditorHasUnsavedChanges() ? "true" : "false") + ",\"format\":\"" +
+				(PawnEditorFormat() == PAWN_CODE_STREAMER ? "streamer" : "native") + "\",\"encoding\":\"" +
+				(PawnEditorEncoding() == PAWN_TEXT_UTF8 ? "utf-8" : "windows-1252") + "\",\"mode\":\"" +
+				(GetEditorWorkspaceMode() == 2 ? "pawn" : GetEditorWorkspaceMode() == 1 ? "textdraws" : "map") + "\"";
+		};
+		bool discard = flag("discard_changes", false);
+		auto guard = [&](void){
+			return PawnEditorHasUnsavedChanges() && !discard;
+		};
+		std::string message;
+		if(op == "get"){
+			const std::string &text = PawnEditorAgentText();
+			int offset = std::max(0, integer("offset", 0));
+			int limit = std::max(1, std::min(integer("max_bytes", 200000), 2000000));
+			size_t from = std::min((size_t)offset, text.size());
+			std::string part = text.substr(from, limit);
+			return reply(state() + ",\"length\":" + std::to_string(text.size()) + ",\"offset\":" +
+				std::to_string(from) + ",\"text\":\"" + jsonEscapeBytes(part.c_str()) + "\"");
+		}
+		if(op == "set"){
+			if(guard()) return fail("the script has unsaved changes: save it, or pass discard_changes");
+			PawnEditorAgentSetText(get("text"));
+		}else if(op == "refresh"){
+			if(guard()) return fail("the script has unsaved changes: save it, or pass discard_changes");
+			if(!PawnEditorAgentRefresh(&message)) return fail(message);
+		}else if(op == "open"){
+			if(guard()) return fail("the script has unsaved changes: save it, or pass discard_changes");
+			if(!PawnEditorAgentOpen(get("path").c_str(), &message)) return fail(message);
+		}else if(op == "save"){
+			if(!PawnEditorAgentSave(get("path").c_str(), &message)) return fail(message);
+		}else if(op == "settings"){
+			if(has("format")){
+				std::string format = lowercase(get("format").c_str());
+				if(format != "native" && format != "streamer")
+					return fail("format is native or streamer");
+				if(guard()) return fail("a new format regenerates the script: save it, or pass discard_changes");
+				PawnEditorSetFormat(format == "streamer" ? PAWN_CODE_STREAMER : PAWN_CODE_NATIVE);
+				PawnEditorAgentRefresh(&message);
+			}
+			if(has("encoding")){
+				std::string encoding = lowercase(get("encoding").c_str());
+				if(encoding != "utf-8" && encoding != "windows-1252")
+					return fail("encoding is utf-8 or windows-1252");
+				PawnEditorSetEncoding(encoding == "utf-8" ? PAWN_TEXT_UTF8 : PAWN_TEXT_CP1252);
+			}
+			if(has("mode")){
+				std::string mode = lowercase(get("mode").c_str());
+				int m = mode == "map" ? 0 : mode == "textdraws" ? 1 : mode == "pawn" ? 2 : -1;
+				if(m < 0)
+					return fail("mode is map, textdraws or pawn (the Pawn IDE)");
+				SetEditorWorkspaceMode(m);
+			}
+		}else
+			return fail("pawn_code takes get, set, refresh, open, save or settings");
+		return reply(state() + ",\"length\":" + std::to_string(PawnEditorText().size()));
+	}
+
+	if(command == "textdraw_tool"){
+		static const char *reads[] = { "boards", "guides", "select", "board_switch" };
+		bool read = false;
+		for(const char *r : reads)
+			read |= op == r;
+		if(!read && !requireAgentSession(requestId)) return true;
+		std::string json;
+		if(!TextDrawsAgent(op, f, &json, &error))
+			return fail(error);
+		return reply(json);
+	}
+
+	if(command == "layout_path"){
+		if(op != "list" && op != "get" && !requireAgentSession(requestId)) return true;
+		std::string json;
+		if(!LayoutPathsAgent(op, f, &json, &error))
+			return fail(error);
+		if(op != "list" && op != "get")
+			gAgentSceneRevision++;
+		return reply(json);
+	}
+
+	if(command == "coordinate_pin"){
+		// The Tools window's coordinate pin and ruler: placing one (with a
+		// ruler to end), clearing the active one or all, or what is set.
+		if(op == "set"){
+			rw::V3d position, rulerEnd;
+			if(!parseAgentVector(get("position"), &position))
+				return fail("position x,y,z");
+			bool ruler = has("end");
+			if(ruler && !parseAgentVector(get("end"), &rulerEnd))
+				return fail("end x,y,z");
+			CoordinatePinPlace(position, ruler ? &rulerEnd : nullptr);
+		}else if(op == "clear")
+			CoordinatePinClear(flag("all", false));
+		else if(!op.empty() && op != "get")
+			return fail("coordinate_pin takes get, set or clear");
+		rw::V3d at, end;
+		bool pin = CoordinatePinPosition(&at), ruler = CoordinatePinPosition(&at, &end);
+		std::string body = std::string("\"pin\":") + (pin ? "[" + jsonFloat(at.x) + "," + jsonFloat(at.y) + "," +
+			jsonFloat(at.z) + "]" : "null");
+		body += std::string(",\"ruler_end\":") + (ruler ? "[" + jsonFloat(end.x) + "," + jsonFloat(end.y) + "," +
+			jsonFloat(end.z) + "]" : "null");
+		body += ",\"pins\":" + std::to_string(CoordinatePinCount());
+		return reply(body);
+	}
+
+	if(command == "interiors"){
+		// The Interiors window: the game's interiors (enex), going to one, its Pawn.
+		if(op == "list"){
+			std::vector<GameInteriorInfo> found = FindGameInteriors(get("filter").c_str());
+			int limit = std::max(1, std::min(integer("limit", 50), 256));
+			std::string json = "\"interiors\":[";
+			for(size_t i = 0; i < found.size() && (int)i < limit; i++){
+				const GameInteriorInfo &in = found[i];
+				json += std::string(i ? "," : "") + "{\"index\":" + std::to_string(in.index) + ",\"interior\":" +
+					std::to_string(in.id) + ",\"name\":\"" + jsonEscapeBytes(in.name.c_str()) + "\",\"key\":\"" +
+					jsonEscapeBytes(in.key.c_str()) + "\",\"position\":[" + jsonFloat(in.pos.x) + "," +
+					jsonFloat(in.pos.y) + "," + jsonFloat(in.pos.z) + "],\"angle\":" + jsonFloat(in.angle) + "}";
+			}
+			return reply(json + "],\"total\":" + std::to_string(found.size()));
+		}
+		int index;
+		if(!parseInt(get("index"), &index) || GameInteriorPawn(index).empty())
+			return fail("index: an interior's index from list");
+		if(op == "pawn")
+			return reply("\"pawn\":\"" + jsonEscapeBytes(GameInteriorPawn(index).c_str()) + "\"");
+		if(op == "goto"){
+			GoToGameInterior(index);
+			gAgentCameraRevision++;
+			return reply(cameraContextBody() + ",\"interior\":" + std::to_string(currentArea));
+		}
+		return fail("interiors takes list, goto or pawn");
+	}
+
+	if(command == "nodes"){
+		// The Nodes tool: open.mp's NPC road network (NODES<area>.DAT), a
+		// node by area and point. Adding or deleting renumbers later points.
+		SAPaths::EnsureLoaded();
+		if(!SAPaths::NodesLoaded())
+			return fail("the node files aren't loaded");
+		auto nodeJson = [&](SAPaths::Node *node){
+			int area, point;
+			bool vehicle;
+			rw::V3d pos;
+			SAPaths::GetNodeInfo(node, &area, &point, &vehicle, &pos);
+			SAPaths::Node *links[16];
+			int n = SAPaths::GetNodeLinks(node, links, 16);
+			std::string json = "{\"area\":" + std::to_string(area) + ",\"point\":" + std::to_string(point) +
+				",\"vehicle\":" + (vehicle ? "true" : "false") + ",\"position\":[" + jsonFloat(pos.x) + "," +
+				jsonFloat(pos.y) + "," + jsonFloat(pos.z) + "],\"links\":[";
+			for(int i = 0; i < n; i++){
+				int la, lp;
+				SAPaths::GetNodeInfo(links[i], &la, &lp, nil, nil);
+				json += std::string(i ? "," : "") + "[" + std::to_string(la) + "," + std::to_string(lp) + "]";
+			}
+			return json + "]}";
+		};
+		auto node = [&](const char *areaKey, const char *pointKey){
+			int area, point;
+			if(!parseInt(get(areaKey), &area) || !parseInt(get(pointKey), &point))
+				return (SAPaths::Node*)nil;
+			return SAPaths::FindNode(area, point);
+		};
+		if(op == "list"){
+			float x, y, radius = 50.0f;
+			if(!parseFloat(get("x"), &x) || !parseFloat(get("y"), &y) || (has("radius") &&
+			   (!parseFloat(get("radius"), &radius) || radius <= 0.0f || radius > 1000.0f)))
+				return fail("x, y and radius (up to 1000 m): the nodes around a point");
+			int limit = std::max(1, std::min(integer("limit", 100), 256)), total = 0;
+			std::string json = "\"nodes\":[";
+			for(int area = 0; area < 64; area++){
+				int vehicle = 0, ped = 0, links = 0;
+				SAPaths::GetAreaCounts(area, &vehicle, &ped, &links);
+				for(int point = 0; point < vehicle + ped; point++){
+					SAPaths::Node *n = SAPaths::FindNode(area, point);
+					rw::V3d pos;
+					if(n == nil || !SAPaths::GetNodeInfo(n, nil, nil, nil, &pos))
+						continue;
+					float dx = pos.x - x, dy = pos.y - y;
+					if(dx*dx + dy*dy > radius*radius || total++ >= limit)
+						continue;
+					json += (total > 1 ? "," : "") + nodeJson(n);
+				}
+			}
+			return reply(json + "],\"total\":" + std::to_string(total) + ",\"edited_areas\":" +
+				std::to_string(SAPaths::GetDirtyAreaCount()));
+		}
+		if(op == "get"){
+			SAPaths::Node *n = node("area", "point");
+			return n ? reply("\"node\":" + nodeJson(n)) : fail("area, point: no such node");
+		}
+		if(op == "link" || op == "unlink"){
+			SAPaths::Node *a = node("area", "point"), *b = node("to_area", "to_point");
+			if(a == nil || b == nil)
+				return fail("area, point and to_area, to_point: two nodes");
+			const char *reason = nil;
+			bool ok = op == "link" ? SAPaths::LinkNodes(a, b, &reason) : SAPaths::UnlinkNodes(a, b);
+			if(!ok)
+				return fail(reason ? reason : "they aren't linked");
+			SAPaths::UpdateNodesUndo();
+			return reply("\"node\":" + nodeJson(a));
+		}
+		if(op == "delete"){
+			SAPaths::Node *n = node("area", "point");
+			if(n == nil || !SAPaths::DeleteNode(n))
+				return fail("area, point: no such node, or it can't be deleted");
+			SAPaths::UpdateNodesUndo();
+			return reply("\"deleted\":true");
+		}
+		if(op == "move"){
+			SAPaths::Node *n = node("area", "point");
+			rw::V3d pos;
+			if(n == nil || !parseAgentVector(get("position"), &pos))
+				return fail("area, point and position x,y,z");
+			SAPaths::Node *saved = SAPaths::selectedNode;
+			SAPaths::selectedNode = n;
+			bool ok = SAPaths::SetSelectedNodePosition(pos, true);
+			SAPaths::CommitSelectedNodeEdit();
+			SAPaths::selectedNode = saved;
+			if(!ok)
+				return fail("position: a node stays inside its 750 m area");
+			SAPaths::UpdateNodesUndo();
+			return reply("\"node\":" + nodeJson(n));
+		}
+		if(op == "save" || op == "load" || op == "reload_game"){
+			char err[256] = "";
+			int count = 0;
+			std::string dir = has("directory") ? get("directory") : WorkspacePath("scriptfiles/NPCs/nodes");
+			if(op == "save"){
+				if(dir.empty() || SAPaths::IsGameNodesFolder(dir.c_str()) || IsInGameDir(dir.c_str()))
+					return fail("directory: a folder outside the game (the workspace's scriptfiles/NPCs/nodes)");
+				if(!SAPaths::SaveAreasToFolder(dir.c_str(), &count, err, sizeof(err)))
+					return fail(err[0] ? err : "could not save the nodes");
+				return reply("\"saved\":" + std::to_string(count) + ",\"directory\":\"" + jsonEscapeBytes(dir.c_str()) + "\"");
+			}
+			if(SAPaths::GetDirtyAreaCount() > 0 && !flag("discard_changes", false))
+				return fail("node edits aren't saved: save them, or pass discard_changes");
+			if(op == "load"){
+				if(dir.empty() || !SAPaths::LoadAreasFromFolder(dir.c_str(), &count, err, sizeof(err)))
+					return fail(err[0] ? err : "could not load nodes from that folder");
+				return reply("\"loaded\":" + std::to_string(count));
+			}
+			SAPaths::ReloadGameNodes();
+			return reply("\"reloaded\":true");
+		}
+		return fail("nodes takes list, get, link, unlink, delete, move, save, load or reload_game");
+	}
+	return false;
 }
 
 static void
@@ -3067,7 +4031,10 @@ handleRequest(const std::vector<std::string> &lines)
 			"\"delete\",\"material\",\"material_text\",\"material_clear\",\"clear\",\"list\",\"validate\",\"camera\",\"capture\",\"capture_screen\","
 			"\"capture_pose\",\"save\",\"map_status\",\"map_new\",\"map_open\",\"map_merge\",\"place_element\",\"maptool\",\"test_in_game\","
 			"\"properties\",\"undo\",\"redo\",\"map_check\",\"texture_search\",\"textdraws\",\"textdraw_add\",\"textdraw_set\",\"textdraw_delete\","
-			"\"textdraw_new\",\"textdraw_open\",\"textdraw_save\",\"textdraw_move_from_map\"],"
+			"\"textdraw_new\",\"textdraw_open\",\"textdraw_save\",\"textdraw_move_from_map\","
+			"\"world\",\"clipboard\",\"selection_sets\",\"history\",\"favourites\",\"view\",\"radar_layers\","
+			"\"export\",\"custom_model\",\"workspace\",\"pawn_code\",\"textdraw_tool\",\"nodes\",\"interiors\","
+			"\"layout_path\",\"coordinate_pin\"],"
 			"\"element_kinds\":[\"object\",\"vehicle\",\"pickup\",\"label\",\"actor\",\"class\","
 			"\"gangzone\",\"mapicon\",\"npc\",\"pathpoint\",\"sound\",\"checkpoint\"]");
 		return;
@@ -4001,8 +4968,15 @@ handleRequest(const std::vector<std::string> &lines)
 			TestServerStop();
 		else if(action == "restart")
 			TestServerRestart();
-		else if(action != "status"){
-			writeError(requestId, "test_in_game takes run, status, stop or restart");
+		else if(action == "launch"){
+			// The game client, connecting to the test server (run it first).
+			if(!TestServerIsRunning()){
+				writeError(requestId, "the test server isn't running: run first");
+				return;
+			}
+			TestServerLaunchGame();
+		}else if(action != "status"){
+			writeError(requestId, "test_in_game takes run, status, stop, restart or launch");
 			return;
 		}
 		TestServerReport report;
@@ -4020,7 +4994,10 @@ handleRequest(const std::vector<std::string> &lines)
 		return;
 	}
 	if(command == "maptool"){
-		if(!requireAgentSession(requestId)) return;
+		// Finding duplicates only reads; removing them is an edit.
+		bool readOnly = lines.size() > 2 && lowercase(lines[2].c_str()) == "duplicates" &&
+			std::find(lines.begin(), lines.end(), "mode=remove") == lines.end();
+		if(!readOnly && !requireAgentSession(requestId)) return;
 		handleMapTool(requestId, lines);
 		return;
 	}
@@ -5204,7 +6181,18 @@ handleRequest(const std::vector<std::string> &lines)
 		}
 		SAPaths::EnsureLoaded();
 		const char *reason = nil;
-		SAPaths::Node *node = SAPaths::NodesLoaded() ? SAPaths::AddNode(pos, vehicle != 0, nil, &reason) : nil;
+		// [link area] [link point]: linked to that node as it is added, as the
+		// Nodes tool's chain does with the one selected.
+		SAPaths::Node *linkTo = nil;
+		int linkArea, linkPoint;
+		if(lines.size() > 7 && parseInt(lines[6], &linkArea) && parseInt(lines[7], &linkPoint) &&
+		   (linkTo = SAPaths::FindNode(linkArea, linkPoint)) == nil){
+			writeError(requestId, "no node to link to at that area and point");
+			return;
+		}
+		SAPaths::Node *node = SAPaths::NodesLoaded() ? SAPaths::AddNode(pos, vehicle != 0, linkTo, &reason) : nil;
+		if(node)
+			SAPaths::UpdateNodesUndo();
 		int area = -1, point = -1;
 		bool isVehicle = false;
 		rw::V3d at;
@@ -5212,10 +6200,11 @@ handleRequest(const std::vector<std::string> &lines)
 			writeError(requestId, reason ? reason : "the node files aren't loaded");
 			return;
 		}
-		char body[128];
+		char body[256];
 		snprintf(body, sizeof(body), "\"area\":%d,\"point\":%d,\"vehicle\":%s", area, point,
 			isVehicle ? "true" : "false");
-		writeResponse(requestId, true, body);
+		std::string extra = linkTo && reason ? std::string(",\"link_failed\":\"") + jsonEscape(reason) + "\"" : "";
+		writeResponse(requestId, true, body + extra);
 		return;
 	}
 	if(command == "nodes_status"){
@@ -5338,6 +6327,14 @@ handleRequest(const std::vector<std::string> &lines)
 			writeError(requestId, "the open map has unsaved changes: save it first, or pass discard");
 			return;
 		}
+		// Discarding is the agent's call, but the user's work is theirs: it
+		// goes to an autosave first, which File > Recover Autosave reopens.
+		std::string kept = discard ? AutosaveBeforeDiscard() : std::string();
+		if(discard && PawnMapHasUnsavedChanges() && kept.empty()){
+			writeError(requestId, "the open map's unsaved changes couldn't be kept in an autosave, so they weren't "
+				"discarded: ask the user to save or close it");
+			return;
+		}
 		leaveAgentScene();
 		if(open && !OpenPawnMapFile(lines[2].c_str())){
 			writeError(requestId, ("could not open " + lines[2]).c_str());
@@ -5350,6 +6347,8 @@ handleRequest(const std::vector<std::string> &lines)
 		if(open){
 			body += ",\"import\":" + agentImportReportJson();
 		}
+		if(!kept.empty())
+			body += ",\"discarded_changes_autosave\":\"" + jsonEscape(kept.c_str()) + "\"";
 		writeResponse(requestId, true, body);
 		return;
 	}
@@ -5423,6 +6422,12 @@ handleRequest(const std::vector<std::string> &lines)
 			writeError(requestId, "the map is untitled: give a path to save it to");
 			return;
 		}
+		if((path == nil || strcmp(path, GetPawnMapPath()) == 0) && PawnMapChangedOnDisk()){
+			writeError(requestId, "the map file was changed outside Haumea since it was opened (a script rewrote "
+				"it?): saving now would bring back what that removed and drop what it added. open_map it again "
+				"(discard_changes keeps the edits here in an autosave), or ask the user");
+			return;
+		}
 		SetPawnTextEncoding(encoding);
 		if(!SavePawnMapTo(path, format)){
 			SetPawnTextEncoding(oldEncoding);
@@ -5454,6 +6459,8 @@ handleRequest(const std::vector<std::string> &lines)
 			std::to_string(steps) + ",\"live_instances\":" + std::to_string(countAgentInstances(false)));
 		return;
 	}
+	if(handleEditorTools(requestId, command, lines))
+		return;
 	writeError(requestId, "unknown command");
 }
 
@@ -5578,6 +6585,16 @@ agentcastNote(const std::vector<std::string> &lines)
 	}else if(c == "prefab_save"){
 		key = "prefab";
 		format = _("saving a prefab");
+	}else if(c == "history" && lines.size() > 2 && lines[2] == "goto"){
+		key = "undo";
+		format = _("undoing");
+	}else if((c == "clipboard" || c == "world" || c == "layout_path" || c == "radar_layers") && lines.size() > 2 &&
+		(lines[2] == "cut" || lines[2] == "paste" || lines[2] == "paste_in_place" || lines[2] == "restore" ||
+		 lines[2] == "convert" || lines[2] == "delete" || lines[2] == "new" || lines[2] == "set" ||
+		 lines[2] == "generate" || lines[2] == "detach" || lines[2].find("_point") != std::string::npos)){
+		// The editor's other edits, in the overlay's existing words.
+		key = "properties";
+		format = _("changing elements: %d");
 	}else if(c.compare(0, 9, "textdraw_") == 0){
 		key = "textdraw";
 		format = _("editing textdraws");

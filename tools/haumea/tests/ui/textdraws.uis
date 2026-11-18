@@ -1,9 +1,11 @@
 # TextDraw mode: textdraws in a file of their own, on a canvas instead of the world.
 open "$UI_FIXTURES/ui_map.pwn"
+click_item '*' '##editor'
+wait 2
 click_item '*' 'TextDraws'
 wait 5
-assert window "TextDraws"
-assert item '*' 'Map'
+assert window "Layers"
+assert item '*' '##editor'
 click_item 'TextDraws' 'Text'
 wait 5
 assert textdraws == 1
@@ -30,7 +32,7 @@ assert textdraws == 1
 assert objects == 4
 # The map has no textdraws; Save As writes them beside it.
 assert pawn_lacks "TextDrawCreate("
-click_item 'TextDraws' '###File options'
+click_item 'TextDraws' 'td_file_options'
 wait 3
 click_item '*' 'Save As...'
 wait 5

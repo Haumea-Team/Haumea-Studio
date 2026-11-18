@@ -337,6 +337,12 @@ httpFetch(const std::string &url, const std::string &outPath, std::string *error
 }
 #endif
 
+bool
+HttpDownload(const std::string &url, const std::string &outPath, std::string *error)
+{
+	return httpFetch(url, outPath, error);
+}
+
 static bool
 httpGetString(const std::string &url, const std::string &tempPath, std::string *out, std::string *error)
 {
@@ -762,45 +768,93 @@ rollBack(void)
 
 // ---- GUI ----
 
-static void
-whatsNewBody(void)
+// The release the notes are for, and its page when it has one.
+static const std::string &
+whatsNewVersion(void)
 {
-	const std::string &version = gNoticeKind == "updated" ? gNoticeVersion : gRelease.version;
+	return gNoticeKind == "updated" ? gNoticeVersion : gRelease.version;
+}
+
+static bool
+whatsNewHasPage(void)
+{
+	return !gRelease.pageUrl.empty() && whatsNewVersion() == gRelease.version;
+}
+
+static void
+whatsNewNotes(void)
+{
 	const std::string &notes = gNoticeKind == "updated" ? gNotes : gRelease.body;
 	if(notes.empty())
 		ImGui::TextDisabled(_("This release has no notes."));
 	else
 		ImGui::TextWrapped("%s", notes.c_str());
-	if(!gRelease.pageUrl.empty() && version == gRelease.version)
+}
+
+// The notes and, under them, a link to the release page (the start screen's block).
+static void
+whatsNewBody(void)
+{
+	whatsNewNotes();
+	if(whatsNewHasPage())
 		ImGui::TextLinkOpenURL(_("Release page"), gRelease.pageUrl.c_str());
 }
 
+// Read what a release changed: the notes filling the window, its page at the foot.
 static void
 whatsNewWindow(void)
 {
 	if(!gShowWhatsNew)
 		return;
-	const std::string &version = gNoticeKind == "updated" ? gNoticeVersion : gRelease.version;
-	ImGui::SetNextWindowSize(ImVec2(ImGui::GetFontSize() * 30.0f, ImGui::GetFontSize() * 24.0f), ImGuiCond_FirstUseEver);
 	char title[96];
-	snprintf(title, sizeof(title), _("What's new in %s"), version.c_str());
+	snprintf(title, sizeof(title), _("What's new in %s"), whatsNewVersion().c_str());
 	snprintf(title + strlen(title), sizeof(title) - strlen(title), "###updater_whats_new");
-	if(ImGui::Begin(title, &gShowWhatsNew))
-		whatsNewBody();
+	ImGuiWindowFlags placed = UiPlaceToolWindow(title, 30.0f, false);
+	if(ImGui::Begin(title, &gShowWhatsNew, placed)){
+		bool page = whatsNewHasPage();
+		float foot = page ? ImGui::GetFrameHeightWithSpacing() + ImGui::GetStyle().ItemSpacing.y : 0.0f;
+		ImGui::BeginChild("##whats_new_notes", ImVec2(0, -foot));
+		whatsNewNotes();
+		ImGui::EndChild();
+		if(page && UiFooterButton(_("Release page")))
+			OpenInFileManager(gRelease.pageUrl);
+	}
 	ImGui::End();
 }
 
 // What's new: its own window, or, in the start screen's inline block, a flag
 // the caller reads to draw UpdaterDrawWhatsNewInline under it.
 static void
-whatsNewButton(void)
+whatsNewButton(const ImVec2 &size = ImVec2(0, 0))
 {
-	if(ImGui::Button(_("What's new"))){
+	if(ImGui::Button(_("What's new"), size)){
 		if(gDrawingInline)
 			gWhatsNewInline = !gWhatsNewInline;
 		else
 			gShowWhatsNew = true;
 	}
+}
+
+// The width of each of n equal buttons sharing the row.
+static ImVec2
+rowButton(int n)
+{
+	float spacing = ImGui::GetStyle().ItemSpacing.x;
+	return ImVec2(floorf((ImGui::GetContentRegionAvail().x - spacing * (n - 1)) / n), 0);
+}
+
+// The one main action: a solid accent button with white text.
+static bool
+accentButton(const char *label, const ImVec2 &size)
+{
+	ImVec4 fill = UiAccentFill();
+	ImGui::PushStyleColor(ImGuiCol_Button, fill);
+	ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(fill.x*1.12f, fill.y*1.12f, fill.z*1.12f, 1.0f));
+	ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(fill.x*0.9f, fill.y*0.9f, fill.z*0.9f, 1.0f));
+	ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 1, 1, 1));
+	bool pressed = ImGui::Button(label, size);
+	ImGui::PopStyleColor(4);
+	return pressed;
 }
 
 static bool
@@ -823,16 +877,23 @@ noticeContents(void)
 		ImGui::Text(TI(ICON_FA_CHECK, "Updated to Haumea Studio %s"), gNoticeVersion.c_str());
 		for(const std::string &p : gNoticeLocal)
 			ImGui::TextWrapped(_("You had changed %s: your copy is %s.local."), p.c_str(), p.c_str());
-		whatsNewButton();
-		ImGui::SameLine();
 	}else if(gNoticeKind == "rolledback"){
 		ImGui::Text(TI(ICON_FA_ROTATE_LEFT, "Back to Haumea Studio %s"), gNoticeOther.c_str());
 		ImGui::TextDisabled(_("%s won't be offered again."), gNoticeVersion.c_str());
 	}else{
 		ImGui::TextWrapped(TI(ICON_FA_TRIANGLE_EXCLAMATION, "The update wasn't installed: %s"), gNoticeError.c_str());
 	}
+	// What's new beside OK after an update; else OK alone, full width.
+	// (Not UiFooterButton: the start screen draws this inline, mid-window.)
 	ImGui::PushID("updater_notice");
-	if(ImGui::Button(_("OK")))
+	if(gNoticeKind == "updated"){
+		ImGui::Spacing();
+		ImVec2 half = rowButton(2);
+		whatsNewButton(half);
+		ImGui::SameLine();
+		if(accentButton(_("OK"), half))
+			gNoticeKind.clear();
+	}else if(accentButton(_("OK"), ImVec2(-FLT_MIN, 0)))
 		gNoticeKind.clear();
 	ImGui::PopID();
 }
@@ -847,22 +908,30 @@ bannerContents(int status)
 	if(status == UPD_AVAILABLE){
 		if(gNotifyOnly[0])
 			ImGui::TextDisabled("%s", _(gNotifyOnly));
-		whatsNewButton();
+		ImGui::Spacing();
+		// What's new and Skip on top; along the foot Later, then the main
+		// action at the right: Update now, or the release page when it can't.
+		ImVec2 half = rowButton(2);
+		whatsNewButton(half);
 		ImGui::SameLine();
-		if(!gNotifyOnly[0]){
-			if(ImGui::Button(_("Update now")))
-				startDownload();
-			ImGui::SetItemTooltip(_("Downloads it in the background; it installs when Haumea restarts."));
-		}else if(!gRelease.pageUrl.empty())
-			ImGui::TextLinkOpenURL(_("Release page"), gRelease.pageUrl.c_str());
-		ImGui::SameLine();
-		if(ImGui::Button(_("Later")))
-			gBannerHidden = true;
-		ImGui::SameLine();
-		if(ImGui::Button(_("Skip this version"))){
+		if(ImGui::Button(_("Skip this version"), half)){
 			snprintf(gUpdateSkip, sizeof(gUpdateSkip), "%s", gRelease.version.c_str());
 			SaveEditorSettingsNow();
 			gBannerHidden = true;
+		}
+		bool page = gNotifyOnly[0] && !gRelease.pageUrl.empty();
+		ImVec2 later = !gNotifyOnly[0] || page ? half : ImVec2(-FLT_MIN, 0);
+		if(ImGui::Button(_("Later"), later))
+			gBannerHidden = true;
+		if(!gNotifyOnly[0]){
+			ImGui::SameLine();
+			if(accentButton(_("Update now"), half))
+				startDownload();
+			ImGui::SetItemTooltip(_("Downloads it in the background; it installs when Haumea restarts."));
+		}else if(page){
+			ImGui::SameLine();
+			if(accentButton(_("Release page"), half))
+				OpenInFileManager(gRelease.pageUrl);
 		}
 	}else if(status == UPD_DOWNLOADING){
 		const UpdateAsset *asset = UpdateBundleName() ? gRelease.Find(UpdateBundleName()) : nil;
@@ -871,28 +940,35 @@ bannerContents(int status)
 			ImGui::ProgressBar((float)((double)gDownloadedBytes / total));
 		else
 			ImGui::ProgressBar(-1.0f * (float)ImGui::GetTime());
-		if(ImGui::Button(_("Hide")))
+		if(ImGui::Button(_("Hide"), ImVec2(-FLT_MIN, 0)))
 			gBannerHidden = true;
 		ImGui::SetItemTooltip(_("The download goes on; the update installs when Haumea restarts."));
 	}else if(status == UPD_READY){
 		const char *blocker = restartBlocker();
+		ImGui::Spacing();
+		// Later, then the main action at the right.
+		ImVec2 half = rowButton(2);
+		if(ImGui::Button(_("Later"), half))
+			gBannerHidden = true;
+		ImGui::SetItemTooltip(_("It installs the next time Haumea starts."));
+		ImGui::SameLine();
 		ImGui::BeginDisabled(blocker != nil);
-		if(ImGui::Button(_("Restart now")) && !RestartHaumeaKeepingArgs())
+		if(accentButton(_("Restart now"), half) && !RestartHaumeaKeepingArgs())
 			Toast(TOAST_SELECTION, _("Couldn't restart: the update installs next time"));
 		ImGui::EndDisabled();
 		if(blocker)
 			ImGui::SetItemTooltip(_("%s The update installs the next time Haumea starts."), blocker);
-		ImGui::SameLine();
-		if(ImGui::Button(_("Later")))
-			gBannerHidden = true;
-		ImGui::SetItemTooltip(_("It installs the next time Haumea starts."));
 	}else{
+		ImGui::PushStyleColor(ImGuiCol_Text, UiSemanticColor(UI_COLOR_ERROR));
 		ImGui::TextWrapped(_("The update failed: %s"), gError.c_str());
-		if(ImGui::Button(_("Try again")))
-			startDownload();
-		ImGui::SameLine();
-		if(ImGui::Button(_("Dismiss")))
+		ImGui::PopStyleColor();
+		ImGui::Spacing();
+		ImVec2 half = rowButton(2);
+		if(ImGui::Button(_("Dismiss"), half))
 			gBannerHidden = true;
+		ImGui::SameLine();
+		if(accentButton(_("Try again"), half))
+			startDownload();
 	}
 }
 
@@ -989,17 +1065,25 @@ UpdaterHelpMenuItems(void)
 	}
 }
 
+// On the same line, at the row's right end when there's room, for a button.
+static void
+rightEnd(float right, const char *button)
+{
+	ImGui::SameLine();
+	float w = ImGui::CalcTextSize(button, nil, true).x + ImGui::GetStyle().FramePadding.x * 2;
+	if(ImGui::GetCursorPosX() < right - w)
+		ImGui::SetCursorPosX(right - w);
+}
+
 void
 UpdaterPreferences(void)
 {
 	bool changed = false;
-	changed |= ImGui::Checkbox(_("Check for updates when Haumea starts"), &gUpdateCheckAuto);
-	changed |= ImGui::Checkbox(_("Download updates automatically"), &gUpdateDownloadAuto);
-	ImGui::SetItemTooltip(_("Downloads in the background; the update still installs only when Haumea restarts."));
+	// The channel as a row: its name on the left, the two choices on the right.
 	defaultChannel();
 	int beta = followsBeta() ? 1 : 0;
-	ImGui::TextUnformatted(_("Channel"));
-	ImGui::SameLine();
+	char channelId[64];
+	UiFieldLabel(_("Channel"), channelId, sizeof(channelId));
 	changed |= ImGui::RadioButton(_("Production"), &beta, 0);
 	ImGui::SetItemTooltip(_("The tested releases everyone gets."));
 	ImGui::SameLine();
@@ -1011,31 +1095,44 @@ UpdaterPreferences(void)
 	// build number can run ahead of main's) can also switch to the latest one
 	// now, even an older one.
 	bool pr = strcmp(buildChannel(), "pr") == 0;
+	bool backToProduction = !beta && strcmp(buildChannel(), "beta") == 0;
+	ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
 	if(unofficialBuild())
 		ImGui::TextWrapped(_("This is %s, not an official release: it updates to the next official release."),
 			pr ? _("a PR build") : _("a Dev build"));
 	// A beta build back on Production is never downgraded on its own.
-	bool backToProduction = !beta && strcmp(buildChannel(), "beta") == 0;
 	if(backToProduction)
 		ImGui::TextWrapped(_("You'll move to Production with the next production release newer than %s."),
 			HaumeaFullVersion());
+	ImGui::PopStyleColor();
 	if(backToProduction || pr){
 		ImGui::BeginDisabled(gWorking);
-		if(ImGui::Button(pr ? _("Switch to the latest official release") : _("Go back to the latest Production now")))
+		if(ImGui::Button(pr ? _("Switch to the latest official release") : _("Go back to the latest Production now"),
+			ImVec2(-FLT_MIN, 0)))
 			startGoBack();
 		ImGui::EndDisabled();
 		ImGui::SetItemTooltip(_("Downloads the newest %s release, even if it's older than this build;\n"
 			"it installs the next time Haumea starts. Your maps and settings stay."), beta ? _("Beta or Production") : _("Production"));
 	}
+	ImGui::Spacing();
+	changed |= UiCheckbox(_("Check for updates when Haumea starts"), &gUpdateCheckAuto);
+	changed |= UiCheckbox(_("Download updates automatically"), &gUpdateDownloadAuto);
+	ImGui::SetItemTooltip(_("Downloads in the background; the update still installs only when Haumea restarts."));
+	ImGui::Spacing();
+	// The version and a skipped one as quiet lines, each action at the row's right end.
+	float right = ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x;
 	if(gUpdateSkip[0]){
+		ImGui::AlignTextToFramePadding();
 		ImGui::TextDisabled(_("Skipping %s"), gUpdateSkip);
-		ImGui::SameLine();
-		if(ImGui::SmallButton(_("Offer it again"))){
+		rightEnd(right, _("Offer it again"));
+		if(ImGui::Button(_("Offer it again"))){
 			gUpdateSkip[0] = '\0';
 			changed = true;
 		}
 	}
+	ImGui::AlignTextToFramePadding();
 	ImGui::TextDisabled(_("This is %s."), HaumeaVersionDisplay());
+	rightEnd(right, _("Check now"));
 	if(ImGui::Button(_("Check now")))
 		UpdaterCheckNow();
 	if(changed)

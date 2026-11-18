@@ -235,6 +235,36 @@ void result(int count, const std::string &error)
 }
 } // namespace
 
+// Namaka's way to the pin (Tools > Coordinate pin): a new pin, with a ruler
+// to end when given; it becomes the active one and shows in the 3D view.
+void CoordinatePinPlace(const rw::V3d &position, const rw::V3d *rulerEnd)
+{
+	append(position, {0, 0, 1});
+	visible = true;
+	if(rulerEnd) {
+		pins.back().end = *rulerEnd;
+		pins.back().measured = true;
+	}
+}
+
+// Removes the active pin, or all of them; how many went.
+int CoordinatePinClear(bool all)
+{
+	cancel();
+	int removed = 0;
+	if(all) {
+		removed = (int)pins.size();
+		pins.clear();
+		active = -1;
+	} else if(current()) {
+		pins.erase(pins.begin() + active);
+		removed = 1;
+		active = pins.empty() ? -1 : (int)pins.size() - 1;
+	}
+	resolveEndpoints();
+	return removed;
+}
+
 int CoordinatePinCount()
 {
 	return (int)pins.size();
@@ -273,53 +303,60 @@ bool CoordinatePinScreen(ImVec2 *point, int handle, int index)
 		point->y -= 24 * GetUiScale();
 	return true;
 }
+// Panel layout helpers, defined in maptools.cpp.
+float MapToolsButtonWidth(int n);
+float MapToolsWidthBeforeButton(const char *label);
+bool MapToolsMainButton(const char *label, const ImVec2 &size = ImVec2(-FLT_MIN, 0.0f));
+
+namespace
+{
+// A row's name from a translated "Name:" caption: without the colon (ASCII
+// or full-width) and the spaces before it.
+std::string rowName(const char *caption)
+{
+	std::string name = caption;
+	if(name.size() >= 3 && name.compare(name.size() - 3, 3, "\xEF\xBC\x9A") == 0)
+		name.resize(name.size() - 3);
+	else if(!name.empty() && name.back() == ':')
+		name.pop_back();
+	while(!name.empty() && name.back() == ' ')
+		name.pop_back();
+	return name;
+}
+// A row of X, Y and Z checkboxes after the row's name in the left column.
+void axisCheckboxes(const char *caption, const char *const labels[3], bool values[3])
+{
+	char id[128];
+	std::string name = rowName(caption);
+	UiFieldLabel(name.c_str(), id, sizeof(id));
+	for(int i = 0; i < 3; i++) {
+		if(i > 0)
+			ImGui::SameLine();
+		UiCheckbox(labels[i], &values[i]);
+	}
+}
+} // namespace
+
 void CoordinatePinPanel()
 {
 	panelFrame = ImGui::GetFrameCount();
 	resolveEndpoints();
-	ImGui::Checkbox(_("Show pins and guides"), &showPins);
-	if(ImGui::Button(_("Place pin")))
+	float half = MapToolsButtonWidth(2);
+	if(MapToolsMainButton(_("Place pin"), ImVec2(half, 0)))
 		arm(1);
 	ImGui::SetItemTooltip(_("Add a pin on a surface. Drag its head to move it; drag its base ring to measure. Both "
 				"ends snap to objects."));
 	ImGui::SameLine();
 	ImGui::BeginDisabled(!current());
-	if(ImGui::Button(_("Clear pin"))) {
+	if(ImGui::Button(_("Clear pin"), ImVec2(half, 0))) {
 		cancel();
 		pins.erase(pins.begin() + active);
 		active = pins.empty() ? -1 : std::min(active, (int)pins.size() - 1);
 		resolveEndpoints();
 	}
 	ImGui::EndDisabled();
-	if(pins.size() > 1) {
-		char title[64];
-		snprintf(title, sizeof(title), _("Pin %d"), pins[active].id);
-		ImGui::SetNextItemWidth(-1);
-		if(ImGui::BeginCombo("##active_pin", title)) {
-			for(int i = 0; i < (int)pins.size(); i++) {
-				snprintf(title, sizeof(title), _("Pin %d"), pins[i].id);
-				if(ImGui::Selectable(title, active == i)) {
-					cancel();
-					active = i;
-				}
-			}
-			ImGui::EndCombo();
-		}
-	}
-	ImGui::Checkbox(_("Snap to surfaces"), &snapSurface);
-	ImGui::Checkbox(_("Snap to object points"), &snapPoints);
-	ImGui::SetItemTooltip(_("Snap pins and endpoints to collision-box corners, edge midpoints, face centres and "
-				"object centres. Alt temporarily releases snapping."));
-	ImGui::SetNextItemWidth(ImGui::GetFontSize() * 5);
-	if(ImGui::InputFloat(_("Angle step"), &angleStep, 0, 0, "%.0f"))
-		angleStep = clamp(angleStep, 1.0f, 180.0f);
-	ImGui::SetItemTooltip(_("Shift: straight X/Y/Z. Ctrl: angle steps. Shift+Ctrl: angle steps on a horizontal "
-				"plane. Alt: free placement."));
-	if(picking)
-		ImGui::TextWrapped("%s", picking == 1 ? _("Click to place the pin. Esc cancels.")
-						      : _("Click the measurement endpoint. Esc cancels."));
 	ImGui::BeginDisabled(!selection.first);
-	if(ImGui::Button(_("Pin at selected centre")) && selection.first) {
+	if(ImGui::Button(_("Pin at selected centre"), ImVec2(-FLT_MIN, 0)) && selection.first) {
 		ObjectInst *inst = (ObjectInst *)selection.first->item;
 		ObjectDef *obj = GetObjectDef(inst->m_objectId);
 		rw::V3d centre = {0, 0, 0};
@@ -331,25 +368,59 @@ void CoordinatePinPanel()
 	ImGui::SetItemTooltip(_("Add a pin at the object's collision-box centre. For an embedded doorway, pick its two "
 				"edges and use Midpoint."));
 	ImGui::EndDisabled();
+	if(picking) {
+		ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+		ImGui::TextWrapped("%s", picking == 1 ? _("Click to place the pin. Esc cancels.")
+						      : _("Click the measurement endpoint. Esc cancels."));
+		ImGui::PopStyleColor();
+	}
+
+	// Showing and snapping: the on/off options together, then the step.
+	ImGui::Spacing();
+	UiCheckbox(_("Show pins and guides"), &showPins);
+	UiCheckbox(_("Snap to surfaces"), &snapSurface);
+	UiCheckbox(_("Snap to object points"), &snapPoints);
+	ImGui::SetItemTooltip(_("Snap pins and endpoints to collision-box corners, edge midpoints, face centres and "
+				"object centres. Alt temporarily releases snapping."));
+	if(UiInputFloat(_("Angle step"), &angleStep, 0, 0, "%.0f"))
+		angleStep = clamp(angleStep, 1.0f, 180.0f);
+	ImGui::SetItemTooltip(_("Shift: straight X/Y/Z. Ctrl: angle steps. Shift+Ctrl: angle steps on a horizontal "
+				"plane. Alt: free placement."));
+
 	Pin *pin = current();
 	if(!pin)
 		return;
-	ImGui::InputFloat3(_("Pin XYZ"), &pin->position.x, "%.3f");
-	if(ImGui::Button(_("Copy coordinates"))) {
-		char text[160];
-		snprintf(text, sizeof(text), "%.6f, %.6f, %.6f", pin->position.x, pin->position.y, pin->position.z);
-		ImGui::SetClipboardText(text);
+	ImGui::Spacing();
+	if(pins.size() > 1) {
+		char title[64];
+		snprintf(title, sizeof(title), _("Pin %d"), pins[active].id);
+		ImGui::SetNextItemWidth(-FLT_MIN);
+		if(ImGui::BeginCombo("##active_pin", title)) {
+			for(int i = 0; i < (int)pins.size(); i++) {
+				snprintf(title, sizeof(title), _("Pin %d"), pins[i].id);
+				if(ImGui::Selectable(title, active == i)) {
+					cancel();
+					active = i;
+				}
+			}
+			ImGui::EndCombo();
+		}
+		pin = current();
 	}
+	UiInputFloat3(_("Pin XYZ"), &pin->position.x, "%.3f");
+	ImGui::SetNextItemWidth(MapToolsWidthBeforeButton(_("Apply offset")));
+	UiInputFloat(_("Surface offset"), &offset, 0, 0, "%.3f");
+	ImGui::SetItemTooltip(_("Move the pin this many units along the last picked surface normal. Negative values "
+				"move to the other side."));
 	ImGui::SameLine();
-	if(ImGui::Button(_("Pick endpoint")))
-		arm(2);
+	if(ImGui::Button(_("Apply offset")))
+		pin->position = add(pin->position, scale(pin->normal, offset));
 	if(pins.size() > 1) {
 		char title[64];
 		snprintf(title, sizeof(title), "%s", _("Free endpoint"));
 		if(pin->endPin)
 			snprintf(title, sizeof(title), _("Pin %d"), pin->endPin);
-		ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8);
-		if(ImGui::BeginCombo(_("Ruler to"), title)) {
+		if(UiBeginCombo(_("Ruler to"), title)) {
 			if(ImGui::Selectable(_("Free endpoint"), !pin->endPin))
 				pin->endPin = 0;
 			for(const Pin &other : pins)
@@ -364,25 +435,45 @@ void CoordinatePinPanel()
 			ImGui::EndCombo();
 		}
 	}
-	ImGui::SetNextItemWidth(ImGui::GetFontSize() * 7);
-	ImGui::InputFloat(_("Surface offset"), &offset, 0, 0, "%.3f");
-	ImGui::SetItemTooltip(_("Move the pin this many units along the last picked surface normal. Negative values "
-				"move to the other side."));
+	half = MapToolsButtonWidth(2);
+	if(ImGui::Button(_("Copy coordinates"), ImVec2(half, 0))) {
+		char text[160];
+		snprintf(text, sizeof(text), "%.6f, %.6f, %.6f", pin->position.x, pin->position.y, pin->position.z);
+		ImGui::SetClipboardText(text);
+	}
 	ImGui::SameLine();
-	if(ImGui::Button(_("Apply offset")))
-		pin->position = add(pin->position, scale(pin->normal, offset));
+	if(ImGui::Button(_("Pick endpoint"), ImVec2(half, 0)))
+		arm(2);
 	if(pin->measured) {
-		if(ImGui::InputFloat3(_("Endpoint XYZ"), &pin->end.x, "%.3f"))
+		ImGui::Spacing();
+		if(UiInputFloat3(_("Endpoint XYZ"), &pin->end.x, "%.3f"))
 			pin->endPin = 0;
+		rw::V3d d = sub(pin->end, pin->position);
+		ImGui::TextDisabled("dX %.3f   dY %.3f   dZ %.3f", d.x, d.y, d.z);
+		// Midpoint, then X, Y and Z to line the pin up with the endpoint.
+		char id[128];
+		std::string name = rowName(_("Align pin:"));
+		UiFieldLabel(name.c_str(), id, sizeof(id));
+		float quarter = MapToolsButtonWidth(4);
+		if(ImGui::Button(_("Midpoint"), ImVec2(quarter, 0))) {
+			pin->position = scale(add(pin->position, pin->end), .5f);
+			pin->measured = false;
+			pin->endPin = 0;
+		}
+		ImGui::SetItemTooltip(
+		    _("Place the pin halfway between the two picked points, for example the edges of a doorway."));
+		for(int axis = 0; axis < 3; axis++) {
+			ImGui::SameLine();
+			const char *labels[] = {"X##pin_align", "Y##pin_align", "Z##pin_align"};
+			if(ImGui::Button(labels[axis], ImVec2(quarter, 0)))
+				(&pin->position.x)[axis] = (&pin->end.x)[axis];
+		}
 		if(ImGui::TreeNode(_("Ruler settings"))) {
 			auto angles = Alignment::Angles(array(sub(pin->end, pin->position)));
 			bool changed = false;
-			ImGui::SetNextItemWidth(ImGui::GetFontSize() * 7);
-			changed |= ImGui::InputFloat(_("Distance"), &angles[0], 0, 0, "%.3f");
-			ImGui::SetNextItemWidth(ImGui::GetFontSize() * 7);
-			changed |= ImGui::InputFloat(_("Heading"), &angles[1], 0, 0, "%.2f");
-			ImGui::SetNextItemWidth(ImGui::GetFontSize() * 7);
-			changed |= ImGui::InputFloat(_("Pitch"), &angles[2], 0, 0, "%.2f");
+			changed |= UiInputFloat(_("Distance"), &angles[0], 0, 0, "%.3f");
+			changed |= UiInputFloat(_("Heading"), &angles[1], 0, 0, "%.2f");
+			changed |= UiInputFloat(_("Pitch"), &angles[2], 0, 0, "%.2f");
 			if(changed) {
 				pin->end =
 				    add(pin->position, fromArray(Alignment::FromAngles(
@@ -391,59 +482,33 @@ void CoordinatePinPanel()
 			}
 			ImGui::TreePop();
 		}
-		rw::V3d d = sub(pin->end, pin->position);
-		ImGui::Text("dX %.3f   dY %.3f   dZ %.3f", d.x, d.y, d.z);
-		if(ImGui::Button(_("Midpoint"))) {
-			pin->position = scale(add(pin->position, pin->end), .5f);
-			pin->measured = false;
-			pin->endPin = 0;
-		}
-		ImGui::SetItemTooltip(
-		    _("Place the pin halfway between the two picked points, for example the edges of a doorway."));
-		ImGui::SameLine();
-		ImGui::TextUnformatted(_("Align pin:"));
-		for(int axis = 0; axis < 3; axis++) {
-			ImGui::SameLine();
-			const char *labels[] = {"X##pin_align", "Y##pin_align", "Z##pin_align"};
-			if(ImGui::SmallButton(labels[axis]))
-				(&pin->position.x)[axis] = (&pin->end.x)[axis];
-		}
 	}
 	if(!ImGui::TreeNode(_("Alignment guides")))
 		return;
-	ImGui::TextUnformatted(_("Show guides:"));
-	for(int i = 0; i < 3; i++) {
-		ImGui::SameLine();
-		const char *labels[] = {"X##guide", "Y##guide", "Z##guide"};
-		ImGui::Checkbox(labels[i], &guides[i]);
-	}
-	ImGui::Checkbox(_("Snap objects to pins"), &snapObjects);
+	const char *guideLabels[] = {"X##guide", "Y##guide", "Z##guide"};
+	axisCheckboxes(_("Show guides:"), guideLabels, guides);
+	const char *axisLabels[] = {"X##align_axis", "Y##align_axis", "Z##align_axis"};
+	axisCheckboxes(_("Align axes:"), axisLabels, alignAxes);
+	const char *anchors[] = {_("Minimum"), _("Centre"), _("Maximum"), _("Origin")};
+	UiCombo(_("Object anchor"), &alignAnchor, anchors, 4);
+	UiCheckbox(_("Snap objects to pins"), &snapObjects);
 	ImGui::SetItemTooltip(_(
 	    "With object snap enabled (N), moving objects snap their edges or centre to the pins and visible guides."));
-	ImGui::TextUnformatted(_("Align axes:"));
-	for(int i = 0; i < 3; i++) {
-		ImGui::SameLine();
-		const char *labels[] = {"X##align_axis", "Y##align_axis", "Z##align_axis"};
-		ImGui::Checkbox(labels[i], &alignAxes[i]);
-	}
-	const char *anchors[] = {_("Minimum"), _("Centre"), _("Maximum"), _("Origin")};
-	ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8);
-	ImGui::Combo(_("Object anchor"), &alignAnchor, anchors, 4);
 	if(pin->measured)
-		ImGui::Checkbox(_("Face ruler direction"), &faceRuler);
+		UiCheckbox(_("Face ruler direction"), &faceRuler);
 	int axes = (alignAxes[0] ? 1 : 0) | (alignAxes[1] ? 2 : 0) | (alignAxes[2] ? 4 : 0);
 	ImGui::BeginDisabled(!selection.first || !axes);
 	std::string error;
-	if(ImGui::Button(_("Align selection to pin")))
+	if(ImGui::Button(_("Align selection to pin"), ImVec2(-FLT_MIN, 0)))
 		result(MapToolsAlignToGuide(pin->position, nullptr, axes, alignAnchor, false, false, &error), error);
 	if(pin->measured) {
-		if(ImGui::Button(_("Align selection to ruler")))
+		if(ImGui::Button(_("Align selection to ruler"), ImVec2(-FLT_MIN, 0)))
 			result(
 			    MapToolsAlignToGuide(pin->position, &pin->end, axes, alignAnchor, false, faceRuler, &error),
 			    error);
 		ImGui::SetItemTooltip(_("Project each selected object's anchor onto the extended ruler, preserving its "
 					"position along the guide."));
-		if(ImGui::Button(_("Distribute between ends")))
+		if(ImGui::Button(_("Distribute between ends"), ImVec2(-FLT_MIN, 0)))
 			result(
 			    MapToolsAlignToGuide(pin->position, &pin->end, axes, alignAnchor, true, faceRuler, &error),
 			    error);

@@ -17,7 +17,7 @@ click_item 'Merge Pawn File' 'Merge into map'
 wait 10
 assert toast_contains "Merged ui_mta.map"
 assert objects == 6
-assert pawn_contains "CreateObject(1634, 2050.000000, -3000.000000"
+assert pawn_contains "CreateObject(1634, 2050.0, -3000.0"
 
 set_item 'Merge Pawn File' '##merge_path' "$UI_FIXTURES/ui_tstudio.db"
 click_item 'Merge Pawn File' 'Merge into map'
@@ -44,4 +44,4 @@ click_item 'Export Pawn Code' 'Export'
 wait 5
 assert toast_contains "Exported 2 Pawn object(s)"
 assert file_contains "$XDG_CONFIG_HOME/haumea/pawn-exports/ui_export.pwn" "\"ferry_build14\""
-assert file_contains "$XDG_CONFIG_HOME/haumea/pawn-exports/ui_export.pwn" "1634, 2070.000000"
+assert file_contains "$XDG_CONFIG_HOME/haumea/pawn-exports/ui_export.pwn" "1634, 2070.0"

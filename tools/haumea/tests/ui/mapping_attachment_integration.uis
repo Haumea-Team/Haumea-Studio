@@ -3,6 +3,8 @@ open "$UI_FIXTURES/ui_mapping_player_attachments.pwn"
 assert objects == 4
 shortcut window_tools
 wait 5
+click_item 'Tools' '###tools_arrange'
+wait 2
 click_item 'Tools' 'Duplicate cleanup'
 click_item 'Tools' 'Match properties and materials'
 click_item 'Tools' 'Find duplicates'
@@ -27,13 +29,17 @@ wait 3
 click_item '*' 'Attachment Workspace'
 wait 3
 assert no_window 'Attachment Workspace'
+click_item 'Tools' '###tools_arrange'
+wait 2
 click_item 'Tools' 'Duplicate cleanup'
+click_item 'Tools' '###tools_place'
+wait 2
 click_item 'Tools' 'Pivot'
 wait 3
 click_item 'Tools' 'Center Parent'
 wait 5
 assert pawn_contains ', 4, 1271, 6,'
-assert pawn_contains '1.500000, 1.000000, 0.800000, 0xFFAA0000, 0xFF00AA00'
+assert pawn_contains '1.5, 1.0, 0.8, 0xFFAA0000, 0xFF00AA00'
 move 800 400
 key Ctrl+Z
 wait 5
@@ -41,7 +47,7 @@ assert pawn_contains ', 4, 1271, 6,'
 key Ctrl+Y
 wait 5
 assert pawn_contains ', 4, 1271, 6,'
-assert pawn_contains '1.500000, 1.000000, 0.800000, 0xFFAA0000, 0xFF00AA00'
+assert pawn_contains '1.5, 1.0, 0.8, 0xFFAA0000, 0xFF00AA00'
 close_popup
 key Ctrl+S
 wait 5

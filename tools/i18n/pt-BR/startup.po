@@ -15,11 +15,6 @@ msgstr "Renderizador"
 msgid "Automatic uses OpenGL, and Direct3D 9 when OpenGL doesn't start on this PC."
 msgstr "Automático usa OpenGL, e Direct3D 9 quando o OpenGL não inicia neste PC."
 
-#: tools/haumea/gui.cpp:8351
-#, c-format
-msgid "Running: %s"
-msgstr "Em uso: %s"
-
 #: tools/haumea/gui.cpp:8353
 msgid "OpenGL didn't start on this PC, so Automatic uses Direct3D 9."
 msgstr "O OpenGL não iniciou neste PC, então Automático usa Direct3D 9."

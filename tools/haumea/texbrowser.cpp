@@ -540,34 +540,115 @@ passes(const TexEntry &e, const std::string &key)
 	return gSearch.PassFilter(e.name) && gTxdFilter.PassFilter(pawnTxdName(e.txdSlot));
 }
 
-static void
-targetBar(void)
+// The picked texture's target, along the panel's foot as the Asset Browser
+// shows the picked model: the object's name and ID, then where the texture
+// goes (the material slot, every selected object or one) at the right end.
+// Two rows when the panel is narrow.
+static bool
+targetBarTwoRows(void)
 {
-	std::vector<ObjectInst*> targets;
-	selectedTargets(targets);
+	return ImGui::GetContentRegionAvail().x < ImGui::GetFontSize() * 34.0f;
+}
+
+static float
+targetBarHeight(bool hasTarget)
+{
+	float rows = hasTarget && targetBarTwoRows() ? 2.0f : 1.0f;
+	return (ImGui::GetFrameHeight() + ImGui::GetStyle().ItemSpacing.y) * rows + ImGui::GetStyle().ItemSpacing.y;
+}
+
+static void
+targetBar(const std::vector<ObjectInst*> &targets)
+{
+	// A hairline over it, the width of the panel.
+	{
+		ImVec2 p = ImGui::GetCursorScreenPos();
+		ImGuiWindow *w = ImGui::GetCurrentWindow();
+		ImGui::GetWindowDrawList()->AddLine(ImVec2(w->Pos.x, p.y), ImVec2(w->Pos.x + w->Size.x, p.y), ImGui::GetColorU32(ImGuiCol_Separator));
+		ImGui::Dummy(ImVec2(0.0f, ImGui::GetStyle().ItemSpacing.y*0.5f));
+	}
 	ObjectInst *first = targets.empty() ? nil : targets[0];
 	ObjectDef *obj = first ? GetObjectDef(first->m_objectId) : nil;
 	rw::Atomic *atomic = obj && obj->m_type == ObjectDef::ATOMIC ? obj->m_atomics[0] : nil;
 	int count = atomic && atomic->geometry ? atomic->geometry->matList.numMaterials : 0;
+	ImGui::AlignTextToFramePadding();
 	if(first == nil){
 		ImGui::TextDisabled("%s", _("Select objects to apply textures to them."));
 		return;
 	}
-	ImGui::SetNextItemWidth(ImGui::GetFontSize() * 6.0f);
-	if(ImGui::InputInt(L("Slot"), &gSlot))
+	float fs = ImGui::GetFontSize(), spacing = ImGui::GetStyle().ItemSpacing.x;
+	float avail = ImGui::GetContentRegionAvail().x;
+	bool twoRows = targetBarTwoRows();
+	const char *slotLabel = _("Slot");
+	const char *allLabel = L("Edit all selected");
+	float slotW = floorf(fs * 6.0f);
+	float allW = floorf(fs * 2.0f) + ImGui::GetStyle().ItemInnerSpacing.x +
+		ImGui::CalcTextSize(allLabel, ImGui::FindRenderedTextEnd(allLabel)).x;
+	float controlsW = ImGui::CalcTextSize(slotLabel).x + spacing + slotW + spacing + allW;
+	float right = twoRows ? 0.0f : controlsW;
+
+	// The object's name in the bold face, its ID dim beside it, and how many
+	// objects a click paints when that is more than one.
+	char idText[32], appliesText[64] = "";
+	snprintf(idText, sizeof(idText), _("ID %d"), PawnModelId(obj->m_id));
+	if(targets.size() > 1)
+		snprintf(appliesText, sizeof(appliesText), _("Applies to %d selected"), (int)targets.size());
+	float dimW = ImGui::CalcTextSize(idText).x + (appliesText[0] ? ImGui::CalcTextSize(appliesText).x + spacing : 0.0f);
+	if(gBoldFont) ImGui::PushFont(gBoldFont);
+	UiElidedText(obj->m_name, std::max(fs, avail - right - dimW - spacing*3.0f));
+	if(gBoldFont) ImGui::PopFont();
+	ImGui::SameLine();
+	ImGui::TextDisabled("%s", idText);
+	if(appliesText[0]){
+		ImGui::SameLine();
+		ImGui::TextDisabled("%s", appliesText);
+	}
+
+	// Where it goes: the slot, then every selected object or one.
+	if(twoRows)
+		ImGui::AlignTextToFramePadding();
+	else
+		ImGui::SameLine(ImGui::GetWindowContentRegionMax().x - controlsW);
+	ImGui::TextDisabled("%s", slotLabel);
+	ImGui::SameLine();
+	ImGui::SetNextItemWidth(slotW);
+	if(ImGui::InputInt("##slot", &gSlot))
 		gSlot = std::max(0, std::min(gSlot, std::max(0, count - 1)));
 	ImGui::SetItemTooltip(_("The material slot (SetObjectMaterial's index) the texture goes to.\n%s has %d."),
 		obj->m_name, count);
 	ImGui::SameLine();
 	bool all = GetBatchEditSelection();
-	if(ImGui::Checkbox(L("Edit all selected"), &all))
+	if(UiCheckbox(allLabel, &all))
 		SetBatchEditSelection(all);
 	ImGui::SetItemTooltip("%s", _("As in Object Info: every selected object that has this slot, as one undo step."));
-	std::vector<ObjectInst*> applied;
-	selectedTargets(applied);
-	if(applied.size() > 1){
+}
+
+// A list's search: filling its row less reserve, tinted with a clear button
+// while it narrows the list, as the Asset Browser's. find: Ctrl+F focuses it.
+static void
+searchBox(ImGuiTextFilter &filter, const char *id, const char *hint, float reserve, bool find,
+	const char *tooltip = nil)
+{
+	if(find && ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_F, ImGuiInputFlags_RouteFromRootWindow))
+		ImGui::SetKeyboardFocusHere();
+	bool active = filter.InputBuf[0] != '\0';
+	float clearW = active ? ImGui::GetFrameHeight() + ImGui::GetStyle().ItemSpacing.x : 0.0f;
+	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - clearW - reserve);
+	if(active) ImGui::PushStyleColor(ImGuiCol_Border, UiSemanticColor(UI_COLOR_WARNING));
+	if(ImGui::InputTextWithHint(id, hint, filter.InputBuf, IM_ARRAYSIZE(filter.InputBuf)))
+		filter.Build();
+	if(tooltip)
+		ImGui::SetItemTooltip("%s", tooltip);
+	if(active){
+		ImGui::PopStyleColor();
 		ImGui::SameLine();
-		ImGui::TextDisabled(_("Applies to %d selected"), (int)applied.size());
+		char clearId[64];
+		snprintf(clearId, sizeof(clearId), ICON_FA_XMARK "##clear%s", id);
+		if(ImGui::Button(clearId, ImVec2(ImGui::GetFrameHeight(), 0))){
+			filter.InputBuf[0] = '\0';
+			filter.Build();
+		}
+		ImGui::SetItemTooltip("%s", _("Clear"));
 	}
 }
 
@@ -659,6 +740,11 @@ tileGrid(const std::vector<int> &items, bool tstudio)
 		endPreview();
 }
 
+// Dress the selected objects: pick where the textures come from, find one by
+// name (narrowed by kind, tiling or TXD), hover a tile to preview it on the
+// selection, click to apply it to the slot shown along the foot.
+// Laid out as the Asset Browser: sources on top, the search and its filters,
+// a count, the grid filling the panel, the target along the foot.
 void
 DrawTextureBrowserWindow(bool *open)
 {
@@ -675,85 +761,116 @@ DrawTextureBrowserWindow(bool *open)
 	UiFitItemsToPanel();
 	loadLists();
 	bool indexed = indexStep(64);
-	targetBar();
-	if(ImGui::BeginTabBar("##texbrowser")){
-		if(ImGui::BeginTabItem(L("Textures"))){
-			gSearch.Draw("##search", -FLT_MIN);
-			if(!gSearch.IsActive()){
-				ImVec2 p = ImGui::GetItemRectMin();
-				ImGui::GetWindowDrawList()->AddText(ImVec2(p.x + 6, p.y + ImGui::GetStyle().FramePadding.y),
-					ImGui::GetColorU32(ImGuiCol_TextDisabled), TI(ICON_FA_MAGNIFYING_GLASS, "Search texture names"));
-			}
-			static const char *shows[] = { N_("All textures"), N_("SA-MP textures only"), N_("Custom models"), N_("Recently used"), N_("Favourites") };
-			const char *showNames[IM_ARRAYSIZE(shows)];
-			for(int i = 0; i < IM_ARRAYSIZE(shows); i++)
-				showNames[i] = _(shows[i]);
-			ImGui::SetNextItemWidth(ImGui::GetFontSize() * 10.0f);
-			ImGui::Combo("##show", &gShow, showNames, IM_ARRAYSIZE(shows));
+	float fs = ImGui::GetFontSize(), spacing = ImGui::GetStyle().ItemSpacing.x;
+
+	// The sources: every texture the game and the map's models load, or
+	// Texture Studio's numbered list.
+	static int source;
+	const char *sources[] = { L("Textures"), L("Texture Studio list") };
+	UiSegmented("##tex_source", sources, IM_ARRAYSIZE(sources), &source, false);
+
+	std::vector<ObjectInst*> targets;
+	selectedTargets(targets);
+	float footer = targetBarHeight(!targets.empty());
+	// The grid fills what is left above the foot; in a short panel the panel
+	// scrolls instead.
+	auto gridSize = [&](){
+		return ImVec2(0, std::max(ImGui::GetContentRegionAvail().y - footer, fs * 6.0f));
+	};
+
+	if(source == 0){
+		// The search, filling its row, with which textures at its right end.
+		float comboW = floorf(fs * 13.0f);
+		bool comboBeside = ImGui::GetContentRegionAvail().x > fs * 30.0f;
+		searchBox(gSearch, "##search", TI(ICON_FA_MAGNIFYING_GLASS, "Search texture names"),
+			comboBeside ? comboW + spacing : 0.0f, true);
+		static const char *shows[] = { N_("All textures"), N_("SA-MP textures only"), N_("Custom models"), N_("Recently used"), N_("Favourites") };
+		const char *showNames[IM_ARRAYSIZE(shows)];
+		for(int i = 0; i < IM_ARRAYSIZE(shows); i++)
+			showNames[i] = _(shows[i]);
+		if(comboBeside)
 			ImGui::SameLine();
-			gTxdFilter.Draw("TXD", ImGui::GetFontSize() * 8.0f);
-			ImGui::SameLine();
-			ImGui::SetNextItemWidth(ImGui::GetFontSize() * 5.0f);
-			ImGui::SliderFloat("##tile", &gTile, 3.0f, 12.0f, _("Size"));
-			static const char *tiles[] = { N_("Any tiling"), N_("Tiles left to right"), N_("Tiles top to bottom"),
-				N_("Tiles both ways") };
-			const char *tileNames[IM_ARRAYSIZE(tiles)];
-			for(int i = 0; i < IM_ARRAYSIZE(tiles); i++)
-				tileNames[i] = _(tiles[i]);
-			ImGui::SetNextItemWidth(ImGui::GetFontSize() * 12.0f);
-			ImGui::Combo("##tiles", &gTiles, tileNames, IM_ARRAYSIZE(tiles));
-			ImGui::SetItemTooltip(_("Textures that repeat without a seam, for floors, walls and long surfaces,\n"
-				"judged from their edges; a guess, so check how it looks."));
-			std::vector<int> items;
-			if(gShow == SHOW_RECENT || gShow == SHOW_FAVOURITES){
-				// Looked up by "txd:texture", recent ones newest first.
-				static std::map<std::string, int> byKey;
-				if(byKey.size() != gIndex.size() && indexed){
-					byKey.clear();
-					for(size_t i = 0; i < gIndex.size(); i++)
-						byKey[entryKey(gIndex[i].txdSlot, gIndex[i].name)] = (int)i;
-				}
-				std::vector<std::string> keys = gShow == SHOW_RECENT ? gRecent :
-					std::vector<std::string>(gFavourites.begin(), gFavourites.end());
-				for(size_t r = 0; r < keys.size(); r++){
-					std::map<std::string, int>::iterator it = byKey.find(keys[r]);
-					if(it != byKey.end() && passes(gIndex[it->second], keys[r]))
-						items.push_back(it->second);
-				}
-			}else
+		ImGui::SetNextItemWidth(comboBeside ? comboW : -FLT_MIN);
+		ImGui::Combo("##show", &gShow, showNames, IM_ARRAYSIZE(shows));
+
+		// The filters on one row: the tiling, the TXD.
+		static const char *tiles[] = { N_("Any tiling"), N_("Tiles left to right"), N_("Tiles top to bottom"),
+			N_("Tiles both ways") };
+		const char *tileNames[IM_ARRAYSIZE(tiles)];
+		for(int i = 0; i < IM_ARRAYSIZE(tiles); i++)
+			tileNames[i] = _(tiles[i]);
+		float half = floorf((ImGui::GetContentRegionAvail().x - spacing) * 0.5f);
+		ImGui::SetNextItemWidth(half);
+		ImGui::Combo("##tiles", &gTiles, tileNames, IM_ARRAYSIZE(tiles));
+		ImGui::SetItemTooltip(_("Textures that repeat without a seam, for floors, walls and long surfaces,\n"
+			"judged from their edges; a guess, so check how it looks."));
+		ImGui::SameLine();
+		searchBox(gTxdFilter, "##txd", "TXD", 0.0f, false, _("Only textures from TXDs whose name matches"));
+
+		std::vector<int> items;
+		if(gShow == SHOW_RECENT || gShow == SHOW_FAVOURITES){
+			// Looked up by "txd:texture", recent ones newest first.
+			static std::map<std::string, int> byKey;
+			if(byKey.size() != gIndex.size() && indexed){
+				byKey.clear();
 				for(size_t i = 0; i < gIndex.size(); i++)
-					if(passes(gIndex[i], std::string()))
-						items.push_back((int)i);
-			if(!indexed)
-				ImGui::TextDisabled(_("Indexing textures... %d of %d TXDs"), gNextSlot, GetNumTxdSlots());
-			else
-				ImGui::TextDisabled(_("Textures: %d"), (int)items.size());
-			ImGui::BeginChild("##grid", UiFillRest(ImGui::GetFontSize() * 6.0f));
-			tileGrid(items, false);
-			ImGui::EndChild();
-			ImGui::EndTabItem();
-		}
-		if(ImGui::BeginTabItem(L("Texture Studio list"))){
-			gTsSearch.Draw("##tssearch", -FLT_MIN);
-			std::string from;
-			int n;
-			const TStudioTexture *tstudioTextures = TStudioTextureList(&n, &from);
-			ImGui::SetItemTooltip(_("Texture Studio's texture index (alltextures.pwn): search by number, TXD or name.\n"
-				"From %s."), from == "bundled" ? _("the copy that comes with Haumea") : from.c_str());
-			std::vector<int> items;
-			for(int i = 1; i < n; i++){
-				char line[128];
-				snprintf(line, sizeof(line), "%d %s %s", i, tstudioTextures[i].txd, tstudioTextures[i].texture);
-				if(gTsSearch.PassFilter(line))
-					items.push_back(i);
+					byKey[entryKey(gIndex[i].txdSlot, gIndex[i].name)] = (int)i;
 			}
-			ImGui::TextDisabled(_("%d of %d"), (int)items.size(), n - 1);
-			ImGui::BeginChild("##tsgrid", UiFillRest(ImGui::GetFontSize() * 6.0f));
-			tileGrid(items, true);
-			ImGui::EndChild();
-			ImGui::EndTabItem();
+			std::vector<std::string> keys = gShow == SHOW_RECENT ? gRecent :
+				std::vector<std::string>(gFavourites.begin(), gFavourites.end());
+			for(size_t r = 0; r < keys.size(); r++){
+				std::map<std::string, int>::iterator it = byKey.find(keys[r]);
+				if(it != byKey.end() && passes(gIndex[it->second], keys[r]))
+					items.push_back(it->second);
+			}
+		}else
+			for(size_t i = 0; i < gIndex.size(); i++)
+				if(passes(gIndex[i], std::string()))
+					items.push_back((int)i);
+
+		// The count, quiet, with the tile size at the row's right end.
+		float right = ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x;
+		ImGui::AlignTextToFramePadding();
+		if(!indexed)
+			ImGui::TextDisabled(_("Indexing textures... %d of %d TXDs"), gNextSlot, GetNumTxdSlots());
+		else
+			ImGui::TextDisabled(_("Textures: %d"), (int)items.size());
+		float sizeW = fs * 6.0f;
+		ImGui::SameLine();
+		if(ImGui::GetCursorPosX() < right - sizeW)
+			ImGui::SetCursorPosX(right - sizeW);
+		ImGui::SetNextItemWidth(sizeW);
+		ImGui::SliderFloat("##tile", &gTile, 3.0f, 12.0f, _("Size"));
+
+		ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, 0.0f);
+		ImGui::BeginChild("##grid", gridSize());
+		ImGui::PopStyleVar();
+		tileGrid(items, false);
+		ImGui::EndChild();
+	}else{
+		std::string from;
+		int n;
+		const TStudioTexture *tstudioTextures = TStudioTextureList(&n, &from);
+		char tip[512];
+		snprintf(tip, sizeof(tip), _("Texture Studio's texture index (alltextures.pwn): search by number, TXD or name.\n"
+			"From %s."), from == "bundled" ? _("the copy that comes with Haumea") : from.c_str());
+		searchBox(gTsSearch, "##tssearch", TI(ICON_FA_MAGNIFYING_GLASS, "Search"), 0.0f, true, tip);
+		std::vector<int> items;
+		for(int i = 1; i < n; i++){
+			char line[128];
+			snprintf(line, sizeof(line), "%d %s %s", i, tstudioTextures[i].txd, tstudioTextures[i].texture);
+			if(gTsSearch.PassFilter(line))
+				items.push_back(i);
 		}
-		ImGui::EndTabBar();
+		ImGui::AlignTextToFramePadding();
+		ImGui::TextDisabled(_("%d of %d"), (int)items.size(), n - 1);
+		ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, 0.0f);
+		ImGui::BeginChild("##tsgrid", gridSize());
+		ImGui::PopStyleVar();
+		tileGrid(items, true);
+		ImGui::EndChild();
 	}
+
+	targetBar(targets);
 	ImGui::End();
 }

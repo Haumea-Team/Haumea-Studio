@@ -1,6 +1,6 @@
 # Explicit conversion at an unchanged pose, through the inspector and context menu.
 open "$UI_FIXTURES/ui_map.pwn"
-click_world 1479.554688 -1639.609375 13.648438
+click_world 1479.5547 -1639.6094 13.648438
 wait 5
 shortcut window_object_info
 wait 5
@@ -12,8 +12,8 @@ wait 5
 assert selected.z == 13.648438
 assert pawn_count 'RemoveBuildingForPlayer(playerid, 4206' == 1
 assert pawn_count 'CreateObject(4206,' == 1
-assert pawn_contains 'CreateObject(4206, 1479.554688, -1639.609375, 13.648438'
-assert pawn_contains 'CreateDynamicObject(4206, 1479.554688, -1639.609375, 13.648438' streamer
+assert pawn_contains 'CreateObject(4206, 1479.5547, -1639.6094, 13.648438'
+assert pawn_contains 'CreateDynamicObject(4206, 1479.5547, -1639.6094, 13.648438' streamer
 assert xml_contains 'forceWorldReplacement="true"'
 assert no_item 'Object Info' 'Convert to map object'
 move 800 400
@@ -34,12 +34,12 @@ assert pawn_count 'RemoveBuildingForPlayer(playerid, 4206' == 1
 assert pawn_count 'CreateObject(4206,' == 1
 assert xml_contains 'forceWorldReplacement="true"'
 # Select all the occurrences of another world model through Instances.
-click_world 2063.132813 -1731.781250 15.273438 right
+click_world 2063.1328 -1731.7812 15.273438 right
 wait 5
 assert item '*' 'Convert to map object'
 click_item '*' 'Find instances'
 wait 5
-click_item 'Object Browser' 'Select all'
+click_item 'Asset Browser' 'Select all'
 wait 5
 # Every instance in the world: one in the test game, more in the real one.
 assert selected >= 1
@@ -47,15 +47,15 @@ assert selected_world >= 1
 assert selected.model == 3555
 # The context action also converts the selection without moving it: just
 # the clicked one here, so the counts below hold for any game.
-click_world 2063.132813 -1731.781250 15.273438
+click_world 2063.1328 -1731.7812 15.273438
 wait 5
 assert selected == 1
-click_world 2063.132813 -1731.781250 15.273438 right
+click_world 2063.1328 -1731.7812 15.273438 right
 click_item '*' 'Convert to map object'
 wait 5
 assert pawn_count 'RemoveBuildingForPlayer(playerid, 3555' == 1
 assert pawn_count 'CreateObject(3555,' == 1
-assert pawn_contains 'CreateObject(3555, 2063.132812, -1731.781250, 15.273438'
+assert pawn_contains 'CreateObject(3555, 2063.1328, -1731.7812, 15.273438'
 assert pawn_count 'RemoveBuildingForPlayer(playerid, 4206' == 1
 move 800 400
 key Ctrl+Z

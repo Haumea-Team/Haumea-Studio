@@ -173,7 +173,7 @@ def run_script(name):
     config = Path(env['XDG_CONFIG_HOME'], 'haumea')
     config.mkdir(parents=True, exist_ok=True)
     (config / 'savesettings.txt').write_text(
-        'settings_version 8\nshow_browser_window 0\nshow_instance_window 0\n')
+        'settings_version 13\nshow_browser_window 0\nshow_instance_window 0\nshow_map_objects_window 0\n')
     # A copy, so scripts can save over the maps they open.
     shutil.copytree(UI / 'fixtures', Path(work, 'fixtures'))
     env['UI_FIXTURES'] = str(Path(work, 'fixtures'))
@@ -190,6 +190,13 @@ def run_script(name):
     if name == 'terminal.uis':
         # A shell that starts plainly in an empty HOME (zsh opens its new-user wizard there).
         env['SHELL'] = shutil.which('bash') or '/bin/sh'
+        # A HOME of its own with a numbered prompt (a login shell reads .bash_profile
+        # after the system's files): after Ctrl+C the script waits for the next one,
+        # since bash drops a key typed before it is back at its prompt.
+        home = Path(work, 'home')
+        home.mkdir()
+        (home / '.bash_profile').write_text("PS1='ready-\\#$ '\n")
+        env['HOME'] = str(home)
     if name in ('startscreen_launch.uis', 'rc_smoke.uis'):
         # Scripts skip it otherwise. It only shows the screen; settings still go to
         # editor_env's private config, like every script's.

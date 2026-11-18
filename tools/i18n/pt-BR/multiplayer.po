@@ -43,16 +43,8 @@ msgid "Go to"
 msgstr "Ir até"
 
 #: tools/haumea/multiplayer.cpp
-msgid "Host"
-msgstr "Hospedar"
-
-#: tools/haumea/multiplayer.cpp
 msgid "Host this map"
 msgstr "Hospedar este mapa"
-
-#: tools/haumea/multiplayer.cpp
-msgid "Hosting on port %d"
-msgstr "Hospedando na porta %d"
 
 #: tools/haumea/multiplayer.cpp
 msgid "In %s's session"
@@ -99,10 +91,6 @@ msgid "Receiving the map..."
 msgstr "Recebendo o mapa..."
 
 #: tools/haumea/multiplayer.cpp
-msgid "Session code: %s"
-msgstr "Código da sessão: %s"
-
-#: tools/haumea/multiplayer.cpp
 msgid "Stop hosting"
 msgstr "Parar de hospedar"
 
@@ -133,10 +121,6 @@ msgstr "Editem um mapa juntos: um de vocês hospeda o mapa aberto, ou um haumea-
 #: tools/haumea/multiplayer.cpp
 msgid "Lost the connection to the session."
 msgstr "A conexão com a sessão caiu."
-
-#: tools/haumea/multiplayer.cpp
-msgid "Others join with this computer's address, the port and the session code.\nOver the internet the port must be forwarded to this computer, or use a VPN such as Tailscale.\nFor a session that stays up without you, run haumea-server where your SA-MP server runs."
-msgstr "Os outros entram com o endereço deste computador, a porta e o código da sessão.\nPela internet, a porta precisa ser redirecionada para este computador, ou use uma VPN como o Tailscale.\nPara uma sessão que fica no ar sem você, rode o haumea-server onde o seu servidor SA-MP roda."
 
 #: tools/haumea/multiplayer.cpp
 msgid "Refused: "
@@ -193,10 +177,6 @@ msgstr "Abrir a porta no meu roteador"
 #: tools/haumea/multiplayer.cpp
 msgid "Opening the port on your router..."
 msgstr "Abrindo a porta no seu roteador..."
-
-#: tools/haumea/multiplayer.cpp
-msgid "Over the internet, others join at %s"
-msgstr "Pela internet, os outros entram em %s"
 
 #: tools/haumea/multiplayer.cpp
 msgid "That isn't a Haumea session."
@@ -289,9 +269,6 @@ msgstr "Um favorito: fica guardado, no topo. Clique para torná-lo um recente."
 msgid "Keep it as a favourite"
 msgstr "Guardar como favorito"
 
-msgid "Its password is kept on this computer."
-msgstr "A senha dele fica guardada neste computador."
-
 msgid "Forget it"
 msgstr "Esquecer"
 
@@ -323,9 +300,6 @@ msgstr "Agentes de IA aqui"
 
 msgid "Account"
 msgstr "Conta"
-
-msgid "Admin"
-msgstr "Administração"
 
 msgid "Choose a name"
 msgstr "Escolha um nome"
@@ -384,9 +358,6 @@ msgstr "Senha"
 msgid "Remove from the room"
 msgstr "Remover da sala"
 
-msgid "Room"
-msgstr "Sala"
-
 msgid "Room password"
 msgstr "Senha da sala"
 
@@ -443,9 +414,6 @@ msgstr "construtor"
 
 msgid "builders"
 msgstr "construtores"
-
-msgid "empty: pick from the list"
-msgstr "vazio: escolha da lista"
 
 msgid "new room's name"
 msgstr "nome da nova sala"

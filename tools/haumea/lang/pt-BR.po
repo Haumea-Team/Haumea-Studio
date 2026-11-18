@@ -136,10 +136,6 @@ msgstr ""
 "%s"
 
 #, c-format
-msgid "%d added, %d deleted, %d moved, %d rotated, %d material"
-msgstr "%d adicionado(s), %d excluído(s), %d movido(s), %d girado(s), %d de material"
-
-#, c-format
 msgid "%d attached or referenced objects excluded from cleanup."
 msgstr "%d objetos vinculados ou referenciados excluídos da limpeza."
 
@@ -192,8 +188,8 @@ msgid "%d element(s) outside SA-MP's world bounds (±%d): the server clamps or i
 msgstr "%d elemento(s) fora dos limites do mundo do SA-MP (±%d): o servidor limita ou ignora essas posições."
 
 #, c-format
-msgid "%d element(s) use custom models: the server needs them in models/artconfig.txt (or AddSimpleModel) and artwork enabled%s; players need SA-MP 0.3.DL or an open.mp client.%s"
-msgstr "%d elemento(s) usam modelos personalizados: o servidor precisa deles no models/artconfig.txt (ou AddSimpleModel) e do artwork ativado%s; os jogadores precisam do SA-MP 0.3.DL ou de um cliente open.mp.%s"
+msgid "%d element(s) use custom models: their DFF and TXD go in the server's models folder, with artwork enabled%s; players need the SA-MP 0.3.DL client.%s"
+msgstr "%d elemento(s) usam modelos personalizados: o DFF e o TXD deles vão na pasta models do servidor, com o artwork ativado%s; os jogadores precisam do cliente SA-MP 0.3.DL.%s"
 
 #, c-format
 msgid "%d elements share the variable name \"%s\": the Pawn code won't compile."
@@ -272,6 +268,10 @@ msgid "%d object(s) explode when shot or hit (object.dat), such as barrels and p
 msgstr "%d objeto(s) explodem ao levar tiro ou batida (object.dat), como barris e bombas de gasolina. Cada jogador pode explodi-los na própria tela."
 
 #, c-format
+msgid "%d object(s) of custom model %d (%s): its DFF has no collision, so in the game players, actors and cars go through it. Haumea makes one from its shape only for clicking and snapping here. Embed a COL in the DFF."
+msgstr "%d objeto(s) do modelo personalizado %d (%s): o DFF dele não tem colisão, então no jogo jogadores, atores e carros o atravessam. O Haumea cria uma a partir da forma dele só para clicar e encaixar aqui. Inclua um COL no DFF."
+
+#, c-format
 msgid "%d object(s) selected."
 msgstr "%d objeto(s) selecionado(s)."
 
@@ -328,8 +328,12 @@ msgid "%d of %d objects (%s): the rest of the gamemode has little room left."
 msgstr "%d de %d objetos (%s): sobra pouco espaço para o resto do gamemode."
 
 #, c-format
-msgid "%d of those models were imported into the game's modloader/Haumea folder, which SA-MP players don't have. They can become custom models in the server's models folder (SA-MP 0.3.DL / open.mp)."
-msgstr "%d desses modelos foram importados para a pasta modloader/Haumea do jogo, que os jogadores do SA-MP não têm. Eles podem virar modelos personalizados na pasta models do servidor (SA-MP 0.3.DL / open.mp)."
+msgid "%d of those models were imported into the game's modloader/Haumea folder, which SA-MP players don't have. They can become custom models in the server's models folder."
+msgstr "%d desses modelos foram importados para a pasta modloader/Haumea do jogo, que os jogadores do SA-MP não têm. Eles podem virar modelos personalizados na pasta models do servidor."
+
+#, c-format
+msgid "%d particles"
+msgstr "%d partículas"
 
 #, c-format
 msgid "%d per-player or streamed gang zone(s): CreatePlayerGangZone only compiles and runs on open.mp, not on a SA-MP 0.3.7 server. For 0.3.7, set them to Global (Object Info > Shown as, or radar art's Shown as)."
@@ -354,10 +358,6 @@ msgstr "%d selecionados"
 #, c-format
 msgid "%d selected world object(s) will be replaced in the map."
 msgstr "%d objeto(s) do mundo selecionado(s) serão substituídos no mapa."
-
-#, c-format
-msgid "%d selected · Drag gizmo to move or rotate · %s deletes."
-msgstr "%d selecionados · Arraste o gizmo para mover ou girar · %s exclui."
 
 #, c-format
 msgid "%d selected, %d of this kind"
@@ -560,10 +560,6 @@ msgid "%s (you)"
 msgstr "%s (você)"
 
 #, c-format
-msgid "%s Browse · %s Map objects · %s Save · %s Shortcuts"
-msgstr "%s Navegar · %s Objetos do mapa · %s Salvar · %s Atalhos"
-
-#, c-format
 msgid "%s The update installs the next time Haumea starts."
 msgstr "%s A atualização é instalada na próxima vez que o Haumea abrir."
 
@@ -574,6 +570,14 @@ msgstr "%s já está nesse assento."
 #, c-format
 msgid "%s already uses this name."
 msgstr "%s já usa este nome."
+
+#, c-format
+msgid "%s changed on disk and was opened again"
+msgstr "%s mudou no disco e foi aberto de novo"
+
+#, c-format
+msgid "%s changed on disk outside Haumea: saving will ask before replacing it"
+msgstr "%s mudou no disco fora do Haumea: salvar vai perguntar antes de substituí-lo"
 
 #, c-format
 msgid "%s drops the selected objects onto the ground."
@@ -594,6 +598,10 @@ msgstr "%s segue o caminho \"%s\", que tem um ponto só: ele anda até lá e par
 #, c-format
 msgid "%s has no text."
 msgstr "%s não tem texto."
+
+#, c-format
+msgid "%s has nothing to stand on within 2 m under its feet: in the game it falls until it lands on something. Custom models without collision in their DFF don't count."
+msgstr "%s não tem onde pisar até 2 m abaixo dos pés: no jogo ele cai até parar em algo. Modelos personalizados sem colisão no DFF não contam."
 
 #, c-format
 msgid "%s is %.0f m off the track: in game it stands on the nearest track instead, at %.1f, %.1f, %.1f."
@@ -682,6 +690,10 @@ msgstr "%s usa um acessório preso a um osso do jogador, mas o alvo não é joga
 #, c-format
 msgid "%s walks node file %d, which isn't in the workspace (%s). open.mp downloads it on first use; offline servers need it copied there."
 msgstr "%s anda pelo arquivo de nodes %d, que não está no workspace (%s). O open.mp o baixa no primeiro uso; servidores offline precisam dele copiado lá."
+
+#, c-format
+msgid "%s was changed outside Haumea since it was opened."
+msgstr "%s foi alterado fora do Haumea desde que foi aberto."
 
 #, c-format
 msgid "%s won't be offered again."
@@ -818,15 +830,11 @@ msgstr "(versão desconhecida)"
 msgid ", %d removed"
 msgstr ", %d removidos"
 
-#, c-format
-msgid ", %d restored"
-msgstr ", %d restaurados"
-
 msgid ", and it has none"
 msgstr ", e não tem nenhuma"
 
-msgid ", but config.json has artwork.enable off"
-msgstr ", mas o config.json está com artwork.enable desligado"
+msgid ", but artwork is off in the server's config (Add Custom Model turns it on)"
+msgstr ", mas o artwork está desativado na configuração do servidor (Adicionar modelo personalizado o ativa)"
 
 msgid ""
 "-1 keeps the original texture, 0 is SA-MP's blank white texture.\n"
@@ -1081,11 +1089,11 @@ msgid "A copy of the shape under it, this far down and right. 0 for none."
 msgstr "Uma cópia da forma por baixo, deslocada isto para baixo e para a direita. 0 para nenhuma."
 
 msgid ""
-"A custom model's texture: players on 0.3.DL and open.mp download it;\n"
+"A custom model's texture: players on the SA-MP 0.3.DL client download it;\n"
 "0.3.7 players see nothing there."
 msgstr ""
-"Textura de um modelo personalizado: jogadores no 0.3.DL e open.mp a baixam;\n"
-"jogadores no 0.3.7 não veem nada ali."
+"Uma textura de modelo personalizado: jogadores com o cliente SA-MP 0.3.DL a baixam;\n"
+"jogadores do 0.3.7 não veem nada ali."
 
 msgid "A driver recording: the NPC must be in a vehicle"
 msgstr "Uma gravação de motorista: o NPC precisa estar em um veículo"
@@ -1104,6 +1112,15 @@ msgstr ""
 "e Posição e rotação movem e giram a seleção inteira, mantendo o arranjo\n"
 "(o primeiro selecionado é o pivô). Os outros campos mantêm seus valores.\n"
 "%s desfaz a mudança inteira."
+
+msgid ""
+"A gate: it moves back after a while. The map's code needs\n"
+"<map>_Gates(playerid, newkeys, oldkeys) called from OnPlayerKeyStateChange;\n"
+"Test in game does that."
+msgstr ""
+"Um portão: ele volta depois de um tempo. O código do mapa precisa de\n"
+"<map>_Gates(playerid, newkeys, oldkeys) chamado em OnPlayerKeyStateChange;\n"
+"o Testar no jogo já faz isso."
 
 msgid "A group"
 msgstr "Um grupo"
@@ -1188,8 +1205,8 @@ msgstr "Atores"
 msgid "Add"
 msgstr "Adicionar"
 
-msgid "Add Custom Model (SA-MP 0.3.DL / open.mp)"
-msgstr "Adicionar modelo personalizado (SA-MP 0.3.DL / open.mp)"
+msgid "Add Custom Model"
+msgstr "Adicionar modelo personalizado"
 
 msgid "Add a marker to the radar."
 msgstr "Adicione um marcador ao radar."
@@ -1215,6 +1232,9 @@ msgstr "Adicionar cantos"
 msgid "Add object to selection"
 msgstr "Adicionar objeto à seleção"
 
+msgid "Add one with + above, or from the ribbon."
+msgstr "Adicione um com o + acima ou pela faixa de comandos."
+
 msgid "Add or remove favourite"
 msgstr "Adicionar ou remover favorito"
 
@@ -1226,9 +1246,6 @@ msgstr "Adicionar modelo selecionado"
 
 msgid "Add text in the 3D world."
 msgstr "Adicione texto ao mundo 3D."
-
-msgid "Add the shape"
-msgstr "Adicionar a forma"
 
 msgid "Add to Favourites"
 msgstr "Adicionar aos favoritos"
@@ -1250,8 +1267,8 @@ msgid "Added %d object(s) and %d removed building(s)."
 msgstr "%d objeto(s) e %d prédio(s) removido(s) adicionados."
 
 #, c-format
-msgid "Added %d to the server: Object Browser > Custom models"
-msgstr "%d adicionado ao servidor: Navegador de objetos > Modelos personalizados"
+msgid "Added %d to the server: Asset Browser > Custom models"
+msgstr "%d adicionado ao servidor: Navegador de recursos > Modelos personalizados"
 
 #, c-format
 msgid "Added the node, but couldn't link it: %s"
@@ -1280,7 +1297,7 @@ msgid "Adjust FOV zoom"
 msgstr "Ajustar o zoom do FOV"
 
 msgid "Admin"
-msgstr "Administração"
+msgstr "Admin"
 
 msgid "Admin password"
 msgstr "Senha de administrador"
@@ -1370,6 +1387,9 @@ msgstr "Todas as configurações do pincel"
 msgid "All kinds"
 msgstr "Todos os tipos"
 
+msgid "All lines, warnings and errors, or errors only"
+msgstr "Todas as linhas, avisos e erros, ou só erros"
+
 msgid "All objects"
 msgstr "Todos os objetos"
 
@@ -1387,6 +1407,9 @@ msgstr "Nos eixos do próprio objeto"
 
 msgid "Also"
 msgstr "Também"
+
+msgid "Also list what is fine but worth knowing."
+msgstr "Também listar o que está certo, mas vale saber."
 
 #, c-format
 msgid "Also used by \"%s\" (%s). Both run when it is pressed."
@@ -1439,6 +1462,9 @@ msgid ""
 msgstr ""
 "Um NPC que chega a esta ligação sai de NODES%d.DAT;\n"
 "o open.mp então informa uma troca de nó."
+
+msgid "An admin of this server makes them."
+msgstr "Um administrador deste servidor as cria."
 
 msgid "An agent edit session is open."
 msgstr "Há uma sessão de edição do agente aberta."
@@ -1570,8 +1596,18 @@ msgstr "Matriz"
 msgid "Arrow"
 msgstr "Seta"
 
+msgid "Arrow keys"
+msgstr "Setas do teclado"
+
 msgid "Artist Glass"
 msgstr "Vidro de artista"
+
+msgid "Artwork is off on this server: players won't get custom models."
+msgstr "O artwork está desativado neste servidor: os jogadores não vão receber modelos personalizados."
+
+#, c-format
+msgid "Artwork is on in %s."
+msgstr "O artwork está ativado em %s."
 
 msgid "As a group"
 msgstr "Como grupo"
@@ -1601,6 +1637,20 @@ msgid ""
 msgstr ""
 "Pede ao seu roteador para redirecionar a porta para este computador (UPnP),\n"
 "para que as pessoas entrem pela internet sem configurar nada à mão."
+
+msgid "Asset Browser"
+msgstr "Navegador de recursos"
+
+#, c-format
+msgid "Asset Browser (%s): pick an object, Place, then click in the world."
+msgstr "Navegador de recursos (%s): escolha um objeto, Colocar, e clique no mundo."
+
+#, c-format
+msgid "Asset Browser (%s): pick something to place."
+msgstr "Navegador de recursos (%s): escolha algo para colocar."
+
+msgid "Asset Browser list"
+msgstr "Lista do Navegador de recursos"
 
 msgid "Assets are written to modloader/Haumea; original game files stay untouched."
 msgstr "Os arquivos vão para modloader/Haumea; os arquivos originais do jogo não são alterados."
@@ -1633,13 +1683,8 @@ msgstr "Anexar ao alvo"
 msgid "Attached %d object(s) to the selected target."
 msgstr "%d objeto(s) anexado(s) ao alvo selecionado."
 
-#, c-format
-msgid "Attached to %s"
-msgstr "Anexado a %s"
-
-#, c-format
-msgid "Attached to player preview (skin %d)"
-msgstr "Anexado à prévia do jogador (skin %d)"
+msgid "Attached to"
+msgstr "Preso a"
 
 msgid "Attachment"
 msgstr "Anexo"
@@ -1704,9 +1749,6 @@ msgstr "Prefabs disponíveis:"
 
 msgid "Axis"
 msgstr "Eixo"
-
-msgid "BRUSH"
-msgstr "PINCEL"
 
 msgid "Back"
 msgstr "Trás"
@@ -1960,10 +2002,10 @@ msgstr "Pincel"
 
 msgid ""
 "Brush\n"
-"Paint copies of the Object Browser's object onto the world. Its settings are over the 3D view."
+"Paint copies of the Asset Browser's object onto the world. Its settings are over the 3D view."
 msgstr ""
 "Pincel\n"
-"Pinta cópias do objeto do Navegador de Objetos no mundo. As opções dele ficam sobre a vista 3D."
+"Pinta cópias do objeto do Navegador de recursos no mundo. As opções dele ficam sobre a vista 3D."
 
 msgid "Brush disc size. 0 = single object under cursor."
 msgstr "Tamanho do disco do pincel. 0 = um único objeto sob o cursor."
@@ -1980,6 +2022,9 @@ msgstr "Modo pincel"
 
 msgid "Brush with this object"
 msgstr "Pintar com este objeto"
+
+msgid "Build Replay"
+msgstr "Replay da construção"
 
 msgid "Build an NPC path, one point at a time."
 msgstr "Crie um caminho para NPCs, um ponto de cada vez."
@@ -1999,9 +2044,8 @@ msgstr "Construções"
 msgid "Buildings and land"
 msgstr "Construções e terreno"
 
-#, c-format
-msgid "Bundled: Namaka %s"
-msgstr "No pacote: Namaka %s"
+msgid "Bundled"
+msgstr "Incluído"
 
 msgid "Burger Shot"
 msgstr "Burger Shot"
@@ -2059,9 +2103,6 @@ msgstr "Alvo da câmera"
 #, c-format
 msgid "Can't add a node: %s"
 msgstr "Não foi possível adicionar um nó: %s"
-
-msgid "Can't be dragged or resized on the canvas. The fields here still change it."
-msgstr "Não pode ser arrastado nem redimensionado na tela. Os campos aqui ainda o alteram."
 
 #, c-format
 msgid "Can't link: %s"
@@ -2289,6 +2330,9 @@ msgstr ""
 msgid "Circle outline"
 msgstr "Contorno de círculo"
 
+msgid "Circle the map. Moving the camera stops it."
+msgstr "Girar em volta do mapa. Mover a câmera interrompe."
+
 msgid "Circuit"
 msgstr "Circuito"
 
@@ -2395,10 +2439,6 @@ msgstr ""
 "Clique num nó e depois noutro para ligá-los.\n"
 "Clicar em dois nós ligados os desliga. Clique direito ou Esc para parar."
 
-#, c-format
-msgid "Click or drag to paint · %s stops."
-msgstr "Clique ou arraste para pintar · %s encerra."
-
 msgid ""
 "Click points in the world one after another.\n"
 "Right-click or Esc stops."
@@ -2435,12 +2475,14 @@ msgstr "Clique no nó a ligar."
 msgid "Click through locked"
 msgstr "Clicar através dos travados"
 
+msgid "Click to fill in the form; double-click to join."
+msgstr "Clique para preencher o formulário; clique duas vezes para entrar."
+
+msgid "Click to fill in the form; double-click to join. Its password is kept on this computer."
+msgstr "Clique para preencher o formulário; clique duas vezes para entrar. A senha fica guardada neste computador."
+
 msgid "Click to place the pin. Esc cancels."
 msgstr "Clique para posicionar o pin. Esc cancela."
-
-#, c-format
-msgid "Click to place · Shift+click repeats · %s stops."
-msgstr "Clique para colocar · Shift+clique repete · %s encerra."
 
 msgid "Click to place. Q/E or the wheel turn it, Esc stops."
 msgstr "Clique para colocar. Q/E ou a roda giram, Esc para."
@@ -2473,6 +2515,9 @@ msgstr "Fechar"
 msgid "Closed"
 msgstr "Fechado"
 
+msgid "Closes after"
+msgstr "Fecha depois de"
+
 msgid "Clothes"
 msgstr "Roupas"
 
@@ -2502,9 +2547,6 @@ msgstr "Colisão e detalhe"
 
 msgid "Collisions"
 msgstr "Colisões"
-
-msgid "Color 0: the model's own color is kept."
-msgstr "Cor 0: a cor própria do modelo é mantida."
 
 msgid "Colour"
 msgstr "Cor"
@@ -2624,9 +2666,6 @@ msgstr "Cópias"
 msgid "Copies of the selection, not counting it."
 msgstr "Cópias da seleção, sem contar ela."
 
-msgid "Copies the DFF and TXD into the server's models folder and adds them to models/artconfig.txt, so SA-MP 0.3.DL and open.mp send them to players. Nothing is written into the game folder."
-msgstr "Copia a DFF e a TXD para a pasta models do servidor e as adiciona a models/artconfig.txt, para que o SA-MP 0.3.DL e o open.mp as enviem aos jogadores. Nada é gravado na pasta do jogo."
-
 msgid "Copies the lines shown, to paste in a bug report"
 msgstr "Copia as linhas mostradas, para colar num relato de bug"
 
@@ -2710,9 +2749,6 @@ msgstr "Copiar a posição da câmera"
 msgid "Copy the visible X Y Z values"
 msgstr "Copiar os valores X Y Z visíveis"
 
-msgid "Copy transform"
-msgstr "Copiar transformação"
-
 #, c-format
 msgid "Copy: %s"
 msgstr "Copiar: %s"
@@ -2738,6 +2774,10 @@ msgstr "Não foi possível conectar."
 #, c-format
 msgid "Could not create %s"
 msgstr "Não foi possível criar %s"
+
+#, c-format
+msgid "Could not download the open.mp server: %s"
+msgstr "Não foi possível baixar o servidor open.mp: %s"
 
 msgid "Could not find that address."
 msgstr "Não foi possível encontrar esse endereço."
@@ -2860,6 +2900,9 @@ msgstr "Batida C"
 msgid "Crash and error reports"
 msgstr "Relatórios de travamento e erro"
 
+msgid "Create"
+msgstr "Criar"
+
 msgid "Create a path, then drag its points or segment midpoints in the 3D view."
 msgstr "Crie um caminho e arraste seus pontos ou os pontos médios dos segmentos na vista 3D."
 
@@ -2919,8 +2962,8 @@ msgstr "Alças da curva"
 msgid "Custom"
 msgstr "Personalizado"
 
-msgid "Custom Model... (0.3.DL)"
-msgstr "Modelo personalizado... (0.3.DL)"
+msgid "Custom Model..."
+msgstr "Modelo personalizado..."
 
 msgid "Custom import is wired for GTA San Andreas only in this v1."
 msgstr "Nesta v1, a importação personalizada funciona só no GTA San Andreas."
@@ -2931,8 +2974,12 @@ msgstr "A importação personalizada precisa de .dff e .txd correspondentes na m
 msgid "Custom models"
 msgstr "Modelos personalizados"
 
-msgid "Custom models (0.3.DL)"
-msgstr "Modelos personalizados (0.3.DL)"
+msgid "Custom models changed on disk were reloaded"
+msgstr "Modelos personalizados alterados no disco foram recarregados"
+
+#, c-format
+msgid "Custom models reloaded: %d"
+msgstr "Modelos personalizados recarregados: %d"
 
 #, c-format
 msgid "Custom models that couldn't be loaded: %d (see the log)"
@@ -3068,6 +3115,9 @@ msgstr "Desanexar"
 msgid "Detach objects"
 msgstr "Desvincular objetos"
 
+msgid "Detail"
+msgstr "Detalhe"
+
 msgid "Detonator"
 msgstr "Detonador"
 
@@ -3185,11 +3235,21 @@ msgstr "Pontos"
 msgid "Double-click: look from where they were when they wrote this."
 msgstr "Clique duas vezes: veja de onde a pessoa estava quando escreveu isto."
 
-msgid "Down"
-msgstr "Descer"
+msgid "Download the open.mp server into it"
+msgstr "Baixar o servidor open.mp nela"
 
 msgid "Download updates automatically"
 msgstr "Baixar atualizações automaticamente"
+
+msgid "Downloading the open.mp server..."
+msgstr "Baixando o servidor open.mp..."
+
+#, c-format
+msgid "Downloading the open.mp server: %.1f MB"
+msgstr "Baixando o servidor open.mp: %.1f MB"
+
+msgid "Downloading the streamer plugin..."
+msgstr "Baixando o plugin streamer..."
 
 msgid "Downloads in the background; the update still installs only when Haumea restarts."
 msgstr "Baixa em segundo plano; a atualização só é instalada quando o Haumea reinicia."
@@ -3236,10 +3296,6 @@ msgstr "Arraste para mover a ponta"
 msgid "Drag to move pin"
 msgstr "Arraste para mover o pin"
 
-#, c-format
-msgid "Drag to move · drag a corner to resize · %s stops."
-msgstr "Arraste para mover · arraste um canto para redimensionar · %s encerra."
-
 msgid "Drag to move, wheel to zoom, double-click to fly there."
 msgstr "Arraste para mover, roda para zoom, clique duplo para voar até lá."
 
@@ -3272,19 +3328,8 @@ msgstr "Distância de desenho"
 msgid "Draw Last"
 msgstr "Desenhar por último"
 
-msgid "Draw dist:"
-msgstr "Dist. de desenho:"
-
 msgid "Draw distance"
 msgstr "Distância de desenho"
-
-#, c-format
-msgid "Draw distance %.0f"
-msgstr "Distância de desenho %.0f"
-
-#, c-format
-msgid "Draw distance %.0f  ·  LOD %s"
-msgstr "Distância de desenho %.0f  ·  LOD %s"
 
 msgid "Draw distance (m)"
 msgstr "Distância de desenho (m)"
@@ -3390,9 +3435,6 @@ msgstr "Cada ponto é um textdraw: o SA-MP permite 2048 globais e 256 por jogado
 msgid "Edit"
 msgstr "Editar"
 
-msgid "Edit Pawn · Ctrl+S saves · Ctrl+F searches."
-msgstr "Edite Pawn · Ctrl+S salva · Ctrl+F busca."
-
 msgid "Edit all selected"
 msgstr "Editar todos os selecionados"
 
@@ -3424,6 +3466,9 @@ msgstr "Editor"
 msgid "Editor Discord"
 msgstr "Discord do editor"
 
+msgid "Editor data"
+msgstr "Dados do editor"
+
 msgid "Editor list"
 msgstr "Lista do editor"
 
@@ -3438,6 +3483,9 @@ msgstr "Eletricidade"
 
 msgid "Elements"
 msgstr "Elementos"
+
+msgid "Elements built so far. Drag to scrub."
+msgstr "Elementos construídos até agora. Arraste para avançar ou voltar."
 
 msgid "Emmet"
 msgstr "Emmet"
@@ -3495,6 +3543,9 @@ msgstr "Todos aqui recebem um mapa vazio; o servidor guarda uma cópia deste."
 
 msgid "Everyone keeps the map as it is now."
 msgstr "Todos ficam com o mapa como está agora."
+
+msgid "Everything the browser can show"
+msgstr "Tudo o que o navegador pode mostrar"
 
 msgid "Everywhere"
 msgstr "Em todo lugar"
@@ -3659,6 +3710,9 @@ msgstr "Moedas caindo"
 msgid "Fan (0.3.7-R2)"
 msgstr "Ventilador (0.3.7-R2)"
 
+msgid "Far version"
+msgstr "Versão distante"
+
 msgid "Far versions (LOD)"
 msgstr "Versões distantes (LOD)"
 
@@ -3695,6 +3749,9 @@ msgstr "Arquivo > Workspace: escolha a pasta do seu servidor SA-MP ou open.mp."
 
 msgid "File dialogs need zenity or kdialog. Install one (sudo apt install zenity) or type the path."
 msgstr "As caixas de diálogo de arquivo precisam do zenity ou do kdialog. Instale um (sudo apt install zenity) ou digite o caminho."
+
+msgid "File missing"
+msgstr "Arquivo ausente"
 
 msgid "File options"
 msgstr "Opções do arquivo"
@@ -3757,11 +3814,11 @@ msgstr "Encontrar duplicados"
 msgid "Find instances"
 msgstr "Encontrar instâncias"
 
-msgid "Find it in Object Browser > Custom models and place it like any object."
-msgstr "Encontre-o em Navegador de objetos > Modelos personalizados e coloque-o como qualquer objeto."
+msgid "Find it in Asset Browser > Custom models and place it like any object."
+msgstr "Encontre-o em Navegador de recursos > Modelos personalizados e coloque-o como qualquer objeto."
 
-msgid "Find objects by model or TXD"
-msgstr "Achar objetos por modelo ou TXD"
+msgid "Find objects"
+msgstr "Encontrar objetos"
 
 msgid "Find similar models"
 msgstr "Buscar modelos semelhantes"
@@ -3858,9 +3915,6 @@ msgstr "Pasta"
 
 msgid "Folder for NODES*.DAT (a server's scriptfiles/NPCs/nodes)"
 msgstr "Pasta para NODES*.DAT (a scriptfiles/NPCs/nodes de um servidor)"
-
-msgid "Folder missing"
-msgstr "Pasta não encontrada"
 
 msgid "Folder with the server's .rec files; empty: the workspace's npcmodes/recordings"
 msgstr "Pasta com os arquivos .rec do servidor; vazio: npcmodes/recordings do workspace"
@@ -3977,9 +4031,6 @@ msgstr "Daqui"
 msgid "From textures"
 msgstr "Das texturas"
 
-msgid "From the workspace's models/artconfig.txt."
-msgstr "Do models/artconfig.txt do workspace."
-
 msgid "Front"
 msgstr "Frente"
 
@@ -4027,9 +4078,6 @@ msgstr "Objeto do mundo do GTA"
 
 msgid "Game HUD"
 msgstr "HUD do jogo"
-
-msgid "Game folder"
-msgstr "Pasta do jogo"
 
 msgid "Game nodes"
 msgstr "Nós do jogo"
@@ -4080,6 +4128,9 @@ msgstr "Porta de garagem"
 
 msgid "Garage door opening"
 msgstr "Porta da garagem abrindo"
+
+msgid "Garage door sounds"
+msgstr "Sons de portão de garagem"
 
 msgid "General"
 msgstr "Geral"
@@ -4174,8 +4225,8 @@ msgstr "Ir para outra sala: o mapa dela substitui o seu aqui."
 msgid "Go to coordinates (pasted x, y, z)"
 msgstr "Ir para coordenadas (x, y, z coladas)"
 
-msgid "Go to node"
-msgstr "Ir para o nó"
+msgid "Go to this view"
+msgstr "Ir para esta vista"
 
 msgid "Golf club"
 msgstr "Taco de golfe"
@@ -4194,6 +4245,9 @@ msgstr "Granada"
 
 msgid "Grid"
 msgstr "Grade"
+
+msgid "Grid size"
+msgstr "Tamanho da grade"
 
 msgid "Grid spacing, in canvas units (640 x 448)"
 msgstr "Espaçamento da grade, em unidades da tela (640 x 448)"
@@ -4386,6 +4440,9 @@ msgstr "Aqui, nesta hora"
 msgid "Hid %d instance(s) | %s: show all"
 msgstr "%d instância(s) oculta(s) | %s: mostrar todas"
 
+msgid "Hidden at the editor's time now."
+msgstr "Oculto na hora do editor agora."
+
 msgid "Hidden in the viewport. Click to show it."
 msgstr "Oculto na viewport. Clique para mostrar."
 
@@ -4480,18 +4537,14 @@ msgstr "Corrida de cavalos (0.3.7-R2)"
 msgid "Hospital"
 msgstr "Hospital"
 
-msgid "Host"
-msgstr "Hospedar"
-
 msgid "Host this map"
 msgstr "Hospedar este mapa"
 
-#, c-format
-msgid "Hosting on port %d"
-msgstr "Hospedando na porta %d"
-
 msgid "Hour"
 msgstr "Hora"
+
+msgid "Hours"
+msgstr "Horário"
 
 msgid "House (blue)"
 msgstr "Casa (azul)"
@@ -4571,10 +4624,6 @@ msgstr "O ID %d já está em uso"
 #, c-format
 msgid "ID %d is out of range"
 msgstr "O ID %d está fora do intervalo"
-
-#, c-format
-msgid "ID: %d\n"
-msgstr "ID: %d\n"
 
 msgid "IDE"
 msgstr "IDE"
@@ -4667,9 +4716,8 @@ msgstr ""
 msgid "In canvas units: 0 to 640 across, 0 to 448 down."
 msgstr "Em unidades da tela: 0 a 640 na horizontal, 0 a 448 na vertical."
 
-#, c-format
-msgid "In game: SetPlayerTime(playerid, %d, %d); SetPlayerWeather(playerid, %d);"
-msgstr "No jogo: SetPlayerTime(playerid, %d, %d); SetPlayerWeather(playerid, %d);"
+msgid "In game"
+msgstr "No jogo"
 
 #, c-format
 msgid "In room %s on %s, as %s"
@@ -4680,6 +4728,9 @@ msgstr "No mapa aberto"
 
 msgid "In the workspace's maps"
 msgstr "Nos mapas do workspace"
+
+msgid "In the workspace's models folder."
+msgstr "Na pasta models do workspace."
 
 msgid "In this folder"
 msgstr "Nesta pasta"
@@ -4817,8 +4868,11 @@ msgstr "Isolar visualização"
 msgid "Isolated the selection, %d other instance(s) hidden | %s: show all"
 msgstr "Seleção isolada, %d outra(s) instância(s) oculta(s) | %s: mostrar todas"
 
-msgid "It goes into the workspace's models folder and artconfig.txt."
-msgstr "Ele vai para a pasta models do workspace e para o artconfig.txt."
+msgid "It already has a server."
+msgstr "Ela já tem um servidor."
+
+msgid "It goes into the workspace's models folder; maps that use it register it in their code."
+msgstr "Ele vai para a pasta models do workspace; os mapas que o usam o registram no próprio código."
 
 msgid "It installs the next time Haumea starts."
 msgstr "É instalada na próxima vez que o Haumea abrir."
@@ -4832,9 +4886,6 @@ msgstr "Ele anda num sentido com ângulo acima de 180 e no outro até 180. Arras
 msgid "Its account's: the server knows it from the agent's token."
 msgstr "Da conta dele: o servidor sabe pelo token do agente."
 
-msgid "Its password is kept on this computer."
-msgstr "A senha dele fica guardada neste computador."
-
 msgid "Its player name, shown over its head and in the player list."
 msgstr "O nome de jogador dele, mostrado sobre a cabeça e na lista de jogadores."
 
@@ -4846,6 +4897,9 @@ msgstr "Trotar"
 
 msgid "Join"
 msgstr "Entrar"
+
+msgid "Join a session"
+msgstr "Entrar numa sessão"
 
 #, c-format
 msgid "Joined %s's session"
@@ -4892,6 +4946,9 @@ msgstr "Mantém separados os objetos com configurações, texturas ou variáveis
 
 msgid "Keeps the objects where they are and stops the path moving them."
 msgstr "Mantém os objetos onde estão e impede que o caminho os mova."
+
+msgid "Keeps this view: the camera, the time, the weather and the interior."
+msgstr "Guarda esta vista: a câmera, a hora, o clima e o interior."
 
 msgid "Kept in your Haumea settings on this computer, for servers you star."
 msgstr "Guardada nas configurações do Haumea neste computador, para os servidores que você marcar com estrela."
@@ -4979,9 +5036,8 @@ msgstr "Iniciar o jogo entra nele. Depois de mudanças, Recarregar mapa na janel
 msgid "Launch game with"
 msgstr "Abrir o jogo com"
 
-#, c-format
-msgid "Layers - %s"
-msgstr "Camadas - %s"
+msgid "Layers"
+msgstr "Camadas"
 
 msgid "Layout"
 msgstr "Disposição"
@@ -5214,9 +5270,6 @@ msgstr "Travar ou destravar o grupo"
 msgid "Lock this room"
 msgstr "Trancar esta sala"
 
-msgid "Locked"
-msgstr "Travado"
-
 msgid "Locked external reference — reopen its source IPL to edit it."
 msgstr "Referência externa bloqueada — reabra o IPL de origem para editá-la."
 
@@ -5316,6 +5369,9 @@ msgstr "Faço um NPC andar por uma rota"
 msgid "Make an invite code"
 msgstr "Criar um código de convite"
 
+msgid "Make one with the + button above."
+msgstr "Crie uma com o botão + acima."
+
 msgid "Make room"
 msgstr "Criar sala"
 
@@ -5343,6 +5399,9 @@ msgstr "Verificação do mapa"
 
 msgid "Map Objects"
 msgstr "Objetos do mapa"
+
+msgid "Map changed on disk"
+msgstr "Mapa alterado no disco"
 
 msgid "Map changed. Refresh from map to generate its latest code."
 msgstr "O mapa mudou. Atualize a partir do mapa para gerar o código mais recente."
@@ -5462,6 +5521,9 @@ msgstr "Materiais"
 msgid "Max"
 msgstr "Máx"
 
+msgid "Maximize"
+msgstr "Maximizar"
+
 msgid "Maximum"
 msgstr "Máximo"
 
@@ -5505,10 +5567,6 @@ msgstr "Ponto médio"
 msgid "Min"
 msgstr "Mín"
 
-#, c-format
-msgid "Min Draw dist: %.0f"
-msgstr "Dist. mín. de desenho: %.0f"
-
 msgid "Mine"
 msgstr "Meus"
 
@@ -5517,6 +5575,9 @@ msgstr "Meus (pasta de configuração do Haumea)"
 
 msgid "Minigun"
 msgstr "Minigun"
+
+msgid "Minimize"
+msgstr "Minimizar"
 
 msgid "Minimum"
 msgstr "Mínimo"
@@ -5594,10 +5655,6 @@ msgstr "Modelo 0: o \"blanktex\" branco liso do SA-MP; os nomes de TXD e de text
 msgid "Model ID"
 msgstr "ID do modelo"
 
-#, c-format
-msgid "Model ID changes: %d"
-msgstr "Alterações de ID do modelo: %d"
-
 msgid "Model IDs can't be changed for objects linked to an LOD or outside the active map."
 msgstr "Não é possível mudar IDs de modelo de objetos ligados a um LOD ou fora do mapa ativo."
 
@@ -5648,9 +5705,6 @@ msgstr "Mais ações"
 
 msgid "More bands blend more smoothly. Each band is a textdraw."
 msgstr "Mais faixas misturam mais suavemente. Cada faixa é um textdraw."
-
-msgid "More display and snapping options"
-msgstr "Mais opções de exibição e ajuste"
 
 msgid "Motor, stopping"
 msgstr "Motor parando"
@@ -5724,6 +5778,9 @@ msgstr "Movidos"
 msgid "Movement"
 msgstr "Movimento"
 
+msgid "Moves"
+msgstr "Move-se"
+
 msgid "Moves only an object's parts: a skin stands still."
 msgstr "Move só as partes de um objeto: a skin fica parada."
 
@@ -5738,9 +5795,6 @@ msgstr "Move os objetos para o lado do caminho, à direita; negativo para a esqu
 
 msgid "Moves when hit"
 msgstr "Move-se ao ser atingido"
-
-msgid "Moves when the map loads"
-msgstr "Move-se quando o mapa carrega"
 
 msgid "Moving this object updates the offset; moving the parent carries it along."
 msgstr "Mover este objeto atualiza o deslocamento; mover o pai o leva junto."
@@ -5859,6 +5913,9 @@ msgstr "Nome"
 msgid "Name or ID"
 msgstr "Nome ou ID"
 
+msgid "Name the current view and Save it to come back to it."
+msgstr "Dê um nome à vista atual e salve-a para voltar a ela."
+
 msgid "Name, e.g. my-server"
 msgstr "Nome, por exemplo meu-servidor"
 
@@ -5933,6 +5990,9 @@ msgstr "Pescoço"
 
 msgid "Never send"
 msgstr "Nunca enviar"
+
+msgid "New"
+msgstr "Novo"
 
 msgid "New Map"
 msgstr "Novo mapa"
@@ -6086,6 +6146,9 @@ msgstr "Nenhum interior encontrado nos arquivos IPL de data/maps do jogo."
 msgid "No material slots are loaded for this object yet."
 msgstr "Nenhum slot de material carregado para este objeto ainda."
 
+msgid "No messages yet."
+msgstr "Nenhuma mensagem ainda."
+
 #, c-format
 msgid "No model loads TXD %s, so SA-MP can't use this texture"
 msgstr "Nenhum modelo carrega a TXD %s, então o SA-MP não pode usar esta textura"
@@ -6099,8 +6162,11 @@ msgstr "Nenhum nó selecionado. Clique num nó na viewport."
 msgid "No object is in a group."
 msgstr "Nenhum objeto está num grupo."
 
-msgid "No object selected"
-msgstr "Nenhum objeto selecionado"
+msgid "No one else here yet."
+msgstr "Ninguém mais aqui ainda."
+
+msgid "No output yet."
+msgstr "Nenhuma saída ainda."
 
 msgid "No parts fit this model."
 msgstr "Nenhuma peça serve neste modelo."
@@ -6128,6 +6194,9 @@ msgstr "Ainda não há salas."
 
 msgid "No saved selections yet. Select some objects (Shift+click or drag a box) and save them here."
 msgstr "Nenhuma seleção salva ainda. Selecione alguns objetos (Shift+clique ou arraste uma caixa) e salve aqui."
+
+msgid "No saved views yet."
+msgstr "Nenhuma vista salva ainda."
 
 msgid "No server TXDs found."
 msgstr "Nenhum TXD encontrado no servidor."
@@ -6254,8 +6323,8 @@ msgstr "Notas"
 msgid "Nothing matches."
 msgstr "Nada corresponde."
 
-msgid "Nothing placed yet. Pick an object in the Object Browser and click Place."
-msgstr "Nada colocado ainda. Escolha um objeto no Navegador de objetos e clique em Colocar."
+msgid "Nothing placed yet. Pick an object in the Asset Browser and click Place."
+msgstr "Nada colocado ainda. Escolha um objeto no Navegador de recursos e clique em Colocar."
 
 msgid "Nothing selected"
 msgstr "Nada selecionado"
@@ -6271,6 +6340,9 @@ msgstr "Nada foi importado."
 
 msgid "Notifications"
 msgstr "Notificações"
+
+msgid "Now"
+msgstr "Agora"
 
 msgid "Nudge the selection back (as the camera looks)"
 msgstr "Empurrar a seleção para trás (como a câmera olha)"
@@ -6333,20 +6405,6 @@ msgstr "Objeto"
 
 msgid "Object (AddSimpleModel)"
 msgstr "Objeto (AddSimpleModel)"
-
-msgid "Object Browser"
-msgstr "Navegador de objetos"
-
-#, c-format
-msgid "Object Browser (%s): pick an object, Place, then click in the world."
-msgstr "Navegador de objetos (%s): escolha um objeto, Colocar, e clique no mundo."
-
-#, c-format
-msgid "Object Browser (%s): pick something to place."
-msgstr "Navegador de objetos (%s): escolha algo para colocar."
-
-msgid "Object Browser list"
-msgstr "Lista do Navegador de objetos"
 
 msgid "Object ID"
 msgstr "ID do objeto"
@@ -6503,6 +6561,9 @@ msgstr "Só objetos com problema na Verificação do mapa."
 msgid "Only objects with a Map check problem. Runs Map check first."
 msgstr "Só objetos com problema na Verificação do mapa. Roda a verificação antes."
 
+msgid "Only textures from TXDs whose name matches"
+msgstr "Só texturas de TXDs cujo nome corresponde"
+
 msgid "Only the first 256 are saved."
 msgstr "Só os primeiros 256 são salvos."
 
@@ -6512,8 +6573,8 @@ msgstr "Usado só pelos ícones 0 e 1 (os marcadores coloridos)."
 msgid "Opacity"
 msgstr "Opacidade"
 
-msgid "Opacity of the red overlay drawn on selected objects."
-msgstr "Opacidade da camada vermelha desenhada nos objetos selecionados."
+msgid "Opacity of the tint drawn on selected objects."
+msgstr "Opacidade do tom desenhado sobre os objetos selecionados."
 
 msgid "Open"
 msgstr "Abrir"
@@ -6567,6 +6628,9 @@ msgstr "Abrir mapa"
 msgid "Open movable previews at 4:3, 16:9 and 21:9. Dock them beside the canvas to compare."
 msgstr "Abre prévias móveis em 4:3, 16:9 e 21:9. Encaixe-as ao lado da tela para comparar."
 
+msgid "Open or close a panel."
+msgstr "Abre ou fecha um painel."
+
 msgid "Open script"
 msgstr "Abrir script"
 
@@ -6584,6 +6648,9 @@ msgstr "Abrir a porta no meu roteador"
 
 msgid "Open workspace"
 msgstr "Abrir workspace"
+
+msgid "Open..."
+msgstr "Abrir..."
 
 msgid "OpenGL didn't start on this PC, so Automatic uses Direct3D 9."
 msgstr "O OpenGL não iniciou neste PC, então Automático usa Direct3D 9."
@@ -6650,14 +6717,8 @@ msgstr "Outros objetos do SA-MP"
 msgid "Other props"
 msgstr "Outros adereços"
 
-msgid ""
-"Others join with this computer's address, the port and the session code.\n"
-"Over the internet the port must be forwarded to this computer, or use a VPN such as Tailscale.\n"
-"For a session that stays up without you, run haumea-server where your SA-MP server runs."
-msgstr ""
-"Os outros entram com o endereço deste computador, a porta e o código da sessão.\n"
-"Pela internet, a porta precisa ser redirecionada para este computador, ou use uma VPN como o Tailscale.\n"
-"Para uma sessão que fica no ar sem você, rode o haumea-server onde o seu servidor SA-MP roda."
+msgid "Others join with this computer's address, the port and the session code shown once you host."
+msgstr "Os outros entram com o endereço deste computador, a porta e o código da sessão mostrado quando você hospedar."
 
 msgid "Outgoing"
 msgstr "Saída"
@@ -6677,15 +6738,9 @@ msgstr "Contorno"
 msgid "Outline every map object"
 msgstr "Contornar todos os objetos do mapa"
 
-msgid "Outline map objects"
-msgstr "Contornar objetos do mapa"
-
 #, c-format
 msgid "Outline map objects (%s)"
 msgstr "Contornar objetos do mapa (%s)"
-
-msgid "Outline selected and hovered objects"
-msgstr "Contornar objetos selecionados e sob o mouse"
 
 msgid "Outline selected objects"
 msgstr "Contornar objetos selecionados"
@@ -6693,23 +6748,22 @@ msgstr "Contornar objetos selecionados"
 msgid "Outlines"
 msgstr "Contornos"
 
-#, c-format
-msgid "Output: %s"
-msgstr "Saída: %s"
+msgid "Output"
+msgstr "Saída"
 
 #, c-format
 msgid "Over IPv6, others can join at %s when your router lets them in."
 msgstr "Por IPv6, os outros podem entrar em %s quando o seu roteador deixar."
 
-#, c-format
-msgid "Over the internet, others join at %s"
-msgstr "Pela internet, os outros entram em %s"
+msgid ""
+"Over the internet the port must be forwarded to this computer, or use a VPN such as Tailscale.\n"
+"For a session that stays up without you, run haumea-server where your SA-MP server runs."
+msgstr ""
+"Pela internet, a porta precisa ser redirecionada para este computador, ou use uma VPN como o Tailscale.\n"
+"Para uma sessão que continua sem você, rode o haumea-server onde roda o seu servidor SA-MP."
 
-msgid "PLACE"
-msgstr "COLOCAR"
-
-msgid "PREFAB"
-msgstr "PREFAB"
+msgid "Overwrite"
+msgstr "Substituir"
 
 #, c-format
 msgid "Page %d of %d (%d models)"
@@ -6724,10 +6778,6 @@ msgstr "Pintar o objeto selecionado na superfície"
 #, c-format
 msgid "Painted %d x %s"
 msgstr "%d pintado(s) de %s"
-
-#, c-format
-msgid "Painting: %s"
-msgstr "Pintando: %s"
 
 msgid "Paintjob"
 msgstr "Pintura"
@@ -6763,6 +6813,9 @@ msgstr "Layout dos painéis"
 msgid "Panel under the mouse"
 msgstr "Painel sob o mouse"
 
+msgid "Panels"
+msgstr "Painéis"
+
 msgid "Parachute"
 msgstr "Paraquedas"
 
@@ -6771,6 +6824,9 @@ msgstr "Paraquedas abrindo"
 
 msgid "Particle effects"
 msgstr "Efeitos de partículas"
+
+msgid "Particles"
+msgstr "Partículas"
 
 msgid ""
 "Parts of the objects below the water's surface (a rock's\n"
@@ -6793,9 +6849,6 @@ msgstr "Colar no lugar"
 
 msgid "Paste in front of the camera"
 msgstr "Colar na frente da câmera"
-
-msgid "Paste transform"
-msgstr "Colar transformação"
 
 msgid "Paste where it was copied"
 msgstr "Colar onde foi copiado"
@@ -6934,8 +6987,8 @@ msgstr "Pegar de uma imagem"
 msgid "Pick points"
 msgstr "Escolher pontos"
 
-msgid "Pick the object to paint in the Object Browser first."
-msgstr "Primeiro escolha no Navegador de objetos o objeto a pintar."
+msgid "Pick the object to paint in the Asset Browser first."
+msgstr "Primeiro escolha no Navegador de recursos o objeto a pintar."
 
 msgid "Pick the recordings folder first"
 msgstr "Escolha a pasta de gravações primeiro"
@@ -7097,6 +7150,10 @@ msgstr "Classes de jogador"
 msgid "Player menu map"
 msgstr "Mapa do menu do jogador"
 
+#, c-format
+msgid "Player preview (skin %d)"
+msgstr "Prévia do jogador (skin %d)"
+
 msgid "Player skin"
 msgstr "Skin do jogador"
 
@@ -7124,6 +7181,9 @@ msgstr "PlayerPlaySound. Qualquer ID de data/AudioEvents.txt do jogo funciona."
 msgid "Players can click it while SelectTextDraw is on (OnPlayerClickTextDraw)."
 msgstr "Os jogadores podem clicar nele enquanto SelectTextDraw está ativo (OnPlayerClickTextDraw)."
 
+msgid "Players on the SA-MP 0.3.DL client download custom models."
+msgstr "Jogadores com o cliente SA-MP 0.3.DL baixam os modelos personalizados."
+
 msgid "Players see at most 1250 m (400 m inside interiors): objects further away only show in the editor."
 msgstr "Os jogadores veem no máximo 1250 m (400 m dentro de interiores): objetos mais longe só aparecem no editor."
 
@@ -7133,6 +7193,9 @@ msgstr "Toca %s / %s"
 
 msgid "Plays sound 0, which stops the sound playing. Use it for music and loops."
 msgstr "Toca o som 0, que para o som que estiver tocando. Use para músicas e loops."
+
+msgid "Plays the map being built, element by element in the order they were added, while the camera circles it."
+msgstr "Mostra o mapa sendo construído, elemento por elemento na ordem em que foram adicionados, enquanto a câmera gira em volta dele."
 
 #, c-format
 msgid "Please choose a %s file."
@@ -7351,6 +7414,9 @@ msgstr "Anel de progresso"
 msgid "Project each selected object's anchor onto the extended ruler, preserving its position along the guide."
 msgstr "Projeta a referência de cada objeto selecionado na linha da régua, preservando sua posição ao longo da guia."
 
+msgid "Properties"
+msgstr "Propriedades"
+
 msgid "Properties and materials were ignored. Overlapping objects may be intentional."
 msgstr "As propriedades e os materiais foram ignorados. A sobreposição pode ser intencional."
 
@@ -7391,13 +7457,6 @@ msgstr "Colocar a seleção em um grupo"
 msgid "Put what is placed in a group named after the prefab."
 msgstr "Coloca o que for colocado num grupo com o nome do prefab."
 
-msgid ""
-"Puts a DFF and TXD in the server's models folder and artconfig.txt,\n"
-"so SA-MP 0.3.DL and open.mp players get it. The game folder isn't touched."
-msgstr ""
-"Coloca um DFF e um TXD na pasta models do servidor e no artconfig.txt,\n"
-"para que jogadores do SA-MP 0.3.DL e do open.mp o recebam. A pasta do jogo não é alterada."
-
 msgid "Puts back the version before the last update, then restarts."
 msgstr "Volta a versão de antes da última atualização e reinicia."
 
@@ -7410,14 +7469,18 @@ msgstr "Põe cada objeto no chão abaixo da linha."
 msgid "Puts the NPC in a vehicle as its driver."
 msgstr "Põe o NPC num veículo como motorista."
 
+msgid ""
+"Puts your DFF and TXD in the server's models folder; maps that use it register it\n"
+"in their own code. Players on the SA-MP 0.3.DL client download it. The game folder isn't touched."
+msgstr ""
+"Coloca seu DFF e TXD na pasta models do servidor; os mapas que o usam o registram\n"
+"no próprio código. Jogadores com o cliente SA-MP 0.3.DL o baixam. A pasta do jogo não é alterada."
+
 msgid "Python"
 msgstr "Python"
 
 msgid "Quarry"
 msgstr "Pedreira"
-
-msgid "READY"
-msgstr "PRONTO"
 
 msgid "RMB"
 msgstr "RMB"
@@ -7568,12 +7631,11 @@ msgstr ""
 msgid "Reading polygons and textures..."
 msgstr "Lendo polígonos e texturas..."
 
+msgid "Reads the models' DFF and TXD files and the AddSimpleModel lines again. Files rebuilt on disk are also picked up by themselves."
+msgstr "Lê de novo os arquivos DFF e TXD dos modelos e as linhas AddSimpleModel. Arquivos refeitos no disco também são lidos sozinhos."
+
 msgid "Ready"
 msgstr "Pronto"
-
-#, c-format
-msgid "Ready: %s"
-msgstr "Pronto: %s"
 
 msgid "Rebuild objects"
 msgstr "Reconstruir objetos"
@@ -7656,13 +7718,11 @@ msgstr "Atualizar a partir do mapa"
 msgid "Refused: "
 msgstr "Recusado: "
 
-#, c-format
-msgid "Related timed: %s\n"
-msgstr "Relacionado com horário: %s\n"
+msgid "Related"
+msgstr "Relacionado"
 
-#, c-format
-msgid "Related: %s\n"
-msgstr "Relacionado: %s\n"
+msgid "Related timed"
+msgstr "Relacionado por horário"
 
 msgid "Release page"
 msgstr "Página da versão"
@@ -7678,6 +7738,12 @@ msgstr "Recarregar arquivos do jogo..."
 
 msgid "Reload SA Paths"
 msgstr "Recarregar caminhos do SA"
+
+msgid "Reload custom models"
+msgstr "Recarregar modelos personalizados"
+
+msgid "Reload from disk"
+msgstr "Recarregar do disco"
 
 msgid "Reload map"
 msgstr "Recarregar mapa"
@@ -7801,10 +7867,6 @@ msgstr "Relatório"
 msgid "Reports waiting: %d"
 msgstr "Relatórios aguardando: %d"
 
-#, c-format
-msgid "Requested: %s"
-msgstr "Pedido: %s"
-
 msgid "Required"
 msgstr "Obrigatório"
 
@@ -7866,6 +7928,9 @@ msgstr "Reinicia os emissores de partículas selecionados, incluindo efeitos ún
 
 msgid "Restarts Haumea and reloads the game files from disk."
 msgstr "Reinicia o Haumea e recarrega os arquivos do jogo do disco."
+
+msgid "Restore"
+msgstr "Restaurar"
 
 msgid "Restore the default camera FOV (70°)."
 msgstr "Restaura o FOV padrão da câmera (70°)."
@@ -7982,9 +8047,6 @@ msgstr "Voltou para %s: reinicie o Haumea para usá-la"
 msgid "Rooftop"
 msgstr "Terraço"
 
-msgid "Room"
-msgstr "Sala"
-
 msgid "Room password"
 msgstr "Senha da sala"
 
@@ -8077,10 +8139,6 @@ msgstr "Em execução"
 msgid "Running on 127.0.0.1:%d"
 msgstr "Rodando em 127.0.0.1:%d"
 
-#, c-format
-msgid "Running: %s"
-msgstr "Em uso: %s"
-
 msgid ""
 "Runs the map as it is now on a private open.mp test server.\n"
 "Your map file and your own server are not touched."
@@ -8125,9 +8183,6 @@ msgstr ""
 "(96 x 82, dimensionado pela altura da tela). Ligado, a menos que o jogador desligue\n"
 "(nohudscalefix=1 no sa-mp.cfg). Não com o Widescreen Fix, que dimensiona o radar por conta própria."
 
-msgid "SA-MP 0.3.DL and open.mp clients download custom models."
-msgstr "Os clientes SA-MP 0.3.DL e open.mp baixam modelos personalizados."
-
 msgid "SA-MP chat"
 msgstr "Chat do SA-MP"
 
@@ -8155,9 +8210,6 @@ msgstr "Os padrões do SA-MP"
 msgid "SA-MP's own objects won't show without its client files."
 msgstr "Os objetos do SA-MP não aparecem sem os arquivos do cliente."
 
-msgid "SELECT"
-msgstr "SELECIONAR"
-
 #, c-format
 msgid "Safe area (5%)"
 msgstr "Área segura (5%)"
@@ -8168,8 +8220,14 @@ msgstr "Faixas no mesmo sentido"
 msgid "Same Lanes"
 msgstr "Mesmas faixas"
 
+msgid "Same height"
+msgstr "Mesma altura"
+
 msgid "Same height as the key one"
 msgstr "Mesma altura do principal"
+
+msgid "Same width"
+msgstr "Mesma largura"
 
 msgid "Same width as the key one"
 msgstr "Mesma largura do principal"
@@ -8331,9 +8389,6 @@ msgstr ""
 msgid "Saved selections"
 msgstr "Seleções salvas"
 
-msgid "Saved selections: keep a selection under a name and select it again later."
-msgstr "Seleções salvas: guarde uma seleção com um nome e selecione-a de novo depois."
-
 #, c-format
 msgid "Saved the selection \"%s\" (%d object(s))"
 msgstr "Seleção \"%s\" salva (%d objeto(s))"
@@ -8354,6 +8409,9 @@ msgstr "Salva a vista atual por cima desta, com o nome do campo acima."
 msgid "Saves the selection as a prefab file (.haumea) to place again or share."
 msgstr "Salva a seleção como um arquivo de prefab (.haumea) para colocar de novo ou compartilhar."
 
+msgid "Saving now replaces those changes with the map as it is here."
+msgstr "Salvar agora substitui essas alterações pelo mapa como está aqui."
+
 msgid "Sawn-off"
 msgstr "Cano serrado"
 
@@ -8371,6 +8429,9 @@ msgstr "Escola"
 
 msgid "Scope"
 msgstr "Buscar em"
+
+msgid "Screen"
+msgstr "Tela"
 
 msgid "Screen previews"
 msgstr "Prévias de tela"
@@ -8427,11 +8488,11 @@ msgstr ""
 msgid "Seat"
 msgstr "Assento"
 
+msgid "Seconds it stands open."
+msgstr "Segundos que ele fica aberto."
+
 msgid "Seconds. -1 with a static vehicle writes AddStaticVehicle."
 msgstr "Segundos. -1 com um veículo estático grava AddStaticVehicle."
-
-msgid "Section"
-msgstr "Seção"
 
 msgid "See-through (alpha)"
 msgstr "Transparente (alfa)"
@@ -8577,12 +8638,12 @@ msgstr "A seleção não conseguiu criar ou ler o buffer de seleção"
 msgid "Selection only"
 msgstr "Só a seleção"
 
+msgid "Selection outline"
+msgstr "Contorno da seleção"
+
 #, c-format
 msgid "Selection too large: some objects won't move (max %d)"
 msgstr "Seleção grande demais: alguns objetos não vão se mover (máx. %d)"
-
-msgid "Selections"
-msgstr "Seleções"
 
 msgid "Send"
 msgstr "Enviar"
@@ -8595,6 +8656,9 @@ msgstr "Enviar um relatório?"
 
 msgid "Send it to them privately: it makes one account."
 msgstr "Envie em particular: ele cria uma conta."
+
+msgid "Send them the port and session code above."
+msgstr "Envie a eles a porta e o código da sessão acima."
 
 msgid "Sending..."
 msgstr "Enviando..."
@@ -8627,19 +8691,11 @@ msgstr "Registro do servidor"
 msgid "Server package"
 msgstr "Pacote do servidor"
 
-#, c-format
-msgid "Server: %s"
-msgstr "Servidor: %s"
-
 msgid "Servers"
 msgstr "Servidores"
 
 msgid "Session code"
 msgstr "Código da sessão"
-
-#, c-format
-msgid "Session code: %s"
-msgstr "Código da sessão: %s"
 
 msgid "Set X, Y and Z rotation to zero."
 msgstr "Define as rotações X, Y e Z como zero."
@@ -8650,13 +8706,12 @@ msgstr "Defina um workspace (Arquivo > Workspace) para salvar prefabs com o serv
 msgid "SetVehicleNumberPlate, up to 32 characters. Empty keeps the game's plate. GTA's preview displays the first 8 characters."
 msgstr "SetVehicleNumberPlate, até 32 caracteres. Vazio mantém a placa do jogo. A prévia do GTA exibe os primeiros 8 caracteres."
 
+msgid "Sets artwork.enable in config.json (open.mp), or useartwork 1 in server.cfg (SA-MP)."
+msgstr "Define artwork.enable no config.json (open.mp) ou useartwork 1 no server.cfg (SA-MP)."
+
 #, c-format
 msgid "Sets the interior of all %d selected."
 msgstr "Define o interior de todos os %d selecionados."
-
-#, c-format
-msgid "Settings and editor data: %s"
-msgstr "Configurações e dados do editor: %s"
 
 msgid "Setup, elements, NPCs, textdraws, testing and saving, with screenshots."
 msgstr "Configuração, elementos, NPCs, textdraws, testes e salvamento, com capturas de tela."
@@ -8755,9 +8810,6 @@ msgstr "Mostrar guias:"
 msgid "Show material indexes"
 msgstr "Mostrar índices dos materiais"
 
-msgid "Show object edges, including invisible and see-through objects."
-msgstr "Mostrar as bordas dos objetos, incluindo os invisíveis e transparentes."
-
 msgid "Show only the target and its attachments against an empty background."
 msgstr "Mostra apenas o alvo e seus anexos sobre um fundo vazio."
 
@@ -8772,6 +8824,9 @@ msgstr "Mostrar pins e guias"
 
 msgid "Show pressed keys (for tutorials and recordings)"
 msgstr "Mostrar teclas pressionadas (para tutoriais e gravações)"
+
+msgid "Show the target point"
+msgstr "Mostrar o ponto-alvo"
 
 msgid "Show what Namaka is doing"
 msgstr "Mostrar o que o Namaka está fazendo"
@@ -8789,6 +8844,9 @@ msgstr "Mostrado como"
 msgid "Shown at"
 msgstr "Exibido às"
 
+msgid "Shown at the editor's time now."
+msgstr "Visível na hora do editor agora."
+
 msgid "Shown in the 3D view: click to hide."
 msgstr "Mostrada na vista 3D: clique para esconder."
 
@@ -8804,6 +8862,9 @@ msgstr ""
 
 msgid "Shows collision bounding boxes without the collision mesh. Collisions takes precedence when both are enabled."
 msgstr "Mostra os limites de colisão sem a malha. Colisões tem prioridade quando ambos estão ativados."
+
+msgid "Shows from"
+msgstr "Aparece a partir de"
 
 msgid ""
 "Shows the active workspace and session time through Discord desktop.\n"
@@ -8836,6 +8897,9 @@ msgstr "Mostra para onde as cópias vão antes de aplicar."
 
 msgid "Side offset"
 msgstr "Deslocamento lateral"
+
+msgid "Sign in with"
+msgstr "Entrar com"
 
 #, c-format
 msgid "Signed in to %s"
@@ -8952,6 +9016,9 @@ msgstr "O encaixe pulou algumas instâncias vinculadas no limite de %d objetos"
 
 msgid "Snap to object points"
 msgstr "Encaixar nos pontos dos objetos"
+
+msgid "Snap to steps"
+msgstr "Ajustar aos passos"
 
 msgid "Snap to surfaces"
 msgstr "Encaixar nas superfícies"
@@ -9122,6 +9189,9 @@ msgstr "Começar com um mapa vazio"
 msgid "Starting"
 msgstr "Iniciando"
 
+msgid "Starts"
+msgstr "Começa"
+
 msgid ""
 "Starts the game (open.mp's launcher, or SA-MP) and joins the test server.\n"
 "Which one: Preferences > Test server."
@@ -9266,6 +9336,9 @@ msgstr "Sweet"
 msgid "Switch Workspace..."
 msgstr "Trocar workspace..."
 
+msgid "Switch between the map, TextDraws and Code editors."
+msgstr "Alterna entre os editores de mapa, TextDraws e Código."
+
 msgid "Switch between tiles and list. Right-click for tile size."
 msgstr "Alternar entre miniaturas e lista. Clique com o botão direito para ajustar o tamanho."
 
@@ -9281,19 +9354,12 @@ msgstr "Desligado"
 msgid "Sync rotation"
 msgstr "Sincronizar rotação"
 
-msgid "TEXTDRAW"
-msgstr "TEXTDRAW"
-
 msgid "TXD"
 msgstr "TXD"
 
 #, c-format
 msgid "TXD \"%s\" was not found; the original texture stays."
 msgstr "O TXD \"%s\" não foi encontrado; a textura original fica."
-
-#, c-format
-msgid "TXD %s"
-msgstr "TXD %s"
 
 msgid "TXD contains"
 msgstr "TXD contém"
@@ -9331,10 +9397,6 @@ msgstr "Nó de destino"
 msgid "Target picking failed. Click again or cancel."
 msgstr "Não foi possível selecionar o alvo. Clique novamente ou cancele."
 
-#, c-format
-msgid "Target: %s"
-msgstr "Alvo: %s"
-
 msgid "Tattoo"
 msgstr "Tatuagem"
 
@@ -9359,10 +9421,15 @@ msgstr "Testar no jogo (%s) roda o mapa em um servidor open.mp privado."
 
 msgid ""
 "Test in game runs the map on a private open.mp server in Haumea's config\n"
-"folder. Its files come from this package, or from the workspace server when empty."
+"folder. Its files come from this package, or when empty from the workspace server,\n"
+"or else from the latest open.mp release, downloaded the first time."
 msgstr ""
 "Testar no jogo roda o mapa num servidor open.mp privado na pasta de configuração\n"
-"do Haumea. Os arquivos dele vêm deste pacote, ou do servidor do workspace quando vazio."
+"do Haumea. Os arquivos dele vêm deste pacote, ou quando vazio do servidor do workspace,\n"
+"ou então da versão mais recente do open.mp, baixada na primeira vez."
+
+msgid "Test in game starts the server; what it prints shows here."
+msgstr "Testar no jogo inicia o servidor; o que ele imprimir aparece aqui."
 
 #, c-format
 msgid "Test in game: %s"
@@ -9584,6 +9651,9 @@ msgstr ""
 "O radar do jogo no canto da vista 3D, com as gang zones do mapa.\n"
 "Clique nele para o mapa completo."
 
+msgid "The gap, in canvas units. Drag or double-click to type."
+msgstr "O espaço, em unidades do canvas. Arraste ou dê duplo clique para digitar."
+
 msgid "The group the zones go in."
 msgstr "O grupo onde as zonas ficam."
 
@@ -9599,6 +9669,13 @@ msgstr "O instalador parou (código de saída %d)."
 
 msgid "The last checkpoint: Finish (or Air finish) shows a flag."
 msgstr "O último checkpoint: Chegada (ou Chegada aérea) mostra uma bandeira."
+
+msgid ""
+"The latest open.mp release from GitHub, so Test in game and pawncc work in it.\n"
+"Files already in the folder are kept."
+msgstr ""
+"A versão mais recente do open.mp no GitHub, para o Testar no jogo e o pawncc funcionarem nela.\n"
+"Os arquivos que já estão na pasta são mantidos."
 
 msgid "The layout is limited to 2,000 objects. Increase spacing for a longer path."
 msgstr "O layout é limitado a 2.000 objetos. Aumente o espaçamento para caminhos mais longos."
@@ -9627,6 +9704,9 @@ msgstr "O meio, embaixo: ele fica em pé no chão onde você clica."
 msgid "The mirror's %s coordinate."
 msgstr "A coordenada %s do espelho."
 
+msgid "The model is only drawn from this far away."
+msgstr "O modelo só é desenhado a partir desta distância."
+
 msgid "The model's length, so the pieces just touch."
 msgstr "O comprimento do modelo, para as peças se encostarem."
 
@@ -9642,6 +9722,10 @@ msgid ""
 msgstr ""
 "Os objetos desenhados: todo objeto do script, a seleção ou um grupo.\n"
 "Veículos, elementos SA-MP e objetos do mundo sem mudanças ficam de fora."
+
+#, c-format
+msgid "The open.mp server (%s) is in %s."
+msgstr "O servidor open.mp (%s) está em %s."
 
 msgid "The parent was deleted, so this attachment is not exported."
 msgstr "O pai foi excluído, então este anexo não é exportado."
@@ -9663,6 +9747,9 @@ msgstr "O ponto em volta do qual as cópias vão (um eixo vertical)."
 
 msgid "The saved file's first lines say which functions to call."
 msgstr "As primeiras linhas do arquivo salvo dizem quais funções chamar."
+
+msgid "The screen, previews, background, HUD, guides and nudging."
+msgstr "A tela, as prévias, o fundo, o HUD, as guias e o deslocamento."
 
 msgid "The selected server TXD could not be loaded."
 msgstr "Não foi possível carregar o TXD do servidor selecionado."
@@ -9899,10 +9986,6 @@ msgstr "Hora e clima"
 msgid "Time (ms)"
 msgstr "Tempo (ms)"
 
-#, c-format
-msgid "Time: %d %d (visible now: %s)"
-msgstr "Horário: %d %d (visível agora: %s)"
-
 msgid "Timed (day or night)"
 msgstr "Com horário (dia ou noite)"
 
@@ -9937,8 +10020,8 @@ msgstr "Para todos (TextDrawCreate)"
 msgid "To ground"
 msgstr "No chão"
 
-msgid "To keep them: a SA-MP 0.3.DL or open.mp custom model goes in the workspace's models/artconfig.txt (AddSimpleModel) with its DFF and TXD; anything else needs a similar game or SA-MP object in its place (search the Object Browser)."
-msgstr "Para mantê-los: um modelo personalizado do SA-MP 0.3.DL ou do open.mp vai no models/artconfig.txt do workspace (AddSimpleModel) com o DFF e o TXD; o resto precisa de um objeto parecido do jogo ou do SA-MP no lugar (procure no Navegador de objetos)."
+msgid "To keep them: add it as a custom model (File > Import > Custom Model) with its DFF and TXD; anything else needs a similar game or SA-MP object in its place (search the Asset Browser)."
+msgstr "Para mantê-los: adicione-o como modelo personalizado (Arquivo > Importar > Modelo personalizado) com seu DFF e TXD; o resto precisa de um objeto parecido do jogo ou do SA-MP no lugar (procure no Navegador de recursos)."
 
 msgid "To the key one"
 msgstr "Ao principal"
@@ -10044,6 +10127,9 @@ msgstr "Cassino das Tríades"
 msgid "Triangle"
 msgstr "Triângulo"
 
+msgid "Trip"
+msgstr "Trajeto"
+
 msgid "Truck"
 msgstr "Caminhão"
 
@@ -10061,6 +10147,9 @@ msgstr "Giro"
 
 msgid "Turn by"
 msgstr "Girar por"
+
+msgid "Turn on artwork"
+msgstr "Ativar artwork"
 
 msgid "Turns"
 msgstr "Voltas"
@@ -10102,14 +10191,14 @@ msgstr "Txd (inc,-exc)"
 msgid "Type"
 msgstr "Tipo"
 
+msgid "Type a model ID and press Enter to swap the model. Custom models use their negative Pawn IDs."
+msgstr "Digite um ID de modelo e pressione Enter para trocar o modelo. Modelos personalizados usam IDs Pawn negativos."
+
 msgid "UI scale"
 msgstr "Escala da interface"
 
 msgid "URL"
 msgstr "URL"
-
-msgid "Uncapped"
-msgstr "Sem limite"
 
 msgid ""
 "Unchanged world objects are not saved in the map. Once you move,\n"
@@ -10177,6 +10266,9 @@ msgstr "Alterações não salvas"
 msgid "Unsaved changes - %s"
 msgstr "Alterações não salvas - %s"
 
+msgid "Unsaved changes were kept in an autosave (File > Recover Autosave)"
+msgstr "As alterações não salvas foram guardadas num salvamento automático (Arquivo > Recuperar salvamento automático)"
+
 msgid "Unsaved code"
 msgstr "Código não salvo"
 
@@ -10195,9 +10287,6 @@ msgstr "Textdraws não salvos"
 
 msgid "Untitled map"
 msgstr "Mapa sem título"
-
-msgid "Up"
-msgstr "Subir"
 
 msgid "Up / Down"
 msgstr "Cima / Baixo"
@@ -10500,6 +10589,12 @@ msgstr ""
 "Quando o Namaka está instalado, o Haumea o escuta no próprio socket\n"
 "(só o seu usuário pode usá-lo). As mudanças valem a partir da próxima vez que abrir."
 
+msgid "When a driver sounds the horn"
+msgstr "Quando um motorista buzina"
+
+msgid "When a player presses a key"
+msgstr "Quando um jogador aperta uma tecla"
+
 msgid ""
 "When off, Reload Game Files restarts at once if there are no unsaved changes.\n"
 "Unsaved changes always ask first."
@@ -10509,6 +10604,9 @@ msgstr ""
 
 msgid "When off, flying (W/A/S/D and Q/E with the look button held) goes at the constant fly speed below."
 msgstr "Desligado, o voo (W/A/S/D e Q/E com o botão de olhar segurado) vai na velocidade de voo constante abaixo."
+
+msgid "When the map loads"
+msgstr "Quando o mapa carrega"
 
 msgid "Where"
 msgstr "Onde"
@@ -10626,9 +10724,6 @@ msgstr "Mundo"
 
 msgid "World & streaming"
 msgstr "Mundo e streaming"
-
-msgid "World object: it stays unchanged and is omitted from Pawn export. If you move, rotate, delete, or edit its materials, export removes the original per player and creates the scripted replacement."
-msgstr "Objeto do mundo: ele fica inalterado e é omitido da exportação Pawn. Se você o mover, girar, excluir ou editar os materiais dele, a exportação remove o original por jogador e cria o substituto no script."
 
 msgid "World origin"
 msgstr "Origem do mundo"
@@ -10756,6 +10851,9 @@ msgstr "Seus mapas"
 msgid "Your name"
 msgstr "Seu nome"
 
+msgid "Your own DFF and TXD, copied into the server's models folder. Maps that use them register them in their own code (AddSimpleModel, AddCharModel); the server (open.mp, or SA-MP 0.3.DL) sends them to players as they join, and players need the SA-MP 0.3.DL client. Nothing is written into the game folder."
+msgstr "Seu próprio DFF e TXD, copiados para a pasta models do servidor. Os mapas que os usam os registram no próprio código (AddSimpleModel, AddCharModel); o servidor (open.mp ou SA-MP 0.3.DL) os envia aos jogadores quando entram, e os jogadores precisam do cliente SA-MP 0.3.DL. Nada é gravado na pasta do jogo."
+
 msgid "Your own shell, inside Haumea: run any AI assistant, a server or anything else."
 msgstr "Seu próprio shell, dentro do Haumea: execute qualquer assistente de IA, um servidor ou qualquer outra coisa."
 
@@ -10790,8 +10888,14 @@ msgstr "Zoom"
 msgid "Zoom camera toward target"
 msgstr "Aproximar a câmera do alvo"
 
+msgid "Zoom in"
+msgstr "Aproximar"
+
 msgid "Zoom in (narrower FOV, like the wheel)"
 msgstr "Aproximar (FOV mais estreito, como a roda)"
+
+msgid "Zoom out"
+msgstr "Afastar"
 
 msgid "Zoom out (wider FOV, like the wheel)"
 msgstr "Afastar (FOV mais largo, como a roda)"
@@ -10807,6 +10911,9 @@ msgstr "uma cópia dos nós do jogo"
 
 msgid "a node can have at most 15 links"
 msgstr "um nó pode ter no máximo 15 ligações"
+
+msgid "a server download is running; try again when it finishes"
+msgstr "um download do servidor está em andamento; tente de novo quando terminar"
 
 msgid "a sprite needs its text as TXD:texture."
 msgstr "um sprite precisa do texto como TXD:textura."
@@ -10964,9 +11071,6 @@ msgstr "editando textdraws"
 msgid "empty text can crash 0.3.7 clients; use \"_\" for nothing."
 msgstr "texto vazio pode travar clientes 0.3.7; use \"_\" para nada."
 
-msgid "empty: pick from the list"
-msgstr "vazio: escolha da lista"
-
 msgid "fit to at least one zone"
 msgstr "ajuste para pelo menos uma zona"
 
@@ -11066,9 +11170,6 @@ msgstr "nome do novo caminho"
 
 msgid "new room's name"
 msgstr "nome da nova sala"
-
-msgid "no"
-msgstr "não"
 
 #, c-format
 msgid "no NODES*.DAT files in %s"
@@ -11257,9 +11358,6 @@ msgstr "selecionando objetos"
 msgid "set an open.mp server package (folder, .tar.gz or .zip) in Preferences > Test server"
 msgstr "defina um pacote de servidor open.mp (pasta, .tar.gz ou .zip) em Preferências > Servidor de teste"
 
-msgid "show"
-msgstr "mostrar"
-
 msgid "sphere"
 msgstr "esfera"
 
@@ -11391,9 +11489,6 @@ msgstr "observadores"
 #, c-format
 msgid "walks NODES%d.DAT from point %d"
 msgstr "anda pelo NODES%d.DAT a partir do ponto %d"
-
-msgid "yes"
-msgstr "sim"
 
 msgid "yesterday"
 msgstr "ontem"

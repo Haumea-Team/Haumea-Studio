@@ -18,7 +18,7 @@
 
 stock Haumea_hv_streamer_RemoveWorldObjectsForPlayer(playerid)
 {
-	RemoveBuildingForPlayer(playerid, 3563, 2063.132812, -1731.781250, 15.273438, 0.25); // LODpmedhos2_LAe
+	RemoveBuildingForPlayer(playerid, 3563, 2063.1328, -1731.7812, 15.273438, 0.25); // LODpmedhos2_LAe
 }
 
 static zone = -1;
@@ -29,79 +29,79 @@ stock Haumea_hv_streamer_CreateObjects()
 
 	// ---- NPC paths (open.mp) ----
 	new p = NPC_CreatePath();
-	NPC_AddPointToPath(p, 1600.000000, -1920.000000, 13.500000, 0.50); // path point
-	NPC_AddPointToPath(p, 1620.000000, -1920.000000, 13.500000, 0.50); // path point
+	NPC_AddPointToPath(p, 1600.0, -1920.0, 13.5, 0.5); // path point
+	NPC_AddPointToPath(p, 1620.0, -1920.0, 13.5, 0.5); // path point
 
 	// ---- race checkpoints (streamer) ----
-	CreateDynamicRaceCP(0, 1640.000000, -1900.000000, 13.500000, 1650.000000, -1900.000000, 13.500000, 8.00, -1, -1, -1, STREAMER_RACE_CP_SD); // checkpoint
-	CreateDynamicRaceCP(0, 1650.000000, -1900.000000, 13.500000, 1660.000000, -1910.000000, 13.500000, 8.00, -1, -1, -1, STREAMER_RACE_CP_SD); // checkpoint
-	CreateDynamicRaceCP(1, 1660.000000, -1910.000000, 13.500000, 0.000000, 0.000000, 0.000000, 8.00, -1, -1, -1, STREAMER_RACE_CP_SD); // checkpoint
+	CreateDynamicRaceCP(0, 1640.0, -1900.0, 13.5, 1650.0, -1900.0, 13.5, 8.0, -1, -1, -1, STREAMER_RACE_CP_SD); // checkpoint
+	CreateDynamicRaceCP(0, 1650.0, -1900.0, 13.5, 1660.0, -1910.0, 13.5, 8.0, -1, -1, -1, STREAMER_RACE_CP_SD); // checkpoint
+	CreateDynamicRaceCP(1, 1660.0, -1910.0, 13.5, 0.0, 0.0, 0.0, 8.0, -1, -1, -1, STREAMER_RACE_CP_SD); // checkpoint
 
-	new tmp = CreateDynamicObject(19353, 1600.000000, -1890.000000, 14.000000, 0.000000, 0.000000, 90.000000, 0, -1, -1, STREAMER_OBJECT_SD, 300.00); // wall001
+	new tmp = CreateDynamicObject(19353, 1600.0, -1890.0, 14.0, 0.0, 0.0, 90.0, 0, -1, -1, 300.0, 300.0); // wall001
 	SetDynamicObjectMaterial(tmp, 0, 19297, "matcolours", "white", 0xFFFF0000);
 
-	objectid = CreateDynamicObject(19353, 1604.000000, -1890.000000, 14.000000, 0.000000, 0.000000, 90.000000, 5, 3, -1, 200.00, 150.00); // wall001
+	objectid = CreateDynamicObject(19353, 1604.0, -1890.0, 14.0, 0.0, 0.0, 90.0, 5, 3, -1, 200.0, 150.0); // wall001
 	SetDynamicObjectMaterialText(objectid, 0, "OPEN", OBJECT_MATERIAL_SIZE_256x128, "Arial", 24, true, 0xFFFFFFFF, 0xFF000000, OBJECT_MATERIAL_TEXT_ALIGN_CENTER);
 
-	new base = CreateDynamicObject(1271, 1616.000000, -1890.000000, 13.500000, 0.000000, 0.000000, 45.000000, -1, -1, -1); // gunbox
+	new base = CreateDynamicObject(1271, 1616.0, -1890.0, 13.5, 0.0, 0.0, 45.0, -1, -1, -1); // gunbox
 
-	new crate = CreateDynamicObject(1271, 1616.000000, -1890.000000, 14.300000, 15.000000, 25.000000, 80.000000, -1, -1, -1); // gunbox
+	new crate = CreateDynamicObject(1271, 1616.0, -1890.0, 14.3, 15.0, 25.0, 80.0, -1, -1, -1); // gunbox
 
-	AddStaticVehicle(411, 1610.000000, -1880.000000, 13.300000, 90.000000, 1, 1); // infernus
-	AddStaticVehicleEx(560, 1615.000000, -1880.000000, 13.300000, 180.000000, 3, 3, 120); // sultan
+	AddStaticVehicle(411, 1610.0, -1880.0, 13.3, 90.0, 1, 1); // infernus
+	AddStaticVehicleEx(560, 1615.0, -1880.0, 13.3, 180.0, 3, 3, 120); // sultan
 
-	new car = CreateVehicle(522, 1620.000000, -1880.000000, 13.300000, 0.000000, 6, 6, 60); // nrg500
+	new car = CreateVehicle(522, 1620.0, -1880.0, 13.3, 0.0, 6, 6, 60); // nrg500
 	LinkVehicleToInterior(car, 1);
 
-	CreateDynamicPickup(1240, 2, 1600.000000, -1900.000000, 13.500000, 0, -1, -1, 100.00); // health [pickup]
-	CreateDynamic3DTextLabel("Welcome", 0xFFFF00FF, 1602.000000, -1900.000000, 14.000000, 25.00, INVALID_PLAYER_ID, INVALID_VEHICLE_ID, true, 0, -1, -1, STREAMER_3D_TEXT_LABEL_SD); // info [3D text label]
+	CreateDynamicPickup(1240, 2, 1600.0, -1900.0, 13.5, 0, -1, -1, 100.0); // health [pickup]
+	CreateDynamic3DTextLabel("Welcome", 0xFFFF00FF, 1602.0, -1900.0, 14.0, 25.0, INVALID_PLAYER_ID, INVALID_VEHICLE_ID, true, 0, -1, -1, STREAMER_3D_TEXT_LABEL_SD); // info [3D text label]
 
-	new a = CreateDynamicActor(179, 1605.000000, -1900.000000, 13.500000, 180.000000, 0, 50.00, 0, -1, -1, STREAMER_ACTOR_SD); // WMYAMMO [actor]
-	ApplyDynamicActorAnimation(a, "DEALER", "DEALER_IDLE", 4.10, 1, 0, 0, 0, 0);
+	new a = CreateDynamicActor(179, 1605.0, -1900.0, 13.5, 180.0, 0, 50.0, 0, -1, -1, STREAMER_ACTOR_SD); // WMYAMMO [actor]
+	ApplyDynamicActorAnimation(a, "DEALER", "DEALER_IDLE", 4.1, 1, 0, 0, 0, 0);
 
-	CreateDynamicActor(180, 1607.000000, -1900.000000, 13.500000, 0.000000, 1, 100.00, 0, -1, -1, STREAMER_ACTOR_SD); // BMYTATT [actor]
-	AddPlayerClass(0, 1610.000000, -1900.000000, 13.500000, 90.000000, WEAPON_FIST, 0, WEAPON_FIST, 0, WEAPON_FIST, 0); // CJ [player class]
-	AddPlayerClassEx(2, 105, 1612.000000, -1900.000000, 13.500000, -90.000000, WEAPON_DEAGLE, 100, WEAPON_M4, 300, WEAPON_FIST, 0); // FAM1 [player class]
-	CreateDynamicCP(1630.000000, -1900.000000, 13.500000, 3.00, 0, -1, -1, STREAMER_CP_SD); // checkpoint
+	CreateDynamicActor(180, 1607.0, -1900.0, 13.5, 0.0, 1, 100.0, 0, -1, -1, STREAMER_ACTOR_SD); // BMYTATT [actor]
+	AddPlayerClass(0, 1610.0, -1900.0, 13.5, 90.0, WEAPON_FIST, 0, WEAPON_FIST, 0, WEAPON_FIST, 0); // CJ [player class]
+	AddPlayerClassEx(2, 105, 1612.0, -1900.0, 13.5, -90.0, WEAPON_DEAGLE, 100, WEAPON_M4, 300, WEAPON_FIST, 0); // FAM1 [player class]
+	CreateDynamicCP(1630.0, -1900.0, 13.5, 3.0, 0, -1, -1, STREAMER_CP_SD); // checkpoint
 
-	new cp = CreateDynamicCP(1632.000000, -1900.000000, 13.500000, 2.00, -1, -1, -1, STREAMER_CP_SD); // checkpoint
+	new cp = CreateDynamicCP(1632.0, -1900.0, 13.5, 2.0, -1, -1, -1, STREAMER_CP_SD); // checkpoint
 	#pragma unused cp
 
-	zone = GangZoneCreate(1590.000000, -1910.000000, 1630.000000, -1870.000000); // gangzone [gang zone]
+	zone = GangZoneCreate(1590.0, -1910.0, 1630.0, -1870.0); // gangzone [gang zone]
 
-	CreateDynamicMapIcon(1600.000000, -1880.000000, 13.500000, 6, 0x00000000, 0, -1, -1, STREAMER_MAP_ICON_SD, MAPICON_LOCAL); // mapicon [map icon]
+	CreateDynamicMapIcon(1600.0, -1880.0, 13.5, 6, 0x00000000, 0, -1, -1, STREAMER_MAP_ICON_SD, MAPICON_LOCAL); // mapicon [map icon]
 
 	new n = NPC_Create("SWalker"); // WMYST [NPC]
 	NPC_Spawn(n);
 	NPC_SetSkin(n, 101);
-	NPC_SetPos(n, 1600.000000, -1920.000000, 13.500000);
-	NPC_SetFacingAngle(n, 90.000000);
+	NPC_SetPos(n, 1600.0, -1920.0, 13.5);
+	NPC_SetFacingAngle(n, 90.0);
 	NPC_SetWeapon(n, WEAPON:31);
 	NPC_SetAmmo(n, 300);
 
 	new Haumea_hv_streamer_npc_0 = NPC_Create("SDancer"); // BALLAS1 [NPC]
 	NPC_Spawn(Haumea_hv_streamer_npc_0);
 	NPC_SetSkin(Haumea_hv_streamer_npc_0, 102);
-	NPC_SetPos(Haumea_hv_streamer_npc_0, 1606.000000, -1915.000000, 13.500000);
-	NPC_SetFacingAngle(Haumea_hv_streamer_npc_0, 0.000000);
-	NPC_ApplyAnimation(Haumea_hv_streamer_npc_0, "DANCING", "dnce_M_a", 4.10, true, false, false, false, 0);
+	NPC_SetPos(Haumea_hv_streamer_npc_0, 1606.0, -1915.0, 13.5);
+	NPC_SetFacingAngle(Haumea_hv_streamer_npc_0, 0.0);
+	NPC_ApplyAnimation(Haumea_hv_streamer_npc_0, "DANCING", "dnce_M_a", 4.1, true, false, false, false, 0);
 
 	new nw = NPC_Create("SNodeWalker"); // male01 [NPC]
 	NPC_Spawn(nw);
 	NPC_SetSkin(nw, 7);
-	NPC_SetPos(nw, 2490.000000, -1670.000000, 13.300000);
-	NPC_SetFacingAngle(nw, 0.000000);
+	NPC_SetPos(nw, 2490.0, -1670.0, 13.3);
+	NPC_SetFacingAngle(nw, 0.0);
 
 	new dr = NPC_Create("SDriver"); // WMYCH [NPC]
 	NPC_Spawn(dr);
 	NPC_SetSkin(dr, 255);
-	NPC_SetPos(dr, 1700.000000, -1950.000000, 14.000000);
-	NPC_SetFacingAngle(dr, 0.000000);
+	NPC_SetPos(dr, 1700.0, -1950.0, 14.0);
+	NPC_SetFacingAngle(dr, 0.0);
 
-	new streak = AddStaticVehicleEx(538, 2864.750000, 1254.159058, 12.126000, 180.000000, -1, -1, 100); // streak
+	new streak = AddStaticVehicleEx(538, 2864.75, 1254.159, 12.126, 180.0, -1, -1, 100); // streak
 
 	// ---- attachments ----
-	AttachDynamicObjectToObject(crate, base, 0.000000, 0.000000, 0.800000, 15.000000, 25.000000, 35.000000, true);
+	AttachDynamicObjectToObject(crate, base, 0.0, 0.0, 0.8, 15.0, 25.0, 35.0, true);
 
 	// ---- NPCs in vehicles ----
 	NPC_PutInVehicle(dr, streak, 0);
@@ -110,8 +110,8 @@ stock Haumea_hv_streamer_CreateObjects()
 	NPC_OpenNode(15); // scriptfiles/NPCs/nodes/NODES15.DAT
 	NPC_MoveByPath(n, p, NPC_MOVE_TYPE_JOG, 0.5000, true);
 	NPC_SetNodePoint(15, 3);
-	NPC_PlayNode(nw, 15, NPC_MOVE_TYPE_WALK, NPC_MOVE_SPEED_AUTO, 0.00, true);
-	NPC_StartPlayback(dr, "TRAIN_LINDEN_TO_UNITY", true, 1700.000000, -1950.000000, 14.000000, 0.0, 0.0, 0.0);
+	NPC_PlayNode(nw, 15, NPC_MOVE_TYPE_WALK, NPC_MOVE_SPEED_AUTO, 0.0, true);
+	NPC_StartPlayback(dr, "TRAIN_LINDEN_TO_UNITY", true, 1700.0, -1950.0, 14.0, 0.0, 0.0, 0.0);
 }
 
 stock Haumea_hv_streamer_ShowForPlayer(playerid)

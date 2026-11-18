@@ -3,6 +3,8 @@ open "$UI_FIXTURES/ui_pin_alignment.pwn"
 shortcut window_tools
 wait 5
 click_object model=1271
+click_item 'Tools' '###tools_place'
+wait 2
 click_item 'Tools' 'Coordinate pin'
 click_item 'Tools' 'Place pin'
 click obj:1271:2:0:2 obj:1271:2:0:2
@@ -108,21 +110,21 @@ click_item '*' 'Origin'
 scroll_until 'Tools' 'Align selection to pin'
 click_item 'Tools' 'Align selection to pin'
 wait 3
-assert pawn_contains '2020.000000, -3015.000000, 5.000000'
-assert pawn_contains '2040.000000, -3005.000000, 5.000000'
+assert pawn_contains '2020.0, -3015.0, 5.0'
+assert pawn_contains '2040.0, -3005.0, 5.0'
 move 50% 45%
 shortcut undo
 wait 3
 scroll_until 'Tools' 'Align selection to ruler'
 click_item 'Tools' 'Align selection to ruler'
 wait 3
-assert pawn_contains '2030.000000, -3005.000000, 5.000000'
-assert pawn_contains '2030.000000, -2995.000000, 5.000000'
+assert pawn_contains '2030.0, -3005.0, 5.0'
+assert pawn_contains '2030.0, -2995.0, 5.0'
 move 50% 45%
 shortcut undo
 wait 3
-assert pawn_contains '2000.000000, -3005.000000, 5.000000'
-assert pawn_contains '2020.000000, -2995.000000, 5.000000'
+assert pawn_contains '2000.0, -3005.0, 5.0'
+assert pawn_contains '2020.0, -2995.0, 5.0'
 click_item 'Tools' 'Face ruler direction'
 click_item 'Tools' 'Align selection to ruler'
 wait 3
@@ -137,18 +139,22 @@ click_item 'Tools' 'Face ruler direction'
 scroll_until 'Tools' 'Distribute between ends'
 click_item 'Tools' 'Distribute between ends'
 wait 3
-assert pawn_contains '2030.000000, -3010.000000, 5.000000'
-assert pawn_contains '2030.000000, -2990.000000, 5.000000'
+assert pawn_contains '2030.0, -3010.0, 5.0'
+assert pawn_contains '2030.0, -2990.0, 5.0'
 move 50% 45%
 shortcut undo
 wait 3
-assert pawn_contains '2000.000000, -3005.000000, 5.000000'
-assert pawn_contains '2020.000000, -2995.000000, 5.000000'
+assert pawn_contains '2000.0, -3005.0, 5.0'
+assert pawn_contains '2020.0, -2995.0, 5.0'
 # Guide targets participate in the existing object snap system (N).
 move 90% 45%
 wheel 30
+click_item 'Tools' '###tools_place'
+wait 2
 click_item 'Tools' 'Coordinate pin'
 click_object model=1271
+click_item 'Tools' '###tools_place'
+wait 2
 click_item 'Tools' 'Coordinate pin'
 wait 3
 assert selected == 1
@@ -162,6 +168,8 @@ assert pin.count == 2
 click_item 'Tools' 'Snap objects to pins'
 move 90% 45%
 wheel 30
+click_item 'Tools' '###tools_place'
+wait 2
 click_item 'Tools' 'Coordinate pin'
 wait 3
 assert snap_candidate 9.7 0 0 == 1
@@ -169,6 +177,8 @@ shortcut window_tools
 wait 3
 assert snap_candidate 9.7 0 0 == 1
 shortcut window_tools
+click_item 'Tools' '###tools_place'
+wait 2
 click_item 'Tools' 'Coordinate pin'
 click_item 'Tools' 'Show pins and guides'
 wait 3

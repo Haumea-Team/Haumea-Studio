@@ -12,6 +12,7 @@
 #include "textdraws.h"
 #include "namaka.h"
 #include "multiplayer.h"
+#include "agentbridge.h"
 #include "terminal.h"
 #include "samp_loader.h"
 #include "autocol.h"
@@ -34,11 +35,13 @@
 #include "radarart.h"
 #include "encoding.h"
 #include "pawneditor.h"
+#include "lucide_icons.h"
 #include "shortcuts.h"
 #include "version.h"
 #include "versionutil.h"
 #include "mapcheck.h"
 #include "playerview.h"
+#include "buildreplay.h"
 #include "selftest.h"
 #include "i18n.h"
 #include "keycast.h"
@@ -52,6 +55,9 @@
 #endif
 #include "materialtext.h"
 #include "workspace.h"
+#include "wiki_data.h"
+#include "gxt.h"
+#include "serverdownload.h"
 #include <algorithm>
 #include <map>
 #include <set>
@@ -87,7 +93,7 @@ static bool showTimeWeatherWindow;
 static bool showViewWindow;
 static bool showBrowserWindow = true;
 static bool showDiffWindow;
-static bool showMapObjectsWindow;
+static bool showMapObjectsWindow = true;
 static bool showSavedSelectionsWindow;
 static bool showHistoryWindow;
 static bool showTextureBrowserWindow;
@@ -144,7 +150,7 @@ static void uiBatchEditHeader(ObjectInst *inst);
 enum { BROWSER_CATEGORY_RECENT = -2, BROWSER_CATEGORY_ALL = -1 };
 static int gBrowserSelectedCategory = BROWSER_CATEGORY_RECENT;
 // What the Objects shelf lists: map objects, skins or vehicles, never mixed.
-enum { BROWSER_KIND_OBJECTS, BROWSER_KIND_SKINS, BROWSER_KIND_VEHICLES, BROWSER_NUM_KINDS };
+enum { BROWSER_KIND_OBJECTS, BROWSER_KIND_SKINS, BROWSER_KIND_VEHICLES, BROWSER_KIND_PARTICLES, BROWSER_NUM_KINDS };
 static int gBrowserKind = BROWSER_KIND_OBJECTS;
 static char gBrowserSelectedIde[256];
 static bool gBrowserThumbnailView = true;
@@ -223,7 +229,8 @@ static float gSettingsAutosaveSeconds;
 static bool gPersistentSettingsLoaded;
 // Off: Reload Game Files asks only when there are unsaved changes.
 static bool gConfirmReloadGame = false;
-static const int SAVE_SETTINGS_VERSION = 10;
+static const int SAVE_SETTINGS_VERSION = 13;
+static std::string gWindowTitle;	// the window's title, also shown in our own title bar
 
 static void loadSaveSettings(void);
 static void saveSaveSettings(void);
@@ -865,6 +872,9 @@ ShowEditorWindow(void)
 void
 SetEditorWindowDecorated(bool decorated)
 {
+	// Our own title bar stands in for the system's (titlebar.cpp).
+	if(decorated && TitleBarOwned())
+		return;
 #if defined(LIBRW_GLFW)
 	GLFWwindow *window = getEditorGlfwWindow();
 	if(window)
@@ -1136,12 +1146,12 @@ listAutosaves(std::vector<std::string> &files)
 	});
 }
 
-static void
+static std::string
 writeAutosave(void)
 {
 	char dir[1024];
 	if(SettingsAreReadOnly() || !getAutosaveDirectory(dir, sizeof(dir)))
-		return;
+		return std::string();
 	char stem[256];
 	const char *name = currentMapName();
 	size_t n = 0;
@@ -1156,7 +1166,7 @@ writeAutosave(void)
 	int skipped = 0;
 	if(ExportPawnCode(path, (PawnCodeFormat)gPawnSaveFormat, false, &skipped) < 0){
 		log("Autosave: failed to write %s\n", path);
-		return;
+		return std::string();
 	}
 	log("Autosave: wrote %s\n", path);
 	std::vector<std::string> files;
@@ -1166,6 +1176,7 @@ writeAutosave(void)
 		remove(EditorXML::Sidecar(files[i]).c_str());
 		remove((EditorXML::Sidecar(files[i])+".previous").c_str());
 	}
+	return path;
 }
 
 static void
@@ -1431,11 +1442,11 @@ uiToasts(void)
 static void
 uiNotificationSettings(void)
 {
-	ImGui::Checkbox(_("Enable Notifications"), &toastEnabled);
+	UiCheckbox(_("Enable Notifications"), &toastEnabled);
 	if(toastEnabled){
 		ImGui::Indent();
 		for(int i = 0; i < TOAST_NUM_CATEGORIES; i++)
-			ImGui::Checkbox(_(toastCategoryNames[i]), &toastCategoryEnabled[i]);
+			UiCheckbox(_(toastCategoryNames[i]), &toastCategoryEnabled[i]);
 		ImGui::Unindent();
 	}
 }
@@ -1573,11 +1584,11 @@ OpenLogFile(bool append)
 static void
 drawLogWindow(bool *open)
 {
-	ImGui::SetNextWindowSize(ImVec2(ImGui::GetFontSize() * 40.0f, ImGui::GetFontSize() * 20.0f), ImGuiCond_FirstUseEver);
 	// ###Log: the ID the window always had, so saved layouts stay.
 	char title[64];
 	snprintf(title, sizeof(title), ICON_FA_LIST " %s###Log", _("Log"));
-	if(!ImGui::Begin(title, open)){
+	ImGuiWindowFlags flags = UiPlaceToolWindow(title, 56.0f, false);
+	if(!ImGui::Begin(title, open, flags)){
 		ImGui::End();
 		return;
 	}
@@ -1590,17 +1601,29 @@ drawLogWindow(bool *open)
 		warnings = gLogWarnings;
 		gLogSeenErrors = errors;
 	}
-	char label[64];
-	ImGui::Checkbox(L("Info"), &showInfo);
+	// One row: which lines (everything, warnings and up, errors), the
+	// filter filling the row, Copy and Clear at its end.
+	{
+		static char levelLabels[3][64];
+		snprintf(levelLabels[0], sizeof(levelLabels[0]), "%s###all", _("All"));
+		snprintf(levelLabels[1], sizeof(levelLabels[1]), "%s %d###warnings", _("Warnings"), warnings);
+		snprintf(levelLabels[2], sizeof(levelLabels[2]), "%s %d###errors", _("Errors"), errors);
+		const char *levels[] = { levelLabels[0], levelLabels[1], levelLabels[2] };
+		int level = showInfo ? 0 : showWarnings ? 1 : 2;
+		if(UiSegmented("##log_level", levels, 3, &level, false)){
+			showInfo = level == 0;
+			showWarnings = level <= 1;
+			showErrors = true;
+		}
+		ImGui::SetItemTooltip("%s", _("All lines, warnings and errors, or errors only"));
+	}
 	ImGui::SameLine();
-	snprintf(label, sizeof(label), "%s (%d)###warnings", _("Warnings"), warnings);
-	ImGui::Checkbox(label, &showWarnings);
-	ImGui::SameLine();
-	snprintf(label, sizeof(label), "%s (%d)###errors", _("Errors"), errors);
-	ImGui::Checkbox(label, &showErrors);
-	ImGui::SameLine();
-	filter.Draw("##filter", ImGui::GetFontSize() * 10.0f);
-	ImGui::SetItemTooltip("%s", _("Filter: words to find, -word to leave out"));
+	float copyW = ImGui::CalcTextSize(LI(ICON_FA_COPY, "Copy"), nil, true).x + ImGui::GetStyle().FramePadding.x*2.0f;
+	float clearW = ImGui::CalcTextSize(LI(ICON_FA_TRASH, "Clear"), nil, true).x + ImGui::GetStyle().FramePadding.x*2.0f;
+	float spacing = ImGui::GetStyle().ItemSpacing.x;
+	ImGui::SetNextItemWidth(std::max(ImGui::GetFontSize()*6.0f, ImGui::GetContentRegionAvail().x - copyW - clearW - spacing*2.0f));
+	ImGui::InputTextWithHint("##filter", _("Filter: words to find, -word to leave out"), filter.InputBuf, IM_ARRAYSIZE(filter.InputBuf));
+	filter.Build();
 	ImGui::SameLine();
 	bool copy = ImGui::Button(LI(ICON_FA_COPY, "Copy"));
 	ImGui::SetItemTooltip("%s", _("Copies the lines shown, to paste in a bug report"));
@@ -1610,14 +1633,6 @@ drawLogWindow(bool *open)
 		gLogLines.clear();
 		gLogErrors = gLogWarnings = gLogSeenErrors = 0;
 	}
-	ImGui::SameLine();
-	ImGui::Checkbox(L("Follow"), &follow);
-	ImGui::SetItemTooltip("%s", _("Keep the newest line in view"));
-	if(!gLogFilePath.empty()){
-		ImGui::TextDisabled("%s", gLogFilePath.c_str());
-		ImGui::SetItemTooltip("%s", _("This run's log. The one before is haumea.previous.log."));
-	}
-	ImGui::Separator();
 
 	// The lines to show, copied out of the lock.
 	std::vector<LogLine> shown;
@@ -1639,7 +1654,8 @@ drawLogWindow(bool *open)
 		ImGui::SetClipboardText(text.c_str());
 		Toast(TOAST_COPY_PASTE, _("Copied %d log lines"), (int)shown.size());
 	}
-	ImGui::BeginChild("lines", ImVec2(0, 0), ImGuiChildFlags_None, ImGuiWindowFlags_HorizontalScrollbar);
+	float footer = ImGui::GetFrameHeight() + ImGui::GetStyle().ItemSpacing.y;
+	ImGui::BeginChild("lines", ImVec2(0, -footer), ImGuiChildFlags_None, ImGuiWindowFlags_HorizontalScrollbar);
 	ImGuiListClipper clipper;
 	clipper.Begin((int)shown.size());
 	while(clipper.Step())
@@ -1657,6 +1673,22 @@ drawLogWindow(bool *open)
 	if(follow && ImGui::GetScrollY() >= ImGui::GetScrollMaxY() - ImGui::GetFontSize() * 4.0f)
 		ImGui::SetScrollHereY(1.0f);
 	ImGui::EndChild();
+	// Along the foot: this run's log file, and Follow at the end.
+	ImGui::AlignTextToFramePadding();
+	if(!gLogFilePath.empty()){
+		ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+		UiElidedText(gLogFilePath.c_str(), ImGui::GetContentRegionAvail().x - ImGui::GetFontSize()*8.0f);
+		ImGui::PopStyleColor();
+		ImGui::SetItemTooltip("%s", _("This run's log. The one before is haumea.previous.log."));
+	}else
+		ImGui::Dummy(ImVec2(0, 0));
+	{
+		const char *followLabel = L("Follow");
+		float w = ImGui::CalcTextSize(followLabel, nil, true).x + ImGui::GetFontSize()*2.0f + ImGui::GetStyle().ItemInnerSpacing.x;
+		ImGui::SameLine(ImGui::GetWindowContentRegionMax().x - w);
+		UiCheckbox(followLabel, &follow);
+		ImGui::SetItemTooltip("%s", _("Keep the newest line in view"));
+	}
 	ImGui::End();
 }
 
@@ -1863,6 +1895,10 @@ restartHaumeaFromUi(void)
 	ToastFor(TOAST_SAVE, 6.0f, _("Could not restart Haumea. No files or editor changes were modified."));
 }
 
+static void uiDialogButtonsStart(int count);
+static bool uiDialogPrimary(const char *label);
+static bool uiDialogSecondary(const char *label);
+
 static void
 uiReloadGamePopup(void)
 {
@@ -1888,7 +1924,7 @@ uiReloadGamePopup(void)
 
 	ImGui::Spacing();
 	bool dontShowAgain = !gConfirmReloadGame;
-	if(ImGui::Checkbox(_("Don't show again when there are no unsaved changes"), &dontShowAgain)){
+	if(UiCheckbox(_("Don't show again when there are no unsaved changes"), &dontShowAgain)){
 		gConfirmReloadGame = !dontShowAgain;
 		saveSaveSettings();
 	}
@@ -1901,7 +1937,7 @@ uiReloadGamePopup(void)
 		restartHaumeaFromUi();
 	}
 	ImGui::SameLine();
-	if(ImGui::Button(_("Cancel"), ImVec2(120, 0)))
+	if(uiDialogSecondary(_("Cancel")))
 		gShowReloadGame = false;
 	EndEditorDialog();
 }
@@ -2599,40 +2635,40 @@ uiObjectFlagsEditor(ObjectDef *obj)
 {
 	switch(params.objFlagset){
 	case GAME_III:
-		ImGui::Checkbox(_("Normal cull"), &obj->m_normalCull);
-		ImGui::Checkbox(_("No Fade"), &obj->m_noFade);
-		ImGui::Checkbox(_("Draw Last"), &obj->m_drawLast);
-		ImGui::Checkbox(_("Additive Blend"), &obj->m_additive);
+		UiCheckbox(_("Normal cull"), &obj->m_normalCull);
+		UiCheckbox(_("No Fade"), &obj->m_noFade);
+		UiCheckbox(_("Draw Last"), &obj->m_drawLast);
+		UiCheckbox(_("Additive Blend"), &obj->m_additive);
 		if(obj->m_additive) obj->m_drawLast = true;
-		ImGui::Checkbox(_("Is Subway"), &obj->m_isSubway);
-		ImGui::Checkbox(_("Ignore Light"), &obj->m_ignoreLight);
-		ImGui::Checkbox(_("No Z-write"), &obj->m_noZwrite);
+		UiCheckbox(_("Is Subway"), &obj->m_isSubway);
+		UiCheckbox(_("Ignore Light"), &obj->m_ignoreLight);
+		UiCheckbox(_("No Z-write"), &obj->m_noZwrite);
 		break;
 
 	case GAME_VC:
-		ImGui::Checkbox(_("Wet Road Effect"), &obj->m_wetRoadReflection);
-		ImGui::Checkbox(_("No Fade"), &obj->m_noFade);
-		ImGui::Checkbox(_("Draw Last"), &obj->m_drawLast);
-		ImGui::Checkbox(_("Additive Blend"), &obj->m_additive);
+		UiCheckbox(_("Wet Road Effect"), &obj->m_wetRoadReflection);
+		UiCheckbox(_("No Fade"), &obj->m_noFade);
+		UiCheckbox(_("Draw Last"), &obj->m_drawLast);
+		UiCheckbox(_("Additive Blend"), &obj->m_additive);
 		if(obj->m_additive) obj->m_drawLast = true;
-		ImGui::Checkbox(_("Ignore Light"), &obj->m_ignoreLight);
-		ImGui::Checkbox(_("No Z-write"), &obj->m_noZwrite);
-		ImGui::Checkbox(_("No shadows"), &obj->m_noShadows);
-		ImGui::Checkbox(_("Ignore Draw Dist"), &obj->m_ignoreDrawDist);
-		ImGui::Checkbox(_("Code Glass"), &obj->m_isCodeGlass);
-		ImGui::Checkbox(_("Artist Glass"), &obj->m_isArtistGlass);
+		UiCheckbox(_("Ignore Light"), &obj->m_ignoreLight);
+		UiCheckbox(_("No Z-write"), &obj->m_noZwrite);
+		UiCheckbox(_("No shadows"), &obj->m_noShadows);
+		UiCheckbox(_("Ignore Draw Dist"), &obj->m_ignoreDrawDist);
+		UiCheckbox(_("Code Glass"), &obj->m_isCodeGlass);
+		UiCheckbox(_("Artist Glass"), &obj->m_isArtistGlass);
 		break;
 
 	case GAME_SA: {
-		ImGui::Checkbox(_("Draw Last"), &obj->m_drawLast);
-		ImGui::Checkbox(_("Additive Blend"), &obj->m_additive);
+		UiCheckbox(_("Draw Last"), &obj->m_drawLast);
+		UiCheckbox(_("Additive Blend"), &obj->m_additive);
 		if(obj->m_additive) obj->m_drawLast = true;
-		ImGui::Checkbox(_("No Z-write"), &obj->m_noZwrite);
-		ImGui::Checkbox(_("No shadows"), &obj->m_noShadows);
-		ImGui::Checkbox(_("No Backface Culling"), &obj->m_noBackfaceCulling);
+		UiCheckbox(_("No Z-write"), &obj->m_noZwrite);
+		UiCheckbox(_("No shadows"), &obj->m_noShadows);
+		UiCheckbox(_("No Backface Culling"), &obj->m_noBackfaceCulling);
 		if(obj->m_type == ObjectDef::ATOMIC){
-			ImGui::Checkbox(_("Wet Road Effect"), &obj->m_wetRoadReflection);
-			ImGui::Checkbox(_("Don't collide with Flyer"), &obj->m_dontCollideWithFlyer);
+			UiCheckbox(_("Wet Road Effect"), &obj->m_wetRoadReflection);
+			UiCheckbox(_("Don't collide with Flyer"), &obj->m_dontCollideWithFlyer);
 
 			int flag = (int)obj->m_isCodeGlass |
 				(int)obj->m_isArtistGlass<<1 |
@@ -2664,7 +2700,7 @@ uiObjectFlagsEditor(ObjectDef *obj)
 			obj->m_noCover = !!(flag & 0x80);
 			obj->m_wetOnly = !!(flag & 0x100);
 		}else if(obj->m_type == ObjectDef::CLUMP)
-			ImGui::Checkbox(_("Door"), &obj->m_isDoor);
+			UiCheckbox(_("Door"), &obj->m_isDoor);
 		break;
 	}
 	}
@@ -2963,83 +2999,313 @@ uiStepCombo(const char *id, float *value, const float *steps, int numSteps, cons
 
 static ImRect uiPanelWorkArea(void);
 
-// ---- Main toolbar and 3D view overlay (layout after Unreal Engine 5's editor) ----
+// ---- The ribbon and the 3D view's pills ----
 //
-// The bar under the menus holds the big commands, each an icon over its name;
-// the settings of the tool in use float over the 3D view in rounded pills.
+// The bar under the menus is a ribbon of grouped commands: a tile (an icon
+// over its name, the ribbon's full height) for the commands worth aiming at,
+// a stack (three rows of icon beside name) for those that belong to the tile
+// beside it or are really a readout, like the snap steps, and the tools in
+// one card. Groups are split by a hairline. Measures are in 14px-font units.
+// The tool in use's settings, and what is selected, float over the 3D view
+// in rounded pills.
+
+static float
+uiRibbonUnit(void)
+{
+	return ImGui::GetFontSize() / 14.0f;
+}
+
+// When the window is too narrow for the whole ribbon, whole groups leave it,
+// never its sizes or names; each is in a menu too. Picked from the measured
+// width (uiCommandBar). Map: 2 no clipboard; 3 no undo; 4 no To ground and
+// Focus (1 is as 0: the panels are always one tile). TextDraws: 1 no guides
+// stack; 2 no zoom; 3 no gap and sizes; 4 no align-to and spacing; 5 no undo.
+// Past that it scrolls.
+static int gRibbonDensity;
+enum { RIBBON_DENSITY_MAX = 5 };
 
 static float
 uiMainToolbarHeight(void)
 {
-	return floorf(ImGui::GetFontSize() * 3.3f);
+	return floorf(80.0f * uiRibbonUnit());
 }
 
-// An icon over a short name. active: a tool that is on; accent: the call to
-// action (Test in game). dot: a small amber mark (unsaved changes).
-static bool
-uiBigToolButton(const char *id, const char *icon, const char *label, bool active, const char *tip,
-	bool enabled = true, bool accent = false, bool dot = false)
+// The ribbon's contents: its height less the padding.
+static float
+uiRibbonInner(void)
 {
-	float fs = ImGui::GetFontSize();
-	float labelSize = fs * 0.78f;
+	return uiMainToolbarHeight() - 10.0f*uiRibbonUnit();
+}
+
+// White over a dark theme, black over a light one, at this opacity.
+static ImU32
+uiRibbonWash(float alpha)
+{
+	return UiThemeIsLight() ? IM_COL32(0, 0, 0, (int)(alpha*255.0f)) : IM_COL32(255, 255, 255, (int)(alpha*255.0f));
+}
+
+static ImVec4
+uiRibbonAccent(void)
+{
+	return ImGui::GetStyleColorVec4(ImGuiCol_CheckMark);
+}
+
+// The background a ribbon button wears for its state.
+static ImU32
+uiRibbonStateFill(bool open, bool hovered, bool held)
+{
+	// On shows on the icon (the accent), not as a fill: only the pointer washes.
+	(void)open;
+	if(held) return uiRibbonWash(0.12f);
+	if(hovered) return uiRibbonWash(0.06f);
+	return 0;
+}
+
+// A ribbon icon: Lucide's thin outlines (LU_*).
+static void
+uiRibbonIcon(ImDrawList *dl, const char *icon, float size, ImVec2 centre, ImU32 col)
+{
+	ImFont *font = gIconFont ? gIconFont : ImGui::GetFont();
+	ImVec2 s = font->CalcTextSizeA(size, FLT_MAX, 0.0f, icon);
+	dl->AddText(font, size, ImVec2(floorf(centre.x - s.x*0.5f), floorf(centre.y - s.y*0.5f)), col, icon);
+}
+
+// A tile's width: its name's, with room either side, never under 56 (nor
+// under gRibbonTileMinWidth, which keeps the editor's tile one width).
+static float gRibbonTileMinWidth;
+static float
+uiRibbonTileWidth(const char *label)
+{
+	float u = uiRibbonUnit();
+	ImVec2 ls = ImGui::GetFont()->CalcTextSizeA(11.5f*u, FLT_MAX, 0.0f, label);
+	return floorf(std::max(std::max(56.0f*u, ls.x + 12.0f*u), gRibbonTileMinWidth));
+}
+
+// A tile: an icon over a short name. open: its panel is showing (or its mode
+// is on); accent: the call to action (Test in game); dot: an amber mark
+// (unsaved changes).
+// tool: a tool's own colour; while it is the tool in use the tile wears it as
+// a 12% wash, a 1.5px border and the icon's and name's colour. Any other tile
+// that is on (its panel showing) gets a faint wash and the accent on its icon.
+static bool
+uiRibbonTile(const char *id, const char *icon, const char *label, const char *tip,
+	bool enabled = true, bool open = false, bool accent = false, bool dot = false, ImU32 tool = 0)
+{
+	float u = uiRibbonUnit();
 	ImFont *font = ImGui::GetFont();
+	float labelSize = 11.5f*u, iconSize = 24.0f*u;
 	ImVec2 ls = font->CalcTextSizeA(labelSize, FLT_MAX, 0.0f, label);
-	ImVec2 is = ImGui::CalcTextSize(icon);
-	float w = std::max(std::max(ls.x, is.x) + fs*1.2f, fs*3.3f);
-	float h = uiMainToolbarHeight() - fs*0.5f;
-	ImGui::PushID(id);
+	float w = uiRibbonTileWidth(label);
+	float h = uiRibbonInner();
 	ImGui::BeginDisabled(!enabled);
 	ImVec2 p = ImGui::GetCursorScreenPos();
-	bool pressed = ImGui::InvisibleButton("##big", ImVec2(w, h));
+	// Its name is the button's label, for UI scripts; the id keeps it unique.
+	char button[160];
+	snprintf(button, sizeof(button), "%s###%s", label, id);
+	bool pressed = ImGui::InvisibleButton(button, ImVec2(w, h));
 	bool hovered = ImGui::IsItemHovered(), held = ImGui::IsItemActive();
 	ImDrawList *dl = ImGui::GetWindowDrawList();
-	ImVec4 a = ImGui::GetStyleColorVec4(ImGuiCol_CheckMark);
-	ImVec4 fill = UiAccentFill();
-	ImU32 bg = 0;
-	if(accent){
-		float k = held ? 0.88f : hovered ? 1.15f : 1.0f;
-		bg = ImGui::GetColorU32(ImVec4(fill.x*k, fill.y*k, fill.z*k, 1.0f));
-	}else if(active)
-		bg = ImGui::GetColorU32(ImVec4(a.x, a.y, a.z, hovered ? 0.34f : 0.24f));
-	else if(hovered)
-		bg = ImGui::GetColorU32(held ? ImGuiCol_ButtonActive : ImGuiCol_ButtonHovered);
 	ImVec2 q(p.x + w, p.y + h);
-	if(bg)
-		dl->AddRectFilled(p, q, bg, 7.0f);
-	if(active && !accent)
-		dl->AddRectFilled(ImVec2(p.x + w*0.28f, q.y - 3.0f), ImVec2(q.x - w*0.28f, q.y - 1.0f), ImGui::GetColorU32(a), 1.0f);
-	ImU32 iconCol = accent ? IM_COL32_WHITE : active ? ImGui::GetColorU32(a) : ImGui::GetColorU32(ImGuiCol_Text);
-	ImU32 textCol = accent ? IM_COL32_WHITE : ImGui::GetColorU32(active ? ImGuiCol_Text : ImGuiCol_TextDisabled);
-	if(hovered && !accent)
-		textCol = ImGui::GetColorU32(ImGuiCol_Text);
-	float top = p.y + (h - is.y - ls.y - fs*0.25f) * 0.5f;
-	ImVec2 iconAt(p.x + (w - is.x)*0.5f, top);
-	dl->AddText(iconAt, iconCol, icon);
-	dl->AddText(font, labelSize, ImVec2(p.x + (w - ls.x)*0.5f, top + is.y + fs*0.25f), textCol, label);
+	ImU32 text = enabled ? ImGui::GetColorU32(ImGuiCol_Text, 0.88f) : ImGui::GetColorU32(ImGuiCol_TextDisabled, 0.6f);
+	ImU32 iconCol = enabled ? ImGui::GetColorU32(ImGuiCol_Text) : text;
+	if(accent){
+		ImVec4 fill = UiAccentFill();
+		float k = held ? 0.88f : hovered ? 1.12f : 1.0f;
+		dl->AddRectFilled(p, q, ImGui::GetColorU32(ImVec4(fill.x*k, fill.y*k, fill.z*k, 1.0f)), 5.0f*u);
+		text = iconCol = IM_COL32_WHITE;
+	}else if(tool && open){
+		ImVec4 v = ImGui::ColorConvertU32ToFloat4(tool);
+		dl->AddRectFilled(p, q, ImGui::GetColorU32(ImVec4(v.x, v.y, v.z, held ? 0.20f : hovered ? 0.16f : 0.12f)), 5.0f*u);
+		dl->AddRect(p, q, tool, 5.0f*u, 0, std::max(1.5f, 1.5f*u));
+		text = iconCol = tool;
+	}else{
+		if(ImU32 bg = uiRibbonStateFill(open, hovered, held))
+			dl->AddRectFilled(p, q, bg, 5.0f*u);
+		if(open && enabled)
+			iconCol = ImGui::GetColorU32(ImGuiCol_CheckMark);
+	}
+	// Icon over name, the pair centred in the tile, 6 apart.
+	float top = p.y + (h - iconSize - 6.0f*u - ls.y)*0.5f;
+	ImVec2 iconCentre(p.x + w*0.5f, top + iconSize*0.5f);
+	uiRibbonIcon(dl, icon, iconSize, iconCentre, iconCol);
+	dl->AddText(font, labelSize, ImVec2(floorf(p.x + (w - ls.x)*0.5f), floorf(top + iconSize + 6.0f*u)), text, label);
 	if(dot)
-		dl->AddCircleFilled(ImVec2(iconAt.x + is.x + 2.0f, iconAt.y + 2.0f), fs*0.2f, IM_COL32(240, 160, 40, 255));
+		dl->AddCircleFilled(ImVec2(iconCentre.x + iconSize*0.55f, iconCentre.y - iconSize*0.4f), 3.5f*u, IM_COL32(240, 160, 40, 255));
 	ImGui::EndDisabled();
-	ImGui::PopID();
 	if(tip && tip[0])
 		ImGui::SetItemTooltip("%s", tip);
 	return pressed;
 }
 
-// A tall divider between groups of big buttons.
-static void
-uiBigDivider(void)
+// One row of a stack: an icon beside a name, at (x, y), w by h.
+static bool
+uiRibbonRow(const char *id, const char *icon, const char *label, const char *tip, ImVec2 at, float w, float h,
+	bool enabled = true, bool open = false)
 {
-	ImGui::SameLine(0.0f, ImGui::GetFontSize()*0.5f);
-	ImVec2 p = ImGui::GetCursorScreenPos();
-	float h = uiMainToolbarHeight() - ImGui::GetFontSize()*0.5f;
-	ImVec4 c = ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled);
-	c.w *= 0.3f;
-	ImGui::GetWindowDrawList()->AddLine(ImVec2(p.x, p.y + h*0.2f), ImVec2(p.x, p.y + h*0.8f), ImGui::GetColorU32(c));
-	ImGui::Dummy(ImVec2(1.0f, h));
-	ImGui::SameLine(0.0f, ImGui::GetFontSize()*0.5f);
+	float u = uiRibbonUnit();
+	ImFont *font = ImGui::GetFont();
+	float size = 11.5f*u, iconSize = 15.0f*u;
+	ImGui::SetCursorScreenPos(at);
+	ImGui::BeginDisabled(!enabled);
+	// Its name and id are the button's label, for UI scripts: they find it by
+	// either, in English or translated.
+	char button[192];
+	snprintf(button, sizeof(button), "%s###%s", label, id);
+	bool pressed = ImGui::InvisibleButton(button, ImVec2(w, h));
+	bool hovered = ImGui::IsItemHovered(), held = ImGui::IsItemActive();
+	ImDrawList *dl = ImGui::GetWindowDrawList();
+	if(ImU32 bg = uiRibbonStateFill(open, hovered, held))
+		dl->AddRectFilled(at, ImVec2(at.x + w, at.y + h), bg, 5.0f*u);
+	ImU32 col = enabled ? ImGui::GetColorU32(ImGuiCol_Text, 0.88f) : ImGui::GetColorU32(ImGuiCol_TextDisabled, 0.6f);
+	// On (its panel showing, its option set): the accent on the icon.
+	ImU32 iconCol = open && enabled ? ImGui::GetColorU32(ImGuiCol_CheckMark) : col;
+	uiRibbonIcon(dl, icon, iconSize, ImVec2(at.x + 6.0f*u + iconSize*0.5f, at.y + h*0.5f), iconCol);
+	ImVec2 ls = font->CalcTextSizeA(size, FLT_MAX, 0.0f, label);
+	float x = at.x + 6.0f*u + iconSize + 6.0f*u;
+	dl->PushClipRect(at, ImVec2(at.x + w - 4.0f*u, at.y + h), true);
+	dl->AddText(font, size, ImVec2(floorf(x), floorf(at.y + (h - ls.y)*0.5f)), col, label);
+	dl->PopClipRect();
+	ImGui::EndDisabled();
+	if(tip && tip[0])
+		ImGui::SetItemTooltip("%s", tip);
+	return pressed;
 }
 
-// Brush mode with the Object Browser's object, or a hint to pick one.
+// A stack's geometry: its column, and the size of each of its three rows.
+struct RibbonStack
+{
+	ImVec2 at;
+	float w, h;
+	ImVec2 row(int i) const { return ImVec2(at.x, at.y + i*(h + 4.0f*uiRibbonUnit())); }
+};
+
+static RibbonStack
+uiBeginRibbonStack(void)
+{
+	float u = uiRibbonUnit();
+	RibbonStack s;
+	s.at = ImGui::GetCursorScreenPos();
+	s.w = floorf(100.0f*u);
+	s.h = floorf((uiRibbonInner() - 8.0f*u) / 3.0f);
+	return s;
+}
+
+static void
+uiEndRibbonStack(const RibbonStack &s)
+{
+	ImGui::SetCursorScreenPos(s.at);
+	ImGui::Dummy(ImVec2(s.w, uiRibbonInner()));
+}
+
+// The space between two things in a group, and the hairline between groups.
+static void
+uiRibbonGap(void)
+{
+	ImGui::SameLine(0.0f, floorf(4.0f*uiRibbonUnit()));
+}
+
+static void
+uiRibbonSeparator(void)
+{
+	float u = uiRibbonUnit();
+	ImGui::SameLine(0.0f, floorf(10.0f*u));
+	ImVec2 p = ImGui::GetCursorScreenPos();
+	float h = uiRibbonInner(), line = std::min(58.0f*u, h);
+	ImGui::GetWindowDrawList()->AddRectFilled(ImVec2(p.x, p.y + (h - line)*0.5f), ImVec2(p.x + 1.0f, p.y + (h + line)*0.5f),
+		uiRibbonWash(0.11f));
+	ImGui::Dummy(ImVec2(1.0f, h));
+	ImGui::SameLine(0.0f, floorf(10.0f*u));
+}
+
+// A snap step as a readout pill (RbxNative's snap_readout): the axis's icon
+// and the step on the field grey, dim while snapping is off. A click opens
+// the steps to pick from, with the switch for snapping at the top.
+static void
+uiRibbonSnapRow(const char *id, const char *icon, float *value, const float *steps, int n, const char *unit,
+	const char *stepTip, const char *snapTip, const RibbonStack &s, int row)
+{
+	float u = uiRibbonUnit();
+	ImVec2 at = s.row(row);
+	char popup[64];
+	snprintf(popup, sizeof(popup), "%s_steps", id);
+	bool showing = ImGui::IsPopupOpen(popup);
+	ImGui::SetCursorScreenPos(at);
+	if(ImGui::InvisibleButton(id, ImVec2(s.w, s.h))){
+		ImGui::SetNextWindowPos(ImVec2(at.x, at.y + s.h + 2.0f));
+		ImGui::OpenPopup(popup);
+	}
+	bool hovered = ImGui::IsItemHovered();
+	ImGui::SetItemTooltip("%s\n%s", stepTip, snapTip);
+	ImDrawList *dl = ImGui::GetWindowDrawList();
+	ImVec2 f1(at.x + s.w, at.y + s.h);
+	float r = 5.0f*u;
+	dl->AddRectFilled(at, f1, ImGui::GetColorU32(hovered ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg), r);
+	dl->AddRect(at, f1, showing ? ImGui::GetColorU32(ImGuiCol_CheckMark, 0.55f) : uiRibbonWash(0.07f), r);
+	ImU32 col = showing || hovered ? ImGui::GetColorU32(ImGuiCol_Text) :
+		gGizmoSnap ? ImGui::GetColorU32(ImGuiCol_Text, 0.88f) : ImGui::GetColorU32(ImGuiCol_TextDisabled);
+	float iconSize = 14.0f*u;
+	uiRibbonIcon(dl, icon, iconSize, ImVec2(at.x + 9.0f*u + iconSize*0.5f, at.y + s.h*0.5f), gGizmoSnap ? ImGui::GetColorU32(ImGuiCol_CheckMark) : col);
+	char label[32];
+	snprintf(label, sizeof(label), "%g%s", *value, unit);
+	ImFont *font = ImGui::GetFont();
+	float size = 11.5f*u;
+	ImVec2 ls = font->CalcTextSizeA(size, FLT_MAX, 0.0f, label);
+	dl->AddText(font, size, ImVec2(floorf(at.x + 9.0f*u + iconSize + 7.0f*u), floorf(at.y + (s.h - ls.y)*0.5f)), col, label);
+	uiRibbonIcon(dl, LU_CHEVRON_DOWN, 12.0f*u, ImVec2(f1.x - 11.0f*u, at.y + s.h*0.5f), ImGui::GetColorU32(ImGuiCol_Text, 0.45f));
+	if(ImGui::BeginPopup(popup)){
+		UiCheckbox(_("Snap to steps"), &gGizmoSnap);
+		ImGui::SetItemTooltip("%s", snapTip);
+		ImGui::Separator();
+		ImGui::TextDisabled("%s", stepTip);
+		for(int i = 0; i < n; i++){
+			char buf[24];
+			snprintf(buf, sizeof(buf), "%g%s", steps[i], unit);
+			if(ImGui::MenuItem(buf, nil, *value == steps[i]))
+				*value = steps[i];
+		}
+		ImGui::EndPopup();
+	}
+}
+
+// Square icon buttons in a grid, rows of the ribbon's height: commands
+// whose pictures say what they do, their names in the tooltips.
+struct RibbonIconCell { const char *id, *icon, *tip; bool enabled; bool open = false; };
+static int
+uiRibbonIconGrid(const RibbonIconCell *cells, int columns, int rows)
+{
+	float u = uiRibbonUnit(), gap = floorf(4.0f*u);
+	float cell = floorf((uiRibbonInner() - gap*(rows - 1)) / rows);
+	cell = std::min(cell, floorf(30.0f*u));
+	float top = floorf((uiRibbonInner() - (cell*rows + gap*(rows - 1)))*0.5f);
+	ImVec2 origin = ImGui::GetCursorScreenPos();
+	ImDrawList *dl = ImGui::GetWindowDrawList();
+	int clicked = -1;
+	for(int i = 0; i < columns*rows; i++){
+		const RibbonIconCell &c = cells[i];
+		if(c.id == nil)
+			continue;
+		ImVec2 at(origin.x + (i % columns)*(cell + gap), origin.y + top + (i / columns)*(cell + gap));
+		ImGui::SetCursorScreenPos(at);
+		ImGui::BeginDisabled(!c.enabled);
+		if(ImGui::InvisibleButton(c.id, ImVec2(cell, cell)))
+			clicked = i;
+		bool hovered = ImGui::IsItemHovered(), held = ImGui::IsItemActive();
+		ImGui::EndDisabled();
+		if(c.tip)
+			ImGui::SetItemTooltip("%s", c.tip);
+		if(ImU32 bg = uiRibbonStateFill(c.open, hovered && c.enabled, held))
+			dl->AddRectFilled(at, ImVec2(at.x + cell, at.y + cell), bg, 5.0f*u);
+		ImU32 col = c.enabled ? ImGui::GetColorU32(ImGuiCol_Text, 0.88f) : ImGui::GetColorU32(ImGuiCol_TextDisabled, 0.6f);
+		if(c.open && c.enabled)
+			col = ImGui::GetColorU32(ImGuiCol_CheckMark);
+		uiRibbonIcon(dl, c.icon, 17.0f*u, ImVec2(at.x + cell*0.5f, at.y + cell*0.5f), col);
+	}
+	ImGui::SetCursorScreenPos(origin);
+	ImGui::Dummy(ImVec2(cell*columns + gap*(columns - 1), uiRibbonInner()));
+	return clicked;
+}
+
+// Brush mode with the Asset Browser's object, or a hint to pick one.
 static void
 uiStartBrush(void)
 {
@@ -3048,7 +3314,7 @@ uiStartBrush(void)
 		EnterBrushMode(id);
 	else{
 		showBrowserWindow = true;
-		Toast(TOAST_SPAWN, _("Pick the object to paint in the Object Browser first."));
+		Toast(TOAST_SPAWN, _("Pick the object to paint in the Asset Browser first."));
 	}
 }
 
@@ -3057,99 +3323,238 @@ uiMainToolbar(void)
 {
 	char tip[320];
 	bool selected = selection.first != nil;
-	float gap = 2.0f;
 
+	// File and history (history leaves first when the window is narrow).
 	snprintf(tip, sizeof(tip), "%s (%s)", _("Save"), ShortcutLabel(SC_SAVE_MAP));
-	bool dirty = mapHasUnsavedChanges();
-	if(uiBigToolButton("save", ICON_FA_FLOPPY_DISK, _("Save"), false, tip, isSA(), false, dirty))
+	if(uiRibbonTile("save", LU_SAVE, _("Save"), tip, isSA(), false, false, mapHasUnsavedChanges()))
 		savePawnMap();
-	ImGui::SameLine(0.0f, gap);
-	snprintf(tip, sizeof(tip), "%s (%s)", _("Undo"), ShortcutLabel(SC_UNDO));
-	if(uiBigToolButton("undo", ICON_FA_ROTATE_LEFT, _("Undo"), false, tip))
-		uiUndo();
-	ImGui::SameLine(0.0f, gap);
-	snprintf(tip, sizeof(tip), "%s (%s)", _("Redo"), ShortcutLabel(SC_REDO));
-	if(uiBigToolButton("redo", ICON_FA_ROTATE_RIGHT, _("Redo"), false, tip))
-		uiRedo();
-
-	uiBigDivider();
-	if(uiBigToolButton("select", ICON_FA_ARROW_POINTER, _("Select"), !gBrushMode && !gGizmoEnabled,
-	   _("Select\nClick objects to select them, drag them to move along the ground."))){
-		if(gBrushMode) ExitBrushMode();
-		gGizmoEnabled = false;
-	}
-	ImGui::SameLine(0.0f, gap);
-	snprintf(tip, sizeof(tip), _("Move (%s)\nDrag the arrows on the selected object."), ShortcutLabel(SC_GIZMO_MOVE));
-	if(uiBigToolButton("move", ICON_FA_ARROWS_UP_DOWN_LEFT_RIGHT, _("Move"), !gBrushMode && gGizmoEnabled && gGizmoMode == GIZMO_TRANSLATE, tip)){
-		if(gBrushMode) ExitBrushMode();
-		uiRunShortcut(SC_GIZMO_MOVE);
-	}
-	ImGui::SameLine(0.0f, gap);
-	snprintf(tip, sizeof(tip), _("Rotate (%s)\nDrag the rings on the selected object."), ShortcutLabel(SC_GIZMO_ROTATE));
-	if(uiBigToolButton("rotate", ICON_FA_ROTATE, _("Rotate"), !gBrushMode && gGizmoEnabled && gGizmoMode == GIZMO_ROTATE, tip)){
-		if(gBrushMode) ExitBrushMode();
-		uiRunShortcut(SC_GIZMO_ROTATE);
-	}
-	ImGui::SameLine(0.0f, gap);
-	if(uiBigToolButton("brush", ICON_FA_PAINTBRUSH, _("Brush"), gBrushMode,
-	   _("Brush\nPaint copies of the Object Browser's object onto the world. Its settings are over the 3D view."))){
-		if(gBrushMode) ExitBrushMode();
-		else uiStartBrush();
+	if(gRibbonDensity < 3){
+		uiRibbonGap();
+		RibbonStack s = uiBeginRibbonStack();
+		snprintf(tip, sizeof(tip), "%s (%s)", _("Undo"), ShortcutLabel(SC_UNDO));
+		if(uiRibbonRow("undo", LU_UNDO_2, _("Undo"), tip, s.row(0), s.w, s.h)) uiUndo();
+		snprintf(tip, sizeof(tip), "%s (%s)", _("Redo"), ShortcutLabel(SC_REDO));
+		if(uiRibbonRow("redo", LU_REDO_2, _("Redo"), tip, s.row(1), s.w, s.h)) uiRedo();
+		if(uiRibbonRow("history", LU_HISTORY, _("History"), _("History"), s.row(2), s.w, s.h, true, showHistoryWindow))
+			showHistoryWindow ^= 1;
+		uiEndRibbonStack(s);
 	}
 
-	uiBigDivider();
-	snprintf(tip, sizeof(tip), "%s (%s)", _("Object Browser"), ShortcutLabel(SC_WINDOW_BROWSER));
-	if(uiBigToolButton("objects", ICON_FA_CUBE, _("Objects"), showBrowserWindow, tip))
-		uiRunShortcut(SC_WINDOW_BROWSER);
-	ImGui::SameLine(0.0f, gap);
-	snprintf(tip, sizeof(tip), "%s (%s)", _("Texture Browser"), ShortcutLabel(SC_WINDOW_TEXTURES));
-	if(uiBigToolButton("textures", ICON_FA_IMAGE, _("Textures"), showTextureBrowserWindow, tip))
-		uiRunShortcut(SC_WINDOW_TEXTURES);
-	ImGui::SameLine(0.0f, gap);
-	snprintf(tip, sizeof(tip), "%s (%s)", _("Tools"), ShortcutLabel(SC_WINDOW_TOOLS));
-	if(uiBigToolButton("tools", ICON_FA_WRENCH, _("Tools"), showToolsWindow, tip))
-		uiRunShortcut(SC_WINDOW_TOOLS);
-	ImGui::SameLine(0.0f, gap);
-	if(uiBigToolButton("selections", ICON_FA_STAR, _("Selections"), showSavedSelectionsWindow,
-	   _("Saved selections: keep a selection under a name and select it again later.")))
-		showSavedSelectionsWindow ^= 1;
+	// The clipboard.
+	if(gRibbonDensity < 2){
+		uiRibbonSeparator();
+		snprintf(tip, sizeof(tip), "%s (%s)", _(GetShortcutInfo(SC_COPY)->name), ShortcutLabel(SC_COPY));
+		if(uiRibbonTile("copy", LU_COPY, _("Copy"), tip, selected))
+			uiRunShortcut(SC_COPY);
+		uiRibbonGap();
+		RibbonStack s = uiBeginRibbonStack();
+		static const struct { const char *id, *icon, *label; int action; bool needsSelection; } rows[] = {
+			{ "paste", LU_CLIPBOARD_PASTE, N_("Paste"), SC_PASTE, false },
+			{ "cut", LU_SCISSORS, N_("Cut"), SC_CUT, true },
+			{ "duplicate", LU_COPY_PLUS, N_("Duplicate"), SC_DUPLICATE, true },
+		};
+		for(int i = 0; i < IM_ARRAYSIZE(rows); i++){
+			snprintf(tip, sizeof(tip), "%s (%s)", _(GetShortcutInfo(rows[i].action)->name), ShortcutLabel(rows[i].action));
+			if(uiRibbonRow(rows[i].id, rows[i].icon, _(rows[i].label), tip, s.row(i), s.w, s.h, !rows[i].needsSelection || selected))
+				uiRunShortcut(rows[i].action);
+		}
+		uiEndRibbonStack(s);
+	}
 
-	uiBigDivider();
-	snprintf(tip, sizeof(tip), "%s (%s)", _(GetShortcutInfo(SC_SNAP_TO_GROUND)->name), ShortcutLabel(SC_SNAP_TO_GROUND));
-	if(uiBigToolButton("drop", ICON_FA_ARROW_DOWN, _("To ground"), false, tip, selected))
-		uiRunShortcut(SC_SNAP_TO_GROUND);
-	ImGui::SameLine(0.0f, gap);
-	snprintf(tip, sizeof(tip), "%s (%s)", _(GetShortcutInfo(SC_FOCUS_SELECTION)->name), ShortcutLabel(SC_FOCUS_SELECTION));
-	if(uiBigToolButton("focus", ICON_FA_CROSSHAIRS, _("Focus"), false, tip, selected))
-		uiRunShortcut(SC_FOCUS_SELECTION);
-	ImGui::SameLine(0.0f, gap);
-	snprintf(tip, sizeof(tip), "%s (%s)", _(GetShortcutInfo(SC_PLAYER_VIEW)->name), ShortcutLabel(SC_PLAYER_VIEW));
-	if(uiBigToolButton("player", ICON_FA_USER, _("Player view"), gPlayerView, tip))
-		uiRunShortcut(SC_PLAYER_VIEW);
-	ImGui::SameLine(0.0f, gap);
-	snprintf(tip, sizeof(tip), "%s (%s)", _(GetShortcutInfo(SC_OUTLINE_OBJECTS)->name), ShortcutLabel(SC_OUTLINE_OBJECTS));
-	if(uiBigToolButton("outline", ICON_FA_VECTOR_SQUARE, _("Outlines"), gOutlineMapObjects, tip))
-		uiRunShortcut(SC_OUTLINE_OBJECTS);
+	// The tools, and the steps a Shift+drag snaps to.
+	uiRibbonSeparator();
+	{
+		char selectTip[160], moveTip[160], rotateTip[160], brushTip[200];
+		snprintf(selectTip, sizeof(selectTip), "%s", _("Select\nClick objects to select them, drag them to move along the ground."));
+		snprintf(moveTip, sizeof(moveTip), _("Move (%s)\nDrag the arrows on the selected object."), ShortcutLabel(SC_GIZMO_MOVE));
+		snprintf(rotateTip, sizeof(rotateTip), _("Rotate (%s)\nDrag the rings on the selected object."), ShortcutLabel(SC_GIZMO_ROTATE));
+		snprintf(brushTip, sizeof(brushTip), "%s",
+			_("Brush\nPaint copies of the Asset Browser's object onto the world. Its settings are over the 3D view."));
+		// Each tool's own pastel (RbxNative's tool accents), on its tile while in use.
+		struct ToolTile { const char *id, *icon, *label, *tip; bool active; ImU32 colour; };
+		const ToolTile tools[] = {
+			{ "select", LU_MOUSE_POINTER_2, N_("Select"), selectTip, !gBrushMode && !gGizmoEnabled, IM_COL32(0x8F, 0xB8, 0xFF, 255) },
+			{ "move", LU_MOVE, N_("Move"), moveTip, !gBrushMode && gGizmoEnabled && gGizmoMode == GIZMO_TRANSLATE, IM_COL32(0x8F, 0xE0, 0xB0, 255) },
+			{ "rotate", LU_ROTATE_CW, N_("Rotate"), rotateTip, !gBrushMode && gGizmoEnabled && gGizmoMode == GIZMO_ROTATE, IM_COL32(0xFF, 0xC9, 0x8F, 255) },
+			{ "brush", LU_PAINTBRUSH, N_("Brush"), brushTip, gBrushMode, IM_COL32(0xFF, 0x9B, 0xE0, 255) },
+		};
+		int pick = -1;
+		for(int i = 0; i < IM_ARRAYSIZE(tools); i++){
+			if(i) uiRibbonGap();
+			if(uiRibbonTile(tools[i].id, tools[i].icon, _(tools[i].label), tools[i].tip, true, tools[i].active, false, false,
+			   UiThemeIsLight() ? ImGui::GetColorU32(ImGuiCol_CheckMark) : tools[i].colour))
+				pick = i;
+		}
+		if(pick == 3){
+			if(gBrushMode) ExitBrushMode();
+			else uiStartBrush();
+		}else if(pick >= 0){
+			if(gBrushMode) ExitBrushMode();
+			if(pick == 0) gGizmoEnabled = false;
+			else uiRunShortcut(pick == 1 ? SC_GIZMO_MOVE : SC_GIZMO_ROTATE);
+		}
+	}
+	uiRibbonSeparator();
+	{
+		// The steps a Shift+drag snaps to, each with the switch for snapping.
+		RibbonStack s = uiBeginRibbonStack();
+		s.w = floorf(100.0f*uiRibbonUnit());
+		s.h = floorf(28.0f*uiRibbonUnit());
+		float pairH = s.h*2.0f + 4.0f*uiRibbonUnit();
+		ImVec2 stackTop = s.at;
+		s.at.y += floorf((uiRibbonInner() - pairH)*0.5f);
+		static const float intervals[] = { 0.25f, 0.5f, 1, 2, 5, 10, 25, 50 };
+		static const float angles[] = { 5, 10, 15, 30, 45, 90 };
+		snprintf(tip, sizeof(tip), _("Step snapping: hold Shift while dragging the gizmo\n"
+			"to move in %g m steps or rotate in %g\xC2\xB0 steps.\nRight-click to change the steps."),
+			gGizmoSnapTranslate, gGizmoSnapAngle);
+		uiRibbonSnapRow("move_step", LU_MOVE, &gGizmoSnapTranslate, intervals, IM_ARRAYSIZE(intervals),
+			" m", _("Move step (hold Shift)"), tip, s, 0);
+		uiRibbonSnapRow("rotate_step", LU_ROTATE_CW, &gGizmoSnapAngle, angles, IM_ARRAYSIZE(angles),
+			"\xC2\xB0", _("Rotate step (hold Shift)"), tip, s, 1);
+		s.at = stackTop;
+		uiEndRibbonStack(s);
+	}
 
-	// Right end: the session (multiplayer) and the call to action, Test in game.
+	// What to do with the selection, and how the view draws.
+	uiRibbonSeparator();
+	if(gRibbonDensity < 4){
+		snprintf(tip, sizeof(tip), "%s (%s)", _(GetShortcutInfo(SC_SNAP_TO_GROUND)->name), ShortcutLabel(SC_SNAP_TO_GROUND));
+		if(uiRibbonTile("drop", LU_ARROW_DOWN_TO_LINE, _("To ground"), tip, selected))
+			uiRunShortcut(SC_SNAP_TO_GROUND);
+		uiRibbonGap();
+		snprintf(tip, sizeof(tip), "%s (%s)", _(GetShortcutInfo(SC_FOCUS_SELECTION)->name), ShortcutLabel(SC_FOCUS_SELECTION));
+		if(uiRibbonTile("focus", LU_LOCATE_FIXED, _("Focus"), tip, selected))
+			uiRunShortcut(SC_FOCUS_SELECTION);
+		uiRibbonGap();
+	}
+	{
+		RibbonStack s = uiBeginRibbonStack();
+		snprintf(tip, sizeof(tip), "%s (%s)", _(GetShortcutInfo(SC_PLAYER_VIEW)->name), ShortcutLabel(SC_PLAYER_VIEW));
+		if(uiRibbonRow("player", LU_USER, _("Player view"), tip, s.row(0), s.w, s.h, true, gPlayerView))
+			uiRunShortcut(SC_PLAYER_VIEW);
+		snprintf(tip, sizeof(tip), "%s (%s)", _(GetShortcutInfo(SC_OUTLINE_OBJECTS)->name), ShortcutLabel(SC_OUTLINE_OBJECTS));
+		if(uiRibbonRow("outline", LU_SQUARE_DASHED, _("Outlines"), tip, s.row(1), s.w, s.h, true, gOutlineMapObjects))
+			uiRunShortcut(SC_OUTLINE_OBJECTS);
+		if(uiRibbonRow("outline_selection", LU_MOUSE_POINTER_2, _("Selection outline"),
+		   _("Draws the edges of selected and hovered objects, so invisible ones\n"
+		   "can be seen. Off leaves only the tint above."), s.row(2), s.w, s.h, true, gOutlineSelection))
+			gOutlineSelection = !gOutlineSelection;
+		uiEndRibbonStack(s);
+	}
+
+	// The panels, lit while they show.
+	uiRibbonSeparator();
+	struct PanelTile { const char *id, *icon, *label; int action; bool *open; };
+	const PanelTile panels[] = {
+		{ "objects", LU_BOX, N_("Objects"), SC_WINDOW_BROWSER, &showBrowserWindow },
+		{ "textures", LU_IMAGE, N_("Textures"), SC_WINDOW_TEXTURES, &showTextureBrowserWindow },
+	};
+	for(int i = 0; i < IM_ARRAYSIZE(panels); i++){
+		const PanelTile &t = panels[i];
+		snprintf(tip, sizeof(tip), "%s (%s)", _(GetShortcutInfo(t.action)->name), ShortcutLabel(t.action));
+		if(i) uiRibbonGap();
+		if(uiRibbonTile(t.id, t.icon, _(t.label), tip, true, *t.open))
+			uiRunShortcut(t.action);
+	}
+
+	// The smaller panels, in three groups: the selection's, the world's and
+	// the view's, then the checks and logs.
+	struct PanelRow { const char *id, *icon, *label; int action; bool *open; };
+	const PanelRow details[] = {
+		{ "map_objects", LU_LAYERS, N_("Map Objects"), SC_WINDOW_MAP_OBJECTS, &showMapObjectsWindow },
+		{ "object_info", LU_INFO, N_("Object Info"), SC_WINDOW_OBJECT_INFO, &showInstanceWindow },
+		{ "tools", LU_WRENCH, N_("Tools"), SC_WINDOW_TOOLS, &showToolsWindow },
+	};
+	const PanelRow world[] = {
+		{ "time_weather", LU_CLOUD_SUN, N_("Time & Weather"), SC_WINDOW_TIME_WEATHER, &showTimeWeatherWindow },
+		{ "view", LU_EYE, N_("View"), SC_WINDOW_VIEW, &showViewWindow },
+		{ "camera", LU_VIDEO, N_("Camera"), SC_WINDOW_CAMERA, &showEditorWindow },
+	};
+	const PanelRow checks[] = {
+		{ "map_check", LU_LIST_CHECKS, N_("Map Check"), SC_WINDOW_MAP_CHECK, &showMapCheckWindow },
+		{ "changes", LU_FILE_DIFF, N_("Changes"), SC_WINDOW_CHANGES, &showDiffWindow },
+		{ "log", LU_SCROLL_TEXT, N_("Log"), SC_WINDOW_LOG, &showLogWindow },
+	};
+	// One Panels tile lists them all: the stacks of small rows were cramped.
+	uiRibbonGap();
+	ImVec2 at = ImGui::GetCursorScreenPos();
+	char label[64];
+	snprintf(label, sizeof(label), "%s " ICON_FA_CARET_DOWN, _("Panels"));
+	if(uiRibbonTile("panels", LU_APP_WINDOW, label, _("Open or close a panel."))){
+		ImGui::SetNextWindowPos(ImVec2(at.x, at.y + uiRibbonInner() + 2.0f));
+		ImGui::OpenPopup("##ribbon_panels");
+	}
+	if(ImGui::BeginPopup("##ribbon_panels")){
+		auto items = [&](const PanelRow *rows, int n){
+			for(int i = 0; i < n; i++){
+				char item[96];
+				snprintf(item, sizeof(item), "%s###%s", _(rows[i].label), rows[i].id);
+				if(ImGui::MenuItem(item, ShortcutLabel(rows[i].action), *rows[i].open))
+					uiRunShortcut(rows[i].action);
+			}
+		};
+		items(details, IM_ARRAYSIZE(details));
+		ImGui::Separator();
+		items(world, IM_ARRAYSIZE(world));
+		ImGui::Separator();
+		items(checks, IM_ARRAYSIZE(checks));
+		ImGui::EndPopup();
+	}
+}
+
+// The ribbon's right end, outside its scrolling: the session (multiplayer)
+// and the call to action, Test in game. Its width, then the tiles.
+static float
+uiRibbonRightEndWidth(void)
+{
+	// The same in every editor, so the right end never comes and goes;
+	// TextDraws adds its Canvas in front.
+	float u = uiRibbonUnit();
+	float canvas = InTextDrawMode() ? uiRibbonTileWidth(_("Canvas")) + floorf(4.0f*u) : 0.0f;
+	if(!isSA())
+		return canvas > 0.0f ? canvas + floorf(6.0f*u) : 0.0f;
+	return canvas + uiRibbonTileWidth(_("Multiplayer")) + floorf(4.0f*u) + uiRibbonTileWidth(_("Test in game")) + floorf(10.0f*u);
+}
+
+// TextDraws' canvas settings: the screen, previews, background, HUD, guides.
+static void
+uiTextDrawsCanvasTile(void)
+{
+	ImVec2 at = ImGui::GetCursorScreenPos();
+	if(uiRibbonTile("canvas", LU_MONITOR, _("Canvas"), _("The screen, previews, background, HUD, guides and nudging."))){
+		// Under the tile, kept inside the window near its right edge.
+		float popupW = ImGui::GetFontSize() * 24.0f;
+		float x = std::min(at.x, ImGui::GetMainViewport()->Pos.x + ImGui::GetMainViewport()->Size.x - popupW - 8.0f);
+		ImGui::SetNextWindowPos(ImVec2(x, at.y + uiRibbonInner() + 2.0f));
+		ImGui::OpenPopup("##canvas_settings");
+	}
+	// A fixed width: its rows fill the popup, and an auto-sized popup grows
+	// with them past the window's edge.
+	ImGui::SetNextWindowSizeConstraints(ImVec2(ImGui::GetFontSize() * 24.0f, 0),
+		ImVec2(ImGui::GetFontSize() * 24.0f, FLT_MAX));
+	if(ImGui::BeginPopup("##canvas_settings")){
+		TextDrawsCanvasSettings();
+		ImGui::EndPopup();
+	}
+}
+
+static void
+uiRibbonRightEnd(void)
+{
+	char tip[160];
+	if(InTextDrawMode()){
+		uiTextDrawsCanvasTile();
+		uiRibbonGap();
+	}
 	if(!isSA())
 		return;
-	float fs = ImGui::GetFontSize();
-	ImFont *font = ImGui::GetFont();
-	auto widthOf = [&](const char *icon, const char *label){
-		return std::max(std::max(font->CalcTextSizeA(fs*0.78f, FLT_MAX, 0.0f, label).x, ImGui::CalcTextSize(icon).x) + fs*1.2f, fs*3.3f);
-	};
-	float right = widthOf(ICON_FA_USERS, _("Multiplayer")) + gap + widthOf(ICON_FA_PLAY, _("Test in game"));
-	float x = ImGui::GetWindowContentRegionMax().x - right;
-	ImGui::SameLine();
-	if(x > ImGui::GetCursorPosX())
-		ImGui::SetCursorPosX(x);
-	if(uiBigToolButton("multiplayer", ICON_FA_USERS, _("Multiplayer"), showMultiplayerWindow,
-	   _("Edit this map together with others: host it, or join someone's.")))
+	if(uiRibbonTile("multiplayer", LU_USERS, _("Multiplayer"),
+	   _("Edit this map together with others: host it, or join someone's."), true, showMultiplayerWindow))
 		showMultiplayerWindow ^= 1;
-	ImGui::SameLine(0.0f, gap);
+	uiRibbonGap();
 	snprintf(tip, sizeof(tip), "%s (%s)", _("Test in game"), ShortcutLabel(SC_TEST_IN_GAME));
-	if(uiBigToolButton("test", ICON_FA_PLAY, _("Test in game"), false, tip, true, true))
+	if(uiRibbonTile("test", LU_PLAY, _("Test in game"), tip, true, false, true))
 		uiRunShortcut(SC_TEST_IN_GAME);
 }
 
@@ -3179,9 +3584,20 @@ uiEndOverlayPill(void)
 	ImGui::PopStyleVar(5);
 }
 
+// How much of the 3D view's bottom the selection pill takes, for the key
+// display to stand above it rather than under it (last frame's).
+static float gViewportBottomInset;
+
+float
+ViewportBottomOverlayInset(void)
+{
+	return gViewportBottomInset;
+}
+
 static void
 uiViewportOverlay(void)
 {
+	gViewportBottomInset = 0.0f;
 	if(InTextDrawMode() || InPawnIdeMode())
 		return;
 	ImRect view = uiPanelWorkArea();
@@ -3192,7 +3608,7 @@ uiViewportOverlay(void)
 	float margin = ImGui::GetFontSize()*0.6f;
 	char tip[320];
 
-	// Left: the settings of the tool in use (the tool column picks the tool).
+	// Left: the settings of the tool in use (the ribbon picks the tool).
 	if(uiBeginOverlayPill("##overlay_transform", ImVec2(view.Min.x + margin, view.Min.y + margin), ImVec2(0, 0))){
 		const char *toolName = gBrushMode ? TI(ICON_FA_PAINTBRUSH, "Brush") : !gGizmoEnabled ? TI(ICON_FA_ARROW_POINTER, "Select") :
 			gGizmoMode == GIZMO_ROTATE ? TI(ICON_FA_ROTATE, "Rotate") : TI(ICON_FA_ARROWS_UP_DOWN_LEFT_RIGHT, "Move");
@@ -3231,7 +3647,7 @@ uiViewportOverlay(void)
 			if(ImGui::InputFloat("##brush_spacing", &gBrushSpacing, 0.0f, 0.0f, "%.1f m"))
 				gBrushSpacing = max(gBrushSpacing, 0.0f);
 			ImGui::SameLine();
-			ImGui::Checkbox(_("Align to surface##brush_bar"), &gBrushAlignToSurface);
+			UiCheckbox(_("Align to surface##brush_bar"), &gBrushAlignToSurface);
 			ImGui::SameLine();
 			if(uiToolbarButton(ICON_FA_GEAR "##brush_more", false, _("All brush settings")))
 				showToolsWindow = true;
@@ -3252,23 +3668,16 @@ uiViewportOverlay(void)
 			ImGui::SameLine(0.0f, 1.0f);
 			if(uiSegment(TI(ICON_FA_CUBE, "Local"), !world)) gGizmoSpace = GIZMO_LOCAL;
 			ImGui::SetItemTooltip("%s", tip);
-			uiBarDivider();
-			snprintf(tip, sizeof(tip), _("Step snapping: hold Shift while dragging the gizmo\n"
-				"to move in %g m steps or rotate in %g\xC2\xB0 steps.\nRight-click to change the steps."),
-				gGizmoSnapTranslate, gGizmoSnapAngle);
-			if(uiToolbarButton(ICON_FA_MAGNET "##overlay_snap", gGizmoSnap, tip))
-				gGizmoSnap = !gGizmoSnap;
-			if(ImGui::BeginPopupContextItem("##overlay_snap_steps")){
-				uiToolbarSnapSteps();
-				ImGui::EndPopup();
+			if(gGizmoSnap){
+				// The step a Shift+drag rounds to (set on the ribbon).
+				uiBarDivider();
+				ImGui::AlignTextToFramePadding();
+				if(gGizmoMode == GIZMO_ROTATE)
+					ImGui::TextDisabled(ICON_FA_MAGNET " %g\xC2\xB0", gGizmoSnapAngle);
+				else
+					ImGui::TextDisabled(ICON_FA_MAGNET " %g m", gGizmoSnapTranslate);
+				ImGui::SetItemTooltip("%s", gGizmoMode == GIZMO_ROTATE ? _("Rotate step (hold Shift)") : _("Move step (hold Shift)"));
 			}
-			ImGui::SameLine(0.0f, 2.0f);
-			static const float intervals[] = { 0.25f, 0.5f, 1, 2, 5, 10, 25, 50 };
-			static const float angles[] = { 5, 10, 15, 30, 45, 90 };
-			if(gGizmoMode == GIZMO_ROTATE)
-				uiStepCombo("##overlay_rotate_step", &gGizmoSnapAngle, angles, IM_ARRAYSIZE(angles), "\xC2\xB0", _("Rotate step (hold Shift)"));
-			else
-				uiStepCombo("##overlay_move_step", &gGizmoSnapTranslate, intervals, IM_ARRAYSIZE(intervals), " m", _("Move step (hold Shift)"));
 		}
 
 		uiBarDivider();
@@ -3281,17 +3690,48 @@ uiViewportOverlay(void)
 		snprintf(tip, sizeof(tip), "%s\n%s", _("Follow ground"), _("Keep dragged objects on the ground surface."));
 		if(uiToolbarButton(ICON_FA_MOUNTAIN "##overlay_follow_ground", gDragFollowGround, tip))
 			gDragFollowGround = !gDragFollowGround;
-		ImGui::SameLine(0.0f, 2.0f);
-		if(uiToolbarButton(ICON_FA_GEAR "##overlay_options", false, _("More display and snapping options")))
-			ImGui::OpenPopup("##overlay_options_popup");
-		if(ImGui::BeginPopup("##overlay_options_popup")){
-			ImGui::MenuItem(TI(ICON_FA_VECTOR_SQUARE, "Outline map objects"), ShortcutLabel(SC_OUTLINE_OBJECTS), &gOutlineMapObjects);
-			ImGui::SetItemTooltip(_("Show object edges, including invisible and see-through objects."));
-			ImGui::MenuItem(_("Outline selected and hovered objects"), nil, &gOutlineSelection);
-			ImGui::EndPopup();
-		}
+
 	}
 	uiEndOverlayPill();
+
+	// Bottom left: what is selected, and where.
+	if(selection.first && !gBrushMode){
+		int count = 0;
+		ObjectInst *one = nil;
+		for(CPtrNode *p = selection.first; p; p = p->next){
+			ObjectInst *inst = (ObjectInst*)p->item;
+			if(inst && !inst->m_isDeleted){
+				one = inst;
+				count++;
+			}
+		}
+		if(count > 0 && uiBeginOverlayPill("##overlay_selection", ImVec2(view.Min.x + margin, view.Max.y - margin), ImVec2(0, 1))){
+			ImGui::AlignTextToFramePadding();
+			if(count == 1){
+				ObjectDef *def = GetObjectDef(one->m_objectId);
+				ImGui::Text(ICON_FA_CUBE " %s", def ? def->m_name : "?");
+				ImGui::SameLine(0.0f, 6.0f);
+				ImGui::TextDisabled("%d", PawnModelId(one->m_objectId));
+				ImGui::SameLine(0.0f, 10.0f);
+				ImGui::TextDisabled("%.2f, %.2f, %.2f", one->m_translation.x, one->m_translation.y, one->m_translation.z);
+				ImGui::SetItemTooltip("%s", _("Position"));
+			}else{
+				char text[96];
+				snprintf(text, sizeof(text), _("%d object(s) selected."), count);
+				ImGui::Text(ICON_FA_CUBE " %s", text);
+			}
+			gViewportBottomInset = ImGui::GetWindowHeight() + margin;
+		}
+		if(count > 0)
+			uiEndOverlayPill();
+	}
+
+	// Bottom, in the middle: the build replay's playback.
+	if(BuildReplayActive()){
+		if(uiBeginOverlayPill("##overlay_replay", ImVec2((view.Min.x + view.Max.x)*0.5f, view.Max.y - margin), ImVec2(0.5f, 1)))
+			BuildReplayControls();
+		uiEndOverlayPill();
+	}
 
 	// Right: which world and interior the view shows.
 	if(!isSA())
@@ -3316,102 +3756,6 @@ uiViewportOverlay(void)
 		ImGui::SetItemTooltip("%s", _("Interior"));
 	}
 	uiEndOverlayPill();
-}
-
-// Collapsed panels, as a column of icons on the right edge: a click opens
-// or closes one, like the panel icons of a creative suite.
-static bool*
-uiPanelVisibility(int action)
-{
-	switch(action){
-	case SC_WINDOW_BROWSER: return &showBrowserWindow;
-	case SC_WINDOW_OBJECT_INFO: return &showInstanceWindow;
-	case SC_WINDOW_MAP_OBJECTS: return &showMapObjectsWindow;
-	case SC_WINDOW_TOOLS: return &showToolsWindow;
-	case SC_WINDOW_TEXTURES: return &showTextureBrowserWindow;
-	case SC_WINDOW_TIME_WEATHER: return &showTimeWeatherWindow;
-	case SC_WINDOW_VIEW: return &showViewWindow;
-	case SC_WINDOW_CAMERA: return &showEditorWindow;
-	case SC_WINDOW_MAP_CHECK: return &showMapCheckWindow;
-	case SC_WINDOW_CHANGES: return &showDiffWindow;
-	case SC_WINDOW_LOG: return &showLogWindow;
-	case SC_WINDOW_TERMINAL: return &showTerminalWindow;
-	}
-	return nil;
-}
-
-static void
-uiPanelStrip(void)
-{
-	if(InTextDrawMode() || InPawnIdeMode())
-		return;
-	float button = floorf(ImGui::GetFrameHeight() + 4.0f);
-	float pad = 4.0f;
-	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(pad, 6.0f));
-	ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(2.0f, 2.0f));
-	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0.0f, 0.0f));
-	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
-	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImGui::GetStyleColorVec4(ImGuiCol_TitleBg));
-	ImGui::BeginViewportSideBar("##PanelStrip", ImGui::GetMainViewport(), ImGuiDir_Right, button + pad*2.0f,
-		ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoDocking |
-		ImGuiWindowFlags_NoScrollWithMouse);
-	// action -2: the History panel, -3: Multiplayer; neither has a shortcut.
-	struct PanelIcon { const char *icon; int action; };
-	const PanelIcon panels[] = {
-		{ ICON_FA_MAGNIFYING_GLASS "##panel_browser", SC_WINDOW_BROWSER },
-		{ ICON_FA_CIRCLE_INFO "##panel_info", SC_WINDOW_OBJECT_INFO },
-		{ ICON_FA_LAYER_GROUP "##panel_map_objects", SC_WINDOW_MAP_OBJECTS },
-		{ ICON_FA_WRENCH "##panel_tools", SC_WINDOW_TOOLS },
-		{ nil, -1 },
-		{ ICON_FA_IMAGE "##panel_textures", SC_WINDOW_TEXTURES },
-		{ ICON_FA_CLOUD_SUN "##panel_weather", SC_WINDOW_TIME_WEATHER },
-		{ ICON_FA_EYE "##panel_view", SC_WINDOW_VIEW },
-		{ ICON_FA_VIDEO "##panel_camera", SC_WINDOW_CAMERA },
-		{ nil, -1 },
-		{ ICON_FA_LIST_CHECK "##panel_map_check", SC_WINDOW_MAP_CHECK },
-		{ ICON_FA_FILE "##panel_changes", SC_WINDOW_CHANGES },
-		{ ICON_FA_CLOCK_ROTATE_LEFT "##panel_history", -2 },
-		{ ICON_FA_STAR "##panel_saved_selections", -4 },
-		{ ICON_FA_TERMINAL "##panel_log", SC_WINDOW_LOG },
-		{ nil, -1 },
-		{ ICON_FA_USERS "##panel_multiplayer", -3 },
-		{ ">_##panel_terminal", SC_WINDOW_TERMINAL },
-	};
-	char tip[256];
-	for(const PanelIcon &p : panels){
-		if(p.icon == nil){
-			ImVec2 at = ImGui::GetCursorScreenPos();
-			ImGui::GetWindowDrawList()->AddLine(ImVec2(at.x + button*0.2f, at.y + 3.0f), ImVec2(at.x + button*0.8f, at.y + 3.0f),
-				ImGui::GetColorU32(ImGuiCol_Border));
-			ImGui::Dummy(ImVec2(button, 6.0f));
-			continue;
-		}
-		bool *open = p.action == -2 ? &showHistoryWindow : p.action == -3 ? &showMultiplayerWindow :
-			p.action == -4 ? &showSavedSelectionsWindow : uiPanelVisibility(p.action);
-		const char *key = p.action < 0 ? "" : ShortcutLabel(p.action);
-		const char *name = p.action == -2 ? _("History") : p.action == -3 ? _("Multiplayer") :
-			p.action == -4 ? _("Saved selections") : _(GetShortcutInfo(p.action)->name);
-		if(key[0]) snprintf(tip, sizeof(tip), "%s (%s)", name, key);
-		else snprintf(tip, sizeof(tip), "%s", name);
-		bool on = open && *open;
-		ImGui::PushStyleColor(ImGuiCol_Text, on ? ImGui::GetStyleColorVec4(ImGuiCol_Text) : ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
-		if(uiToolbarButton(p.icon, false, tip, true, ImVec2(button, button))){
-			if(p.action == -2) showHistoryWindow ^= 1;
-			else if(p.action == -3) showMultiplayerWindow ^= 1;
-			else if(p.action == -4) showSavedSelectionsWindow ^= 1;
-			else uiRunShortcut(p.action);
-		}
-		ImGui::PopStyleColor();
-		if(on){
-			// A bar on the inner edge marks the open ones.
-			ImVec2 lo = ImGui::GetItemRectMin(), hi = ImGui::GetItemRectMax();
-			ImGui::GetWindowDrawList()->AddRectFilled(ImVec2(lo.x - pad, lo.y + 4.0f), ImVec2(lo.x - pad + 2.0f, hi.y - 4.0f),
-				ImGui::GetColorU32(ImGuiCol_CheckMark));
-		}
-	}
-	ImGui::End();
-	ImGui::PopStyleColor();
-	ImGui::PopStyleVar(4);
 }
 
 static bool gShowWorkspaceWindow;
@@ -3490,17 +3834,21 @@ uiHistoryWindow(void)
 	uiFitItemsToPanel();
 	std::vector<UndoHistoryStep> steps;
 	int done = GetUndoHistory(steps);
-	char tip[64];
+	// Undo and Redo as an even pair, then the steps.
+	float half = floorf((ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x) * 0.5f);
 	ImGui::BeginDisabled(done == 0);
-	snprintf(tip, sizeof(tip), "%s (%s)", _("Undo"), ShortcutLabel(SC_UNDO));
-	if(uiToolbarButton(ICON_FA_ROTATE_LEFT "##history_undo", false, tip)) uiUndo();
+	char label[96];
+	snprintf(label, sizeof(label), "%s %s##history_undo", ICON_FA_ROTATE_LEFT, _("Undo"));
+	if(ImGui::Button(label, ImVec2(half, 0))) uiUndo();
+	ImGui::SetItemTooltip("%s", ShortcutLabel(SC_UNDO));
 	ImGui::EndDisabled();
 	ImGui::SameLine();
 	ImGui::BeginDisabled(done >= (int)steps.size());
-	snprintf(tip, sizeof(tip), "%s (%s)", _("Redo"), ShortcutLabel(SC_REDO));
-	if(uiToolbarButton(ICON_FA_ROTATE_RIGHT "##history_redo", false, tip)) uiRedo();
+	snprintf(label, sizeof(label), "%s %s##history_redo", ICON_FA_ROTATE_RIGHT, _("Redo"));
+	if(ImGui::Button(label, ImVec2(half, 0))) uiRedo();
+	ImGui::SetItemTooltip("%s", ShortcutLabel(SC_REDO));
 	ImGui::EndDisabled();
-	ImGui::Separator();
+	ImGui::Spacing();
 	ImGui::BeginChild("##history_steps", UiFillRest(UiListMinHeight()));
 	static int lastDone = -1;
 	for(int i = 0; i <= (int)steps.size(); i++){
@@ -3527,36 +3875,34 @@ uiHistoryWindow(void)
 	ImGui::End();
 }
 
-// The right end of the menu bar: which editor (Map, TextDraws or Code) in a
-// switcher, then Save and Test in game.
-static void
-uiMenuBarRight(void)
+// The menus open from the ribbon, one at a time: gRibbonMenu is the one
+// being drawn (0 File, 1 Edit, 2 Windows, 3 Help), its items straight in
+// the ribbon's popup.
+static int gRibbonMenu = -1, gRibbonMenuCounter;
+
+static bool
+uiTopMenu(const char *label)
 {
-	// Save and Test in game are on the main toolbar; the TextDraw and Code
-	// editors have their own.
-	ImGuiStyle &style = ImGui::GetStyle();
-	const char *labels[] = { L("Map"), L("TextDraws"), L("Code") };
-	float switcher = style.FramePadding.x*6.0f + style.ItemSpacing.x*2.0f + 8.0f;
-	for(const char *l : labels)
-		switcher += ImGui::CalcTextSize(l, nil, true).x;
-	float x = ImGui::GetWindowContentRegionMax().x - switcher - style.ItemSpacing.x;
-	if(x > ImGui::GetCursorPosX())
-		ImGui::SetCursorPosX(x);
-	// The switcher: a sunken track with the current editor raised.
-	ImVec2 p = ImGui::GetCursorScreenPos();
-	float h = ImGui::GetFrameHeight();
-	ImGui::GetWindowDrawList()->AddRectFilled(ImVec2(p.x - 2.0f, p.y + 1.0f), ImVec2(p.x + switcher - 6.0f, p.y + h - 1.0f),
-		ImGui::GetColorU32(ImGuiCol_FrameBg), style.FrameRounding);
-	ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(2.0f, style.ItemSpacing.y));
-	uiWorkspaceNavigation();
-	ImGui::PopStyleVar();
+	int index = gRibbonMenuCounter++;
+	if(gRibbonMenu < 0)
+		return ImGui::BeginMenu(label);
+	return index == gRibbonMenu;
 }
 
 static void
-uiMainmenu(void)
+uiEndTopMenu(void)
 {
-	if(ImGui::BeginMainMenuBar()){
-		if(ImGui::BeginMenu(LI(ICON_FA_FOLDER_OPEN, "File"))){
+	if(gRibbonMenu < 0)
+		ImGui::EndMenu();
+}
+
+// The menus' items.
+static void
+uiMainMenuItems(void)
+{
+	gRibbonMenuCounter = 0;
+	{
+		if(uiTopMenu(L("File"))){
 			if(ImGui::MenuItem(InPawnIdeMode() ? TI(ICON_FA_FILE, "New script") : TI(ICON_FA_FILE, "New Map"), ShortcutLabel(SC_NEW_MAP), false, isSA()))
 				requestMapAction(MAP_ACTION_NEW);
 			if(ImGui::MenuItem(InPawnIdeMode() ? TI(ICON_FA_FOLDER_OPEN, "Open script...") : TI(ICON_FA_FOLDER_OPEN, "Open Map..."), ShortcutLabel(SC_OPEN_MAP), false, isSA()))
@@ -3623,9 +3969,9 @@ uiMainmenu(void)
 				if(ImGui::MenuItem(_("Prefab..."), ShortcutLabel(SC_IMPORT_PREFAB)))
 					gOpenImportPrefab = true;
 				ImGui::SetItemTooltip(_("Places the objects of a prefab file (.haumea) in this map."));
-				if(ImGui::MenuItem(_("Custom Model... (0.3.DL)"), nil, false, isSA()))
+				if(ImGui::MenuItem(_("Custom Model..."), nil, false, isSA()))
 					OpenAddCustomModelDialog(nil);
-				ImGui::SetItemTooltip(_("Puts a DFF and TXD in the server's models folder and artconfig.txt,\nso SA-MP 0.3.DL and open.mp players get it. The game folder isn't touched."));
+				ImGui::SetItemTooltip(_("Puts your DFF and TXD in the server's models folder; maps that use it register it\nin their own code. Players on the SA-MP 0.3.DL client download it. The game folder isn't touched."));
 				ImGui::EndMenu();
 			}
 			if(ImGui::BeginMenu(LI(ICON_FA_FILE_EXPORT, "Export"), selection.first != nil)){
@@ -3662,9 +4008,9 @@ uiMainmenu(void)
 			}
 			ImGui::SetItemTooltip(_("Restarts Haumea and reloads the game files from disk."));
 			if(ImGui::MenuItem(TI(ICON_FA_RIGHT_FROM_BRACKET, "Exit"), "Alt+F4")) requestMapAction(MAP_ACTION_QUIT);
-			ImGui::EndMenu();
+			uiEndTopMenu();
 		}
-		if(ImGui::BeginMenu(LI(ICON_FA_PEN, "Edit"))){
+		if(uiTopMenu(L("Edit"))){
    if(InPawnIdeMode()){
     if(ImGui::MenuItem(_("Undo"), "Ctrl+Z")) PawnEditorRequest(PAWN_EDITOR_UNDO);
     if(ImGui::MenuItem(_("Redo"), "Ctrl+Y")) PawnEditorRequest(PAWN_EDITOR_REDO);
@@ -3713,11 +4059,11 @@ uiMainmenu(void)
 			}
 			ImGui::SetItemTooltip(_("Hiding is only for editing: hidden objects stay in the map and are saved as usual."));
    }
-			ImGui::EndMenu();
+			uiEndTopMenu();
 		}
-		if(ImGui::BeginMenu(LI(ICON_FA_WINDOW_MAXIMIZE, "Windows"))){
+		if(uiTopMenu(L("Windows"))){
 			if(ImGui::BeginMenu(L("Editor panels"))){
-				if(ImGui::MenuItem(TI(ICON_FA_MAGNIFYING_GLASS, "Object Browser"), ShortcutLabel(SC_WINDOW_BROWSER), showBrowserWindow)) { showBrowserWindow ^= 1; }
+				if(ImGui::MenuItem(TI(ICON_FA_MAGNIFYING_GLASS, "Asset Browser"), ShortcutLabel(SC_WINDOW_BROWSER), showBrowserWindow)) { showBrowserWindow ^= 1; }
 				if(ImGui::MenuItem(TI(ICON_FA_CIRCLE_INFO, "Object Info"), ShortcutLabel(SC_WINDOW_OBJECT_INFO), showInstanceWindow)) { showInstanceWindow ^= 1; }
 				if(ImGui::MenuItem(TI(ICON_FA_LAYER_GROUP, "Map Objects"), ShortcutLabel(SC_WINDOW_MAP_OBJECTS), showMapObjectsWindow)) { showMapObjectsWindow ^= 1; }
 				if(ImGui::MenuItem(TI(ICON_FA_CLOCK_ROTATE_LEFT, "History"), nil, showHistoryWindow)) { showHistoryWindow ^= 1; }
@@ -3759,6 +4105,19 @@ uiMainmenu(void)
 					saveSaveSettings();
 				}
 				ImGui::SetItemTooltip(_("The game's radar in the corner of the 3D view, with the map's gang zones.\nClick it for the full map."));
+				ImGui::Separator();
+				bool hasElements = false;
+				for(CPtrNode *p = instances.first; p && !hasElements; p = p->next){
+					ObjectInst *inst = (ObjectInst*)p->item;
+					hasElements = !inst->m_isDeleted && IsUserMapObject(inst);
+				}
+				if(ImGui::MenuItem(TI(ICON_FA_VIDEO, "Build Replay"), nil, BuildReplayActive(), hasElements || BuildReplayActive())){
+					if(BuildReplayActive())
+						BuildReplayStop();
+					else
+						BuildReplayStart();
+				}
+				ImGui::SetItemTooltip(_("Plays the map being built, element by element in the order they were added, while the camera circles it."));
 				ImGui::EndMenu();
 			}
 			if(ImGui::BeginMenu(L("Review"))){
@@ -3790,9 +4149,9 @@ uiMainmenu(void)
 			}
 			ImGui::Separator();
 			if(ImGui::MenuItem(TI(ICON_FA_GEAR, "Preferences..."), ShortcutLabel(SC_WINDOW_PREFERENCES), showPreferencesWindow)) { showPreferencesWindow ^= 1; }
-			ImGui::EndMenu();
+			uiEndTopMenu();
 		}
-		if(ImGui::BeginMenu(LI(ICON_FA_CIRCLE_QUESTION, "Help"))){
+		if(uiTopMenu(L("Help"))){
 			if(ImGui::MenuItem(_("Getting started"))){
 				gShowStartGuide = true;
 				saveSaveSettings();
@@ -3805,12 +4164,16 @@ uiMainmenu(void)
 			ImGui::SetItemTooltip(_("Install Namaka and connect an AI assistant (Claude, Codex…), like Windows > Namaka."));
 			ImGui::Separator();
 			UpdaterHelpMenuItems();
-			ImGui::EndMenu();
+			uiEndTopMenu();
 		}
 
-		uiMenuBarRight();
-		ImGui::EndMainMenuBar();
 	}
+}
+
+// The menus' popups and windows; the menus themselves are on the ribbon.
+static void
+uiMainmenu(void)
+{
 	uiExportPrefabPopup();
 	uiImportPrefabPopup();
 	uiSavePawnAsPopup();
@@ -3827,37 +4190,503 @@ uiMainmenu(void)
 
 // The options bar under the menus: the settings of the tool in use (map)
 // or the TextDraw tools. The Code editor has its own.
+static void uiWorkspaceNavigation(void);
+
+// A stack row with a checkbox: a switch with its name.
+static bool
+uiRibbonCheckRow(const char *id, const char *label, bool on, const char *tip, ImVec2 at, float w, float h)
+{
+	float u = uiRibbonUnit();
+	ImGui::SetCursorScreenPos(at);
+	bool pressed = ImGui::InvisibleButton(id, ImVec2(w, h));
+	bool hovered = ImGui::IsItemHovered(), held = ImGui::IsItemActive();
+	if(tip && tip[0])
+		ImGui::SetItemTooltip("%s", tip);
+	ImDrawList *dl = ImGui::GetWindowDrawList();
+	if(ImU32 bg = uiRibbonStateFill(false, hovered, held))
+		dl->AddRectFilled(at, ImVec2(at.x + w, at.y + h), bg, 5.0f*u);
+	float box = floorf(13.0f*u);
+	ImVec2 b0(at.x + 6.0f*u, at.y + floorf((h - box)*0.5f)), b1(b0.x + box, b0.y + box);
+	if(on){
+		dl->AddRectFilled(b0, b1, ImGui::GetColorU32(ImGuiCol_Text, 0.92f), 3.0f*u);
+		float t = std::max(1.5f, 1.8f*u);
+		ImU32 ink = ImGui::GetColorU32(ImGuiCol_WindowBg);
+		dl->AddLine(ImVec2(b0.x + box*0.22f, b0.y + box*0.52f), ImVec2(b0.x + box*0.42f, b0.y + box*0.72f), ink, t);
+		dl->AddLine(ImVec2(b0.x + box*0.42f, b0.y + box*0.72f), ImVec2(b0.x + box*0.78f, b0.y + box*0.30f), ink, t);
+	}else
+		dl->AddRect(b0, b1, ImGui::GetColorU32(ImGuiCol_Text, hovered ? 0.8f : 0.5f), 3.0f*u, 0, 1.2f*u);
+	ImFont *font = ImGui::GetFont();
+	float size = 11.5f*u;
+	ImVec2 ls = font->CalcTextSizeA(size, FLT_MAX, 0.0f, label);
+	dl->AddText(font, size, ImVec2(floorf(b1.x + 7.0f*u), floorf(at.y + (h - ls.y)*0.5f)),
+		ImGui::GetColorU32(ImGuiCol_Text, 0.88f), label);
+	return pressed;
+}
+
+// The TextDraw editor's commands, in its working order: the file, what to
+// add, the board it goes on, arranging it, and how the canvas shows.
+static void
+uiTextDrawsRibbon(void)
+{
+	char tip[160];
+	float u = uiRibbonUnit();
+
+	// File.
+	if(uiRibbonTile("td_new", LU_FILE_PLUS, _("New"), _("New textdraw file")))
+		TextDrawsFileCommand(0);
+	uiRibbonGap();
+	{
+		RibbonStack s = uiBeginRibbonStack();
+		s.h = floorf((uiRibbonInner() - 12.0f*u) / 4.0f);
+		if(uiRibbonRow("td_open", LU_FOLDER_OPEN, _("Open..."), _("Open a textdraw file"), s.row(0), s.w, s.h))
+			TextDrawsFileCommand(1);
+		snprintf(tip, sizeof(tip), "%s (%s)", _("Save"), ShortcutLabel(SC_SAVE_MAP));
+		if(uiRibbonRow("td_save", LU_SAVE, _("Save"), tip, s.row(1), s.w, s.h))
+			TextDrawsFileCommand(2);
+		if(uiRibbonRow("td_save_as", LU_SAVE, _("Save As..."), nil, s.row(2), s.w, s.h))
+			TextDrawsFileCommand(3);
+		if(uiRibbonRow("td_file_options", LU_SETTINGS, _("File options"), _("File options"), s.row(3), s.w, s.h)){
+			ImGui::SetNextWindowPos(ImVec2(s.row(3).x, s.row(3).y + s.h + 2.0f));
+			ImGui::OpenPopup("##td_file_options");
+		}
+		if(ImGui::BeginPopup("##td_file_options")){
+			TextDrawsFileOptionsItems();
+			ImGui::EndPopup();
+		}
+		uiEndRibbonStack(s);
+	}
+	// Narrowest: undo and redo leave (Ctrl+Z, the Edit menu).
+	if(gRibbonDensity < 5){
+		uiRibbonGap();
+		RibbonStack s = uiBeginRibbonStack();
+		s.w = floorf(80.0f*u);
+		snprintf(tip, sizeof(tip), "%s (%s)", _("Undo"), ShortcutLabel(SC_UNDO));
+		if(uiRibbonRow("td_undo", LU_UNDO_2, _("Undo"), tip, s.row(0), s.w, s.h))
+			TextDrawsFileCommand(4);
+		snprintf(tip, sizeof(tip), "%s (%s)", _("Redo"), ShortcutLabel(SC_REDO));
+		if(uiRibbonRow("td_redo", LU_REDO_2, _("Redo"), tip, s.row(1), s.w, s.h))
+			TextDrawsFileCommand(5);
+		uiEndRibbonStack(s);
+	}
+
+	// Insert.
+	uiRibbonSeparator();
+	static const char *names[] = { N_("Text"), N_("Box"), N_("Sprite"), N_("Model"), N_("Image") };
+	static const char *icons[] = { LU_TYPE, LU_SQUARE, LU_SQUARE_DASHED, LU_BOX, LU_IMAGE };
+	for(int i = 0; i < 5; i++){
+		char id[16];
+		snprintf(id, sizeof(id), "add_%d", i);
+		if(i) uiRibbonGap();
+		if(uiRibbonTile(id, icons[i], _(names[i]), i == 4 ?
+		   _("A picture to build on: a mock-up or a screenshot (PNG, BMP or TGA).\n"
+		     "It is a layer like the others, only the editor shows it; the eyedropper picks its colours.") : nil))
+			TextDrawsAdd(i);
+	}
+	uiRibbonGap();
+	ImVec2 at = ImGui::GetCursorScreenPos();
+	if(uiRibbonTile("add_shape", LU_SHAPES, _("Shape"),
+	   _("Boxes, circles, outlines, triangles, arrows, gradients, bars and rings, made\n"
+	     "of sprite textdraws and added as a group. Select it later to change it."))){
+		ImGui::SetNextWindowPos(ImVec2(at.x, at.y + uiRibbonInner() + 2.0f));
+		ImGui::OpenPopup("##shape");
+	}
+	if(ImGui::BeginPopup("##shape")){
+		TextDrawsShapeMenu();
+		ImGui::EndPopup();
+	}
+
+	// The board the new ones go on.
+	uiRibbonSeparator();
+	char label[96];
+	snprintf(label, sizeof(label), "%s " ICON_FA_CARET_DOWN, TextDrawsBoardName());
+	at = ImGui::GetCursorScreenPos();
+	if(uiRibbonTile("board", LU_LAYERS, label, _("An artboard: a screen of its own, shown and hidden in Pawn with\n"
+	   "<prefix>_Show<Board>(playerid) and _Hide<Board>(playerid). Right-click for more."))){
+		ImGui::SetNextWindowPos(ImVec2(at.x, at.y + uiRibbonInner() + 2.0f));
+		ImGui::OpenPopup("##boards");
+	}
+	ImGui::SetNextWindowSizeConstraints(ImVec2(ImGui::GetFontSize()*12.0f, 0), ImVec2(FLT_MAX, FLT_MAX));
+	if(ImGui::BeginPopup("##boards")){
+		TextDrawsBoardMenu();
+		ImGui::EndPopup();
+	}
+
+	// Arrange: the edges and the flips as pictures, then what they line up
+	// with, spacing and sizes.
+	uiRibbonSeparator();
+	{
+		const RibbonIconCell cells[] = {
+			{ "td_align_left", LU_ALIGN_START_VERTICAL, _("Left edges"), TextDrawsCanArrange(0) },
+			{ "td_align_centre", LU_ALIGN_CENTER_VERTICAL, _("Centres across"), TextDrawsCanArrange(1) },
+			{ "td_align_right", LU_ALIGN_END_VERTICAL, _("Right edges"), TextDrawsCanArrange(2) },
+			{ "td_flip_across", LU_FLIP_HORIZONTAL_2, _("Flip across: sprites mirror, shapes point the other way"), TextDrawsCanArrange(10) },
+			{ "td_align_top", LU_ALIGN_START_HORIZONTAL, _("Top edges"), TextDrawsCanArrange(3) },
+			{ "td_align_middle", LU_ALIGN_CENTER_HORIZONTAL, _("Middles"), TextDrawsCanArrange(4) },
+			{ "td_align_bottom", LU_ALIGN_END_HORIZONTAL, _("Bottom edges"), TextDrawsCanArrange(5) },
+			{ "td_flip_down", LU_FLIP_VERTICAL_2, _("Flip upside down"), TextDrawsCanArrange(11) },
+		};
+		static const int commands[] = { 0, 1, 2, 10, 3, 4, 5, 11 };
+		int pick = uiRibbonIconGrid(cells, 4, 2);
+		if(pick >= 0)
+			TextDrawsArrange(commands[pick]);
+	}
+	uiRibbonGap();
+	uiRibbonGap();
+	// Narrow: these leave the ribbon, last group first (gRibbonDensity).
+	if(gRibbonDensity < 4){
+		RibbonStack s = uiBeginRibbonStack();
+		s.w = floorf(132.0f*u);
+		const char *tos[] = { _("To the selection"), _("To the key one"), _("To the screen") };
+		int to = TextDrawsAlignTo();
+		if(uiRibbonRow("td_align_to", LU_TARGET, tos[to < 0 || to > 2 ? 0 : to],
+		   _("What aligning lines them up with. The key one is the one clicked last\n"
+		     "(outlined thicker), and it stays put. One on its own aligns to the screen.\n"
+		     "A group moves as one, and a shape aligns by its own edges."), s.row(0), s.w, s.h)){
+			ImGui::SetNextWindowPos(ImVec2(s.row(0).x, s.row(0).y + s.h + 2.0f));
+			ImGui::OpenPopup("##td_align_to");
+		}
+		if(ImGui::BeginPopup("##td_align_to")){
+			for(int i = 0; i < 3; i++)
+				if(ImGui::MenuItem(tos[i], nil, to == i))
+					TextDrawsSetAlignTo(i);
+			ImGui::EndPopup();
+		}
+		if(uiRibbonRow("td_space_across", LU_ALIGN_HORIZONTAL_DISTRIBUTE_CENTER, _("Space evenly across"), nil,
+		   s.row(1), s.w, s.h, TextDrawsCanArrange(6)))
+			TextDrawsArrange(6);
+		if(uiRibbonRow("td_space_down", LU_ALIGN_VERTICAL_DISTRIBUTE_CENTER, _("Space evenly down"), nil,
+		   s.row(2), s.w, s.h, TextDrawsCanArrange(7)))
+			TextDrawsArrange(7);
+		uiEndRibbonStack(s);
+		uiRibbonGap();
+	}
+	if(gRibbonDensity < 3){
+		RibbonStack s = uiBeginRibbonStack();
+		s.w = floorf(112.0f*u);
+		// The gap: a checkbox, and its distance in a field beside it.
+		bool *fixed = TextDrawsFixedGap();
+		float field = floorf(48.0f*u);
+		if(uiRibbonCheckRow("td_gap", _("Gap"), *fixed, _("Off: the outer ones stay and the gaps between come out equal.\n"
+		   "On: each is this far from the one before, from the first."), s.row(0), s.w - field - 4.0f*u, s.h))
+			*fixed = !*fixed;
+		ImGui::SetCursorScreenPos(ImVec2(s.row(0).x + s.w - field, s.row(0).y));
+		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4.0f*u, floorf((s.h - ImGui::GetFontSize())*0.5f)));
+		ImGui::SetNextItemWidth(field);
+		ImGui::BeginDisabled(!*fixed);
+		ImGui::DragFloat("##td_gap_value", TextDrawsGap(), 0.25f, 0.0f, 640.0f, "%.1f");
+		ImGui::EndDisabled();
+		ImGui::SetItemTooltip("%s", _("The gap, in canvas units. Drag or double-click to type."));
+		ImGui::PopStyleVar();
+		if(uiRibbonRow("td_same_width", LU_MOVE_HORIZONTAL, _("Same width"), _("Same width as the key one"),
+		   s.row(1), s.w, s.h, TextDrawsCanArrange(8)))
+			TextDrawsArrange(8);
+		if(uiRibbonRow("td_same_height", LU_MOVE_VERTICAL, _("Same height"), _("Same height as the key one"),
+		   s.row(2), s.w, s.h, TextDrawsCanArrange(9)))
+			TextDrawsArrange(9);
+		uiEndRibbonStack(s);
+	}
+
+	// View: zoom, the canvas's guides, its settings. Narrow: the zoom (the
+	// wheel zooms) and the guides (also in Canvas) leave first.
+	uiRibbonSeparator();
+	if(gRibbonDensity < 2){
+		RibbonStack s = uiBeginRibbonStack();
+		if(uiRibbonRow("zoom_in", LU_ZOOM_IN, _("Zoom in"), nil, s.row(0), s.w, s.h)) TextDrawsZoom(1);
+		if(uiRibbonRow("zoom_out", LU_ZOOM_OUT, _("Zoom out"), nil, s.row(1), s.w, s.h)) TextDrawsZoom(-1);
+		char fit[48];
+		snprintf(fit, sizeof(fit), "%s  %.0f%%", _("Fit"), TextDrawsZoomPercent());
+		if(uiRibbonRow("Fit", LU_MAXIMIZE, fit,
+		   _("The wheel zooms round the cursor, the middle button pans.\nCtrl+wheel sizes the interface instead."),
+		   s.row(2), s.w, s.h))
+			TextDrawsZoom(0);
+		uiEndRibbonStack(s);
+		uiRibbonGap();
+	}
+	if(gRibbonDensity < 1){
+		RibbonStack s = uiBeginRibbonStack();
+		s.w = floorf(80.0f*u);
+		static const char *options[] = { N_("Grid"), N_("Snap"), N_("Rulers") };
+		static const char *ids[] = { "td_grid", "td_snap", "td_rulers" };
+		for(int i = 0; i < 3; i++)
+			if(uiRibbonCheckRow(ids[i], _(options[i]), TextDrawsCanvasOption(i), nil, s.row(i), s.w, s.h))
+				TextDrawsToggleCanvasOption(i);
+		uiEndRibbonStack(s);
+		uiRibbonGap();
+	}
+	// Canvas is at the bar's right end (uiRibbonRightEnd), so it never
+	// scrolls away.
+}
+
+// The Code editor's commands: the document, finding, the code's format.
+static void
+uiCodeRibbon(void)
+{
+	if(uiRibbonTile("new_script", LU_FILE_PLUS, _("New script"), nil))
+		PawnEditorRequest(PAWN_EDITOR_NEW);
+	uiRibbonGap();
+	{
+		RibbonStack s = uiBeginRibbonStack();
+		s.w = floorf(120.0f*uiRibbonUnit());
+		if(uiRibbonRow("Open script...", LU_FOLDER_OPEN, _("Open script..."), nil, s.row(0), s.w, s.h))
+			PawnEditorRequest(PAWN_EDITOR_OPEN);
+		if(uiRibbonRow("Save script", LU_SAVE, _("Save script"), nil, s.row(1), s.w, s.h))
+			PawnEditorRequest(PAWN_EDITOR_SAVE);
+		if(uiRibbonRow("Save As...", LU_SAVE, _("Save As..."), nil, s.row(2), s.w, s.h))
+			PawnEditorRequest(PAWN_EDITOR_SAVE_AS);
+		uiEndRibbonStack(s);
+	}
+	uiRibbonSeparator();
+	if(uiRibbonTile("find", LU_SEARCH, _("Find / Replace"), nil))
+		PawnEditorFindReplace();
+	uiRibbonGap();
+	if(uiRibbonTile("refresh", LU_ROTATE_CW, _("Refresh from map"),
+	   _("Replace this document with generated map code. Manual edits are saved as a separate script.")))
+		PawnEditorRequest(PAWN_EDITOR_REFRESH);
+	uiRibbonSeparator();
+	{
+		RibbonStack s = uiBeginRibbonStack();
+		s.w = floorf(120.0f*uiRibbonUnit());
+		int format = PawnEditorFormat();
+		if(uiRibbonRow("Native", LU_BOX, _("Native"), nil, s.row(0), s.w, s.h, true, format == PAWN_CODE_NATIVE))
+			PawnEditorSetFormat(PAWN_CODE_NATIVE);
+		if(uiRibbonRow("Streamer", LU_LAYERS, _("Streamer"), nil, s.row(1), s.w, s.h, true, format == PAWN_CODE_STREAMER))
+			PawnEditorSetFormat(PAWN_CODE_STREAMER);
+		// The text's encoding (PAWN_TEXT_CP1252, PAWN_TEXT_UTF8).
+		static const char *encodings[] = { "Windows-1252", "UTF-8" };
+		int enc = PawnEditorEncoding() == 1 ? 1 : 0;
+		if(uiRibbonRow("##ScriptEncoding", LU_TYPE, encodings[enc], nil, s.row(2), s.w, s.h)){
+			ImGui::SetNextWindowPos(ImVec2(s.row(2).x, s.row(2).y + s.h + 2.0f));
+			ImGui::OpenPopup("##script_encoding");
+		}
+		if(ImGui::BeginPopup("##script_encoding")){
+			for(int i = 0; i < 2; i++)
+				if(ImGui::MenuItem(encodings[i], nil, enc == i))
+					PawnEditorSetEncoding(i);
+			ImGui::EndPopup();
+		}
+		uiEndRibbonStack(s);
+	}
+	// Which document, and whether it is saved.
+	ImGui::SameLine(0.0f, floorf(10.0f*uiRibbonUnit()));
+	ImVec2 at = ImGui::GetCursorPos();
+	ImGui::SetCursorPos(ImVec2(at.x, at.y + floorf((uiRibbonInner() - ImGui::GetTextLineHeight())*0.5f)));
+	ImGui::TextDisabled("%s", PawnEditorDocumentName().c_str());
+}
+
+// The bar at the top of every editor: the title row (logo, menus, the map's
+// name, the window's buttons), then the ribbon: which editor, and its commands.
 static void
 uiCommandBar(void)
 {
-	if(InPawnIdeMode())
-		return;
+	// The top row: the logo, the menus, the map's name in the middle and the
+	// window's buttons (our own title bar, titlebar.cpp); with the system's
+	// title bar, just the menus.
+	{
+		float u = uiRibbonUnit();
+		bool own = TitleBarOwned();
+		if(own)
+			TitleBarInstall();
+		ImGuiViewport *viewport = ImGui::GetMainViewport();
+		float h = floorf((own ? 32.0f : 28.0f)*u);
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(floorf(8.0f*u), floorf((h - ImGui::GetFontSize())*0.5f)));
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(floorf(2.0f*u), ImGui::GetStyle().ItemSpacing.y));
+		ImGui::PushStyleColor(ImGuiCol_MenuBarBg, ImGui::GetStyleColorVec4(ImGuiCol_TitleBg));
+		bool open = ImGui::BeginViewportSideBar("##MenuBar", viewport, ImGuiDir_Up, h,
+			ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoSavedSettings |
+			ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+		ImGui::PopStyleVar(4);
+		ImGui::PopStyleColor();
+		if(open && ImGui::BeginMenuBar()){
+			ImVec2 top = ImGui::GetWindowPos();
+			float right = top.x + ImGui::GetWindowWidth();
+			ImDrawList *dl = ImGui::GetWindowDrawList();
+			float x = top.x + floorf(10.0f*u);
+			if(own){
+				float logo = floorf(18.0f*u);
+				if(rw::Texture *tex = GetHaumeaLogoTexture())
+					dl->AddImage((ImTextureID)tex, ImVec2(x, top.y + floorf((h - logo)*0.5f)),
+						ImVec2(x + logo, top.y + floorf((h - logo)*0.5f) + logo));
+				x += logo + floorf(6.0f*u);
+			}
+			// The menus' names on the row's middle, like the title and the buttons.
+			ImGui::SetCursorScreenPos(ImVec2(x, top.y + floorf((h - ImGui::GetTextLineHeight())*0.5f) - ImGui::GetStyle().FramePadding.y));
+			uiMainMenuItems();
+			float menusEnd = ImGui::GetItemRectMax().x;
+			float buttonW = floorf(46.0f*u), buttonsStart = own ? right - 3.0f*buttonW : right;
+			// The map's name in the middle, or as near it as the menus allow.
+			if(!gWindowTitle.empty()){
+				ImVec2 ts = ImGui::CalcTextSize(gWindowTitle.c_str());
+				float lo = menusEnd + floorf(16.0f*u), hi = buttonsStart - floorf(16.0f*u);
+				float tx = floorf(clamp(top.x + (right - top.x - ts.x)*0.5f, lo, std::max(lo, hi - ts.x)));
+				dl->PushClipRect(ImVec2(lo, top.y), ImVec2(std::max(lo, hi), top.y + h), true);
+				dl->AddText(ImVec2(tx, top.y + floorf((h - ts.y)*0.5f)), ImGui::GetColorU32(ImGuiCol_TextDisabled), gWindowTitle.c_str());
+				dl->PopClipRect();
+			}
+			if(own){
+				// Minimize, maximize or restore, close: thin strokes, Windows' sizes.
+				enum { BUTTON_MIN, BUTTON_MAX, BUTTON_CLOSE };
+				static const char *ids[] = { "##window_minimize", "##window_maximize", "##window_close" };
+				const char *tips[] = { _("Minimize"), TitleBarMaximized() ? _("Restore") : _("Maximize"), _("Close") };
+				for(int i = 0; i < 3; i++){
+					ImVec2 p(buttonsStart + i*buttonW, top.y);
+					ImGui::SetCursorScreenPos(p);
+					bool pressed = ImGui::InvisibleButton(ids[i], ImVec2(buttonW, h));
+					bool hovered = ImGui::IsItemHovered(), held = ImGui::IsItemActive();
+					ImGui::SetItemTooltip("%s", tips[i]);
+					ImU32 ink = ImGui::GetColorU32(ImGuiCol_Text, 0.85f);
+					if(i == BUTTON_CLOSE && (hovered || held)){
+						ImVec4 red = UiSemanticColor(UI_COLOR_ERROR);
+						dl->AddRectFilled(p, ImVec2(p.x + buttonW, p.y + h), ImGui::GetColorU32(held ? ImVec4(red.x*0.85f, red.y*0.85f, red.z*0.85f, 1.0f) : red));
+						ink = IM_COL32_WHITE;
+					}else if(ImU32 bg = uiRibbonStateFill(false, hovered, held))
+						dl->AddRectFilled(p, ImVec2(p.x + buttonW, p.y + h), bg);
+					ImVec2 c(floorf(p.x + buttonW*0.5f) + 0.5f, floorf(p.y + h*0.5f) + 0.5f);
+					float r = floorf(5.0f*u), t = std::max(1.0f, floorf(u));
+					if(i == BUTTON_MIN)
+						dl->AddLine(ImVec2(c.x - r, c.y), ImVec2(c.x + r, c.y), ink, t);
+					else if(i == BUTTON_MAX){
+						if(TitleBarMaximized()){
+							float o = floorf(2.0f*u);
+							dl->AddRect(ImVec2(c.x - r, c.y - r + o), ImVec2(c.x + r - o, c.y + r), ink, 0.0f, 0, t);
+							dl->AddLine(ImVec2(c.x - r + o, c.y - r + o), ImVec2(c.x - r + o, c.y - r), ink, t);
+							dl->AddLine(ImVec2(c.x - r + o, c.y - r), ImVec2(c.x + r, c.y - r), ink, t);
+							dl->AddLine(ImVec2(c.x + r, c.y - r), ImVec2(c.x + r, c.y + r - o), ink, t);
+							dl->AddLine(ImVec2(c.x + r, c.y + r - o), ImVec2(c.x + r - o, c.y + r - o), ink, t);
+						}else
+							dl->AddRect(ImVec2(c.x - r, c.y - r), ImVec2(c.x + r, c.y + r), ink, 0.0f, 0, t);
+					}else{
+						dl->AddLine(ImVec2(c.x - r, c.y - r), ImVec2(c.x + r, c.y + r), ink, t);
+						dl->AddLine(ImVec2(c.x - r, c.y + r), ImVec2(c.x + r, c.y - r), ink, t);
+					}
+					if(pressed){
+						if(i == BUTTON_MIN) TitleBarMinimize();
+						else if(i == BUTTON_MAX) TitleBarToggleMaximize();
+						else requestMapAction(MAP_ACTION_QUIT);
+					}
+				}
+				TitleBarSetLayout(h, menusEnd - viewport->Pos.x, buttonsStart - viewport->Pos.x);
+			}
+			ImGui::EndMenuBar();
+		}
+		ImGui::End();
+		if(own)
+			TitleBarUpdate();
+	}
 	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(8.0f, 3.0f));
 	ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(6.0f, 6.0f));
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8.0f, 5.0f));
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
-	ImGui::PushStyleColor(ImGuiCol_MenuBarBg, ImGui::GetStyleColorVec4(ImGuiCol_TitleBg));
 	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImGui::GetStyleColorVec4(ImGuiCol_TitleBg));
-	bool mapBar = !InTextDrawMode();
-	ImGui::BeginViewportSideBar("##EditorCommands", ImGui::GetMainViewport(), ImGuiDir_Up,
-		mapBar ? uiMainToolbarHeight() : ImGui::GetFrameHeight() + 10.0f, ImGuiWindowFlags_NoDecoration |
-		(mapBar ? 0 : ImGuiWindowFlags_MenuBar) | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoDocking |
+	ImGui::BeginViewportSideBar("##EditorCommands", ImGui::GetMainViewport(), ImGuiDir_Up, uiMainToolbarHeight(),
+		ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoDocking |
 		ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
-	if(mapBar){
+	float u = uiRibbonUnit();
+	// The commands scroll sideways when the window is too narrow for them
+	// (the wheel scrolls them); the right end stays put.
+	float rightEnd = uiRibbonRightEndWidth();
+	float left = floorf(10.0f*u), top = floorf(5.0f*u);
+	ImGui::SetCursorPos(ImVec2(left, 0.0f));
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+	ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize, 3.0f);
+	ImGui::BeginChild("##ribbon_scroll", ImVec2(ImGui::GetWindowWidth() - left - rightEnd - floorf(8.0f*u), uiMainToolbarHeight()),
+		ImGuiChildFlags_None, ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+	ImGui::PopStyleVar(2);
+	if(ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows) && ImGui::GetIO().MouseWheel != 0.0f && !ImGui::IsAnyItemActive())
+		ImGui::SetScrollX(ImGui::GetScrollX() - ImGui::GetIO().MouseWheel*ImGui::GetFontSize()*4.0f);
+	ImGui::SetCursorPos(ImVec2(0.0f, top));
+	uiWorkspaceNavigation();
+	if(InTextDrawMode()){
+		uiRibbonSeparator();
+		uiTextDrawsRibbon();
+	}else if(InPawnIdeMode()){
+		uiRibbonSeparator();
+		uiCodeRibbon();
+	}else{
 		// The big commands; the tool's settings float over the 3D view (uiViewportOverlay).
-		ImGui::SetCursorPos(ImVec2(ImGui::GetFontSize()*0.5f, ImGui::GetFontSize()*0.25f));
+		uiRibbonSeparator();
 		uiMainToolbar();
-	}else if(ImGui::BeginMenuBar()){
-		DrawTextDrawsToolbar();
-		ImGui::EndMenuBar();
+	}
+	// Whole groups leave while the contents overflow (each is in a menu
+	// too); they come back once the width last measured one step looser
+	// fits. Each editor and font size keeps its own measures.
+	{
+		ImGuiWindow *child = ImGui::GetCurrentWindow();
+		float used = child->DC.CursorMaxPos.x - (child->Pos.x - child->Scroll.x);
+		float room = child->Size.x;
+		int mode = InTextDrawMode() ? 1 : InPawnIdeMode() ? 2 : 0;
+		static int densities[3];
+		static float widths[3][RIBBON_DENSITY_MAX + 1];
+		static float measuredAt;
+		if(measuredAt != ImGui::GetFontSize()){
+			measuredAt = ImGui::GetFontSize();
+			memset(widths, 0, sizeof(widths));
+		}
+		int &d = densities[mode];
+		if(d == gRibbonDensity)
+			widths[mode][d] = used;
+		if(used > room + 1.0f && d < RIBBON_DENSITY_MAX)
+			d++;
+		else if(d > 0 && (widths[mode][d - 1] == 0.0f || widths[mode][d - 1] <= room))
+			d--;
+		ImGui::EndChild();
+		gRibbonDensity = d;
+	}
+	if(rightEnd > 0.0f){
+		ImGui::SetCursorPos(ImVec2(ImGui::GetWindowWidth() - rightEnd + floorf(10.0f*u) - floorf(8.0f*u), top));
+		uiRibbonRightEnd();
 	}
 	// A dark line under the bar, where the work area starts.
 	ImVec2 lo = ImGui::GetWindowPos(), sz = ImGui::GetWindowSize();
+	// Docked panels can start a pixel below the bar; fill that row so the
+	// 3D view never shows through between them.
+	ImDrawList *bar = ImGui::GetWindowDrawList();
+	bar->PushClipRect(lo, ImVec2(lo.x + sz.x, lo.y + sz.y + 1.0f), false);
+	bar->AddRectFilled(ImVec2(lo.x, lo.y + sz.y - 1.0f), ImVec2(lo.x + sz.x, lo.y + sz.y + 1.0f),
+		ImGui::GetColorU32(ImGuiCol_TitleBg));
+	bar->PopClipRect();
 	ImGui::GetWindowDrawList()->AddLine(ImVec2(lo.x, lo.y + sz.y - 1.0f), ImVec2(lo.x + sz.x, lo.y + sz.y - 1.0f),
 		ImGui::GetColorU32(ImGuiCol_Separator));
 	ImGui::End();
-	ImGui::PopStyleColor(2);
+	ImGui::PopStyleColor();
 	ImGui::PopStyleVar(4);
+}
+
+// A dialog's buttons: at its bottom right, the main one solid accent.
+static float
+uiDialogButtonWidth(void)
+{
+	return floorf(ImGui::GetFontSize() * 7.0f);
+}
+
+static void
+uiDialogButtonsStart(int count)
+{
+	ImGui::Spacing();
+	float w = uiDialogButtonWidth(), spacing = ImGui::GetStyle().ItemSpacing.x;
+	float x = ImGui::GetWindowContentRegionMax().x - count*w - (count - 1)*spacing;
+	if(x > ImGui::GetCursorPosX())
+		ImGui::SetCursorPosX(x);
+}
+
+static bool
+uiDialogPrimary(const char *label)
+{
+	ImVec4 fill = UiAccentFill();
+	ImGui::PushStyleColor(ImGuiCol_Button, fill);
+	ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(fill.x*1.12f, fill.y*1.12f, fill.z*1.12f, 1.0f));
+	ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(fill.x*0.9f, fill.y*0.9f, fill.z*0.9f, 1.0f));
+	ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 1, 1, 1));
+	bool pressed = ImGui::Button(label, ImVec2(uiDialogButtonWidth(), 0));
+	ImGui::PopStyleColor(4);
+	return pressed;
+}
+
+static bool
+uiDialogSecondary(const char *label)
+{
+	return ImGui::Button(label, ImVec2(uiDialogButtonWidth(), 0));
 }
 
 // Save selection as prefab: a name, where (Mine or the workspace, and a
@@ -3880,21 +4709,24 @@ uiExportPrefabPopup(void)
 	if(!BeginEditorDialog(L("Save Prefab"), &gShowExportPrefab))
 		return;
 	int selected = uiSelectionCount();
-	ImGui::Text(_("Save %d selected as a prefab"), selected);
+	ImGui::TextDisabled(_("Save %d selected as a prefab"), selected);
 	if(ImGui::IsWindowAppearing())
 		ImGui::SetKeyboardFocusHere();
-	ImGui::InputTextWithHint(_("Name"), _("e.g. bus stop"), prefabName, sizeof(prefabName));
+	UiInputTextWithHint(_("Name"), _("e.g. bus stop"), prefabName, sizeof(prefabName));
 	bool workspace = GetWorkspaceDir()[0] != '\0';
 	if(!workspace)
 		where = 0;
 	ImGui::BeginDisabled(!workspace);
 	const char *places[] = { _("Mine (Haumea's config folder)"), _("The workspace's prefabs folder") };
-	ImGui::Combo(_("Save in"), &where, places, IM_ARRAYSIZE(places));
+	UiCombo(_("Save in"), &where, places, IM_ARRAYSIZE(places));
 	ImGui::EndDisabled();
 	ImGui::SetItemTooltip(workspace ? _("The workspace's prefabs are shared with everyone who maps for that server.") :
 		_("Set a workspace (File > Workspace) to save prefabs with the server."));
 	// The subfolders already there, or a new one.
 	const char *root = where == 1 ? "Workspace" : "Mine";
+	char folderId[64];
+	UiFieldLabel(_("Folder"), folderId, sizeof(folderId));
+	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - ImGui::GetFrameHeight() - ImGui::GetStyle().ItemInnerSpacing.x);
 	ImGui::InputTextWithHint("##folder", _("no folder"), folder, sizeof(folder));
 	ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
 	if(ImGui::BeginCombo("##folders", "", ImGuiComboFlags_NoPreview)){
@@ -3909,12 +4741,10 @@ uiExportPrefabPopup(void)
 				snprintf(folder, sizeof(folder), "%s", f.c_str());
 		ImGui::EndCombo();
 	}
-	ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
-	ImGui::TextUnformatted(_("Folder"));
-	ImGui::InputTextWithHint(_("Tags"), _("e.g. street, LS"), tags, sizeof(tags));
+	UiInputTextWithHint(_("Tags"), _("e.g. street, LS"), tags, sizeof(tags));
 	ImGui::SetItemTooltip(_("Comma-separated words the prefab search finds it by."));
-	ImGui::TextUnformatted(_("Held by"));
-	ImGui::SameLine();
+	char heldId[64];
+	UiFieldLabel(_("Held by"), heldId, sizeof(heldId));
 	ImGui::RadioButton(_("Lowest point"), &origin, PREFAB_ORIGIN_LOWEST);
 	ImGui::SetItemTooltip(_("The middle, at the bottom: it stands on the ground where you click."));
 	ImGui::SameLine();
@@ -3927,8 +4757,12 @@ uiExportPrefabPopup(void)
 
 	bool validName = prefabName[0] != '\0' && strpbrk(prefabName, "/\\:*?\"<>|") == nil &&
 		strstr(folder, "..") == nil && selected > 0;
+	uiDialogButtonsStart(2);
+	if(uiDialogSecondary(_("Cancel")))
+		gShowExportPrefab = false;
+	ImGui::SameLine();
 	ImGui::BeginDisabled(!validName);
-	bool save = ImGui::Button(_("Save"), ImVec2(120, 0));
+	bool save = uiDialogPrimary(_("Save"));
 	ImGui::EndDisabled();
 	if(save){
 		std::string dir = PrefabSaveDir(where == 1, folder);
@@ -3941,9 +4775,6 @@ uiExportPrefabPopup(void)
 			Toast(TOAST_SAVE, _("Couldn't save the prefab"));
 		gShowExportPrefab = false;
 	}
-	ImGui::SameLine();
-	if(ImGui::Button(_("Cancel"), ImVec2(120, 0)))
-		gShowExportPrefab = false;
 	EndEditorDialog();
 }
 
@@ -4041,10 +4872,10 @@ uiImportPrefabPopup(void)
 		ImGui::TextDisabled(_("No .haumea files found in the config folder's prefabs/"));
 
 		ImGui::Separator();
-		ImGui::InputText(_("Or path"), manualPath, sizeof(manualPath));
+		UiInputText(_("Or path"), manualPath, sizeof(manualPath));
 
 		bool canImport = selectedFile >= 0 || manualPath[0] != '\0';
-		if(ImGui::Button(_("Import"), ImVec2(120, 0)) && canImport){
+		if((uiDialogButtonsStart(2), uiDialogPrimary(_("Import"))) && canImport){
 			char path[512];
 			if(manualPath[0] != '\0')
 				strncpy(path, manualPath, sizeof(path));
@@ -4060,7 +4891,7 @@ uiImportPrefabPopup(void)
 			gShowImportPrefab = false;
 		}
 		ImGui::SameLine();
-		if(ImGui::Button(_("Cancel"), ImVec2(120, 0)))
+		if(uiDialogSecondary(_("Cancel")))
 			gShowImportPrefab = false;
 
 		EndEditorDialog();
@@ -4101,6 +4932,39 @@ pawnPathWithExtension(const char *path, char *out, size_t size)
 static int gPendingMapAction = MAP_ACTION_NONE;
 static char gPendingMapPath[1024];
 static bool gOpenUnsavedMapPrompt;
+// The open map's file as Haumea last read or wrote it, to notice a script or
+// another editor rewriting it while it is open.
+struct MapDiskStamp { std::string path; long long size = -1, time = -1; };
+static MapDiskStamp gMapDiskStamp;
+static bool gOpenMapChangedOnDiskPrompt;
+static bool gMapChangedOnDiskWarned;
+static bool gOverwriteChangedMap;	// the user chose Overwrite: the next save goes ahead
+
+static void
+noteMapOnDisk(const char *path)
+{
+	gMapDiskStamp = MapDiskStamp();
+	gMapChangedOnDiskWarned = false;
+	struct stat st;
+	if(path == nil || path[0] == '\0' || stat(path, &st) != 0)
+		return;
+	gMapDiskStamp.path = path;
+	gMapDiskStamp.size = (long long)st.st_size;
+	gMapDiskStamp.time = (long long)st.st_mtime;
+}
+
+// The open map's file was changed (or removed) by something else since
+// Haumea opened or saved it.
+static bool
+mapChangedOnDisk(void)
+{
+	if(gMapDiskStamp.path.empty() || gMapDiskStamp.path != gPawnSavePath)
+		return false;
+	struct stat st;
+	if(stat(gMapDiskStamp.path.c_str(), &st) != 0)
+		return false;	// gone: saving puts it back, nothing to lose
+	return (long long)st.st_size != gMapDiskStamp.size || (long long)st.st_mtime != gMapDiskStamp.time;
+}
 static bool gTextDrawsAskedBeforeQuit;
 static bool gContinueMapActionAfterSave;
 static bool gWindowCloseRequested;
@@ -4502,6 +5366,60 @@ uiSelectSavedSelection(const SavedSelection &set, bool add)
 	Toast(TOAST_SELECTION, _("Selected %d object(s) from \"%s\""), n, set.name.c_str());
 }
 
+// Saved selections for Namaka: the same sets the panel shows, saved the same way.
+std::vector<SavedSelectionInfo>
+GetSavedSelections(void)
+{
+	std::unordered_set<ObjectInst*> live = uiLiveInstances();
+	std::vector<SavedSelectionInfo> out;
+	for(const SavedSelection &set : gSavedSelections){
+		SavedSelectionInfo info;
+		info.name = set.name;
+		for(ObjectInst *inst : set.objects)
+			if(live.count(inst) && !inst->m_isDeleted)
+				info.ids.push_back(inst->m_id);
+		out.push_back(info);
+	}
+	return out;
+}
+
+// Saves (or saves over) a set by name.
+void
+SaveSelectionSet(const char *name, const std::vector<ObjectInst*> &objects)
+{
+	for(SavedSelection &set : gSavedSelections)
+		if(set.name == name){
+			set.objects = objects;
+			uiWriteSavedSelections(gPawnSavePath);
+			return;
+		}
+	gSavedSelections.push_back({ name, objects });
+	uiWriteSavedSelections(gPawnSavePath);
+}
+
+bool
+SelectSavedSelection(const char *name, bool add)
+{
+	for(const SavedSelection &set : gSavedSelections)
+		if(set.name == name){
+			uiSelectSavedSelection(set, add);
+			return true;
+		}
+	return false;
+}
+
+bool
+DeleteSavedSelection(const char *name)
+{
+	for(size_t i = 0; i < gSavedSelections.size(); i++)
+		if(gSavedSelections[i].name == name){
+			gSavedSelections.erase(gSavedSelections.begin() + i);
+			uiWriteSavedSelections(gPawnSavePath);
+			return true;
+		}
+	return false;
+}
+
 static void
 uiSaveSelectionPopup(void)
 {
@@ -4519,7 +5437,7 @@ uiSaveSelectionPopup(void)
 	if(ImGui::IsWindowAppearing())
 		ImGui::SetKeyboardFocusHere();
 	ImGui::SetNextItemWidth(ImGui::GetFontSize() * 18.0f);
-	bool enter = ImGui::InputText(_("Name"), name, sizeof(name), ImGuiInputTextFlags_EnterReturnsTrue);
+	bool enter = UiInputText(_("Name"), name, sizeof(name), ImGuiInputTextFlags_EnterReturnsTrue);
 	for(const SavedSelection &set : gSavedSelections)
 		if(set.name == name){
 			ImGui::TextColored(UiSemanticColor(UI_COLOR_WARNING), "%s", _("A saved selection has this name: saving replaces it."));
@@ -4752,6 +5670,7 @@ openPawnMap(const char *path)
 	// Recordings are looked for in this server's npcmodes/recordings.
 	RecSetServerHint(path);
 	uiLoadSavedSelections(gPawnSavePath[0] ? gPawnSavePath : path);
+	noteMapOnDisk(gPawnSavePath);
 	ToastFor(TOAST_SAVE, 4.0f, _("Opened %s"), pathFilename(path));
 	if(skipped > 0 || !GetLastPawnImportReport().notes.empty()){
 		// Say what was left out instead of failing silently.
@@ -4922,6 +5841,71 @@ uiCopyCameraPosition(void)
 	Toast(TOAST_COPY_PASTE, _("Copied the camera position: %s"), text);
 }
 
+// The map's named areas (info.zon), each once: the biggest box that has the
+// name, and its middle.
+struct UiPlace { std::string name; rw::V3d middle; float area; };
+
+static std::vector<UiPlace>&
+uiPlaces(void)
+{
+	static std::vector<UiPlace> places;
+	static int builtFrom = -1;
+	int count = Zones::GetNumNavigZones();
+	if(builtFrom == count)
+		return places;
+	builtFrom = count;
+	places.clear();
+	std::unordered_map<std::string, size_t> byName;
+	for(int i = 0; i < count; i++){
+		const char *key = Zones::GetNavigZoneText(i);
+		const char *text = GxtLookup(key);
+		std::string name = text && text[0] ? text : key;
+		if(name.empty())
+			continue;
+		rw::V3d min, max;
+		Zones::GetNavigZoneBox(i, &min, &max);
+		float area = (max.x - min.x) * (max.y - min.y);
+		rw::V3d middle = { (min.x + max.x) * 0.5f, (min.y + max.y) * 0.5f, 0.0f };
+		auto it = byName.find(name);
+		if(it == byName.end()){
+			byName[name] = places.size();
+			places.push_back({ name, middle, area });
+		}else if(area > places[it->second].area)
+			places[it->second] = { name, middle, area };
+	}
+	std::sort(places.begin(), places.end(), [](const UiPlace &a, const UiPlace &b){
+		return rw::strcmp_ci(a.name.c_str(), b.name.c_str()) < 0;
+	});
+	return places;
+}
+
+static void
+uiGoToPoint(rw::V3d point, float distance)
+{
+	TheCamera.setTarget(point);
+	TheCamera.setDistanceFromTarget(distance);
+	Toast(TOAST_SELECTION, _("Camera at %.2f, %.2f, %.2f"), point.x, point.y, point.z);
+}
+
+// A workspace's open.mp server download (the start screen's Create
+// workspace) has finished: say so, whatever is on screen by then.
+static void
+uiServerDownloadToast(void)
+{
+	// Test in game reports its own.
+	if(ServerDownloadOwner() != SERVER_DOWNLOAD_FOR_WORKSPACE)
+		return;
+	std::string dir, message;
+	int state = ServerDownloadStatus(&dir, &message, nil);
+	if(state == SERVER_DOWNLOAD_DONE)
+		Toast(TOAST_SAVE, _("The open.mp server (%s) is in %s."), message.c_str(), dir.c_str());
+	else if(state == SERVER_DOWNLOAD_FAILED)
+		Toast(TOAST_SAVE, _("Could not download the open.mp server: %s"), message.c_str());
+	else
+		return;
+	ServerDownloadAcknowledge();
+}
+
 // A view change only: nothing goes on the undo stack.
 static void
 uiGoToCoordinatesPopup(void)
@@ -4935,24 +5919,45 @@ uiGoToCoordinatesPopup(void)
 	}
 	if(!ImGui::BeginPopupModal(L("Go to Coordinates"), nil, ImGuiWindowFlags_AlwaysAutoResize))
 		return;
-	ImGui::TextUnformatted(_("Paste a position: x, y, z (an angle after it is fine) or a SetPlayerPos line."));
+	ImGui::TextDisabled("%s", _("Paste a position: x, y, z (an angle after it is fine) or a SetPlayerPos line."));
 	if(ImGui::IsWindowAppearing())
 		ImGui::SetKeyboardFocusHere();
-	ImGui::SetNextItemWidth(420.0f);
+	ImGui::SetNextItemWidth(-FLT_MIN);
 	bool go = ImGui::InputText("##coordinates", text, sizeof(text), ImGuiInputTextFlags_EnterReturnsTrue);
 	if(bad)
 		ImGui::TextColored(UiSemanticColor(UI_COLOR_ERROR), _("That has no x, y and z in it."));
-	ImGui::Spacing();
-	go |= ImGui::Button(_("Go"), ImVec2(110, 0));
-	ImGui::SameLine();
-	if(ImGui::Button(_("Cancel"), ImVec2(110, 0)) || ImGui::IsKeyPressed(ImGuiKey_Escape))
+
+	// Or a place by name.
+	std::vector<UiPlace> &places = uiPlaces();
+	static char placeFilter[64];
+	if(!places.empty()){
+		ImGui::Spacing();
+		ImGui::TextDisabled("%s", _("Places"));
+		ImGui::SetNextItemWidth(-FLT_MIN);
+		ImGui::InputTextWithHint("##place_filter", _("search"), placeFilter, sizeof(placeFilter));
+		if(ImGui::BeginListBox("##places", ImVec2(ImGui::GetFontSize() * 24.0f, ImGui::GetTextLineHeightWithSpacing() * 8.0f))){
+			for(const UiPlace &place : places){
+				if(placeFilter[0] && !ImStristr(place.name.c_str(), nil, placeFilter, nil))
+					continue;
+				if(ImGui::Selectable(place.name.c_str())){
+					rw::V3d point = place.middle, ground;
+					point.z = GetGroundPlacementSurface(point, &ground) ? ground.z : 20.0f;
+					uiGoToPoint(point, 150.0f);
+					ImGui::CloseCurrentPopup();
+				}
+			}
+			ImGui::EndListBox();
+		}
+	}
+	uiDialogButtonsStart(2);
+	if(uiDialogSecondary(_("Cancel")) || ImGui::IsKeyPressed(ImGuiKey_Escape))
 		ImGui::CloseCurrentPopup();
+	ImGui::SameLine();
+	go |= uiDialogPrimary(_("Go"));
 	if(go){
 		rw::V3d point;
 		if(ParseCoordinates(text, &point)){
-			TheCamera.setTarget(point);
-			TheCamera.setDistanceFromTarget(25.0f);
-			Toast(TOAST_SELECTION, _("Camera at %.2f, %.2f, %.2f"), point.x, point.y, point.z);
+			uiGoToPoint(point, 25.0f);
 			ImGui::CloseCurrentPopup();
 		}else
 			bad = true;
@@ -4971,8 +5976,18 @@ uiUnsavedMapPopup(void)
 		return;
 	ImGui::Text(_("Save changes to %s?"), currentMapName());
 	ImGui::TextDisabled(_("Your changes are lost if you don't save them."));
-	ImGui::Spacing();
-	if(ImGui::Button(_("Save"), ImVec2(110, 0))){
+	uiDialogButtonsStart(3);
+	if(uiDialogSecondary(_("Cancel")) || ImGui::IsKeyPressed(ImGuiKey_Escape)){
+		gPendingMapAction = MAP_ACTION_NONE;
+		ImGui::CloseCurrentPopup();
+	}
+	ImGui::SameLine();
+	if(uiDialogSecondary(_("Don't Save"))){
+		ImGui::CloseCurrentPopup();
+		continuePendingMapAction();
+	}
+	ImGui::SameLine();
+	if(uiDialogPrimary(_("Save"))){
 		ImGui::CloseCurrentPopup();
 		gContinueMapActionAfterSave = true;
 		if(gPawnSavePath[0] == '\0')
@@ -4982,17 +5997,71 @@ uiUnsavedMapPopup(void)
 		else
 			gContinueMapActionAfterSave = false;
 	}
-	ImGui::SameLine();
-	if(ImGui::Button(_("Don't Save"), ImVec2(110, 0))){
+	ImGui::EndPopup();
+}
+
+static void
+uiMapChangedOnDiskPopup(void)
+{
+	if(gOpenMapChangedOnDiskPrompt){
+		ImGui::OpenPopup(L("Map changed on disk"));
+		gOpenMapChangedOnDiskPrompt = false;
+	}
+	if(!ImGui::BeginPopupModal(L("Map changed on disk"), nil, ImGuiWindowFlags_AlwaysAutoResize))
+		return;
+	ImGui::Text(_("%s was changed outside Haumea since it was opened."), currentMapName());
+	ImGui::TextDisabled(_("Saving now replaces those changes with the map as it is here."));
+	uiDialogButtonsStart(3);
+	if(uiDialogSecondary(_("Cancel")) || ImGui::IsKeyPressed(ImGuiKey_Escape)){
+		gContinueMapActionAfterSave = false;
 		ImGui::CloseCurrentPopup();
-		continuePendingMapAction();
 	}
 	ImGui::SameLine();
-	if(ImGui::Button(_("Cancel"), ImVec2(110, 0)) || ImGui::IsKeyPressed(ImGuiKey_Escape)){
-		gPendingMapAction = MAP_ACTION_NONE;
+	if(uiDialogSecondary(_("Reload from disk"))){
 		ImGui::CloseCurrentPopup();
+		gContinueMapActionAfterSave = false;
+		char path[sizeof(gPawnSavePath)];
+		snprintf(path, sizeof(path), "%s", gPawnSavePath);
+		// What is here goes to an autosave first: File > Recover Autosave.
+		AutosaveBeforeDiscard();
+		openPawnMap(path);
+	}
+	ImGui::SameLine();
+	if(uiDialogPrimary(_("Overwrite"))){
+		ImGui::CloseCurrentPopup();
+		gOverwriteChangedMap = true;
+		savePawnMap();
 	}
 	ImGui::EndPopup();
+}
+
+// Every few seconds: a map rewritten on disk by something else is opened
+// again when nothing here is unsaved (so a later save can't bring old
+// content back); otherwise the user is told once, and Save asks.
+static void
+mapDiskWatchTick(void)
+{
+	static time_t last;
+	time_t now = time(nil);
+	if(now - last < 2)
+		return;
+	last = now;
+	if(!mapChangedOnDisk())
+		return;
+	// In a session the map is everyone's: only say so.
+	bool shared = GetMultiplayerState() != MP_OFF;
+	if(!mapHasUnsavedChanges() && !shared && !AgentBridgeSessionActive()){
+		char path[sizeof(gPawnSavePath)];
+		snprintf(path, sizeof(path), "%s", gPawnSavePath);
+		if(openPawnMap(path))
+			ToastFor(TOAST_SAVE, 6.0f, _("%s changed on disk and was opened again"), pathFilename(path));
+		return;
+	}
+	if(!gMapChangedOnDiskWarned){
+		gMapChangedOnDiskWarned = true;
+		ToastFor(TOAST_SAVE, 10.0f, _("%s changed on disk outside Haumea: saving will ask before replacing it"),
+			currentMapName());
+	}
 }
 
 #ifdef LIBRW_GLFW
@@ -5010,8 +6079,6 @@ onWindowCloseRequested(GLFWwindow *window)
 static void
 updateMapWindowTitle(void)
 {
-#ifdef LIBRW_GLFW
-	static std::string current;
 	char title[1200];
 	const char *workspace = GetWorkspaceDir();
 	if(workspace[0])
@@ -5020,9 +6087,10 @@ updateMapWindowTitle(void)
 	else
 		snprintf(title, sizeof(title), "%s%s - Haumea Studio", mapHasUnsavedChanges() ? "* " : "",
 			currentMapName());
-	if(current == title)
+	if(gWindowTitle == title)
 		return;
-	current = title;
+	gWindowTitle = title;
+#ifdef LIBRW_GLFW
 	if(GLFWwindow *window = glfwGetCurrentContext()){
 		static bool closeHookInstalled;
 		if(!closeHookInstalled){
@@ -5051,12 +6119,20 @@ savePawnMap(void)
 		Toast(TOAST_SAVE, _("Invalid or too long Pawn map path"));
 		return false;
 	}
+	// Something else rewrote the file since it was opened: saving would
+	// put back what that took out (and drop what it added). Ask first.
+	if(strcmp(outputPath, gPawnSavePath) == 0 && mapChangedOnDisk() && !gOverwriteChangedMap){
+		gOpenMapChangedOnDiskPrompt = true;
+		return false;
+	}
+	gOverwriteChangedMap = false;
 	int skipped = 0;
 	int saved = ExportPawnCode(outputPath, (PawnCodeFormat)gPawnSaveFormat, false, &skipped);
 	if(saved < 0){
 		Toast(TOAST_SAVE, _("Failed to save Pawn map"));
 		return false;
 	}
+	noteMapOnDisk(outputPath);
 	strncpy(gPawnSavePath, outputPath, sizeof(gPawnSavePath)-1);
 	gPawnSavePath[sizeof(gPawnSavePath)-1] = '\0';
 	gPawnLastSavedChangeSeq = GetLatestChangeSeq();
@@ -5096,19 +6172,29 @@ uiSavePawnAsPopup(void)
 	}
 
 	if(BeginEditorDialog(L("Save Pawn Map As"), &gShowSavePawnAs)){
-		ImGui::TextWrapped(_("Save the map as Pawn source. It holds every placed object and only the changed or removed GTA world objects, and Haumea opens it again as the map."));
-		ImGui::InputText(_("Path"), path, sizeof(path));
+		// The path with a browse button at its end; what is saved in its tooltip.
+		ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - std::min(ImGui::GetFontSize() * 9.4f,
+			ImGui::GetContentRegionAvail().x * 0.42f) - ImGui::GetFrameHeight() - ImGui::GetStyle().ItemSpacing.x);
+		UiInputText(_("Path"), path, sizeof(path));
+		ImGui::SetItemTooltip("%s\n%s", _("Save the map as Pawn source. It holds every placed object and only the changed or removed GTA world objects, and Haumea opens it again as the map."),
+			_("Use an absolute path, or a path relative to the editor's working directory."));
 		ImGui::SameLine();
-		if(ImGui::Button(_("Browse..."))){
+		bool browse = ImGui::Button(ICON_FA_FOLDER_OPEN "##browse", ImVec2(ImGui::GetFrameHeight(), 0));
+		ImGui::SetItemTooltip("%s", _("Browse..."));
+		if(browse){
 			char picked[1024];
 			if(pickPawnFileDialog(picked, sizeof(picked), true, path)){
 				strncpy(path, picked, sizeof(path)-1);
 				path[sizeof(path)-1] = '\0';
 			}
 		}
+		char formatId[64];
+		UiFieldLabel(_("Code"), formatId, sizeof(formatId));
 		ImGui::RadioButton(_("Native CreateObject"), &format, PAWN_CODE_NATIVE);
 		ImGui::SameLine();
 		ImGui::RadioButton(_("Streamer CreateDynamicObject"), &format, PAWN_CODE_STREAMER);
+		char encodingId[64];
+		UiFieldLabel(_("Text"), encodingId, sizeof(encodingId));
 		ImGui::RadioButton("Windows-1252##textenc", &encoding, PAWN_TEXT_CP1252);
 		ImGui::SetItemTooltip(_("Text encoding of labels, material text, textdraws and notes.\n"
 			"SA-MP and open.mp clients draw text as Windows-1252, as pawno writes it."));
@@ -5116,9 +6202,11 @@ uiSavePawnAsPopup(void)
 		ImGui::RadioButton("UTF-8##textenc", &encoding, PAWN_TEXT_UTF8);
 		ImGui::SetItemTooltip(_("Only for a server whose players' clients draw UTF-8 text:\n"
 			"the standard SA-MP and open.mp clients show accents garbled."));
-		ImGui::TextDisabled(_("Use an absolute path, or a path relative to the editor's working directory."));
-
-		if(ImGui::Button(_("Save"), ImVec2(120, 0)) && path[0] != '\0'){
+		uiDialogButtonsStart(2);
+		if(uiDialogSecondary(_("Cancel")))
+			gShowSavePawnAs = false;
+		ImGui::SameLine();
+		if(uiDialogPrimary(_("Save")) && path[0] != '\0'){
 			char oldPath[sizeof(gPawnSavePath)];
 			strncpy(oldPath, gPawnSavePath, sizeof(oldPath)-1);
 			oldPath[sizeof(oldPath)-1] = '\0';
@@ -5137,9 +6225,6 @@ uiSavePawnAsPopup(void)
 				SetPawnTextEncoding(oldEncoding);
 			}
 		}
-		ImGui::SameLine();
-		if(ImGui::Button(_("Cancel"), ImVec2(120, 0)))
-			gShowSavePawnAs = false;
 		EndEditorDialog();
 	}
 	// Closing the dialog without saving also cancels a pending New/Open/Quit.
@@ -5147,6 +6232,137 @@ uiSavePawnAsPopup(void)
 		gContinueMapActionAfterSave = false;
 		gPendingMapAction = MAP_ACTION_NONE;
 	}
+}
+
+// File > Export as Pawn's write: centred moves what is exported around the
+// origin for the write (the middle, at the lowest point) and straight back,
+// with nothing marked changed. *centre says where that was.
+int
+ExportPawnCodeCentred(const char *path, int format, bool selectedOnly, bool centred, int *numSkipped,
+	rw::V3d *centre, bool *wasCentred)
+{
+	struct Moved { ObjectInst *inst; rw::V3d pos; bool dirty; };
+	std::vector<Moved> moved;
+	rw::V3d middle = { 0.0f, 0.0f, 0.0f };
+	if(centred){
+		rw::V3d lo = { 1e30f, 1e30f, 1e30f }, hi = { -1e30f, -1e30f, -1e30f };
+		for(CPtrNode *p = instances.first; p; p = p->next){
+			ObjectInst *inst = (ObjectInst*)p->item;
+			if(inst == nil || inst->m_isDeleted || IsPawnWorldObject(inst) || !PawnObjectNeedsExport(inst) ||
+			   (selectedOnly && !inst->m_selected))
+				continue;
+			moved.push_back({ inst, inst->m_translation, inst->m_isDirty });
+			lo.x = min(lo.x, inst->m_translation.x); hi.x = max(hi.x, inst->m_translation.x);
+			lo.y = min(lo.y, inst->m_translation.y); hi.y = max(hi.y, inst->m_translation.y);
+			lo.z = min(lo.z, inst->m_translation.z);
+		}
+		if(!moved.empty())
+			middle = rw::makeV3d((lo.x + hi.x)*0.5f, (lo.y + hi.y)*0.5f, lo.z);
+		for(Moved &m : moved){
+			m.inst->m_translation = sub(m.pos, middle);
+			m.inst->UpdateMatrix();
+		}
+	}
+	int exported = ExportPawnCode(path, (PawnCodeFormat)format, selectedOnly, numSkipped);
+	for(Moved &m : moved){
+		m.inst->m_translation = m.pos;
+		m.inst->UpdateMatrix();
+		m.inst->m_isDirty = m.dirty;
+	}
+	if(centre) *centre = middle;
+	if(wasCentred) *wasCentred = !moved.empty();
+	return exported;
+}
+
+// ---- For Namaka (agentbridge.cpp) ----
+static bool uiIsDirectory(const std::string &path);
+static bool finalizeCustomImport(void);
+
+// File > Import custom model without the dialog: dff and txd (a col is
+// optional; without one it is made from the model) under objectId (-1: the
+// suggested free id), with the IDE's draw distance and flags. Spawns one at the
+// placement point like the dialog. Returns the id, or -1 with *error.
+int
+CustomImportModel(const char *dff, const char *txd, const char *col, int objectId, const char *modelName,
+	const char *txdName, float drawDist, int ideFlags, std::string *error)
+{
+	resetCustomImportState();
+	setCustomImportDffPath(dff);
+	if(txd && txd[0])
+		setCustomImportTxdPath(txd);
+	if(col && col[0])
+		setCustomImportColPath(col);
+	if(objectId >= 0)
+		gCustomImport.objectId = objectId;
+	if(modelName && modelName[0])
+		snprintf(gCustomImport.modelName, sizeof(gCustomImport.modelName), "%s", modelName);
+	if(txdName && txdName[0])
+		snprintf(gCustomImport.txdName, sizeof(gCustomImport.txdName), "%s", txdName);
+	if(drawDist > 0.0f)
+		gCustomImport.drawDist = drawDist;
+	gCustomImport.previewObj.m_drawDist[0] = gCustomImport.drawDist;
+	if(ideFlags > 0)
+		gCustomImport.previewObj.SetFlags(ideFlags);
+	int id = gCustomImport.objectId;
+	bool ok = gCustomImport.dffSource[0] && gCustomImport.txdSource[0];
+	if(!ok)
+		*error = "a .dff and a .txd are needed";
+	else if(!(ok = finalizeCustomImport()))
+		*error = gCustomImport.error;
+	else if(gCustomImport.warning[0])
+		*error = gCustomImport.warning;	// imported: only a warning
+	gCustomImport.active = false;
+	return ok ? id : -1;
+}
+
+int
+SuggestCustomImportId(void)
+{
+	return findSuggestedCustomImportId();
+}
+
+std::vector<std::string>
+GetRecentMapList(void)
+{
+	std::vector<std::string> maps;
+	for(int i = 0; i < gNumRecentMaps; i++)
+		maps.push_back(gRecentMaps[i]);
+	return maps;
+}
+
+std::vector<std::string>
+GetAutosaveList(void)
+{
+	std::vector<std::string> files;
+	listAutosaves(files);
+	return files;
+}
+
+// Where Object Info's "Save haumea_races.inc to the workspace" writes: the
+// workspace's qawno/include, or pawno/include; "" without either.
+std::string
+WorkspaceRacesIncludePath(void)
+{
+	std::string include = WorkspacePath("qawno/include");
+	if(include.empty() || !uiIsDirectory(include))
+		include = WorkspacePath("pawno/include");
+	if(include.empty() || !uiIsDirectory(include))
+		return "";
+	return include + "/haumea_races.inc";
+}
+
+// Help > Reload Game Files: Haumea starts again and reads the game from disk.
+bool
+ReloadGameFiles(void)
+{
+	finishTransformPanelEdit();
+	return RestartHaumea();
+}
+
+bool
+EditorHasUnsavedChanges(void)
+{
+	return mapHasUnsavedChanges();
 }
 
 static void
@@ -5164,13 +6380,17 @@ uiExportPawnPopup(void)
 	}
 
 	if(BeginEditorDialog(L("Export Pawn Code"), &gShowExportPawn)){
-		ImGui::Text(_("Export open.mp Pawn object code"));
-		ImGui::InputText(_("Name"), pawnName, sizeof(pawnName));
+		ImGui::TextDisabled("%s", _("Export open.mp Pawn object code"));
+		UiInputText(_("Name"), pawnName, sizeof(pawnName));
+		char formatId[64];
+		UiFieldLabel(_("Code"), formatId, sizeof(formatId));
 		ImGui::RadioButton(_("Native CreateObject"), &gPawnExportFormat, PAWN_CODE_NATIVE);
+		ImGui::SetItemTooltip("%s", _("Native CreateObject is global and has no interior parameter."));
 		ImGui::SameLine();
 		ImGui::RadioButton(_("Streamer CreateDynamicObject"), &gPawnExportFormat, PAWN_CODE_STREAMER);
-		ImGui::Checkbox(_("Selection only"), &gPawnExportSelectionOnly);
-		ImGui::Checkbox(_("Centered"), &gPawnExportCentered);
+		ImGui::SetItemTooltip("%s", _("Streamer objects use world -1 and preserve positive editor interiors."));
+		UiCheckbox(_("Selection only"), &gPawnExportSelectionOnly);
+		UiCheckbox(_("Centered"), &gPawnExportCentered);
 		ImGui::SetItemTooltip("%s", _("Write coordinates relative to the export's centre (its lowest point for height),\n"
 			"so the code can be placed anywhere by adding a position. Removed GTA buildings keep their real coordinates."));
 
@@ -5209,8 +6429,11 @@ uiExportPawnPopup(void)
 		}
 		int exportableSelection = selectedObjects + deletedWorldObjects;
 		int exportCount = gPawnExportSelectionOnly ? exportableSelection : totalObjects;
-		ImGui::Text(gPawnExportSelectionOnly ? _("Export set: %d object(s) (selection + deleted world objects)") :
+		char exportSet[160];
+		snprintf(exportSet, sizeof(exportSet), gPawnExportSelectionOnly ? _("Export set: %d object(s) (selection + deleted world objects)") :
 			_("Export set: %d object(s) (whole scene)"), exportCount);
+		ImGui::Spacing();
+		ImGui::TextUnformatted(exportSet);
 		int exportWorldObjects = gPawnExportSelectionOnly ?
 			worldObjects + deletedWorldObjects : totalWorldObjects;
 		int omittedWorldObjects = gPawnExportSelectionOnly ?
@@ -5223,10 +6446,6 @@ uiExportPawnPopup(void)
 		else
 			ImGui::TextWrapped(_("Unchanged world objects are omitted. Changed or deleted world objects are exported as RemoveBuildingForPlayer plus scripted object calls."));
 		ImGui::PopStyleColor();
-		if(gPawnExportFormat == PAWN_CODE_NATIVE)
-			ImGui::TextDisabled(_("Native CreateObject is global and has no interior parameter."));
-		else
-			ImGui::TextDisabled(_("Streamer objects use world -1 and preserve positive editor interiors."));
 
 		char exportDir[1024];
 		char exportPath[1024];
@@ -5240,43 +6459,23 @@ uiExportPawnPopup(void)
 				havePath = false;
 		}
 		if(havePath)
-			ImGui::TextDisabled(_("Output: %s"), exportPath);
+			UiInfoRow(_("Output"), exportPath);
 
 		bool canExport = validName && havePath && (!gPawnExportSelectionOnly || exportableSelection > 0);
-		if(ImGui::Button(_("Export"), ImVec2(120, 0)) && canExport){
+		uiDialogButtonsStart(2);
+		if(uiDialogSecondary(_("Cancel")))
+			gShowExportPawn = false;
+		ImGui::SameLine();
+		ImGui::BeginDisabled(!canExport);
+		bool doExport = uiDialogPrimary(_("Export"));
+		ImGui::EndDisabled();
+		if(doExport && canExport){
 			int skipped = 0;
-			// Centered: move what is exported around the origin for the
-			// write, then straight back. Nothing is marked changed.
-			struct Moved { ObjectInst *inst; rw::V3d pos; bool dirty; };
-			std::vector<Moved> moved;
 			rw::V3d centre = { 0.0f, 0.0f, 0.0f };
-			if(gPawnExportCentered){
-				rw::V3d lo = { 1e30f, 1e30f, 1e30f }, hi = { -1e30f, -1e30f, -1e30f };
-				for(CPtrNode *p = instances.first; p; p = p->next){
-					ObjectInst *inst = (ObjectInst*)p->item;
-					if(inst == nil || inst->m_isDeleted || IsPawnWorldObject(inst) || !PawnObjectNeedsExport(inst) ||
-					   (gPawnExportSelectionOnly && !inst->m_selected))
-						continue;
-					moved.push_back({ inst, inst->m_translation, inst->m_isDirty });
-					lo.x = min(lo.x, inst->m_translation.x); hi.x = max(hi.x, inst->m_translation.x);
-					lo.y = min(lo.y, inst->m_translation.y); hi.y = max(hi.y, inst->m_translation.y);
-					lo.z = min(lo.z, inst->m_translation.z);
-				}
-				if(!moved.empty())
-					centre = rw::makeV3d((lo.x + hi.x)*0.5f, (lo.y + hi.y)*0.5f, lo.z);
-				for(Moved &m : moved){
-					m.inst->m_translation = sub(m.pos, centre);
-					m.inst->UpdateMatrix();
-				}
-			}
-			int exported = ExportPawnCode(exportPath,
-				(PawnCodeFormat)gPawnExportFormat, gPawnExportSelectionOnly, &skipped);
-			for(Moved &m : moved){
-				m.inst->m_translation = m.pos;
-				m.inst->UpdateMatrix();
-				m.inst->m_isDirty = m.dirty;
-			}
-			if(exported > 0 && !moved.empty())
+			bool centred = false;
+			int exported = ExportPawnCodeCentred(exportPath, gPawnExportFormat, gPawnExportSelectionOnly,
+				gPawnExportCentered, &skipped, &centre, &centred);
+			if(exported > 0 && centred)
 				Toast(TOAST_SAVE, _("Coordinates are relative to %.2f, %.2f, %.2f"), centre.x, centre.y, centre.z);
 			if(exported > 0){
 				Toast(TOAST_SAVE, skipped > 0 ? _("Exported %d Pawn object(s) (some skipped) to %s") :
@@ -5287,9 +6486,6 @@ uiExportPawnPopup(void)
 			}else
 				Toast(TOAST_SAVE, _("Failed to export Pawn code"));
 		}
-		ImGui::SameLine();
-		if(ImGui::Button(_("Cancel"), ImVec2(120, 0)))
-			gShowExportPawn = false;
 
 		EndEditorDialog();
 	}
@@ -5356,7 +6552,7 @@ uiOpenReportWindow(void)
 			ImGui::Spacing();
 			ImGui::TextWrapped(_("%d of those models were imported into the game's modloader/Haumea folder, "
 				"which SA-MP players don't have. They can become custom models in the server's "
-				"models folder (SA-MP 0.3.DL / open.mp)."), (int)legacy.size());
+				"models folder."), (int)legacy.size());
 			if(ImGui::Button(_("Move them to the server's models folder"))){
 				std::string err;
 				const char *map = GetCustomModelsMapPath();
@@ -5849,18 +7045,18 @@ uiCustomImportPopup(void)
 		ImGui::TextDisabled(_("Tip: you can also drag & drop .dff/.txd/.col files anywhere in Haumea."));
 
 	ImGui::Separator();
-	ImGui::InputInt(_("Object ID"), &gCustomImport.objectId);
+	UiInputInt(_("Object ID"), &gCustomImport.objectId);
 	int previousPreferredStartId = gCustomImportPreferredStartId;
-	ImGui::InputInt(_("Preferred ID Start"), &gCustomImportPreferredStartId);
+	UiInputInt(_("Preferred ID Start"), &gCustomImportPreferredStartId);
 	sanitizeCustomImportSettings();
 	if(gCustomImportPreferredStartId != previousPreferredStartId)
 		saveSaveSettings();
 	ImGui::SameLine();
 	if(ImGui::Button(_("Suggest Free ID")))
 		gCustomImport.objectId = findSuggestedCustomImportId();
-	ImGui::InputText(_("Model"), gCustomImport.modelName, sizeof(gCustomImport.modelName));
+	UiInputText(_("Model"), gCustomImport.modelName, sizeof(gCustomImport.modelName));
 	ImGui::InputText("TXD", gCustomImport.txdName, sizeof(gCustomImport.txdName));
-	ImGui::DragFloat(_("Draw Distance"), &gCustomImport.drawDist, 1.0f, 1.0f, 10000.0f, "%.1f");
+	UiDragFloat(_("Draw Distance"), &gCustomImport.drawDist, 1.0f, 1.0f, 10000.0f, "%.1f");
 	gCustomImport.previewObj.m_drawDist[0] = gCustomImport.drawDist;
 
 	ImGui::Separator();
@@ -5888,13 +7084,13 @@ uiCustomImportPopup(void)
 	ImGui::Separator();
 	bool canImport = gCustomImport.dffSource[0] != '\0' && gCustomImport.txdSource[0] != '\0';
 	ImGui::BeginDisabled(!canImport);
-	if(ImGui::Button(_("Import"), ImVec2(120, 0))){
+	if((uiDialogButtonsStart(2), uiDialogPrimary(_("Import")))){
 		if(finalizeCustomImport())
 			gCustomImport.active = false;
 	}
 	ImGui::EndDisabled();
 	ImGui::SameLine();
-	if(ImGui::Button(_("Cancel"), ImVec2(120, 0))){
+	if(uiDialogSecondary(_("Cancel"))){
 		gCustomImport.active = false;
 		gCustomImport.error[0] = '\0';
 		gCustomImport.warning[0] = '\0';
@@ -5941,12 +7137,12 @@ uiKeyboardShortcutsWindow(void)
 		{ N_("Selection"), N_("RMB on deleted object"), N_("Undelete object"), N_("Editor list") },
 		{ N_("Selection"), N_("Shift while dragging"), N_("Use selected snap increment"), N_("Gizmo") },
 
-		{ N_("Object Browser"), N_("Ctrl+F"), N_("Search"), N_("Object Browser") },
-		{ N_("Object Browser"), N_("Up / Down"), N_("Move selected object through current filtered list"), N_("Object Browser list") },
-		{ N_("Object Browser"), N_("Right-click object row"), N_("Add or remove favourite"), N_("Object Browser list") },
-		{ N_("Object Browser"), N_("Click in 3D view"), N_("Place selected object"), N_("Place mode") },
-		{ N_("Object Browser"), N_("Shift+click in 3D view"), N_("Place object and stay in place mode"), N_("Place mode") },
-		{ N_("Object Browser"), N_("RMB"), N_("Exit place mode"), N_("Place mode") },
+		{ N_("Asset Browser"), N_("Ctrl+F"), N_("Search"), N_("Asset Browser") },
+		{ N_("Asset Browser"), N_("Up / Down"), N_("Move selected object through current filtered list"), N_("Asset Browser list") },
+		{ N_("Asset Browser"), N_("Right-click object row"), N_("Add or remove favourite"), N_("Asset Browser list") },
+		{ N_("Asset Browser"), N_("Click in 3D view"), N_("Place selected object"), N_("Place mode") },
+		{ N_("Asset Browser"), N_("Shift+click in 3D view"), N_("Place object and stay in place mode"), N_("Place mode") },
+		{ N_("Asset Browser"), N_("RMB"), N_("Exit place mode"), N_("Place mode") },
 
 		{ N_("Brush"), N_("LMB"), N_("Paint selected object on surface"), N_("Brush mode") },
 		{ N_("Brush"), N_("LMB drag"), N_("Paint continuously using spacing/delay settings"), N_("Brush mode") },
@@ -5956,21 +7152,23 @@ uiKeyboardShortcutsWindow(void)
 	};
 	static const char *contextNames[] = { N_("Editor"), N_("3D view"), N_("Panel under the mouse") };
 
-	ImGui::SetNextWindowSize(ImVec2(780, 620), ImGuiCond_FirstUseEver);
-	ImGui::SetNextWindowSizeConstraints(ImVec2(420, 260), ImVec2(10000, 10000));
-	ImGui::Begin(LI(ICON_FA_LIST, "Keyboard Shortcuts"), &showShortcutsWindow);
+	ImGuiWindowFlags windowFlags = UiPlaceToolWindow(LI(ICON_FA_LIST, "Keyboard Shortcuts"), 48.0f, false);
+	ImGui::Begin(LI(ICON_FA_LIST, "Keyboard Shortcuts"), &showShortcutsWindow, windowFlags);
 
+	// The search filling the row, Change shortcuts at its end; then every
+	// shortcut, under its section's name.
 	static ImGuiTextFilter filter;
-	filter.Draw(_("Filter"), 280.0f);
-	ImGui::SameLine();
-	if(ImGui::Button(_("Clear")))
-		filter.Clear();
+	float changeW = ImGui::CalcTextSize(TI(ICON_FA_GEAR, "Change shortcuts..."), nil, true).x + ImGui::GetStyle().FramePadding.x*2.0f;
+	if(ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_F, ImGuiInputFlags_RouteFromRootWindow))
+		ImGui::SetKeyboardFocusHere();
+	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - changeW - ImGui::GetStyle().ItemSpacing.x);
+	if(ImGui::InputTextWithHint("##shortcut_filter", TI(ICON_FA_MAGNIFYING_GLASS, "Search"), filter.InputBuf, IM_ARRAYSIZE(filter.InputBuf)))
+		filter.Build();
 	ImGui::SameLine();
 	if(ImGui::Button(TI(ICON_FA_GEAR, "Change shortcuts...")))
 		showPreferencesWindow = true;
 	ImGui::SetItemTooltip(_("Preferences > Shortcuts"));
-
-	ImGui::Separator();
+	ImGui::Spacing();
 
 	int shown = 0;
 	const char *lastSection = nil;
@@ -5978,14 +7176,12 @@ uiKeyboardShortcutsWindow(void)
 	if(scrollSize.y < 140.0f)
 		scrollSize.y = 140.0f;
 	ImGui::BeginChild("##ShortcutsScroll", scrollSize, false, ImGuiWindowFlags_HorizontalScrollbar);
-	ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg |
-		ImGuiTableFlags_Resizable;
-	if(ImGui::BeginTable("##Shortcuts", 4, flags)){
-		ImGui::TableSetupColumn(_("Section"), ImGuiTableColumnFlags_WidthFixed, 120.0f);
-		ImGui::TableSetupColumn(_("Shortcut"), ImGuiTableColumnFlags_WidthFixed, 180.0f);
+	ImGuiTableFlags flags = ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable | ImGuiTableFlags_PadOuterX;
+	if(ImGui::BeginTable("##Shortcuts", 3, flags)){
+		float fs = ImGui::GetFontSize();
+		ImGui::TableSetupColumn(_("Shortcut"), ImGuiTableColumnFlags_WidthFixed, fs * 11.0f);
 		ImGui::TableSetupColumn(_("Action"));
-		ImGui::TableSetupColumn(_("Context"), ImGuiTableColumnFlags_WidthFixed, 160.0f);
-		ImGui::TableHeadersRow();
+		ImGui::TableSetupColumn(_("Context"), ImGuiTableColumnFlags_WidthFixed, fs * 10.0f);
 
 		int numFixed = (int)(sizeof(fixedShortcuts) / sizeof(fixedShortcuts[0]));
 		for(int i = 0; i < SC_NUM_ACTIONS + numFixed; i++){
@@ -6005,18 +7201,19 @@ uiKeyboardShortcutsWindow(void)
 				continue;
 
 			if(lastSection == nil || strcmp(lastSection, s.section) != 0){
-				ImGui::TableNextRow();
+				ImGui::TableNextRow(ImGuiTableRowFlags_None, ImGui::GetFrameHeight());
 				ImGui::TableSetColumnIndex(0);
-				ImGui::TextColored(UiSemanticColor(UI_COLOR_INFO), "%s", _(s.section));
+				ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, ImGui::GetColorU32(ImGuiCol_WindowBg));
+				UiHeading(_(s.section));
 				lastSection = s.section;
 			}
 
 			ImGui::TableNextRow();
+			ImGui::TableSetColumnIndex(0);
+			ImGui::TextColored(UiSemanticColor(UI_COLOR_INFO), "%s", s.shortcut);
 			ImGui::TableSetColumnIndex(1);
-			ImGui::TextUnformatted(s.shortcut);
-			ImGui::TableSetColumnIndex(2);
 			ImGui::TextUnformatted(_(s.action));
-			ImGui::TableSetColumnIndex(3);
+			ImGui::TableSetColumnIndex(2);
 			ImGui::TextDisabled("%s", _(s.context));
 			shown++;
 		}
@@ -6034,7 +7231,7 @@ uiKeyboardShortcutsWindow(void)
 static bool
 uiHelpTopic(const char *title)
 {
-	return ImGui::CollapsingHeader(title);
+	return UiSection(title);
 }
 
 static void
@@ -6059,7 +7256,7 @@ uiHelpWindow(void)
 		showLicensesWindow = true;
 	ImGui::SetItemTooltip(_("GNU GPL v2 or later, and the licenses of the components it includes."));
 
-	ImGui::SeparatorText(_("How do I..."));
+	UiHeading(_("How do I..."));
 	if(uiHelpTopic(_("Start a map for my server"))){
 		ImGui::BulletText(_("File > Workspace: pick your SA-MP or open.mp server folder."));
 		ImGui::BulletText(_("File > New, place things, then %s saves a .pwn you include in a script."),
@@ -6067,7 +7264,7 @@ uiHelpWindow(void)
 		ImGui::BulletText(_("The saved file's first lines say which functions to call."));
 	}
 	if(uiHelpTopic(_("Place objects, pickups, actors..."))){
-		ImGui::BulletText(_("Object Browser (%s): pick an object, Place, then click in the world."),
+		ImGui::BulletText(_("Asset Browser (%s): pick an object, Place, then click in the world."),
 			uiKey(SC_WINDOW_BROWSER));
 		ImGui::BulletText(_("Choose Characters, Markers, Text & audio or Zones in the browser."));
 		ImGui::BulletText(_("Click something to edit it in Object Info (%s). %s stops placing."),
@@ -6082,10 +7279,10 @@ uiHelpWindow(void)
 			uiKey(SC_WINDOW_NODES));
 	}
 	if(uiHelpTopic(_("Use custom models"))){
-		UiBadge("0.3.DL", _("SA-MP 0.3.DL and open.mp clients download custom models."));
+		UiBadge("0.3.DL", _("Players on the SA-MP 0.3.DL client download custom models."));
 		ImGui::BulletText(_("File > Import > Custom Model: pick a DFF and TXD and an ID."));
-		ImGui::BulletText(_("It goes into the workspace's models folder and artconfig.txt."));
-		ImGui::BulletText(_("Find it in Object Browser > Custom models and place it like any object."));
+		ImGui::BulletText(_("It goes into the workspace's models folder; maps that use it register it in their code."));
+		ImGui::BulletText(_("Find it in Asset Browser > Custom models and place it like any object."));
 	}
 	if(uiHelpTopic(_("Design a textdraw"))){
 		ImGui::BulletText(_("Windows > TextDraws starts TextDraw mode: a canvas instead of the world."));
@@ -6102,7 +7299,7 @@ uiHelpWindow(void)
 			uiKey(SC_WINDOW_MAP_CHECK));
 	}
 
-	ImGui::SeparatorText(_("More"));
+	UiHeading(_("More"));
 	ImGui::TextLinkOpenURL(_("User guide"), "https://github.com/itsneufox/Haumea-Studio/blob/main/docs/USER_GUIDE.md");
 	ImGui::SetItemTooltip(_("Setup, elements, NPCs, textdraws, testing and saving, with screenshots."));
 	ImGui::SameLine();
@@ -6169,17 +7366,8 @@ uiTimeWeather(void)
 	float rowWidth = ImGui::GetContentRegionAvail().x;
 	float spacing = ImGui::GetStyle().ItemSpacing.x;
 
-	ImGui::SeparatorText(_("Time"));
-	ImGui::PushItemWidth((rowWidth - spacing) * 0.5f);
-	ImGui::InputInt("##Hour", &currentHour, 1);
-	advanceHour(0);
-	ImGui::SetItemTooltip(_("Hour"));
-	ImGui::SameLine();
-	ImGui::InputInt("##Minute", &currentMinute, 1);
-	advanceMinute(0);
-	ImGui::SetItemTooltip(_("Minute"));
-	ImGui::PopItemWidth();
-
+	// The time of day: drag it across the day, or a preset, then exact.
+	UiHeading(_("Time"));
 	char clock[16];
 	snprintf(clock, sizeof(clock), "%02d:%02d", currentHour, currentMinute);
 	int totalMinute = currentHour*60 + currentMinute;
@@ -6191,26 +7379,45 @@ uiTimeWeather(void)
 	static const struct { const char *name; int hour; } presets[] = {
 		{ N_("Dawn"), 6 }, { N_("Noon"), 12 }, { N_("Dusk"), 20 }, { N_("Night"), 0 },
 	};
-	for(size_t i = 0; i < IM_ARRAYSIZE(presets); i++){
-		if(i > 0)
-			ImGui::SameLine();
-		if(ImGui::Button(_(presets[i].name))){
-			currentHour = presets[i].hour;
-			currentMinute = 0;
-		}
+	const char *presetNames[IM_ARRAYSIZE(presets)];
+	int preset = -1;
+	for(int i = 0; i < IM_ARRAYSIZE(presets); i++){
+		presetNames[i] = _(presets[i].name);
+		if(currentHour == presets[i].hour && currentMinute == 0)
+			preset = i;
 	}
+	if(UiSegmented("##time_presets", presetNames, IM_ARRAYSIZE(presets), &preset) && preset >= 0){
+		currentHour = presets[preset].hour;
+		currentMinute = 0;
+	}
+	// Hour and minute side by side on one row.
+	char timeId[32];
+	UiFieldLabel(_("Time"), timeId, sizeof(timeId));
+	rowWidth = ImGui::GetContentRegionAvail().x;
+	ImGui::PushItemWidth(floorf((rowWidth - spacing) * 0.5f));
+	ImGui::InputInt("##Hour", &currentHour, 1);
+	advanceHour(0);
+	ImGui::SetItemTooltip(_("Hour"));
+	ImGui::SameLine();
+	ImGui::InputInt("##Minute", &currentMinute, 1);
+	advanceMinute(0);
+	ImGui::SetItemTooltip(_("Minute"));
+	ImGui::PopItemWidth();
 
-	ImGui::SeparatorText(_("Weather"));
-	ImGui::SetNextItemWidth(-FLT_MIN);
+	UiHeading(_("Weather"));
+	char weatherId[32];
+	UiFieldLabel(_("Weather"), weatherId, sizeof(weatherId));
 	uiWeatherBox("##Weather", &Weather::oldWeather);
 	Weather::newWeather = Weather::oldWeather;
 	Weather::interpolation = 0.0f;
 	extraColours = -1;
 
-	ImGui::Spacing();
-	ImGui::TextDisabled(_("In game: SetPlayerTime(playerid, %d, %d); SetPlayerWeather(playerid, %d);"),
+	// The same in Pawn, to copy; the editor only previews them.
+	UiHeading(_("In game"));
+	char code[128];
+	snprintf(code, sizeof(code), "SetPlayerTime(playerid, %d, %d); SetPlayerWeather(playerid, %d);",
 		currentHour, currentMinute, Weather::oldWeather);
-	ImGui::TextDisabled(_("The editor only previews these; they are not saved in the map."));
+	UiInfoRow("Pawn", code, _("The editor only previews these; they are not saved in the map."));
 }
 
 // What the 3D view shows and how it looks. Everything here only changes the
@@ -6218,72 +7425,68 @@ uiTimeWeather(void)
 static void
 uiView(void)
 {
-	ImGui::SeparatorText(_("Show"));
-	ImGui::Checkbox(_("Map elements"), &gRenderSampElements);
+	UiHeading(_("Show"));
+	UiCheckbox(_("Map elements"), &gRenderSampElements);
 	ImGui::SetItemTooltip(_("3D text labels, gang zones and tags on pickups, actors,\nplayer classes and map icons."));
-	ImGui::Checkbox(_("Collisions"), &gRenderCollision);
+	UiCheckbox(_("Collisions"), &gRenderCollision);
 	ImGui::SetItemTooltip(_("What players and vehicles actually collide with."));
-	ImGui::Checkbox(_("Particle effects"), &ParticlePreview::enabled);
+	UiCheckbox(_("Particle effects"), &ParticlePreview::enabled);
 	ImGui::SetItemTooltip(_("Animate fire, smoke, water and other particle objects in the viewport."));
-	ImGui::Checkbox(_("Focus my map"), &gFocusMyMap);
+	UiCheckbox(_("Focus my map"), &gFocusMyMap);
 	ImGui::SetItemTooltip(_("Dims the game's buildings so your map's objects stand out."));
 	gStreamDistance = clamp(gStreamDistance, 50.0f, 5000.0f);
 	gFrameLimit = gFrameLimit <= 0 ? 0 : clamp(gFrameLimit, 30, 360);
 
 	if(isSA()){
-		ImGui::SeparatorText(_("Player view"));
+		UiHeading(_("Player view"));
 		char playerViewLabel[64];
 		snprintf(playerViewLabel, sizeof(playerViewLabel), _("As a player sees it (%s)##player_view"), uiKey(SC_PLAYER_VIEW));
-		ImGui::Checkbox(playerViewLabel, &gPlayerView);
+		UiCheckbox(playerViewLabel, &gPlayerView);
 		ImGui::SetItemTooltip(_("Previews virtual worlds, interiors, areas and client object limits.\nAll elements keep the stream distance set in Performance. Nothing is saved."));
 		ImGui::BeginDisabled(!gPlayerView);
-		ImGui::SetNextItemWidth(ImGui::GetFontSize() * 6.0f);
-		ImGui::InputInt(_("Virtual world"), &gPlayerViewWorld);
+		UiInputInt(_("Virtual world"), &gPlayerViewWorld);
 		if(gPlayerViewWorld < 0)
 			gPlayerViewWorld = 0;
 		ImGui::EndDisabled();
 	}
 
-	ImGui::SeparatorText(_("Selection"));
-	ImGui::Checkbox(_("Outline selected objects"), &gOutlineSelection);
+	UiHeading(_("Selection"));
+	UiCheckbox(_("Outline selected objects"), &gOutlineSelection);
 	ImGui::SetItemTooltip(_("Draws the edges of selected and hovered objects, so invisible ones\n"
 		"can be seen. Off leaves only the tint above."));
 	char outlineLabel[64];
 	snprintf(outlineLabel, sizeof(outlineLabel), _("Outline map objects (%s)##outline_map"), uiKey(SC_OUTLINE_OBJECTS));
-	ImGui::Checkbox(outlineLabel, &gOutlineMapObjects);
+	UiCheckbox(outlineLabel, &gOutlineMapObjects);
 
 	// What most maps never need: debug drawing, the game's own display
 	// rules, the path nodes (also in Nodes) and the selection tint.
 	ImGui::Spacing();
-	if(ImGui::TreeNodeEx(L("Advanced"), ImGuiTreeNodeFlags_SpanAvailWidth)){
-		ImGui::Checkbox(L("Object bounds"), &gRenderBounds);
+	if(UiSection(L("Advanced"))){
+		UiCheckbox(L("Object bounds"), &gRenderBounds);
 		ImGui::SetItemTooltip(_("Shows collision bounding boxes without the collision mesh. Collisions takes precedence when both are enabled."));
-		ImGui::Checkbox(_("Water"), &gRenderWater);
+		UiCheckbox(_("Water"), &gRenderWater);
 		if(gameversion == GAME_SA)
-			ImGui::Checkbox(_("Animated objects"), &gPlayAnimations);
-		ImGui::Checkbox(_("Light coronas"), &gRenderLightEffects);
+			UiCheckbox(_("Animated objects"), &gPlayAnimations);
+		UiCheckbox(_("Light coronas"), &gRenderLightEffects);
 		ImGui::SetItemTooltip(_("Street lamp and building light coronas, as the client draws them."));
-		ImGui::Checkbox(_("Timed objects at any hour"), &gNoTimeCull);
+		UiCheckbox(_("Timed objects at any hour"), &gNoTimeCull);
 		ImGui::SetItemTooltip(_("Objects the game only shows by day or by night are always drawn."));
 		if(params.numAreas)
-			ImGui::Checkbox(_("Every interior at once"), &gNoAreaCull);
+			UiCheckbox(_("Every interior at once"), &gNoAreaCull);
 		ImGui::SetItemTooltip(_("Off draws only the interior set on the menu bar, like the client."));
 
 		if(isSA()){
-			ImGui::SeparatorText(_("NPC nodes (NODES*.DAT)"));
-			ImGui::Checkbox(_("Vehicle nodes"), &gRenderSaCarPaths);
-			ImGui::SameLine();
-			ImGui::Checkbox(_("Ped nodes"), &gRenderSaPedPaths);
+			UiHeading(_("NPC nodes (NODES*.DAT)"));
+			UiCheckbox(_("Vehicle nodes"), &gRenderSaCarPaths);
+			UiCheckbox(_("Ped nodes"), &gRenderSaPedPaths);
 			ImGui::SetItemTooltip(_("The game's path nodes. open.mp NPCs follow them with NPC_PlayNode."));
-			ImGui::Checkbox(_("Node area grid"), &gRenderSaAreaGrid);
+			UiCheckbox(_("Node area grid"), &gRenderSaAreaGrid);
 			ImGui::SetItemTooltip(_("The 8x8 grid of NODES0-63.DAT areas (750 units each).\nNodes cannot be moved across these boundaries."));
 		}
 
-		ImGui::SeparatorText(_("Selection"));
-		ImGui::SetNextItemWidth(ImGui::GetFontSize() * 10.0f);
-		ImGui::SliderInt(_("Highlight"), &gSelectionHighlightOpacity, 0, 100, "%d%%");
-		ImGui::SetItemTooltip(_("Opacity of the red overlay drawn on selected objects."));
-		ImGui::TreePop();
+		UiHeading(_("Selection"));
+		UiSliderInt(_("Highlight"), &gSelectionHighlightOpacity, 0, 100, "%d%%");
+		ImGui::SetItemTooltip(_("Opacity of the tint drawn on selected objects."));
 	}
 }
 
@@ -6421,30 +7624,52 @@ uiTransformVectorField(const char *label, float values[3], float speed,
 	bool *deactivatedAfterEdit, bool *copyClicked)
 {
 	ImGui::PushID(copiedName);
-	ImGui::TextUnformatted(label);
 	bool changed = false;
 	*deactivatedAfterEdit = false;
 	const char *axes[] = { "X", "Y", "Z" };
+	static const ImVec4 dark[3] = { ImVec4(0.90f, 0.33f, 0.29f, 1), ImVec4(0.36f, 0.73f, 0.45f, 1), ImVec4(0.44f, 0.65f, 0.94f, 1) };
+	static const ImVec4 light[3] = { ImVec4(0.75f, 0.16f, 0.13f, 1), ImVec4(0.12f, 0.50f, 0.22f, 1), ImVec4(0.10f, 0.38f, 0.80f, 1) };
+	float fs = ImGui::GetFontSize(), avail = ImGui::GetContentRegionAvail().x;
+	float column = std::min(fs * 9.4f, avail * 0.42f);
+	float copyWidth = ImGui::GetFrameHeight(), gap = 4.0f;
+	// One row: the name, X Y Z side by side, the copy button. Narrower, the
+	// name goes above and X Y Z keep their row; narrower still, a row each.
+	bool beside = (avail - column - copyWidth - gap*3.0f) / 3.0f >= fs * 4.2f;
+	bool row = beside || (avail - copyWidth - gap*3.0f) / 3.0f >= fs * 3.6f;
+	float startX = ImGui::GetCursorPosX();
+	ImGui::AlignTextToFramePadding();
+	ImGui::TextDisabled("%s", label);
+	if(beside){
+		ImGui::SameLine();
+		ImGui::SetCursorPosX(startX + column);
+	}
+	float fieldWidth = row ? floorf((avail - (beside ? column : 0.0f) - copyWidth - gap*3.0f) / 3.0f) : -FLT_MIN;
 	for(int axis = 0; axis < 3; axis++){
 		ImGui::PushID(axis);
-		// The axis letter in the gizmo's colour, and a stripe of it on the field.
-		static const ImVec4 dark[3] = { ImVec4(0.90f, 0.33f, 0.29f, 1), ImVec4(0.36f, 0.73f, 0.45f, 1), ImVec4(0.44f, 0.65f, 0.94f, 1) };
-		static const ImVec4 light[3] = { ImVec4(0.75f, 0.16f, 0.13f, 1), ImVec4(0.12f, 0.50f, 0.22f, 1), ImVec4(0.10f, 0.38f, 0.80f, 1) };
 		ImVec4 axisColour = UiThemeIsLight() ? light[axis] : dark[axis];
-		ImGui::AlignTextToFramePadding();
-		ImGui::TextColored(axisColour, "%s", axes[axis]);
-		ImGui::SameLine(ImGui::GetFontSize() * 2.2f);
-		ImGui::SetNextItemWidth(-FLT_MIN);
+		if(row && axis)
+			ImGui::SameLine(0.0f, gap);
+		if(!row){
+			ImGui::AlignTextToFramePadding();
+			ImGui::TextColored(axisColour, "%s", axes[axis]);
+			ImGui::SameLine(fs * 2.2f);
+		}
+		ImGui::SetNextItemWidth(fieldWidth);
+		// The axis is the stripe's colour (the gizmo's), and the tooltip's.
 		if(ImGui::DragFloat("##value", &values[axis], speed, 0.0f, 0.0f, format)) changed = true;
 		{
+			// The gizmo's colour as a line along the field's underside, inside it.
 			ImVec2 lo = ImGui::GetItemRectMin(), hi = ImGui::GetItemRectMax();
-			ImGui::GetWindowDrawList()->AddRectFilled(ImVec2(lo.x + 1.0f, lo.y + 3.0f), ImVec2(lo.x + 3.0f, hi.y - 3.0f),
-				ImGui::GetColorU32(axisColour));
+			float inset = ImGui::GetStyle().FrameRounding;
+			ImGui::GetWindowDrawList()->AddRectFilled(ImVec2(lo.x + inset, hi.y - 3.0f), ImVec2(hi.x - inset, hi.y - 1.0f),
+				ImGui::GetColorU32(axisColour), 1.0f);
 		}
 		*deactivatedAfterEdit |= ImGui::IsItemDeactivatedAfterEdit();
-		ImGui::SetItemTooltip("%s", tooltip);
+		ImGui::SetItemTooltip("%s: %s", axes[axis], tooltip);
 		ImGui::PopID();
 	}
+	if(row)
+		ImGui::SameLine(0.0f, gap);
 
 	*copyClicked = ImGui::SmallButton(ICON_FA_COPY);
 	if(*copyClicked){
@@ -6570,13 +7795,18 @@ uiTransformPanel(ObjectInst *inst)
 
 	bool absolute = !gTransformPanel.relative;
 	if(rotationMode == UI_ROTATION_FULL){
-		if(ImGui::RadioButton(_("Absolute"), absolute)){
+		// Absolute | Delta as one switch.
+		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(1.0f, ImGui::GetStyle().ItemSpacing.y));
+		bool toAbsolute = uiSegment(_("Absolute"), absolute);
+		ImGui::SameLine();
+		bool toDelta = uiSegment(_("Delta"), !absolute);
+		ImGui::PopStyleVar();
+		if(toAbsolute){
 			finishTransformPanelEdit();
 			gTransformPanel.relative = false;
 			refreshTransformPanel(inst);
 		}
-		ImGui::SameLine();
-		if(ImGui::RadioButton(_("Delta"), !absolute)){
+		if(toDelta){
 			finishTransformPanelEdit();
 			gTransformPanel.relative = true;
 			refreshTransformPanel(inst);
@@ -6640,7 +7870,10 @@ uiTransformPanel(ObjectInst *inst)
 	if(rotationCopyClicked)
 		finishTransformPanelEdit();
 
-	if(ImGui::SmallButton(TI(ICON_FA_COPY, "Copy transform"))){
+	// The transform's actions in an even grid: copy and paste, then reset
+	// and upright.
+	float half = floorf((ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x) * 0.5f);
+	if(ImGui::Button(TI(ICON_FA_COPY, "Copy"), ImVec2(half, 0))){
 		finishTransformPanelEdit();
 		gTransformClipboard.valid = true;
 		gTransformClipboard.position = inst->m_translation;
@@ -6667,19 +7900,19 @@ uiTransformPanel(ObjectInst *inst)
 		}
 	}
 	ImGui::BeginDisabled(!systemClipboard.valid && !gTransformClipboard.valid);
-	if(ImGui::SmallButton(TI(ICON_FA_PASTE, "Paste transform"))){
+	if(ImGui::Button(TI(ICON_FA_PASTE, "Paste"), ImVec2(half, 0))){
 		const TransformClipboard &source = systemClipboard.valid ? systemClipboard : gTransformClipboard;
 		applyTransformPanelValues(inst, source.position,
 			source.rotationDegrees, UNDO_TRANSFORM_POS | UNDO_TRANSFORM_ROT);
 	}
 	ImGui::EndDisabled();
 
-	if(ImGui::SmallButton(_("Reset rotation")))
+	if(ImGui::Button(_("Reset rotation"), ImVec2(half, 0)))
 		applyTransformPanelValues(inst, inst->m_translation, { 0.0f, 0.0f, 0.0f },
 			UNDO_TRANSFORM_ROT);
 	ImGui::SetItemTooltip(_("Set X, Y and Z rotation to zero."));
 	ImGui::SameLine();
-	if(ImGui::SmallButton(_("Make upright"))){
+	if(ImGui::Button(_("Make upright"), ImVec2(half, 0))){
 		rw::V3d degrees = GetObjectRotationDegrees(inst->m_rotation);
 		applyTransformPanelValues(inst, inst->m_translation, { 0.0f, 0.0f, degrees.z },
 			UNDO_TRANSFORM_ROT);
@@ -6944,9 +8177,9 @@ uiMaterialTexturePopup(void)
 	}
 	if(searchingAll){
 		if((int)globalResults.size() >= globalLimit)
-			ImGui::Text(_("First %d textures found in all TXDs: type more to narrow it down."), globalLimit);
+			ImGui::TextDisabled(_("First %d textures found in all TXDs: type more to narrow it down."), globalLimit);
 		else
-			ImGui::Text(_("%d texture(s) found in all TXDs"), (int)globalResults.size());
+			ImGui::TextDisabled(_("%d texture(s) found in all TXDs"), (int)globalResults.size());
 		if(ImGui::BeginChild("##material_search_results", ImVec2(520.0f, 380.0f), true)){
 			float availableWidth = ImGui::GetContentRegionAvail().x;
 			int columns = clamp((int)(availableWidth / 112.0f), 1, 5);
@@ -6998,7 +8231,7 @@ uiMaterialTexturePopup(void)
 				ImGui::TextDisabled(_("No texture has that in its name or its TXD's name."));
 		}
 		ImGui::EndChild();
-		if(ImGui::Button(_("Cancel"))){
+		if((uiDialogButtonsStart(1), uiDialogSecondary(_("Cancel")))){
 			globalQuery[0] = '\0';
 			lastQuery.clear();
 			ImGui::CloseCurrentPopup();
@@ -7010,7 +8243,7 @@ uiMaterialTexturePopup(void)
 
 	TxdDef *selectedTxd = GetTxdDef(gMaterialTextureBrowserTxd);
 	const char *txdPreview = selectedTxd ? selectedTxd->name : _("Select TXD...");
-	if(ImGui::BeginCombo("TXD", txdPreview)){
+	if(UiBeginCombo("TXD", txdPreview)){
 		gMaterialTxdFilter.Draw(_("Filter TXDs"), 220.0f);
 		if(ImGui::BeginChild("##material_txd_list", ImVec2(500.0f, 180.0f), true)){
 			for(int i = 0; i < GetNumTxdSlots(); i++){
@@ -7035,7 +8268,7 @@ uiMaterialTexturePopup(void)
 	}
 	gMaterialTextureFilter.Draw(_("Filter"), 220.0f);
 	ImGui::TextDisabled(_("Choose a TXD, preview its textures, then click one to assign it to this material slot."));
-	ImGui::Text(_("%d texture(s)"), (int)gMaterialTextureChoices.size());
+	ImGui::TextDisabled(_("%d texture(s)"), (int)gMaterialTextureChoices.size());
 	bool textureChildVisible = ImGui::BeginChild("##material_texture_list", ImVec2(520.0f, 330.0f), true);
 	if(textureChildVisible){
 		float availableWidth = ImGui::GetContentRegionAvail().x;
@@ -7073,7 +8306,7 @@ uiMaterialTexturePopup(void)
 			ImGui::TextDisabled(_("Filtered texture names include the source TXD."));
 	}
 	ImGui::EndChild();
-	if(ImGui::Button(_("Cancel")))
+	if((uiDialogButtonsStart(1), uiDialogSecondary(_("Cancel"))))
 		ImGui::CloseCurrentPopup();
 	ImGui::EndPopup();
 }
@@ -7269,14 +8502,10 @@ uiMaterialInfo(ObjectInst *inst)
 	if(obj == nil)
 		return;
 	bool canEdit = IsPawnObjectEditable(inst);
-	if(IsPawnWorldObject(inst)){
-		ImGui::PushStyleColor(ImGuiCol_Text, UiSemanticColor(UI_COLOR_WARNING));
-		ImGui::TextWrapped(_("World object: it stays unchanged and is omitted from Pawn export. If you move, rotate, delete, or edit its materials, export removes the original per player and creates the scripted replacement."));
-		ImGui::PopStyleColor();
-	}
+	// A GTA world object says so in the header; its tooltip tells the rest.
 	if(!canEdit)
 		ImGui::TextDisabled(_("Material controls are locked for this object."));
-	if(ImGui::Checkbox(L("Show material indexes"), &gShowMaterialIndexes))
+	if(UiCheckbox(L("Show material indexes"), &gShowMaterialIndexes))
 		BumpChangeSeq();
 	ImGui::SetItemTooltip("%s", _("Paints each material slot of the selected objects with its number, white on green,\n"
 		"as Texture Studio does, to see which part is which index. The game materials stay unchanged."));
@@ -7323,15 +8552,18 @@ uiMaterialInfo(ObjectInst *inst)
 		ObjectMaterialOverride edited = *material;
 		bool changed = false;
 		int mode = uiMaterialMode(edited);
-		ImGui::SeparatorText("");
-		ImGui::Text(_("Slot %d"), slot);
-		ImGui::SameLine();
-		ImGui::TextDisabled("(%s)", baseName);
+		// The slot: its number on the left, what it shows on the right; the
+		// model's own texture in the tooltip.
+		ImGui::Spacing();
 		ImGui::BeginDisabled(!canEdit);
-		ImGui::SameLine();
 		const char *modes[] = { _("Original"), _("Texture / color"), _("Text") };
-		ImGui::SetNextItemWidth(-FLT_MIN);
-		if(ImGui::Combo("##mode", &mode, modes, IM_ARRAYSIZE(modes))){
+		char slotLabel[48];
+		snprintf(slotLabel, sizeof(slotLabel), _("Slot %d"), slot);
+		char slotId[64];
+		UiFieldLabel(slotLabel, slotId, sizeof(slotId));
+		bool modeChanged = ImGui::Combo("##mode", &mode, modes, IM_ARRAYSIZE(modes));
+		ImGui::SetItemTooltip("%s", baseName);
+		if(modeChanged){
 			if(mode == UI_MATERIAL_ORIGINAL){
 				edited.active = false;
 				edited.textEnabled = false;
@@ -7380,10 +8612,10 @@ uiMaterialInfo(ObjectInst *inst)
 			}
 		}
 		if(mode == UI_MATERIAL_TEXTURE){
-			if(ImGui::Button(_("Browse textures...")))
+			if(ImGui::Button(_("Browse textures..."), ImVec2(-FLT_MIN, 0)))
 				uiOpenMaterialTexturePopup(inst, slot);
 			int model = edited.hasTexture ? edited.sourceModel : -1;
-			if(ImGui::InputInt(_("Model ID"), &model)){
+			if(UiInputInt(_("Model ID"), &model)){
 				model = clamp(model, -1, 65534);
 				edited.hasTexture = model >= 0;
 				edited.sourceModel = model;
@@ -7391,17 +8623,22 @@ uiMaterialInfo(ObjectInst *inst)
 			}
 			ImGui::SetItemTooltip(_("-1 keeps the original texture, 0 is SA-MP's blank white texture.\n"
 				"Otherwise SA-MP loads this model so its TXD is available."));
-			if(edited.hasTexture && edited.sourceModel > 0){
-				if(ImGui::InputText("TXD", edited.txdName, sizeof(edited.txdName))) changed = true;
-				if(ImGui::InputText(_("Texture"), edited.textureName, sizeof(edited.textureName))) changed = true;
-			}
+			// Whether it resolves in game: said only when it doesn't; when it
+			// does, the Texture field's tooltip says what loads it.
 			char status[512];
 			bool ok = uiMaterialTextureStatus(edited, status, sizeof(status));
-			uiStatusLine(ok, status);
+			if(edited.hasTexture && edited.sourceModel > 0){
+				if(UiInputText("TXD", edited.txdName, sizeof(edited.txdName))) changed = true;
+				if(UiInputText(_("Texture"), edited.textureName, sizeof(edited.textureName))) changed = true;
+				if(ok && status[0])
+					ImGui::SetItemTooltip("%s", status);
+			}
+			if(!ok)
+				uiStatusLine(false, status);
 
 			bool recolor = edited.color.red || edited.color.green ||
 				edited.color.blue || edited.color.alpha;
-			if(ImGui::Checkbox(_("Change color"), &recolor)){
+			if(UiCheckbox(_("Change color"), &recolor)){
 				edited.color = recolor ? rw::RGBA{ 255, 255, 255, 255 } : rw::RGBA{ 0, 0, 0, 0 };
 				changed = true;
 			}
@@ -7415,35 +8652,36 @@ uiMaterialInfo(ObjectInst *inst)
 						edited.color.alpha = 1;	// 0x00000000 would mean "no change"
 					changed = true;
 				}
-				ImGui::TextDisabled(_("As in game, a color removes the object's vertex lighting and reflections."));
-			}else
-				ImGui::TextDisabled(_("Color 0: the model's own color is kept."));
+				ImGui::SetItemTooltip("%s", _("As in game, a color removes the object's vertex lighting and reflections."));
+			}
 		}else if(mode == UI_MATERIAL_TEXT){
-			if(ImGui::InputTextMultiline(_("Text"), edited.text, sizeof(edited.text), ImVec2(0.0f, 70.0f)))
+			// A box of several lines: its name above it.
+			ImGui::TextDisabled("%s", _("Text"));
+			if(ImGui::InputTextMultiline("##material_text", edited.text, sizeof(edited.text), ImVec2(-FLT_MIN, 70.0f)))
 				changed = true;
-			ImGui::TextDisabled(_("{RRGGBB} switches color (opaque) for the following text. Enter starts a new line."));
+			ImGui::SetItemTooltip("%s", _("{RRGGBB} switches color (opaque) for the following text. Enter starts a new line."));
 			if(edited.text[0] == '\0')
 				uiStatusLine(false, _("SA-MP ignores material text calls with empty text."));
 			if(uiMaterialFontPicker(&edited)) changed = true;
-			if(ImGui::SliderInt(_("Font size"), &edited.fontSize, 1, 255)) changed = true;
+			if(UiSliderInt(_("Font size"), &edited.fontSize, 1, 255)) changed = true;
 			int materialSizeIndex = uiMaterialSizeIndex(edited.materialSize);
-			if(ImGui::Combo(_("Material size"), &materialSizeIndex, uiMaterialSizeNames,
+			if(UiCombo(_("Material size"), &materialSizeIndex, uiMaterialSizeNames,
 				IM_ARRAYSIZE(uiMaterialSizeNames))){
 				edited.materialSize = uiMaterialSizeValues[materialSizeIndex];
 				changed = true;
 			}
 			const char *alignments[] = { _("Left (top)"), _("Center (middle)"), _("Right (top)") };
-			if(ImGui::Combo(_("Alignment"), &edited.alignment, alignments, IM_ARRAYSIZE(alignments))) changed = true;
-			if(ImGui::Checkbox(_("Bold"), &edited.bold)) changed = true;
+			if(UiCombo(_("Alignment"), &edited.alignment, alignments, IM_ARRAYSIZE(alignments))) changed = true;
+			if(UiCheckbox(_("Bold"), &edited.bold)) changed = true;
 			rw::RGBAf textColor;
 			convColor(&textColor, &edited.textColor);
-			if(ImGui::ColorEdit4(_("Text color"), &textColor.red, ImGuiColorEditFlags_AlphaBar)){
+			if(UiColorEdit4(_("Text color"), &textColor.red, ImGuiColorEditFlags_AlphaBar)){
 				convColor(&edited.textColor, &textColor);
 				changed = true;
 			}
 			rw::RGBAf backgroundColor;
 			convColor(&backgroundColor, &edited.backgroundColor);
-			if(ImGui::ColorEdit4(_("Background"), &backgroundColor.red, ImGuiColorEditFlags_AlphaBar)){
+			if(UiColorEdit4(_("Background"), &backgroundColor.red, ImGuiColorEditFlags_AlphaBar)){
 				convColor(&edited.backgroundColor, &backgroundColor);
 				changed = true;
 			}
@@ -7463,14 +8701,15 @@ uiMaterialInfo(ObjectInst *inst)
 	}
 
 	ImGui::Spacing();
-	if(ImGui::SmallButton(_("Rescan fonts"))){
+	float fontButton = floorf((ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x) * 0.5f);
+	if(ImGui::Button(_("Rescan fonts"), ImVec2(fontButton, 0))){
 		RescanMaterialFonts();
 		RefreshMaterialTextTextures();
 	}
 	ImGui::SetItemTooltip(_("Searches your fonts folder, the GTA folder (SA-MP's fonts), the Wine prefix's\n"
 		"Windows\\Fonts and the system font folders again."));
 	ImGui::SameLine();
-	if(ImGui::SmallButton(_("Open fonts folder")))
+	if(ImGui::Button(_("Open fonts folder"), ImVec2(fontButton, 0)))
 		uiOpenFontsFolder();
 	ImGui::SetItemTooltip(_("Your fonts folder: SA-MP's fonts and the free stand-ins are put there;\n"
 		"add other .ttf files to it, then Rescan fonts."));
@@ -7490,6 +8729,8 @@ uiVehicleColourPicker(const char *label, int *colour)
 {
 	bool changed = false;
 	ImGui::PushID(label);
+	char unusedId[128];
+	UiFieldLabel(label, unusedId, sizeof(unusedId));	// its name in the left column
 	ImVec2 swatch(ImGui::GetFrameHeight(), ImGui::GetFrameHeight());
 	if(*colour < 0){
 		if(ImGui::Button("?", swatch))
@@ -7498,14 +8739,12 @@ uiVehicleColourPicker(const char *label, int *colour)
 		ImGui::OpenPopup("colours");
 	ImGui::SetItemTooltip(_("Pick a colour"));
 	ImGui::SameLine();
-	ImGui::SetNextItemWidth(ImGui::GetFontSize() * 6.0f);
+	ImGui::SetNextItemWidth(-FLT_MIN);
 	int value = *colour;
 	if(ImGui::InputInt("##value", &value)){
 		*colour = clamp(value, -1, 255);
 		changed = true;
 	}
-	ImGui::SameLine();
-	ImGui::TextUnformatted(label);
 	if(ImGui::BeginPopup("colours")){
 		if(ImGui::Button(_("Random (-1)"))){
 			*colour = -1;
@@ -7548,15 +8787,20 @@ uiVehicleSettings(ObjectInst *inst, std::vector<ObjectInst*> &selected, bool bat
 	bool isStatic = inst->m_vehicleStatic;
 	int color1 = inst->m_vehicleColor1, color2 = inst->m_vehicleColor2;
 	int respawn = inst->m_vehicleRespawnDelay;
-	bool staticChanged = ImGui::Checkbox(_("Static vehicle (AddStaticVehicleEx)"), &isStatic);
+	bool staticChanged = UiCheckbox(_("Static vehicle (AddStaticVehicleEx)"), &isStatic);
 	if(IsTrainEngineModel(inst->m_objectId)){
 		int ids = GetTrainVehicleIds(inst->m_objectId);
+		// What it is in one quiet line; how it runs in the tooltip.
+		char train[256];
 		if(ids > 1)
-			ImGui::TextWrapped(_("A train: the engine and 3 carriages behind it, %d vehicle ids. Only the engine is "
+			snprintf(train, sizeof(train), _("A train: the engine and 3 carriages behind it, %d vehicle ids. Only the engine is "
 				"written; the game adds the carriages."), ids);
 		else
-			ImGui::TextWrapped(_("A tram: no carriages."));
-		ImGui::TextDisabled(_("It runs one way with an angle over 180 and the other way up to 180. Dragging "
+			snprintf(train, sizeof(train), "%s", _("A tram: no carriages."));
+		ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+		ImGui::TextWrapped("%s", train);
+		ImGui::PopStyleColor();
+		ImGui::SetItemTooltip("%s", _("It runs one way with an angle over 180 and the other way up to 180. Dragging "
 			"slides it along the track (hold Alt to move it freely)."));
 		if(!isStatic)
 			ImGui::TextColored(UiSemanticColor(UI_COLOR_WARNING), _("Trains need Static vehicle: open.mp's CreateVehicle refuses them."));
@@ -7565,7 +8809,7 @@ uiVehicleSettings(ObjectInst *inst, std::vector<ObjectInst*> &selected, bool bat
 	ImGui::SetItemTooltip(_("A vehicle colour, 0-255. -1 picks one at random when it spawns."));
 	bool color2Changed = uiVehicleColourPicker("Colour 2", &color2);
 	ImGui::SetItemTooltip(_("A vehicle colour, 0-255. -1 picks one at random when it spawns."));
-	bool respawnChanged = ImGui::InputInt(_("Respawn delay"), &respawn);
+	bool respawnChanged = UiInputInt(_("Respawn delay"), &respawn);
 	ImGui::SetItemTooltip(_("Seconds. -1 with a static vehicle writes AddStaticVehicle."));
 
 	// Paintjob: only models with <model>1.txd have one.
@@ -7574,7 +8818,7 @@ uiVehicleSettings(ObjectInst *inst, std::vector<ObjectInst*> &selected, bool bat
 	bool paintjobChanged = false;
 	if(numPaintjobs > 0){
 		const char *labels[] = { _("None"), _("Paintjob 0"), _("Paintjob 1"), _("Paintjob 2") };
-		if(ImGui::BeginCombo(_("Paintjob"), labels[clamp(paintjob, 0, 3)])){
+		if(UiBeginCombo(_("Paintjob"), labels[clamp(paintjob, 0, 3)])){
 			for(int i = 0; i <= numPaintjobs; i++)
 				if(ImGui::Selectable(labels[i], i == paintjob)){
 					paintjob = i;
@@ -7587,12 +8831,12 @@ uiVehicleSettings(ObjectInst *inst, std::vector<ObjectInst*> &selected, bool bat
 
 	char plate[VEHICLE_PLATE_LEN];
 	memcpy(plate, inst->m_vehiclePlate, sizeof(plate));
-	bool plateChanged = ImGui::InputTextWithHint(_("Number plate"), _("default"), plate, sizeof(plate));
+	bool plateChanged = UiInputTextWithHint(_("Number plate"), _("default"), plate, sizeof(plate));
 	ImGui::SetItemTooltip(_("SetVehicleNumberPlate, up to 32 characters. Empty keeps the game's plate. GTA's preview displays the first 8 characters."));
 
 	// Parts: one per slot, only those that fit this model.
 	int changedSlot = -1, changedComponent = 0;
-	if(ImGui::TreeNode(L("Tuning parts"))){
+	if(UiSection(L("Tuning parts"))){
 		bool any = false;
 		for(int slot = 0; slot < VEHICLE_MOD_SLOTS; slot++){
 			int current = inst->m_vehicleMods[slot];
@@ -7609,7 +8853,7 @@ uiVehicleSettings(ObjectInst *inst, std::vector<ObjectInst*> &selected, bool bat
 			else
 				snprintf(preview, sizeof(preview), "%s", _("None"));
 			ImGui::PushID(slot);
-			if(ImGui::BeginCombo(GetVehicleComponentSlotName(slot), preview)){
+			if(UiBeginCombo(GetVehicleComponentSlotName(slot), preview)){
 				if(ImGui::Selectable(_("None"), current == 0)){
 					changedSlot = slot;
 					changedComponent = 0;
@@ -7631,7 +8875,6 @@ uiVehicleSettings(ObjectInst *inst, std::vector<ObjectInst*> &selected, bool bat
 		}
 		if(!any)
 			ImGui::TextDisabled(_("No parts fit this model."));
-		ImGui::TreePop();
 	}
 	ImGui::SetItemTooltip(_("AddVehicleComponent. Only parts SA-MP accepts on this model are listed."));
 	ImGui::EndDisabled();
@@ -7687,7 +8930,7 @@ uiInstInfo(ObjectInst *inst)
 	uiSelectedInstances(selected);
 	bool batch = gBatchEditSelection && selected.size() > 1;
 	int interior = inst->m_area;
-	if(ImGui::InputInt(_("Interior"), &interior)){
+	if(UiInputInt(_("Interior"), &interior)){
 		interior = clamp(interior, 0, MAX_INTERIOR_AREA_CODE);
 		for(size_t i = 0; i < selected.size(); i++){
 			ObjectInst *target = selected[i];
@@ -7704,7 +8947,7 @@ uiInstInfo(ObjectInst *inst)
 	// The streamer tells interior 0 (only there) from -1 (every interior).
 	if(interior == 0 && !inst->m_isVehicle && gPawnSaveFormat == PAWN_CODE_STREAMER){
 		bool zeroOnly = GetObjectPawnProperties(inst)->interiorZeroOnly;
-		if(ImGui::Checkbox(_("Only interior 0"), &zeroOnly)){
+		if(UiCheckbox(_("Only interior 0"), &zeroOnly)){
 			UndoBeginGroup();
 			for(ObjectInst *target : selected){
 				if((target != inst && !batch) || target->m_isVehicle || target->m_area != 0)
@@ -7721,40 +8964,41 @@ uiInstInfo(ObjectInst *inst)
 	ImGui::EndDisabled();
 }
 
+// The model's files and its game settings, as detail rows. The ID is in the
+// header's Model ID; only what is set is listed.
 static void
 uiObjInfo(ObjectDef *obj)
 {
-	int i;
-	TxdDef *txd;
-
-	txd = GetTxdDef(obj->m_txdSlot);
-
-	ImGui::Text(_("ID: %d\n"), PawnModelId(obj->m_id));
-	InputTextReadonly<MODELNAMELEN>(_("Model"), obj->m_name);
-	InputTextReadonly<MODELNAMELEN>("TXD", txd ? txd->name : "");
-
-	InputTextReadonly<1024>("IDE", obj->m_file ? obj->m_file->name : "");
-	if(obj->m_colModel && !obj->m_gotChildCol)
-		InputTextReadonly<1024>("COL", obj->m_colModel->file ? obj->m_colModel->file->name : "");
-
-	ImGui::Text(_("Draw dist:"));
-	for(i = 0; i < obj->m_numAtomics; i++){
-		ImGui::SameLine();
-		ImGui::Text("%.0f", obj->m_drawDist[i]);
+	TxdDef *txd = GetTxdDef(obj->m_txdSlot);
+	UiInfoRow(_("Model"), obj->m_name);
+	UiInfoRow("TXD", txd ? txd->name : "");
+	if(obj->m_file){
+		const char *path = obj->m_file->name;
+		const char *base = path + strlen(path);
+		while(base > path && base[-1] != '/' && base[-1] != '\\') base--;
+		UiInfoRow("IDE", base, path);
 	}
-	ImGui::Text(_("Min Draw dist: %.0f"), obj->m_minDrawDist);
-
+	if(obj->m_colModel && !obj->m_gotChildCol && obj->m_colModel->file)
+		UiInfoRow("COL", obj->m_colModel->file->name);
+	char text[96];
+	int n = 0;
+	text[0] = '\0';
+	for(int i = 0; i < obj->m_numAtomics && n < (int)sizeof(text) - 12; i++)
+		n += snprintf(text + n, sizeof(text) - n, i ? " / %.0f m" : "%.0f m", obj->m_drawDist[i]);
+	UiInfoRow(_("Draw distance"), text);
+	if(obj->m_minDrawDist > 0.0f){
+		snprintf(text, sizeof(text), "%.0f m", obj->m_minDrawDist);
+		UiInfoRow(_("Shows from"), text, _("The model is only drawn from this far away."));
+	}
 	if(obj->m_isTimed){
-		ImGui::Text(_("Time: %d %d (visible now: %s)"),
-			obj->m_timeOn, obj->m_timeOff,
-			IsHourInRange(obj->m_timeOn, obj->m_timeOff) ? _("yes") : _("no"));
+		snprintf(text, sizeof(text), "%02d:00 - %02d:00", obj->m_timeOn, obj->m_timeOff);
+		UiInfoRow(_("Hours"), text, IsHourInRange(obj->m_timeOn, obj->m_timeOff) ?
+			_("Shown at the editor's time now.") : _("Hidden at the editor's time now."));
 	}
-
 	if(obj->m_relatedModel)
-		ImGui::Text(_("Related: %s\n"), obj->m_relatedModel->m_name);
+		UiInfoRow(_("Related"), obj->m_relatedModel->m_name);
 	if(obj->m_relatedTimeModel)
-		ImGui::Text(_("Related timed: %s\n"), obj->m_relatedTimeModel->m_name);
-
+		UiInfoRow(_("Related timed"), obj->m_relatedTimeModel->m_name);
 }
 
 struct CamSetting {
@@ -8215,7 +9459,7 @@ loadSaveSettings(void)
 	// Later saves retain whatever opacity the user chooses.
 	if(loadedSettingsVersion < 2)
 		gSelectionHighlightOpacity = 25;
-	// Version 3 opens the Object Browser on recently placed objects instead
+	// Version 3 opens the Asset Browser on recently placed objects instead
 	// of the whole catalogue, which starts with vehicles.
 	if(loadedSettingsVersion < 3 && gBrowserSelectedCategory == BROWSER_CATEGORY_ALL)
 		gBrowserSelectedCategory = BROWSER_CATEGORY_RECENT;
@@ -8232,9 +9476,16 @@ loadSaveSettings(void)
 		gBrowserTileSize = 7.0f;
 	}
 	if(loadedSettingsVersion < 8) gFogMode = FOG_LIGHT;
-	// The main toolbar and panels in pairs: adopt the arrangement once.
-	if(loadedSettingsVersion < 10)
+	// The main toolbar, details left, map objects right and the browsers
+	// below: adopt the arrangement once.
+	// v12: the TextDraw editor's properties in a window of their own.
+	// v13: the side panels full height, the browsers under the 3D view.
+	if(loadedSettingsVersion < 13)
 		gResetPanelLayout = true;
+	if(loadedSettingsVersion < 11){
+		gResetPanelLayout = true;
+		showBrowserWindow = showInstanceWindow = showMapObjectsWindow = true;
+	}
 	if(loadedSettingsVersion < 7){
 		gStreamDistance = 1000.0f;
 		gFogMode = FOG_LIGHT;
@@ -8512,33 +9763,44 @@ uiEditorWindow(void)
 	ObjectDef *obj;
 	TxdDef *txd;
 
-	uiNextPanelSizeConstraints();
-	ImGui::Begin(TI(ICON_FA_VIDEO, "Camera###Camera & Debug"), &showEditorWindow);
+	ImGuiWindowFlags flags = UiPlaceToolWindow(TI(ICON_FA_VIDEO, "Camera###Camera & Debug"), 26.0f, true);
+	ImGui::Begin(TI(ICON_FA_VIDEO, "Camera###Camera & Debug"), &showEditorWindow, flags);
 	uiFitItemsToPanel();
-	ImGui::TextDisabled(_("Camera speed and controls are in Windows > Preferences."));
-
-	if(ImGui::TreeNodeEx(L("Camera"), ImGuiTreeNodeFlags_DefaultOpen)){
-		ImGui::InputFloat3(_("Position"), (float*)&TheCamera.m_position);
-		ImGui::InputFloat3(_("Target"), (float*)&TheCamera.m_target);
-		ImGui::SameLine();
-		ImGui::Checkbox(_("show"), &gDrawTarget);
-		ImGui::SliderFloat(_("FOV"), &TheCamera.m_fov, CAMERA_FOV_MIN, CAMERA_FOV_MAX, "%.0f");
+	// Where the camera is, the views kept to come back to, and finding
+	// objects by their model or TXD: a tab each.
+	static int tab = 0;
+	const char *tabs[] = { L("Camera###camera_now"), L("Saved views###camera_views"), L("Find objects###camera_find") };
+	UiSegmented("##camera_tabs", tabs, 3, &tab);
+	ImGui::Spacing();
+	if(tab == 0){
+		UiInputFloat3(_("Position"), (float*)&TheCamera.m_position);
+		UiInputFloat3(_("Target"), (float*)&TheCamera.m_target);
+		// The FOV slider with its reset at the end of the row.
+		float resetWidth = ImGui::CalcTextSize(_("Reset")).x + ImGui::GetStyle().FramePadding.x * 2.0f;
+		ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - std::min(ImGui::GetFontSize() * 9.4f,
+			ImGui::GetContentRegionAvail().x * 0.42f) - resetWidth - ImGui::GetStyle().ItemSpacing.x);
+		UiSliderFloat(_("FOV"), &TheCamera.m_fov, CAMERA_FOV_MIN, CAMERA_FOV_MAX, "%.0f");
 		TheCamera.m_fov = ClampCameraFov(TheCamera.m_fov);
 		ImGui::SameLine();
 		if(ImGui::Button(_("Reset##fov")))
 			TheCamera.m_fov = CAMERA_FOV_DEFAULT;
 		ImGui::SetItemTooltip(_("Restore the default camera FOV (70°)."));
+		UiCheckbox(_("Show the target point##show_target"), &gDrawTarget);
+		ImGui::SetItemTooltip("%s", _("Camera speed and controls are in Windows > Preferences."));
 		char setCam[256];
 		snprintf(setCam, sizeof(setCam), "SetPlayerCameraPos(playerid, %.4f, %.4f, %.4f);\n"
 			"SetPlayerCameraLookAt(playerid, %.4f, %.4f, %.4f);",
 			TheCamera.m_position.x, TheCamera.m_position.y, TheCamera.m_position.z,
 			TheCamera.m_target.x, TheCamera.m_target.y, TheCamera.m_target.z);
-		if(ImGui::Button(TI(ICON_FA_COPY, "Copy as Pawn")))
+		if(UiFooterButton(TI(ICON_FA_COPY, "Copy as Pawn")))
 			SetEditorClipboardText(setCam);
 		ImGui::SetItemTooltip("%s", setCam);
-
-		ImGui::SeparatorText(_("Saved views"));
-		ImGui::InputText(_("name"), gEditorCameraName, sizeof(gEditorCameraName));
+	}else if(tab == 1){
+		// A name and Save on one row, then the views: click one to go there;
+		// Replace and Delete at its end while the pointer is on it.
+		float saveWidth = ImGui::CalcTextSize(_("Save")).x + ImGui::GetStyle().FramePadding.x * 2.0f;
+		ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - saveWidth - ImGui::GetStyle().ItemSpacing.x);
+		ImGui::InputTextWithHint("##view_name", _("name"), gEditorCameraName, sizeof(gEditorCameraName));
 		ImGui::SameLine();
 		if(ImGui::Button(_("Save"))){
 			CamSetting cam;
@@ -8547,15 +9809,47 @@ uiEditorWindow(void)
 			camSettings.push_back(cam);
 			saveCamSettings();
 		}
-
-		for(int i = 0; i < camSettings.size(); i++){
+		ImGui::SetItemTooltip(_("Keeps this view: the camera, the time, the weather and the interior."));
+		if(camSettings.empty()){
+			ImGui::Spacing();
+			ImGui::TextDisabled("%s", _("No saved views yet."));
+			ImGui::TextDisabled("%s", _("Name the current view and Save it to come back to it."));
+		}
+		float h = ImGui::GetFrameHeight(), spacing = ImGui::GetStyle().ItemSpacing.x;
+		float actionsW = ImGui::CalcTextSize(_("Replace")).x + ImGui::CalcTextSize(_("Delete")).x +
+			ImGui::GetStyle().FramePadding.x*4.0f + spacing;
+		for(int i = 0; i < (int)camSettings.size(); i++){
 			CamSetting *cam = &camSettings[i];
 			ImGui::PushID(i);
-			sprintf(buf, "%-20s", cam->name);
+			ImVec2 rowAt = ImGui::GetCursorPos();
+			bool go = ImGui::Selectable(cam->name[0] ? cam->name : "-", false, ImGuiSelectableFlags_AllowOverlap,
+				ImVec2(0, h));
+			bool rowHovered = ImGui::IsItemHovered();
+			ImGui::SetItemTooltip(_("Go to this view"));
+			if(go){
+				strncpy(gEditorCameraName, cam->name, sizeof(gEditorCameraName));
+				TheCamera.m_position = cam->pos;
+				TheCamera.m_target = cam->target;
+				TheCamera.m_fov = cam->fov;
+				currentHour = cam->hour;
+				currentMinute = cam->minute;
+				Weather::oldWeather = cam->weather1;
+				Weather::newWeather = cam->weather2;
+				if(params.numAreas)
+					currentArea = cam->area;
+			}
 			// Saved views have no undo, so Delete and Replace ask first.
 			bool del = false;
-			if(ImGui::Button(_("Delete")))
-				ImGui::OpenPopup("##delete_view");
+			bool asking = ImGui::IsPopupOpen("##delete_view") || ImGui::IsPopupOpen("##replace_view");
+			if(rowHovered || asking || ImGui::IsMouseHoveringRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax())){
+				ImGui::SetCursorPos(ImVec2(ImGui::GetWindowContentRegionMax().x - actionsW, rowAt.y));
+				if(ImGui::Button(_("Replace")))
+					ImGui::OpenPopup("##replace_view");
+				ImGui::SetItemTooltip(_("Saves the current view over this one, named as in the field above."));
+				ImGui::SameLine();
+				if(ImGui::Button(_("Delete")))
+					ImGui::OpenPopup("##delete_view");
+			}
 			if(ImGui::BeginPopup("##delete_view")){
 				ImGui::Text(_("Delete the view \"%s\"?"), cam->name);
 				if(ImGui::Button(_("Delete##confirm"))){
@@ -8567,10 +9861,6 @@ uiEditorWindow(void)
 					ImGui::CloseCurrentPopup();
 				ImGui::EndPopup();
 			}
-			ImGui::SameLine();
-			if(ImGui::Button(_("Replace")))
-				ImGui::OpenPopup("##replace_view");
-			ImGui::SetItemTooltip(_("Saves the current view over this one, named as in the field above."));
 			if(ImGui::BeginPopup("##replace_view")){
 				ImGui::Text(_("Replace \"%s\" with the current view?"), cam->name);
 				if(ImGui::Button(_("Replace##confirm"))){
@@ -8584,19 +9874,8 @@ uiEditorWindow(void)
 					ImGui::CloseCurrentPopup();
 				ImGui::EndPopup();
 			}
-			ImGui::SameLine();
-			if(ImGui::Selectable(buf)){
-				strncpy(gEditorCameraName, cam->name, sizeof(gEditorCameraName));
-				TheCamera.m_position = cam->pos;
-				TheCamera.m_target = cam->target;
-				TheCamera.m_fov = cam->fov;
-				currentHour = cam->hour;
-				currentMinute = cam->minute;
-				Weather::oldWeather = cam->weather1;
-				Weather::newWeather = cam->weather2;
-				if(params.numAreas)
-					currentArea = cam->area;
-			}
+			ImGui::SetCursorPos(ImVec2(rowAt.x, rowAt.y + h + ImGui::GetStyle().ItemSpacing.y));
+			ImGui::Dummy(ImVec2(0, 0));
 			ImGui::PopID();
 			if(del){
 				memmove(&camSettings[i], &camSettings[i+1], (camSettings.size()-i-1)*sizeof(CamSetting));
@@ -8605,17 +9884,23 @@ uiEditorWindow(void)
 				i--;
 			}
 		}
-		ImGui::TreePop();
 	}
 
-	if(ImGui::TreeNode(L("Find objects by model or TXD"))){
-		gEditorModelFilter.Draw(_("Model (inc,-exc)")); ImGui::SameLine();
-		if(ImGui::Button(_("Clear##Model")))
-			gEditorModelFilter.Clear();
-		gEditorTxdFilter.Draw(_("Txd (inc,-exc)")); ImGui::SameLine();
-		if(ImGui::Button(_("Clear##Txd")))
-			gEditorTxdFilter.Clear();
-		ImGui::Checkbox(_("Highlight matches"), &gEditorHighlightMatches);
+	if(tab == 2){
+		// Each filter: its name on the left, the field, Clear at the end.
+		auto filterRow = [](ImGuiTextFilter &filter, const char *label, const char *fieldId, const char *clearId){
+			char unusedId[96];
+			UiFieldLabel(label, unusedId, sizeof(unusedId));
+			float clear = ImGui::CalcTextSize(_("Clear")).x + ImGui::GetStyle().FramePadding.x * 2.0f;
+			filter.Draw(fieldId,
+				ImGui::GetContentRegionAvail().x - clear - ImGui::GetStyle().ItemSpacing.x);
+			ImGui::SameLine();
+			if(ImGui::Button(clearId))
+				filter.Clear();
+		};
+		filterRow(gEditorModelFilter, _("Model (inc,-exc)"), "##model_filter", _("Clear##Model"));
+		filterRow(gEditorTxdFilter, _("Txd (inc,-exc)"), "##txd_filter", _("Clear##Txd"));
+		UiCheckbox(_("Highlight matches"), &gEditorHighlightMatches);
 
 		uint32 instanceChangeSeq = GetLatestChangeSeq();
 		if(gEditorCachedInstancesFirst != instances.first ||
@@ -8685,7 +9970,6 @@ uiEditorWindow(void)
 				}
 			}
 		}
-		ImGui::TreePop();
 	}
 
 	ImGui::End();
@@ -8745,22 +10029,50 @@ uiDefaultPanelLayout(PanelSlot slot)
 		ImGui::SetNextWindowCollapsed(false, ImGuiCond_Always);
 }
 
+// A small window (Time & Weather, View, Camera, Map Check...): each time
+// it opens, at the 3D view's top left beside the left panel, under the
+// view's pills, never over another panel; fit: as tall as what it holds (the
+// caller adds ImGuiWindowFlags_AlwaysAutoResize), else a list's size. Left
+// where it is while docked.
+ImGuiWindowFlags
+UiPlaceToolWindow(const char *name, float widthEm, bool fit)
+{
+	ImGuiWindow *window = ImGui::FindWindowByName(name);
+	if(window && window->DockIsActive)
+		return 0;
+	float fs = ImGui::GetFontSize(), gap = uiPanelGap();
+	ImRect view = uiPanelWorkArea();
+#ifdef IMGUI_HAS_DOCK
+	if(ImGuiDockNode *central = ImGui::DockBuilderGetCentralNode(ImHashStr("HaumeaDockSpace")))
+		view = ImRect(central->Pos, ImVec2(central->Pos.x + central->Size.x, central->Pos.y + central->Size.y));
+#endif
+	ImGui::SetNextWindowPos(ImVec2(view.Min.x + gap*3.0f, view.Min.y + fs*3.0f), ImGuiCond_Appearing);
+	float width = std::min(floorf(widthEm*fs), view.GetWidth() - gap*6.0f);
+	float maxHeight = std::max(fs*10.0f, view.GetHeight() - fs*4.0f);
+	if(fit){
+		ImGui::SetNextWindowSizeConstraints(ImVec2(width, 0.0f), ImVec2(width, maxHeight));
+		return ImGuiWindowFlags_AlwaysAutoResize;
+	}
+	ImGui::SetNextWindowSize(ImVec2(width, floorf(maxHeight*0.75f)), ImGuiCond_Appearing);
+	ImGui::SetNextWindowSizeConstraints(ImVec2(fs*20.0f, fs*10.0f), ImVec2(FLT_MAX, FLT_MAX));
+	return 0;
+}
+
 static void
 uiResetPanelLayout(void)
 {
 	showBrowserWindow = true;
 	showInstanceWindow = true;
-	showMapObjectsWindow = false;
+	showMapObjectsWindow = true;
 	showSavedSelectionsWindow = false;
 	showToolsWindow = false;
 	gResetPanelLayout = true;
 }
 
 #ifdef IMGUI_HAS_DOCK
-// Default arrangement: one column on the right, like a creative suite's
-// panels, in groups of two: the browser on top, then Object Info | Tools, then
-// Map Objects | History, which takes what height is left. Two tabs a group keep
-// their names whole in a narrow column. Keep the world view dominant.
+// Default arrangement: the selection's details on the left and the map's
+// objects on the right, both the full height; the browsers in a strip under
+// the 3D view, between them. The 3D view keeps the middle.
 static void
 uiBuildDefaultDockLayout(ImGuiID dockspace)
 {
@@ -8768,24 +10080,23 @@ uiBuildDefaultDockLayout(ImGuiID dockspace)
 	ImGui::DockBuilderRemoveNode(dockspace);
 	ImGui::DockBuilderAddNode(dockspace, ImGuiDockNodeFlags_DockSpace);
 	ImGui::DockBuilderSetNodeSize(dockspace, viewport->WorkSize);
-	float w = viewport->WorkSize.x;
+	float w = viewport->WorkSize.x, h = viewport->WorkSize.y;
 	// Room for Object Info's fields; a wide screen gets a little more.
-	float side = clamp(std::max(380.0f * GetUiScale(), w * 0.17f) / w, 0.16f, 0.34f);
+	float side = clamp(std::max(380.0f * GetUiScale(), w * 0.19f) / w, 0.16f, 0.32f);
+	float strip = clamp(std::max(240.0f * GetUiScale(), h * 0.28f) / h, 0.20f, 0.40f);
+	// The side columns run the full height; the browsers' strip sits only
+	// under the 3D view, between them, so it never cuts a panel short.
 	ImGuiID center = dockspace;
-	ImGuiID right = ImGui::DockBuilderSplitNode(center, ImGuiDir_Right, side, nil, &center);
-	ImGuiID properties;
-	ImGuiID library = ImGui::DockBuilderSplitNode(right, ImGuiDir_Up, 0.42f, nil, &properties);
-	// The browser has a group of its own: it takes focus when it opens, so a
-	// tab beside it would lose its place on every start.
-	ImGui::DockBuilderDockWindow(LI(ICON_FA_MAGNIFYING_GLASS, "Object Browser"), library);
-	ImGuiID layers;
-	properties = ImGui::DockBuilderSplitNode(properties, ImGuiDir_Up, 0.5f, nil, &layers);
-	ImGui::DockBuilderDockWindow(LI(ICON_FA_CIRCLE_INFO, "Object Info"), properties);
-	ImGui::DockBuilderDockWindow(LI(ICON_FA_WRENCH, "Tools"), properties);
-	ImGui::DockBuilderDockWindow(LI(ICON_FA_LAYER_GROUP, "Map Objects"), layers);
-	ImGui::DockBuilderDockWindow(LI(ICON_FA_CLOCK_ROTATE_LEFT, "History"), layers);
-	// Closed until asked for (the toolbar's Selections), so the group stays a pair.
-	ImGui::DockBuilderDockWindow(LI(ICON_FA_STAR, "Saved selections"), layers);
+	ImGuiID left = ImGui::DockBuilderSplitNode(center, ImGuiDir_Left, side, nil, &center);
+	ImGuiID right = ImGui::DockBuilderSplitNode(center, ImGuiDir_Right, side / (1.0f - side), nil, &center);
+	ImGuiID bottom = ImGui::DockBuilderSplitNode(center, ImGuiDir_Down, strip, nil, &center);
+	ImGui::DockBuilderDockWindow(LI(ICON_FA_CIRCLE_INFO, "Object Info"), left);
+	ImGui::DockBuilderDockWindow(LI(ICON_FA_WRENCH, "Tools"), left);
+	ImGui::DockBuilderDockWindow(LI(ICON_FA_LAYER_GROUP, "Map Objects"), right);
+	ImGui::DockBuilderDockWindow(LI(ICON_FA_CLOCK_ROTATE_LEFT, "History"), right);
+	ImGui::DockBuilderDockWindow(LI(ICON_FA_STAR, "Saved selections"), right);
+	ImGui::DockBuilderDockWindow(LI(ICON_FA_MAGNIFYING_GLASS, "Asset Browser"), bottom);
+	ImGui::DockBuilderDockWindow(LI(ICON_FA_PAINTBRUSH, "Texture Browser"), bottom);
 	ImGui::DockBuilderFinish(dockspace);
 }
 
@@ -8798,13 +10109,21 @@ uiDockSpace(void)
 	ImGuiID textdraws = ImHashStr("HaumeaTextDrawDockSpace");
 	bool editingTextDraws = InTextDrawMode();
 	// A panel that is closed never asks for its label, which is what moves an
-	// old layout's settings to its ### ID; History and Saved selections are
-	// new and often closed.
+	// old layout's settings to its ### ID: ask for every docked panel's here,
+	// so one closed at the upgrade keeps its place and dock too.
+	LI(ICON_FA_CIRCLE_INFO, "Object Info");
+	LI(ICON_FA_WRENCH, "Tools");
+	LI(ICON_FA_LAYER_GROUP, "Map Objects");
 	LI(ICON_FA_CLOCK_ROTATE_LEFT, "History");
 	LI(ICON_FA_STAR, "Saved selections");
+	LI(ICON_FA_MAGNIFYING_GLASS, "Asset Browser");
+	LI(ICON_FA_PAINTBRUSH, "Texture Browser");
 	if(!editingTextDraws && (gResetPanelLayout || ImGui::DockBuilderGetNode(map) == nil))
 		uiBuildDefaultDockLayout(map);
-	if(editingTextDraws && (gResetPanelLayout || ImGui::DockBuilderGetNode(textdraws) == nil)){
+	// Also when the TextDraws Properties window is new to this layout: it
+	// docks under the layers, not floating over them.
+	if(editingTextDraws && (gResetPanelLayout || ImGui::DockBuilderGetNode(textdraws) == nil ||
+	   ImGui::FindWindowSettingsByID(ImHashStr("###td_properties")) == nil)){
 		ImGuiViewportP *viewport = (ImGuiViewportP*)ImGui::GetMainViewport();
 		ImRect work = viewport->GetBuildWorkRect();
 		ImGui::DockBuilderRemoveNode(textdraws);
@@ -8814,7 +10133,11 @@ uiDockSpace(void)
 		ImGuiID center = textdraws;
 		float side = clamp(350.0f * GetUiScale() / work.GetWidth(), 0.22f, 0.42f);
 		ImGuiID right = ImGui::DockBuilderSplitNode(center, ImGuiDir_Right, side, nil, &center);
-		ImGui::DockBuilderDockWindow("###textdraws", right);
+		// The layers on top, the selection's properties under them.
+		ImGuiID properties;
+		ImGuiID layersNode = ImGui::DockBuilderSplitNode(right, ImGuiDir_Up, 0.42f, nil, &properties);
+		ImGui::DockBuilderDockWindow("###textdraws", layersNode);
+		ImGui::DockBuilderDockWindow("###td_properties", properties);
 		ImGui::DockBuilderFinish(textdraws);
 	}
 	// The Terminal's first time open: a strip along the bottom of the 3D view,
@@ -9086,98 +10409,99 @@ uiToolsWindow(void)
 	}
 	uiFitItemsToPanel();
 
-	// The toolbar keeps common actions close; less-used placement settings
-	// stay available here without filling the compact panel.
-	if(ImGui::CollapsingHeader(L("Placement"), ImGuiTreeNodeFlags_DefaultOpen)){
-		ImGui::Checkbox(_("Land on objects"), &gPlaceSnapToObjects);
+	// What the tools are for, a tab each: placing (where new objects land,
+	// how dragging and snapping go, the brush, the pin and pivot), arranging
+	// what is selected, and making more of it.
+	static int tab = 0;
+	int asked = MapToolsRequestedTab();
+	if(asked >= 0) tab = asked;
+	if(gBrushMode) tab = 0;
+	const char *tabs[] = { L("Place###tools_place"), L("Arrange###tools_arrange"), L("Create###tools_create") };
+	UiSegmented("##tools_tabs", tabs, 3, &tab);
+	ImGui::Spacing();
+	if(tab == 1 || tab == 2){
+		MapToolsTab(tab);
+		if(tab == 2)
+			RadarArtPanel();
+		ImGui::End();
+		return;
+	}
+
+	if(UiSection(L("Placement"), ImGuiTreeNodeFlags_DefaultOpen)){
+		UiCheckbox(_("Land on objects"), &gPlaceSnapToObjects);
 		ImGui::SetItemTooltip(_("New objects sit on the object under the cursor."));
-		ImGui::Checkbox(_("Land on ground"), &gPlaceSnapToGround);
+		UiCheckbox(_("Land on ground"), &gPlaceSnapToGround);
 		ImGui::SetItemTooltip(_("New objects sit on the ground under the cursor."));
 	}
-	if(ImGui::CollapsingHeader(L("Dragging"))){
+	if(UiSection(L("Dragging"))){
 		ImGui::BeginDisabled(!gDragFollowGround);
-		ImGui::Checkbox(_("Tilt to slope"), &gDragAlignToSurface);
+		UiCheckbox(_("Tilt to slope"), &gDragAlignToSurface);
 		ImGui::EndDisabled();
 		ImGui::SetItemTooltip(_("Match the object's angle to the ground slope. Enable Follow ground in More on the toolbar."));
 	}
-	if(ImGui::CollapsingHeader(L("Snapping"))){
+	if(UiSection(L("Snapping"))){
 		if(isSA()){
-			ImGui::InputFloat(_("Snap distance"), &gObjectSnapDistance, 0.05f, 0.5f, "%.2f m");
+			UiInputFloat(_("Snap distance"), &gObjectSnapDistance, 0.05f, 0.5f, "%.2f m");
 			ImGui::SetItemTooltip(_("Object snap (%s) uses this distance."), uiKey(SC_OBJECT_SNAP));
 			gObjectSnapDistance = clamp(gObjectSnapDistance, 0.01f, 10.0f);
 		}
-		ImGui::InputFloat(_("Move step"), &gGizmoSnapTranslate, 0.25f, 1.0f, "%g m");
+		UiInputFloat(_("Move step"), &gGizmoSnapTranslate, 0.25f, 1.0f, "%g m");
 		ImGui::SetItemTooltip(_("Hold Shift while moving with the magnet on."));
 		gGizmoSnapTranslate = clamp(gGizmoSnapTranslate, 0.01f, 1000.0f);
-		ImGui::InputFloat(_("Rotate step"), &gGizmoSnapAngle, 5.0f, 15.0f, "%g\xC2\xB0");
+		UiInputFloat(_("Rotate step"), &gGizmoSnapAngle, 5.0f, 15.0f, "%g\xC2\xB0");
 		ImGui::SetItemTooltip(_("Hold Shift while rotating with the magnet on."));
 		gGizmoSnapAngle = clamp(gGizmoSnapAngle, 0.1f, 180.0f);
 	}
 
-	ImGui::Spacing();
-	MapToolsPanel();
-	if(ImGui::CollapsingHeader(LI(ICON_FA_PAINTBRUSH, "Brush"), gBrushMode ? ImGuiTreeNodeFlags_DefaultOpen : 0)){
+	if(UiSection(LI(ICON_FA_PAINTBRUSH, "Brush"), gBrushMode ? ImGuiTreeNodeFlags_DefaultOpen : 0)){
 		int brushObjId = GetSpawnObjectId();
 		ObjectDef *brushObj = brushObjId >= 0 ? GetObjectDef(brushObjId) : nil;
 
+		// What it paints, then one button to start or stop; the keys in its tooltip.
+		UiInfoRow(_("Object"), brushObj ? brushObj->m_name : _("Select an object in the Browser first"));
+		char keys[160];
+		if(gCameraLookButton == 2)
+			snprintf(keys, sizeof(keys), "%s", _("LMB = paint   \xC2\xB7   MMB-drag = look around   \xC2\xB7   Esc = cancel"));
+		else
+			snprintf(keys, sizeof(keys), _("LMB = paint   \xC2\xB7   %s-drag = look around   \xC2\xB7   Esc = cancel"),
+				cameraMouseButtonName(cameraBrushLookButton()));
 		if(gBrushMode){
-			ImVec4 active(0.95f, 0.75f, 0.20f, 1.0f);
-			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.35f, 0.25f, 0.05f, 1.0f));
+			ImVec4 w = UiSemanticColor(UI_COLOR_WARNING);
+			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(w.x, w.y, w.z, 0.25f));
+			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(w.x, w.y, w.z, 0.35f));
 			char exitLabel[64];
 			snprintf(exitLabel, sizeof(exitLabel), _("Exit Brush (%s)##exit_brush"), uiKey(SC_CANCEL));
-			if(ImGui::Button(exitLabel))
+			if(ImGui::Button(exitLabel, ImVec2(-FLT_MIN, 0)))
 				ExitBrushMode();
-			ImGui::PopStyleColor();
-			ImGui::SameLine();
-			if(brushObj){
-				char painting[160];
-				snprintf(painting, sizeof(painting), _("Painting: %s"), brushObj->m_name);
-				ImGui::PushStyleColor(ImGuiCol_Text, active);
-				UiElidedText(painting, ImGui::GetContentRegionAvail().x);
-				ImGui::PopStyleColor();
-			}
-			else
-				ImGui::TextColored(active, _("No object selected"));
+			ImGui::PopStyleColor(2);
 		}else{
 			ImGui::BeginDisabled(brushObjId < 0);
-			if(ImGui::Button(_("Start Brush")))
+			ImVec4 fill = UiAccentFill();
+			ImGui::PushStyleColor(ImGuiCol_Button, fill);
+			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(fill.x*1.12f, fill.y*1.12f, fill.z*1.12f, 1.0f));
+			ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 1, 1, 1));
+			if(ImGui::Button(_("Start Brush"), ImVec2(-FLT_MIN, 0)))
 				EnterBrushMode(brushObjId);
+			ImGui::PopStyleColor(3);
 			ImGui::EndDisabled();
-			ImGui::SameLine();
-			if(brushObj){
-				char ready[160];
-				snprintf(ready, sizeof(ready), _("Ready: %s"), brushObj->m_name);
-				ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
-				UiElidedText(ready, ImGui::GetContentRegionAvail().x);
-				ImGui::PopStyleColor();
-			}
-			else
-				ImGui::TextDisabled(_("Select an object in the Browser first"));
 		}
-		if(gCameraLookButton == 2)
-			ImGui::TextDisabled(_("LMB = paint   \xC2\xB7   MMB-drag = look around   \xC2\xB7   Esc = cancel"));
-		else
-			ImGui::TextDisabled(_("LMB = paint   \xC2\xB7   %s-drag = look around   \xC2\xB7   Esc = cancel"),
-				cameraMouseButtonName(cameraBrushLookButton()));
+		ImGui::SetItemTooltip("%s", keys);
+		ImGui::Spacing();
 
-		ImGui::InputFloat(_("Z offset (m)"), &gBrushZOffset, 0.1f, 1.0f, "%.2f");
+		UiInputFloat(_("Z offset (m)"), &gBrushZOffset, 0.1f, 1.0f, "%.2f");
 		ImGui::SetItemTooltip(_("Shift along Z after ground snap.\n"
 			"Negative sinks the object into the ground (useful for trees on slopes).\n"
 			"Positive lifts it off the surface."));
 
-		ImGui::Checkbox(_("Align to surface##brush"), &gBrushAlignToSurface);
-		ImGui::SetItemTooltip(_("Rotate placed objects so their up-axis matches the surface normal.\n"
-			"Use with care — some tree models look better upright on slopes."));
-
 		// Brush size + scatter
-		ImGui::InputFloat(_("Radius (m)"), &gBrushRadius, 0.5f, 5.0f, "%.2f");
+		UiInputFloat(_("Radius (m)"), &gBrushRadius, 0.5f, 5.0f, "%.2f");
 		if(gBrushRadius < 0.0f) gBrushRadius = 0.0f;
 		if(gBrushRadius > 500.0f) gBrushRadius = 500.0f;
 		ImGui::SetItemTooltip(_("Brush disc size. 0 = single object under cursor.\n"
 			"When > 0, each click scatters Count objects inside this radius."));
 
 		ImGui::BeginDisabled(gBrushRadius <= 0.01f);
-		ImGui::InputInt(_("Count / click"), &gBrushCount, 1, 5);
+		UiInputInt(_("Count / click"), &gBrushCount, 1, 5);
 		if(gBrushCount < 1) gBrushCount = 1;
 		if(gBrushCount > 128) gBrushCount = 128;
 		ImGui::SetItemTooltip(_("Number of objects scattered per click when Radius > 0.\n"
@@ -9186,7 +10510,7 @@ uiToolsWindow(void)
 
 		// Yaw range
 		float yaw[2] = { gBrushYawMin, gBrushYawMax };
-		if(ImGui::InputFloat2(_("Yaw min/max (\xC2\xB0)"), yaw, "%.0f")){
+		if(UiInputFloat2(_("Yaw min/max (\xC2\xB0)"), yaw, "%.0f")){
 			gBrushYawMin = yaw[0];
 			gBrushYawMax = yaw[1];
 		}
@@ -9198,20 +10522,22 @@ uiToolsWindow(void)
 			"Different = uniform random between them (e.g. 0/360 for full random)."));
 
 		// Drag pacing
-		ImGui::InputFloat(_("Spacing (m)"), &gBrushSpacing, 0.25f, 1.0f, "%.2f");
+		UiInputFloat(_("Spacing (m)"), &gBrushSpacing, 0.25f, 1.0f, "%.2f");
 		if(gBrushSpacing < 0.0f) gBrushSpacing = 0.0f;
 		ImGui::SetItemTooltip(_("Minimum world distance between drag-paint bursts.\n"
 			"0 disables the distance gate (delay alone controls the rate).\n"
 			"Single clicks always fire regardless."));
 
-		ImGui::InputFloat(_("Delay (ms)"), &gBrushDelayMs, 10.0f, 100.0f, "%.0f");
+		UiInputFloat(_("Delay (ms)"), &gBrushDelayMs, 10.0f, 100.0f, "%.0f");
 		if(gBrushDelayMs < 0.0f) gBrushDelayMs = 0.0f;
 		if(gBrushDelayMs > 10000.0f) gBrushDelayMs = 10000.0f;
 		ImGui::SetItemTooltip(_("Minimum time between drag-paint bursts, in milliseconds.\n"
 			"0 = no delay. Combines with Spacing — both constraints must pass."));
+		UiCheckbox(_("Align to surface##brush"), &gBrushAlignToSurface);
+		ImGui::SetItemTooltip(_("Rotate placed objects so their up-axis matches the surface normal.\n"
+			"Use with care — some tree models look better upright on slopes."));
 	}
-	MapToolsMorePanel();
-	RadarArtPanel();
+	MapToolsTab(0);
 	ImGui::End();
 }
 
@@ -9237,39 +10563,47 @@ uiMapCheckBefore(const char *action)
 static void
 uiMapCheckWindow(void)
 {
-	ImGui::SetNextWindowSize(ImVec2(ImGui::GetFontSize() * 34.0f, ImGui::GetFontSize() * 28.0f), ImGuiCond_FirstUseEver);
-	uiNextPanelSizeConstraints();
-	if(!ImGui::Begin(LI(ICON_FA_LIST, "Map Check"), &showMapCheckWindow)){
+	ImGuiWindowFlags flags = UiPlaceToolWindow(LI(ICON_FA_LIST, "Map Check"), 30.0f, false);
+	if(!ImGui::Begin(LI(ICON_FA_LIST, "Map Check"), &showMapCheckWindow, flags)){
 		ImGui::End();
 		return;
 	}
 	uiFitItemsToPanel();
-	if(!gMapCheckDone || ImGui::Button(TI(ICON_FA_ROTATE, "Check again"))){
+	// What will break in game: the verdict, then the issues to click
+	// through, then Check again at the foot.
+	if(!gMapCheckDone){
 		RunMapCheck(gPawnSaveFormat, &gMapCheck, true);
 		gMapCheckDone = true;
 	}
-	ImGui::SameLine();
-	ImGui::Checkbox(_("Notes"), &gMapCheckShowNotes);
-	ImGui::SameLine();
-	ImGui::TextDisabled("%s", gMapCheck.pawnFormat == PAWN_CODE_STREAMER ? _("for Streamer code") : _("for native code"));
 	std::string summary = MapCheckSummary(gMapCheck);
+	ImGui::AlignTextToFramePadding();
 	if(summary.empty())
 		ImGui::TextColored(UiSemanticColor(UI_COLOR_SUCCESS), TI(ICON_FA_CHECK, "Nothing that will break in game."));
 	else
-		ImGui::TextColored(UiSemanticColor(UI_COLOR_WARNING), "%s", summary.c_str());
-	ImGui::Separator();
+		ImGui::TextColored(UiSemanticColor(UI_COLOR_WARNING), "%s %s", ICON_FA_TRIANGLE_EXCLAMATION, summary.c_str());
+	ImGui::SetItemTooltip("%s", gMapCheck.pawnFormat == PAWN_CODE_STREAMER ? _("for Streamer code") : _("for native code"));
+	// Notes (what is fine but worth knowing) at the row's end.
+	{
+		const char *notes = _("Notes");
+		float w = ImGui::CalcTextSize(notes).x + ImGui::GetFontSize() * 2.0f + ImGui::GetStyle().ItemInnerSpacing.x;
+		ImGui::SameLine(ImGui::GetWindowContentRegionMax().x - w);
+		UiCheckbox(notes, &gMapCheckShowNotes);
+		ImGui::SetItemTooltip(_("Also list what is fine but worth knowing."));
+	}
+	ImGui::Spacing();
 
-	ImGui::BeginChild("##map_check_items", UiFillRest(UiListMinHeight()));
+	float footer = ImGui::GetFrameHeight() + ImGui::GetStyle().ItemSpacing.y * 2.0f;
+	ImGui::BeginChild("##map_check_items", ImVec2(0, -footer));
 	const char *lastCategory = nil;
 	for(size_t i = 0; i < gMapCheck.items.size(); i++){
 		const MapCheckItem &item = gMapCheck.items[i];
 		if(item.severity == MAPCHECK_INFO && !gMapCheckShowNotes)
 			continue;
 		if(lastCategory == nil || strcmp(lastCategory, item.category) != 0){
-			ImGui::SeparatorText(item.category);
+			UiHeading(item.category);
 			lastCategory = item.category;
 		}
-		ImVec4 colour = item.severity == MAPCHECK_ERROR ? ImVec4(1.0f, 0.40f, 0.35f, 1.0f) :
+		ImVec4 colour = item.severity == MAPCHECK_ERROR ? UiSemanticColor(UI_COLOR_ERROR) :
 			item.severity == MAPCHECK_WARNING ? UiSemanticColor(UI_COLOR_WARNING) :
 			ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled);
 		const char *icon = item.severity == MAPCHECK_ERROR ? ICON_FA_XMARK :
@@ -9303,6 +10637,10 @@ uiMapCheckWindow(void)
 		ImGui::PopID();
 	}
 	ImGui::EndChild();
+	if(UiFooterButton(TI(ICON_FA_ROTATE, "Check again"))){
+		RunMapCheck(gPawnSaveFormat, &gMapCheck, true);
+		gMapCheckDone = true;
+	}
 	ImGui::End();
 }
 
@@ -9381,7 +10719,7 @@ uiShortcutPreferences(void)
 			if(lastSection == nil || strcmp(lastSection, info->section) != 0){
 				ImGui::TableNextRow();
 				ImGui::TableSetColumnIndex(0);
-				ImGui::SeparatorText(_(info->section));
+				UiHeading(_(info->section));
 				lastSection = info->section;
 			}
 			ImGui::PushID(action);
@@ -9451,17 +10789,17 @@ uiGeneralPreferences(void)
 {
 	bool changed = false;
 
-	ImGui::SeparatorText(_("Interface"));
+	UiHeading(_("Interface"));
 	if(uiLanguagePreferences())
 		changed = true;
 	float scale = ImGui::GetIO().FontGlobalScale;
-	if(ImGui::SliderFloat(_("UI scale"), &scale, 0.6f, 2.5f, "%.2fx")){
+	if(UiSliderFloat(_("UI scale"), &scale, 0.6f, 2.5f, "%.2fx")){
 		ImGui::GetIO().FontGlobalScale = scale;
 		gUiScale = scale;
 	}
 	changed |= ImGui::IsItemDeactivatedAfterEdit();
 	int theme = GetUiTheme();
-	if(ImGui::BeginCombo(_("Theme"), GetUiThemeName(theme))){
+	if(UiBeginCombo(_("Theme"), GetUiThemeName(theme))){
 		for(int t = 0; t < NumUiThemes(); t++){
 			if(t == UI_THEME_FIRST_PALETTE)
 				ImGui::Separator();
@@ -9474,37 +10812,35 @@ uiGeneralPreferences(void)
 		}
 		ImGui::EndCombo();
 	}
-	changed |= ImGui::Checkbox(_("Snap panels to edges and each other"), &gPanelSnap);
+	changed |= UiCheckbox(_("Snap panels to edges and each other"), &gPanelSnap);
 	ImGui::SetItemTooltip(_("Hold Alt while dragging to place a panel freely."));
-	changed |= ImGui::Checkbox(_("Show getting started card on empty maps"), &gShowStartGuide);
+	changed |= UiCheckbox(_("Show getting started card on empty maps"), &gShowStartGuide);
 	changed |= KeycastPreferences();
-	if(ImGui::Button(TI(ICON_FA_TABLE_COLUMNS, "Reset panel layout")))
-		uiResetPanelLayout();
 
-	ImGui::SeparatorText(_("Maps"));
-	changed |= ImGui::Checkbox(_("Reopen last map on startup"), &gReopenLastMap);
-	bool autosaveChanged = ImGui::Checkbox(_("Autosave unsaved maps"), &gAutosaveEnabled);
+	UiHeading(_("Maps"));
+	changed |= UiCheckbox(_("Reopen last map on startup"), &gReopenLastMap);
+	bool autosaveChanged = UiCheckbox(_("Autosave unsaved maps"), &gAutosaveEnabled);
 	ImGui::SetItemTooltip(_("Writes a copy of the open map to the autosave folder in Haumea's config\n"
 		"folder while it has unsaved changes. File > Recover Autosave opens them.\n"
 		"The map file itself is only written by Save."));
 	ImGui::BeginDisabled(!gAutosaveEnabled);
 	ImGui::Indent();
 	int autosaveMinutes = gAutosaveIntervalSeconds / 60;
-	if(ImGui::SliderInt(_("Every (minutes)"), &autosaveMinutes, 1, 30)){
+	if(UiSliderInt(_("Every (minutes)"), &autosaveMinutes, 1, 30)){
 		gAutosaveIntervalSeconds = autosaveMinutes * 60;
 		autosaveChanged = true;
 	}
-	autosaveChanged |= ImGui::SliderInt(_("Copies to keep"), &gAutosaveKeepCount, 1, 50);
+	autosaveChanged |= UiSliderInt(_("Copies to keep"), &gAutosaveKeepCount, 1, 50);
 	ImGui::Unindent();
 	ImGui::EndDisabled();
 	if(autosaveChanged){
 		sanitizeAutosaveSettings();
 		changed = true;
 	}
-	changed |= ImGui::Checkbox(_("Confirm before reloading game files"), &gConfirmReloadGame);
+	changed |= UiCheckbox(_("Confirm before reloading game files"), &gConfirmReloadGame);
 	ImGui::SetItemTooltip(_("When off, Reload Game Files restarts at once if there are no unsaved changes.\nUnsaved changes always ask first."));
 
-	ImGui::SeparatorText(_("Notifications"));
+	UiHeading(_("Notifications"));
 	uiNotificationSettings();
 
 	if(changed)
@@ -9515,10 +10851,11 @@ static void
 uiCameraPreferences(void)
 {
 	bool changed = false;
-	ImGui::SeparatorText(_("Mouse"));
-	ImGui::Text(_("Look around with"));
+	UiHeading(_("Mouse"));
+	char lookId[64];
+	UiFieldLabel(_("Look around with"), lookId, sizeof(lookId));
 	for(int button = 1; button <= 3; button++){
-		ImGui::SameLine();
+		if(button > 1) ImGui::SameLine();
 		char label[32];
 		snprintf(label, sizeof(label), "%s##camera_look_button", cameraMouseButtonName(button));
 		if(ImGui::RadioButton(label, gCameraLookButton == button)){
@@ -9526,23 +10863,21 @@ uiCameraPreferences(void)
 			changed = true;
 		}
 	}
-	ImGui::SameLine();
-	ImGui::TextDisabled("(?)");
 	ImGui::SetItemTooltip("%s", gCameraLookButton == 1 ?
 		_("Hold it and drag to look, and fly with W/A/S/D (Q/E down and up) while it's held;\n"
 		"a click without dragging still selects.\n"
 		"While brushing, LMB paints, so hold RMB to look.") :
 		_("Hold it and drag to look, and fly with W/A/S/D (Q/E down and up) while it's held;\n"
 		"a click without dragging still selects."));
-	ImGui::SeparatorText(_("Flying"));
-	changed |= ImGui::Checkbox(_("Accelerate fly movement"), &gFlyAcceleration);
+	UiHeading(_("Flying"));
+	changed |= UiCheckbox(_("Accelerate fly movement"), &gFlyAcceleration);
 	ImGui::SetItemTooltip(_("When off, flying (W/A/S/D and Q/E with the look button held) goes at the constant fly speed below."));
 	ImGui::BeginDisabled(gFlyAcceleration);
-	ImGui::SliderFloat(_("Fly speed"), &gFlySpeed, 0.1f, 70.0f, "%.2f");
+	UiSliderFloat(_("Fly speed"), &gFlySpeed, 0.1f, 70.0f, "%.2f");
 	ImGui::EndDisabled();
-	ImGui::SliderFloat(_("Fast (Shift)"), &gFlyFastMul, 1.0f, 10.0f, "x%.2f");
-	ImGui::SliderFloat(_("Slow (Alt)"), &gFlySlowMul, 0.05f, 1.0f, "x%.2f");
-	ImGui::SliderFloat(_("FOV wheel step"), &gFovWheelStep, 0.1f, 15.0f, "%.2f deg");
+	UiSliderFloat(_("Fast (Shift)"), &gFlyFastMul, 1.0f, 10.0f, "x%.2f");
+	UiSliderFloat(_("Slow (Alt)"), &gFlySlowMul, 0.05f, 1.0f, "x%.2f");
+	UiSliderFloat(_("FOV wheel step"), &gFovWheelStep, 0.1f, 15.0f, "%.2f deg");
 	ImGui::SetItemTooltip(_("How much the field of view changes per mouse wheel step."));
 
 	if(changed)
@@ -9553,49 +10888,50 @@ static void
 uiPerformancePreferences(void)
 {
 	bool changed = false;
-	ImGui::TextDisabled(_("Stream distance"));
-	ImGui::SetNextItemWidth(-FLT_MIN);
-	changed |= ImGui::SliderFloat("##stream_distance", &gStreamDistance, 50.0f, 5000.0f, "%.0f m", ImGuiSliderFlags_AlwaysClamp);
-	ImGui::SetItemTooltip(_("One distance for all objects, independent of model, weather and time of day."));
-	ImGui::TextWrapped(_("Higher distances show more objects and use more GPU and memory."));
+	UiHeading(_("View"));
+	changed |= UiSliderFloat(_("Stream distance"), &gStreamDistance, 50.0f, 5000.0f, "%.0f m", ImGuiSliderFlags_AlwaysClamp);
+	ImGui::SetItemTooltip("%s\n%s", _("One distance for all objects, independent of model, weather and time of day."),
+		_("Higher distances show more objects and use more GPU and memory."));
 	// The SA-MP client's own far clip (CGame::UpdateFarClippingPlane):
 	// players never see further than this, so past it is editor-only.
 	if(gStreamDistance > 1250.0f)
 		ImGui::TextColored(UiSemanticColor(UI_COLOR_INFO), "%s",
 			_("Players see at most 1250 m (400 m inside interiors): objects further away only show in the editor."));
 	bool fog = gFogMode != FOG_OFF;
-	if(ImGui::Checkbox(_("Distance fog"), &fog)){
+	if(UiCheckbox(_("Distance fog"), &fog)){
 		gFogMode = fog ? FOG_LIGHT : FOG_OFF;
 		changed = true;
 	}
 	ImGui::SetItemTooltip(_("Blends distant objects into the horizon to soften the stream cutoff."));
-	ImGui::Spacing();
-	ImGui::TextDisabled(_("Frame rate"));
-	ImGui::Text(_("%.0f FPS  /  %.1f ms"), ImGui::GetIO().Framerate, 1000.0f/max(ImGui::GetIO().Framerate, 1.0f));
-	changed |= ImGui::Checkbox(_("VSync"), &gVSync);
+	UiHeading(_("Frame rate"));
+	{
+		char rate[48];
+		snprintf(rate, sizeof(rate), _("%.0f FPS  /  %.1f ms"), ImGui::GetIO().Framerate, 1000.0f/max(ImGui::GetIO().Framerate, 1.0f));
+		UiInfoRow(_("Now"), rate, _("Background windows run at up to 30 FPS."));
+	}
+	changed |= UiCheckbox(_("VSync"), &gVSync);
 	ImGui::SetItemTooltip(_("Matches the display refresh rate to reduce tearing. Turn off for uncapped FPS."));
 	bool limited = gFrameLimit > 0;
-	if(ImGui::Checkbox(_("Limit frame rate"), &limited)){
+	if(UiCheckbox(_("Limit frame rate"), &limited)){
 		gFrameLimit = limited ? 144 : 0;
 		changed = true;
 	}
 	if(limited){
+		// Under its switch: the switch row fills the width.
+		ImGui::Indent();
 		ImGui::SetNextItemWidth(-FLT_MIN);
 		changed |= ImGui::SliderInt("##frame_limit", &gFrameLimit, 30, 360, "%d FPS", ImGuiSliderFlags_AlwaysClamp);
-	}else if(!gVSync)
-		ImGui::TextDisabled(_("Uncapped"));
-	ImGui::TextDisabled(_("Background windows run at up to 30 FPS."));
-	ImGui::Spacing();
+		ImGui::Unindent();
+	}
 	// Renderer details most people never change: folded.
-	if(!ImGui::TreeNodeEx(L("Graphics"), ImGuiTreeNodeFlags_SpanAvailWidth)){
+	if(!UiSection(L("Graphics"))){
 		if(changed) saveSaveSettings();
 		return;
 	}
 	uint32 activeAASamples = sanitizeAASamples(rw::Engine::getMultiSamplingLevels());
 	uint32 maxAASamples = sanitizeAASamples(rw::Engine::getMaxMultiSamplingLevels());
 	static const uint32 aaOptions[] = { 1, 2, 4, 8, 16 };
-	ImGui::SetNextItemWidth(ImGui::GetFontSize() * 10.0f);
-	if(ImGui::BeginCombo(_("Anti-aliasing"), getAASamplesLabel(gRequestedAASamples))){
+	if(UiBeginCombo(_("Anti-aliasing"), getAASamplesLabel(gRequestedAASamples))){
 		for(uint32 samples : aaOptions){
 			if(samples > 1 && (maxAASamples <= 1 || samples > maxAASamples))
 				continue;
@@ -9627,8 +10963,7 @@ uiPerformancePreferences(void)
 #else
 		const int running = RENDERER_OPENGL;
 #endif
-		ImGui::SetNextItemWidth(ImGui::GetFontSize() * 10.0f);
-		if(ImGui::BeginCombo(_("Renderer"), label(gRendererChoice))){
+		if(UiBeginCombo(_("Renderer"), label(gRendererChoice))){
 			for(int i = RENDERER_AUTO; i <= RENDERER_D3D9; i++){
 				bool selected = gRendererChoice == i;
 				if(ImGui::Selectable(label(i), selected) && !selected){
@@ -9644,30 +10979,25 @@ uiPerformancePreferences(void)
 		ImGui::SetItemTooltip(_("Automatic uses OpenGL, and Direct3D 9 when OpenGL doesn't start on this PC."));
 		int wanted = gRendererChoice != RENDERER_AUTO ? gRendererChoice :
 			gRendererGlFailed ? RENDERER_D3D9 : RENDERER_OPENGL;
-		ImGui::TextDisabled(_("Running: %s"), label(running));
-		if(gRendererGlFailed && gRendererChoice == RENDERER_AUTO)
-			ImGui::TextDisabled(_("OpenGL didn't start on this PC, so Automatic uses Direct3D 9."));
+		UiInfoRow(_("Running"), label(running), gRendererGlFailed && gRendererChoice == RENDERER_AUTO ?
+			_("OpenGL didn't start on this PC, so Automatic uses Direct3D 9.") : nullptr);
 		if(wanted != running){
-			ImGui::TextDisabled(_("Restart Haumea to switch renderers."));
-			ImGui::SameLine();
-			if(ImGui::SmallButton(_("Restart now")))
+			ImGui::TextColored(UiSemanticColor(UI_COLOR_WARNING), "%s", _("Restart Haumea to switch renderers."));
+			if(ImGui::Button(_("Restart now"), ImVec2(-FLT_MIN, 0)))
 				restartHaumeaFromUi();
 		}
 	}
-	ImGui::Checkbox(_("Post effects"), &gRenderPostFX);
+	UiCheckbox(_("Post effects"), &gRenderPostFX);
 	if(params.timecycle == GAME_SA){
-		ImGui::SameLine();
 		bool colourFilter = gColourFilter != 0;
-		if(ImGui::Checkbox(_("Colour filter"), &colourFilter))
+		if(UiCheckbox(_("Colour filter"), &colourFilter))
 			gColourFilter = colourFilter ? PLATFORM_PC : 0;
 		ImGui::SetItemTooltip(_("The PC game's time-of-day colour grading."));
 	}
-	ImGui::Checkbox(_("Sky"), &gRenderBackground);
-	ImGui::SameLine();
-	ImGui::Checkbox(_("Backface culling"), &gDoBackfaceCulling);
+	UiCheckbox(_("Sky"), &gRenderBackground);
+	UiCheckbox(_("Backface culling"), &gDoBackfaceCulling);
 	if(params.timecycle == GAME_SA)
-		ImGui::Checkbox(_("Interior and tunnel lighting"), &gEnableTimecycleBoxes);
-	ImGui::TreePop();
+		UiCheckbox(_("Interior and tunnel lighting"), &gEnableTimecycleBoxes);
 	if(changed) saveSaveSettings();
 }
 
@@ -9726,14 +11056,19 @@ uiPreferencesWindow(void)
 		ShortcutsSetCapturing(false);
 	}
 	switch(section){
-	case PREF_GENERAL:
+	case PREF_GENERAL: {
 		uiGeneralPreferences();
 		ImGui::Spacing();
-		if(ImGui::Button(_("Open fonts folder")))
+		float half = floorf((ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x) * 0.5f);
+		if(ImGui::Button(TI(ICON_FA_TABLE_COLUMNS, "Reset panel layout"), ImVec2(half, 0)))
+			uiResetPanelLayout();
+		ImGui::SameLine();
+		if(ImGui::Button(_("Open fonts folder"), ImVec2(half, 0)))
 			uiOpenFontsFolder();
 		ImGui::SetItemTooltip(_("Fonts for material text: SA-MP's own and the free stand-ins are put\n"
 			"there; add other .ttf files to it."));
 		break;
+	}
 	case PREF_PERFORMANCE: uiPerformancePreferences(); break;
 	case PREF_CAMERA: uiCameraPreferences(); break;
 	case PREF_WORKSPACE: uiWorkspaceSettings(); break;
@@ -9749,7 +11084,7 @@ uiPreferencesWindow(void)
 		break;
 	case PREF_NAMAKA:
 		NamakaListenSwitch();
-		if(ImGui::Button(_("Open Namaka...")))
+		if(ImGui::Button(_("Open Namaka..."), ImVec2(-FLT_MIN, 0)))
 			showNamakaWindow = true;
 		ImGui::SetItemTooltip(_("Install, repair or update Namaka, and connect an AI assistant (Claude, Codex…)."));
 		break;
@@ -9814,7 +11149,10 @@ uiGroupPicker(const char *label, char *group, size_t size)
 	bool changed = false;
 	float buttonWidth = ImGui::GetFrameHeight();
 	ImGui::PushID(label);
-	ImGui::SetNextItemWidth(ImGui::CalcItemWidth() - buttonWidth - ImGui::GetStyle().ItemInnerSpacing.x);
+	// Its name in the left column, then the field and the list of groups.
+	char unusedId[128];
+	UiFieldLabel(label, unusedId, sizeof(unusedId));
+	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - buttonWidth - ImGui::GetStyle().ItemInnerSpacing.x);
 	if(ImGui::InputTextWithHint("##group", _("no group"), group, size))
 		changed = true;
 	ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
@@ -9833,8 +11171,6 @@ uiGroupPicker(const char *label, char *group, size_t size)
 			}
 		ImGui::EndCombo();
 	}
-	ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
-	ImGui::TextUnformatted(label);
 	ImGui::PopID();
 	return changed;
 }
@@ -9921,7 +11257,7 @@ uiIdComboBegin(const char *label, int *value, const char *name, bool *changed)
 	if(!ImGui::BeginCombo(label, preview, ImGuiComboFlags_HeightLarge))
 		return false;
 	ImGui::SetNextItemWidth(ImGui::GetFontSize() * 6.0f);
-	if(ImGui::InputInt(_("ID"), value, 0, 0)){
+	if(UiInputInt(_("ID"), value, 0, 0)){
 		*value = max(*value, 0);
 		*changed = true;
 	}
@@ -9965,19 +11301,40 @@ uiNamedValueCombo(const char *label, int *value, const UiNamedValue *values, int
 	return changed;
 }
 
+// "The Truth (truth)": the wiki's name for a game skin, then its model.
+static void
+uiSkinName(int skin, const char *model, char *out, size_t size)
+{
+	const char *wiki = nil;
+	for(const WikiSkin &w : wikiSkins)
+		if(w.id == skin){
+			wiki = w.name;
+			if(model)
+				model = w.model;	// written the same way for every skin
+			break;
+		}
+	if(wiki && model)
+		snprintf(out, size, "%s (%s)", wiki, model);
+	else
+		snprintf(out, size, "%s", wiki ? wiki : model ? model : _("(no model)"));
+}
+
 static bool
 uiSkinPicker(const char *label, int *skin)
 {
 	ObjectDef *obj = GetObjectDef(*skin);
 	bool changed = false;
 	// Skin 0 (CJ) has no model file and is drawn as skin 7.
-	const char *name = *skin == 0 ? "CJ" : obj && obj->m_isPed ? obj->m_name : _("(no model)");
+	char name[128];
+	uiSkinName(*skin, *skin == 0 ? "cj" : obj && obj->m_isPed ? obj->m_name : nil, name, sizeof(name));
 	if(uiIdComboBegin(label, skin, name, &changed)){
 		// Game skins, then the server's AddCharModel skins (20001-30000).
 		for(int i = 0; i < 30001; i = i == 399 ? 20001 : i + 1){
 			ObjectDef *ped = GetObjectDef(i);
-			if(ped && ped->m_isPed)
-				uiIdComboItem(i, ped->m_name, skin, &changed);
+			if(ped && ped->m_isPed){
+				uiSkinName(i, ped->m_name, name, sizeof(name));
+				uiIdComboItem(i, name, skin, &changed);
+			}
 		}
 		ImGui::EndCombo();
 	}
@@ -10148,7 +11505,19 @@ uiSoundIdName(int id)
 	for(size_t i = 0; i < IM_ARRAYSIZE(uiSoundIds); i++)
 		if(uiSoundIds[i].value == id)
 			return _(uiSoundIds[i].name);
+	for(const WikiSound &w : wikiSounds)
+		if(w.id == id)
+			return w.text;
 	return nil;
+}
+
+static bool
+uiIsCommonSoundId(int id)
+{
+	for(size_t i = 0; i < IM_ARRAYSIZE(uiSoundIds); i++)
+		if(uiSoundIds[i].value == id)
+			return true;
+	return false;
 }
 
 static bool
@@ -10159,6 +11528,11 @@ uiSoundIdPicker(const char *label, int *value)
 	if(uiIdComboBegin(label, value, name ? name : _("other sound"), &changed)){
 		for(size_t i = 0; i < IM_ARRAYSIZE(uiSoundIds); i++)
 			uiIdComboItem(uiSoundIds[i].value, _(uiSoundIds[i].name), value, &changed);
+		// The rest of the open.mp wiki's list, in its own words.
+		ImGui::Separator();
+		for(const WikiSound &w : wikiSounds)
+			if(!uiIsCommonSoundId(w.id))
+				uiIdComboItem(w.id, w.text, value, &changed);
 		ImGui::EndCombo();
 	}
 	return changed;
@@ -10216,7 +11590,7 @@ uiNpcVehicle(ObjectInst *inst, ObjectPawnProperties &edited)
 		uiVehicleLabel(vehicle, preview, sizeof(preview));
 	else
 		snprintf(preview, sizeof(preview), "%s", edited.npcVehicle >= 0 ? _("(deleted vehicle)") : _("On foot"));
-	if(ImGui::BeginCombo(_("In vehicle"), preview, ImGuiComboFlags_HeightLarge)){
+	if(UiBeginCombo(_("In vehicle"), preview, ImGuiComboFlags_HeightLarge)){
 		if(ImGui::Selectable(_("On foot"), edited.npcVehicle < 0)){
 			edited.npcVehicle = -1;
 			changed = true;
@@ -10273,6 +11647,26 @@ static const char *uiNpcMoveTypes[] = { N_("None"), N_("Walk"), N_("Jog"), N_("S
 
 // ApplyActorAnimation / NPC_ApplyAnimation: a library, then one of its
 // animations from a searchable list. Picking one plays it in the viewport.
+// What an animation shows, from the open.mp wiki, or nil.
+static const char*
+uiAnimationText(const char *library, const char *name)
+{
+	char lib[64], anim[64];
+	size_t n;
+	for(n = 0; library[n] && n < sizeof(lib)-1; n++) lib[n] = (char)toupper((unsigned char)library[n]);
+	lib[n] = '\0';
+	for(n = 0; name[n] && n < sizeof(anim)-1; n++) anim[n] = (char)toupper((unsigned char)name[n]);
+	anim[n] = '\0';
+	const WikiAnimation *first = wikiAnimations, *last = wikiAnimations + IM_ARRAYSIZE(wikiAnimations);
+	const WikiAnimation *it = std::lower_bound(first, last, 0, [&](const WikiAnimation &a, int){
+		int c = strcmp(a.library, lib);
+		return c < 0 || (c == 0 && strcmp(a.name, anim) < 0);
+	});
+	if(it != last && strcmp(it->library, lib) == 0 && strcmp(it->name, anim) == 0)
+		return it->text;
+	return nil;
+}
+
 static bool
 uiAnimationPicker(ObjectInst *inst, ObjectPawnProperties &edited)
 {
@@ -10291,7 +11685,7 @@ uiAnimationPicker(ObjectInst *inst, ObjectPawnProperties &edited)
 		ImGui::PopID();
 		return false;
 	}
-	if(ImGui::BeginCombo(_("Library"), shownLib >= 0 ? AnimLibraryName(shownLib) : _("Pick a library"),
+	if(UiBeginCombo(_("Library"), shownLib >= 0 ? AnimLibraryName(shownLib) : _("Pick a library"),
 		ImGuiComboFlags_HeightLarge)){
 		for(int lib = 0; lib < numLibs; lib++)
 			if(ImGui::Selectable(AnimLibraryName(lib), lib == shownLib))
@@ -10304,12 +11698,16 @@ uiAnimationPicker(ObjectInst *inst, ObjectPawnProperties &edited)
 		int count = AnimNumInLibrary(shownLib);
 		for(int i = 0; i < count; i++){
 			const char *name = AnimName(shownLib, i);
-			if(filter[0] && !ImStristr(name, nil, filter, nil))
+			const char *about = uiAnimationText(AnimLibraryName(shownLib), name);
+			if(filter[0] && !ImStristr(name, nil, filter, nil) && !(about && ImStristr(about, nil, filter, nil)))
 				continue;
 			bool current = rw::strcmp_ci(edited.animName, name) == 0 &&
 				rw::strcmp_ci(edited.animLib, AnimLibraryName(shownLib)) == 0;
-			char item[64];
-			snprintf(item, sizeof(item), "%s  (%.1f s)", name, AnimDuration(shownLib, i));
+			char item[192];
+			if(about)
+				snprintf(item, sizeof(item), "%s  (%.1f s)  %s", name, AnimDuration(shownLib, i), about);
+			else
+				snprintf(item, sizeof(item), "%s  (%.1f s)", name, AnimDuration(shownLib, i));
 			// Shown dim: a skin can't play it, or it twists the skin.
 			int problem = AnimPedProblem(AnimLibraryName(shownLib), name);
 			if(problem != ANIM_PED_OK)
@@ -10337,6 +11735,9 @@ uiAnimationPicker(ObjectInst *inst, ObjectPawnProperties &edited)
 	}
 	if(edited.animName[0]){
 		ImGui::Text(_("Plays %s / %s"), edited.animLib, edited.animName);
+		const char *about = uiAnimationText(edited.animLib, edited.animName);
+		if(about)
+			ImGui::SetItemTooltip("%s", about);
 		ImGui::SameLine();
 		if(ImGui::SmallButton(_("None"))){
 			edited.animLib[0] = edited.animName[0] = '\0';
@@ -10346,17 +11747,15 @@ uiAnimationPicker(ObjectInst *inst, ObjectPawnProperties &edited)
 		if(problem != ANIM_PED_OK)
 			ImGui::TextColored(UiSemanticColor(UI_COLOR_WARNING), "%s", problem == ANIM_PED_OBJECT_ONLY ?
 				_("Moves only an object's parts: a skin stands still.") : _("Twists the skin out of shape."));
-		if(ImGui::InputFloat(_("Delta"), &edited.animDelta, 0.1f, 1.0f, "%.2f")) changed = true;
+		if(UiInputFloat(_("Delta"), &edited.animDelta, 0.1f, 1.0f, "%.2f")) changed = true;
 		ImGui::SetItemTooltip(_("Playback speed in game (4.1 is normal). The editor plays at normal speed."));
-		if(ImGui::Checkbox(_("Loop"), &edited.animLoop)) changed = true;
-		ImGui::SameLine();
-		if(ImGui::Checkbox(_("Lock X"), &edited.animLockX)) changed = true;
-		ImGui::SameLine();
-		if(ImGui::Checkbox(_("Lock Y"), &edited.animLockY)) changed = true;
-		ImGui::SameLine();
-		if(ImGui::Checkbox(_("Freeze"), &edited.animFreeze)) changed = true;
+		// Switch rows: side by side they ran past a narrow panel's edge.
+		if(UiCheckbox(_("Loop"), &edited.animLoop)) changed = true;
+		if(UiCheckbox(_("Lock X"), &edited.animLockX)) changed = true;
+		if(UiCheckbox(_("Lock Y"), &edited.animLockY)) changed = true;
+		if(UiCheckbox(_("Freeze"), &edited.animFreeze)) changed = true;
 		ImGui::SetItemTooltip(_("Hold the last frame when it ends."));
-		if(ImGui::InputInt(_("Time (ms)"), &edited.animTime, 100, 1000)){
+		if(UiInputInt(_("Time (ms)"), &edited.animTime, 100, 1000)){
 			edited.animTime = max(edited.animTime, 0);
 			changed = true;
 		}
@@ -10365,6 +11764,15 @@ uiAnimationPicker(ObjectInst *inst, ObjectPawnProperties &edited)
 		ImGui::TextDisabled(_("None: the skin stands still."));
 	ImGui::PopID();
 	return changed;
+}
+
+// An action in a panel: a full-width button on its own line, its own
+// width when it follows something on the same line.
+static bool
+uiPanelButton(const char *label)
+{
+	bool inRow = ImGui::GetCurrentWindow()->DC.IsSameLine;
+	return ImGui::Button(label, ImVec2(inRow ? 0.0f : -FLT_MIN, 0.0f));
 }
 
 static bool
@@ -10387,48 +11795,54 @@ uiSampElementSettings(ObjectInst *inst, ObjectPawnProperties &edited)
 			changed = true;
 		ImGui::SetItemTooltip(_("{RRGGBB} changes the colour from there on, as in game."));
 		if(uiPawnColorEdit(_("Colour"), &edited.labelColor)) changed = true;
-		if(ImGui::InputFloat(_("Draw distance"), &edited.drawDistance, 1.0f, 10.0f, "%.1f")) changed = true;
-		if(ImGui::Checkbox(_("Hide behind walls (test LOS)"), &edited.labelTestLOS)) changed = true;
+		if(UiInputFloat(_("Draw distance"), &edited.drawDistance, 1.0f, 10.0f, "%.1f")) changed = true;
+		if(UiCheckbox(_("Hide behind walls (test LOS)"), &edited.labelTestLOS)) changed = true;
 		break;
 	case SAMP_ELEMENT_ACTOR:
 		if(uiSkinPicker(_("Skin"), &edited.elementModel)) changed = true;
-		if(ImGui::CollapsingHeader(L("Advanced###actor_advanced"))){
-			if(ImGui::Checkbox(_("Invulnerable"), &edited.actorInvulnerable)) changed = true;
-			if(ImGui::InputFloat(_("Health"), &edited.actorHealth, 1.0f, 10.0f, "%.1f")) changed = true;
+		if(UiSection(L("Advanced###actor_advanced"))){
+			if(UiCheckbox(_("Invulnerable"), &edited.actorInvulnerable)) changed = true;
+			if(UiInputFloat(_("Health"), &edited.actorHealth, 1.0f, 10.0f, "%.1f")) changed = true;
 		}
-		if(ImGui::CollapsingHeader(L("Animation###actor-animation"),
+		if(UiSection(L("Animation###actor-animation"),
 		   edited.animName[0] ? ImGuiTreeNodeFlags_DefaultOpen : 0))
 			if(uiAnimationPicker(inst, edited)) changed = true;
 		break;
 	case SAMP_ELEMENT_CLASS: {
 		if(uiSkinPicker(_("Skin"), &edited.elementModel)) changed = true;
 		bool hasTeam = edited.classTeam >= 0;
-		if(ImGui::Checkbox(_("Team (AddPlayerClassEx)"), &hasTeam)){
+		if(UiCheckbox(_("Team (AddPlayerClassEx)"), &hasTeam)){
 			edited.classTeam = hasTeam ? 0 : -1;
 			changed = true;
 		}
 		if(hasTeam){
-			ImGui::SameLine();
-			ImGui::SetNextItemWidth(ImGui::GetFontSize() * 6.0f);
+			// Under its switch (the switch row fills the width), indented to it.
+			ImGui::Indent();
+			ImGui::SetNextItemWidth(-FLT_MIN);
 			if(ImGui::InputInt("##team", &edited.classTeam)){
 				edited.classTeam = clamp(edited.classTeam, 0, 255);
 				changed = true;
 			}
+			ImGui::SetItemTooltip("%s", _("Team (AddPlayerClassEx)"));
+			ImGui::Unindent();
 		}
 		for(int w = 0; w < PAWN_CLASS_WEAPONS; w++){
 			ImGui::PushID(w);
 			char label[32];
 			snprintf(label, sizeof(label), _("Weapon %d"), w + 1);
-			ImGui::SetNextItemWidth(ImGui::CalcItemWidth() * 0.65f);
+			// The name on the left, the weapon and its ammo filling the row.
+			char unusedId[48];
+			UiFieldLabel(label, unusedId, sizeof(unusedId));
+			float rest = ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x;
+			ImGui::SetNextItemWidth(floorf(rest * 0.65f));
 			if(uiNameListCombo("##weapon", &edited.classWeapons[w], uiWeaponNames, IM_ARRAYSIZE(uiWeaponNames)))
 				changed = true;
 			ImGui::SameLine();
-			ImGui::SetNextItemWidth(ImGui::CalcItemWidth() * 0.35f - ImGui::GetStyle().ItemSpacing.x);
+			ImGui::SetNextItemWidth(-FLT_MIN);
 			ImGui::BeginDisabled(edited.classWeapons[w] == 0);
 			if(ImGui::InputInt("##ammo", &edited.classAmmo[w], 0, 0)) changed = true;
 			ImGui::EndDisabled();
-			ImGui::SameLine();
-			ImGui::TextUnformatted(label);
+			ImGui::SetItemTooltip("%s", _("Ammo"));
 			ImGui::PopID();
 		}
 		break;
@@ -10445,7 +11859,7 @@ uiSampElementSettings(ObjectInst *inst, ObjectPawnProperties &edited)
 			strncpy(npcNameBuffer, edited.npcName, sizeof(npcNameBuffer));
 			npcNameInstance = inst->m_id;
 		}
-		ImGui::InputText(_("Name"), npcNameBuffer, sizeof(npcNameBuffer));
+		UiInputText(_("Name"), npcNameBuffer, sizeof(npcNameBuffer));
 		npcNameEditing = ImGui::IsItemActive();
 		ImGui::SetItemTooltip(_("Its player name, shown over its head and in the player list."));
 		ObjectInst *nameOwner = IsValidNpcName(npcNameBuffer) ? FindNpcByName(npcNameBuffer, inst) : nil;
@@ -10459,23 +11873,27 @@ uiSampElementSettings(ObjectInst *inst, ObjectPawnProperties &edited)
 			changed = true;
 		}
 		if(uiSkinPicker(_("Skin"), &edited.elementModel)) changed = true;
-		ImGui::SetNextItemWidth(ImGui::CalcItemWidth() * 0.65f);
-		if(uiNameListCombo("##npcweapon", &edited.npcWeapon, uiWeaponNames, IM_ARRAYSIZE(uiWeaponNames)))
-			changed = true;
-		ImGui::SameLine();
-		ImGui::SetNextItemWidth(ImGui::CalcItemWidth() * 0.35f - ImGui::GetStyle().ItemSpacing.x);
-		ImGui::BeginDisabled(edited.npcWeapon == 0);
-		if(ImGui::InputInt("##npcammo", &edited.npcAmmo, 0, 0)) changed = true;
-		ImGui::EndDisabled();
-		ImGui::SameLine();
-		ImGui::TextUnformatted(_("Weapon"));
-		if(ImGui::InputFloat(_("Health"), &edited.actorHealth, 1.0f, 10.0f, "%.1f")) changed = true;
-		if(ImGui::InputFloat(_("Armour"), &edited.npcArmour, 1.0f, 10.0f, "%.1f")) changed = true;
-		if(ImGui::Checkbox(_("Invulnerable"), &edited.actorInvulnerable)) changed = true;
-		if(ImGui::CollapsingHeader(L("Animation###npc-animation"),
+		{
+			char unusedId[48];
+			UiFieldLabel(_("Weapon"), unusedId, sizeof(unusedId));
+			float rest = ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x;
+			ImGui::SetNextItemWidth(floorf(rest * 0.65f));
+			if(uiNameListCombo("##npcweapon", &edited.npcWeapon, uiWeaponNames, IM_ARRAYSIZE(uiWeaponNames)))
+				changed = true;
+			ImGui::SameLine();
+			ImGui::SetNextItemWidth(-FLT_MIN);
+			ImGui::BeginDisabled(edited.npcWeapon == 0);
+			if(ImGui::InputInt("##npcammo", &edited.npcAmmo, 0, 0)) changed = true;
+			ImGui::EndDisabled();
+			ImGui::SetItemTooltip("%s", _("Ammo"));
+		}
+		if(UiInputFloat(_("Health"), &edited.actorHealth, 1.0f, 10.0f, "%.1f")) changed = true;
+		if(UiInputFloat(_("Armour"), &edited.npcArmour, 1.0f, 10.0f, "%.1f")) changed = true;
+		if(UiCheckbox(_("Invulnerable"), &edited.actorInvulnerable)) changed = true;
+		if(UiSection(L("Animation###npc-animation"),
 		   edited.animName[0] ? ImGuiTreeNodeFlags_DefaultOpen : 0))
 			if(uiAnimationPicker(inst, edited)) changed = true;
-		if(ImGui::CollapsingHeader(L("Vehicle###npc-vehicle"),
+		if(UiSection(L("Vehicle###npc-vehicle"),
 		   edited.npcVehicle >= 0 ? ImGuiTreeNodeFlags_DefaultOpen : 0))
 			if(uiNpcVehicle(inst, edited)) changed = true;
 
@@ -10486,7 +11904,7 @@ uiSampElementSettings(ObjectInst *inst, ObjectPawnProperties &edited)
 			N_("Play a recording") };
 		int mode = edited.npcRecording[0] ? NPC_PLAYS_RECORDING : edited.npcPlaysNode ? NPC_PLAYS_NODE :
 			edited.pathName[0] ? NPC_FOLLOWS_PATH : NPC_STANDS;
-		bool showMovement = ImGui::CollapsingHeader(L("Movement###npc-movement"),
+		bool showMovement = UiSection(L("Movement###npc-movement"),
 			mode != NPC_STANDS ? ImGuiTreeNodeFlags_DefaultOpen : 0);
 		if(showMovement){
 			static int pendingModeInstance = -1, pendingMode;
@@ -10511,7 +11929,7 @@ uiSampElementSettings(ObjectInst *inst, ObjectPawnProperties &edited)
 					changed = true;
 				ImGui::SetItemTooltip(_("Drive needs the NPC in a vehicle."));
 				bool autoSpeed = edited.npcMoveSpeed < 0.0f;
-				if(ImGui::Checkbox(_("Speed for the move type"), &autoSpeed)){
+				if(UiCheckbox(_("Speed for the move type"), &autoSpeed)){
 					edited.npcMoveSpeed = autoSpeed ? -1.0f : 0.56444f;
 					changed = true;
 				}
@@ -10526,7 +11944,7 @@ uiSampElementSettings(ObjectInst *inst, ObjectPawnProperties &edited)
 			}
 			if(mode == NPC_FOLLOWS_PATH || mode == NPC_PLAYS_NODE){
 				bool previewing = NpcPreviewIsActive(inst);
-				if(ImGui::SmallButton(previewing ? TI(ICON_FA_STOP, "Stop preview") : TI(ICON_FA_PLAY, "Preview movement"))){
+				if(uiPanelButton(previewing ? TI(ICON_FA_STOP, "Stop preview") : TI(ICON_FA_PLAY, "Preview movement"))){
 					if(previewing)
 						NpcPreviewStop(inst);
 					else if(!NpcPreviewStart(inst))
@@ -10545,22 +11963,22 @@ uiSampElementSettings(ObjectInst *inst, ObjectPawnProperties &edited)
 				else if(points.empty())
 					ImGui::TextColored(UiSemanticColor(UI_COLOR_WARNING),
 						_("No points yet. Choose Paths in the browser to add them."));
-				if(ImGui::Checkbox(_("Last point first (reversed)"), &edited.npcPathReversed)) changed = true;
+				if(UiCheckbox(_("Last point first (reversed)"), &edited.npcPathReversed)) changed = true;
 				static const char *repeatModes[] = { N_("Once"), N_("Loop"), N_("Back and forth") };
 				if(UiCombo(_("Repeat"), &edited.npcPathRepeat, repeatModes, IM_ARRAYSIZE(repeatModes))) changed = true;
 				ImGui::SetItemTooltip(_("open.mp's NPC_MoveByPath walks the path once. Loop and Back and forth save\n"
 					"a <map>_OnNPCFinishMovePath(npcid, pathid) helper: call it from your\n"
 					"OnNPCFinishMovePath and the NPC starts the path again (reversed each time\n"
 					"for back and forth)."));
-				if(!points.empty() && ImGui::SmallButton(_("Select the path's points")))
+				if(!points.empty() && uiPanelButton(_("Select the path's points")))
 					uiSelectNpcPath(edited.pathName);
 			}else if(mode == NPC_PLAYS_NODE){
-				if(ImGui::InputInt(_("Node file"), &edited.npcNode)){
+				if(UiInputInt(_("Node file"), &edited.npcNode)){
 					edited.npcNode = clamp(edited.npcNode, 0, 63);
 					changed = true;
 				}
 				ImGui::SetItemTooltip(_("NODES%d.DAT in the server's scriptfiles/NPCs/nodes."), edited.npcNode);
-				if(ImGui::InputInt(_("Start point"), &edited.npcNodePoint)){
+				if(UiInputInt(_("Start point"), &edited.npcNodePoint)){
 					edited.npcNodePoint = clamp(edited.npcNodePoint, 0, 65535);
 					changed = true;
 				}
@@ -10571,7 +11989,7 @@ uiSampElementSettings(ObjectInst *inst, ObjectPawnProperties &edited)
 				bool haveNode = SAPaths::selectedNode &&
 					SAPaths::GetNodeInfo(SAPaths::selectedNode, &area, &point, &vehicle, &nodePos);
 				ImGui::BeginDisabled(!haveNode);
-				if(ImGui::SmallButton(_("Use the selected node"))){
+				if(uiPanelButton(_("Use the selected node"))){
 					edited.npcNode = area;
 					edited.npcNodePoint = point;
 					changed = true;
@@ -10581,9 +11999,9 @@ uiSampElementSettings(ObjectInst *inst, ObjectPawnProperties &edited)
 					ImGui::SetItemTooltip(_("NODES%d.DAT point %d"), area, point);
 				else
 					ImGui::SetItemTooltip(_("Select a node in the Nodes window (Windows > Nodes) first."));
-				if(ImGui::InputFloat(_("Radius"), &edited.npcNodeRadius, 0.1f, 1.0f, "%.2f m")) changed = true;
+				if(UiInputFloat(_("Radius"), &edited.npcNodeRadius, 0.1f, 1.0f, "%.2f m")) changed = true;
 				ImGui::SetItemTooltip(_("Random sideways offset from the node line, so NPCs do not walk in single file."));
-				if(ImGui::Checkbox(_("Face the way it walks"), &edited.npcNodeSetAngle)) changed = true;
+				if(UiCheckbox(_("Face the way it walks"), &edited.npcNodeSetAngle)) changed = true;
 			}else if(mode == NPC_PLAYS_RECORDING){
 				// A driver recording moves the NPC's vehicle; the NPC rides along.
 				ObjectInst *vehicle = edited.npcVehicle >= 0 ? GetInstanceByID(edited.npcVehicle) : nil;
@@ -10593,7 +12011,7 @@ uiSampElementSettings(ObjectInst *inst, ObjectPawnProperties &edited)
 				if(uiRecPlayer(driving ? vehicle : inst, edited.npcRecording, sizeof(edited.npcRecording))) changed = true;
 				int recType = RecTypeOfName(edited.npcRecording);
 				if(recType == REC_DRIVER && !driving){
-					if(ImGui::SmallButton(_("Use a vehicle...")))
+					if(uiPanelButton(_("Use a vehicle...")))
 						ImGui::OpenPopup("##recvehicle");
 					ImGui::SetItemTooltip(_("Puts the NPC in a vehicle as its driver."));
 					if(ImGui::BeginPopup("##recvehicle")){
@@ -10607,13 +12025,13 @@ uiSampElementSettings(ObjectInst *inst, ObjectPawnProperties &edited)
 					}
 				}else if(recType == REC_ONFOOT && vehicle){
 					ImGui::TextColored(UiSemanticColor(UI_COLOR_WARNING), _("An on-foot recording: the NPC has to be on foot."));
-					if(ImGui::SmallButton(_("Get out"))){
+					if(uiPanelButton(_("Get out"))){
 						edited.npcVehicle = -1;
 						changed = true;
 					}
 				}
 				if(edited.npcRecording[0]){
-					if(ImGui::Checkbox(_("Start the route at the NPC"), &edited.npcRecordingAtNpc)) changed = true;
+					if(UiCheckbox(_("Start the route at the NPC"), &edited.npcRecordingAtNpc)) changed = true;
 					ImGui::SetItemTooltip(_("Off plays it where it was recorded. On moves the whole route so it\n"
 						"starts where the NPC stands (NPC_StartPlayback's start position)."));
 				}
@@ -10632,18 +12050,19 @@ uiSampElementSettings(ObjectInst *inst, ObjectPawnProperties &edited)
 		for(size_t i = 0; i < points.size(); i++)
 			if(points[i] == inst)
 				position = (int)i + 1;
-		if(ImGui::InputInt(_("Order"), &edited.pathOrder)){
+		if(UiInputInt(_("Order"), &edited.pathOrder)){
 			edited.pathOrder = max(edited.pathOrder, 0);
 			changed = true;
 		}
 		ImGui::SetItemTooltip(_("Point %d of %d. Points are walked from the lowest order up."),
 			position, (int)points.size());
-		if(ImGui::InputFloat(_("Stop range"), &edited.pathStopRange, 0.1f, 1.0f, "%.2f m")) changed = true;
+		if(UiInputFloat(_("Stop range"), &edited.pathStopRange, 0.1f, 1.0f, "%.2f m")) changed = true;
 		ImGui::SetItemTooltip(_("How close the NPC has to get before it heads for the next point."));
-		if(ImGui::SmallButton(_("Select whole path")))
+		float pathButton = floorf((ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x) * 0.5f);
+		if(ImGui::Button(_("Select whole path"), ImVec2(pathButton, 0)))
 			uiSelectNpcPath(edited.pathName);
 		ImGui::SameLine();
-		if(ImGui::SmallButton(TI(ICON_FA_PLUS, "Add points"))){
+		if(ImGui::Button(TI(ICON_FA_PLUS, "Add points"), ImVec2(pathButton, 0))){
 			SetSpawnPathName(edited.pathName);
 			uiStartSampPlacement(SAMP_ELEMENT_PATHPOINT, GetSampElementProxyModel(SAMP_ELEMENT_PATHPOINT));
 		}
@@ -10671,7 +12090,7 @@ uiSampElementSettings(ObjectInst *inst, ObjectPawnProperties &edited)
 			}
 			changed = true;
 		}
-		if(ImGui::InputFloat(_("Size"), &edited.cpSize, 0.5f, 2.0f, "%.1f")){
+		if(UiInputFloat(_("Size"), &edited.cpSize, 0.5f, 2.0f, "%.1f")){
 			edited.cpSize = max(edited.cpSize, 0.0f);
 			changed = true;
 		}
@@ -10683,7 +12102,7 @@ uiSampElementSettings(ObjectInst *inst, ObjectPawnProperties &edited)
 				"The Air types are rings for planes. Automatic is Normal until the race's end, then Finish."));
 			char race[PAWN_OBJECT_NAME_LEN];
 			snprintf(race, sizeof(race), "%s", edited.cpRace);
-			if(ImGui::InputText(_("Race"), race, sizeof(race)) && IsValidPawnObjectName(race)){
+			if(UiInputText(_("Race"), race, sizeof(race)) && IsValidPawnObjectName(race)){
 				// Joining another race puts it on that race's end.
 				std::vector<ObjectInst*> joined;
 				GetRaceCheckpoints(race, joined);
@@ -10701,7 +12120,7 @@ uiSampElementSettings(ObjectInst *inst, ObjectPawnProperties &edited)
 			for(size_t i = 0; i < points.size(); i++)
 				if(points[i] == inst)
 					position = (int)i + 1;
-			if(ImGui::InputInt(_("Order"), &edited.cpOrder)){
+			if(UiInputInt(_("Order"), &edited.cpOrder)){
 				edited.cpOrder = max(edited.cpOrder, 0);
 				changed = true;
 			}
@@ -10720,11 +12139,11 @@ uiSampElementSettings(ObjectInst *inst, ObjectPawnProperties &edited)
 				raceChanged = true;
 			}
 			ImGui::SetItemTooltip(_("Circuit: the last checkpoint leads back to the first, lap after lap."));
-			if(edited.cpRaceMode == SAMP_RACE_CIRCUIT && ImGui::InputInt(_("Laps"), &edited.cpRaceLaps)){
+			if(edited.cpRaceMode == SAMP_RACE_CIRCUIT && UiInputInt(_("Laps"), &edited.cpRaceLaps)){
 				edited.cpRaceLaps = clamp(edited.cpRaceLaps, 1, (int)SAMP_RACE_MAX_LAPS);
 				raceChanged = true;
 			}
-			if(ImGui::Checkbox(_("Playable race"), &edited.cpRacePlayable))
+			if(UiCheckbox(_("Playable race"), &edited.cpRacePlayable))
 				raceChanged = true;
 			ImGui::SetItemTooltip(_("Saved for haumea_races.inc: each player races on their own with\n"
 				"StartMapRace, seeing one checkpoint at a time, with laps and times.\n"
@@ -10738,7 +12157,7 @@ uiSampElementSettings(ObjectInst *inst, ObjectPawnProperties &edited)
 				if(include.empty() || !uiIsDirectory(include))
 					include = WorkspacePath("pawno/include");
 				ImGui::BeginDisabled(include.empty() || !uiIsDirectory(include));
-				if(ImGui::SmallButton(_("Save haumea_races.inc to the workspace"))){
+				if(uiPanelButton(_("Save haumea_races.inc to the workspace"))){
 					std::string path = include + "/haumea_races.inc";
 					if(WriteHaumeaRacesInclude(path.c_str()))
 						Toast(TOAST_SAVE, _("Saved %s"), path.c_str());
@@ -10762,7 +12181,7 @@ uiSampElementSettings(ObjectInst *inst, ObjectPawnProperties &edited)
 				TheCamera.m_position = add(TheCamera.m_position, d);
 			};
 			if(!previewing){
-				if(ImGui::SmallButton(TI(ICON_FA_PLAY, "Preview race")) && StartRacePreview(edited.cpRace))
+				if(uiPanelButton(TI(ICON_FA_PLAY, "Preview race")) && StartRacePreview(edited.cpRace))
 					frameTarget();
 				ImGui::SetItemTooltip(_("Shows the race as a player drives it: one checkpoint at a time."));
 			}else{
@@ -10771,7 +12190,7 @@ uiSampElementSettings(ObjectInst *inst, ObjectPawnProperties &edited)
 						RacePreviewTarget() + 1, RacePreviewCount());
 				else
 					ImGui::Text(_("Checkpoint %d of %d"), RacePreviewTarget() + 1, RacePreviewCount());
-				if(ImGui::SmallButton(_("Next checkpoint"))){
+				if(uiPanelButton(_("Next checkpoint"))){
 					AdvanceRacePreview();
 					if(RacePreviewActive())
 						frameTarget();
@@ -10779,13 +12198,13 @@ uiSampElementSettings(ObjectInst *inst, ObjectPawnProperties &edited)
 						Toast(TOAST_SELECTION, _("Race finished"));
 				}
 				ImGui::SameLine();
-				if(ImGui::SmallButton(TI(ICON_FA_STOP, "Stop preview")))
+				if(uiPanelButton(TI(ICON_FA_STOP, "Stop preview")))
 					StopRacePreview();
 			}
-			if(ImGui::SmallButton(_("Select whole race")))
+			if(uiPanelButton(_("Select whole race")))
 				uiSelectRace(edited.cpRace);
 			ImGui::SameLine();
-			if(ImGui::SmallButton(TI(ICON_FA_PLUS, "Add checkpoints"))){
+			if(uiPanelButton(TI(ICON_FA_PLUS, "Add checkpoints"))){
 				SetSpawnRaceName(edited.cpRace);
 				uiStartSampPlacement(SAMP_ELEMENT_CHECKPOINT, GetSampElementProxyModel(SAMP_ELEMENT_CHECKPOINT));
 			}
@@ -10818,25 +12237,27 @@ uiSampElementSettings(ObjectInst *inst, ObjectPawnProperties &edited)
 			"area stands (a sphere is around it)."));
 		switch(edited.areaShape){
 		case SAMP_AREA_CIRCLE: case SAMP_AREA_CYLINDER: case SAMP_AREA_SPHERE:
-			if(ImGui::DragFloat(_("Radius"), &edited.areaRadius, 0.25f, 0.5f, 20000.0f, "%.1f m")) changed = true;
+			if(UiDragFloat(_("Radius"), &edited.areaRadius, 0.25f, 0.5f, 20000.0f, "%.1f m")) changed = true;
 			break;
 		case SAMP_AREA_RECTANGLE:
-			if(ImGui::DragFloat2(_("Size (X, Y)"), &edited.areaSize.x, 0.25f, 0.5f, 40000.0f, "%.1f m")) changed = true;
+			if(UiDragFloat2(_("Size (X, Y)"), &edited.areaSize.x, 0.25f, 0.5f, 40000.0f, "%.1f m")) changed = true;
 			break;
 		case SAMP_AREA_CUBOID: case SAMP_AREA_CUBE:
-			if(ImGui::DragFloat3(_("Size (X, Y, Z)"), &edited.areaSize.x, 0.25f, 0.5f, 40000.0f, "%.1f m")) changed = true;
+			if(UiDragFloat3(_("Size (X, Y, Z)"), &edited.areaSize.x, 0.25f, 0.5f, 40000.0f, "%.1f m")) changed = true;
 			break;
 		}
 		if(edited.areaShape == SAMP_AREA_CYLINDER || edited.areaShape == SAMP_AREA_POLYGON){
-			if(ImGui::DragFloat(_("Height"), &edited.areaHeight, 0.25f, 0.0f, 20000.0f, "%.1f m")) changed = true;
+			if(UiDragFloat(_("Height"), &edited.areaHeight, 0.25f, 0.0f, 20000.0f, "%.1f m")) changed = true;
 			if(edited.areaShape == SAMP_AREA_POLYGON)
 				ImGui::SetItemTooltip(_("Up from where the area stands. 0 covers every height."));
 		}
 		if(edited.areaShape == SAMP_AREA_POLYGON){
-			ImGui::Text(_("%d corner(s)"), edited.areaPointCount);
-			ImGui::SameLine();
+			char corners[48];
+			snprintf(corners, sizeof(corners), _("%d corner(s)"), edited.areaPointCount);
+			ImGui::TextDisabled("%s", corners);
 			bool picking = IsAreaPointPicking(inst);
-			if(ImGui::SmallButton(picking ? _("Stop adding") : TI(ICON_FA_PLUS, "Add corners"))){
+			float cornerButton = floorf((ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x) * 0.5f);
+			if(ImGui::Button(picking ? _("Stop adding") : TI(ICON_FA_PLUS, "Add corners"), ImVec2(cornerButton, 0))){
 				if(picking)
 					StopAreaPointPicking();
 				else
@@ -10845,7 +12266,7 @@ uiSampElementSettings(ObjectInst *inst, ObjectPawnProperties &edited)
 			ImGui::SetItemTooltip(_("Click in the world to add a corner; Shift+click keeps adding.\n"
 				"Esc or a right click stops. Drag a corner's handle to move it."));
 			ImGui::SameLine();
-			if(ImGui::SmallButton(_("Remove last")) && edited.areaPointCount > 0){
+			if(ImGui::Button(_("Remove last"), ImVec2(cornerButton, 0)) && edited.areaPointCount > 0){
 				edited.areaPointCount--;
 				changed = true;
 			}
@@ -10858,7 +12279,7 @@ uiSampElementSettings(ObjectInst *inst, ObjectPawnProperties &edited)
 			"Items name the area by its variable (Name above)."));
 		if(items > 0){
 			ImGui::SameLine();
-			if(ImGui::SmallButton(_("Select them"))){
+			if(uiPanelButton(_("Select them"))){
 				std::string name = edited.name;
 				ClearSelection();
 				for(CPtrNode *p = instances.first; p; p = p->next){
@@ -10877,16 +12298,16 @@ uiSampElementSettings(ObjectInst *inst, ObjectPawnProperties &edited)
 			"Game sound: a GTA sound played when a player walks in. It needs _SoundTick on a\n"
 			"timer, or _SoundArea with the streamer; the saved file's header says how."));
 		if(edited.soundKind == SAMP_SOUND_STREAM){
-			if(ImGui::InputTextWithHint(_("URL"), _("http://... .mp3, .ogg or .pls"), edited.soundUrl,
+			if(UiInputTextWithHint(_("URL"), _("http://... .mp3, .ogg or .pls"), edited.soundUrl,
 				sizeof(edited.soundUrl))) changed = true;
 			ImGui::SetItemTooltip(_("PlayAudioStreamForPlayer. Started for each player in _ShowForPlayer."));
 			if(!edited.soundUrl[0])
 				ImGui::TextColored(UiSemanticColor(UI_COLOR_WARNING), _("No URL yet."));
-			if(ImGui::Checkbox(_("Use position"), &edited.soundUsePos)) changed = true;
+			if(UiCheckbox(_("Use position"), &edited.soundUsePos)) changed = true;
 			ImGui::SetItemTooltip(_("On: it gets louder as the player walks up to it and fades out at\n"
 				"the distance. Off: the player hears it everywhere at full volume."));
 			ImGui::BeginDisabled(!edited.soundUsePos);
-			if(ImGui::InputFloat(_("Distance"), &edited.soundRadius, 1.0f, 10.0f, "%.1f m")) changed = true;
+			if(UiInputFloat(_("Distance"), &edited.soundRadius, 1.0f, 10.0f, "%.1f m")) changed = true;
 			ImGui::EndDisabled();
 			int streams = 0;
 			for(CPtrNode *p = instances.first; p; p = p->next){
@@ -10901,15 +12322,15 @@ uiSampElementSettings(ObjectInst *inst, ObjectPawnProperties &edited)
 		}else{
 			if(uiSoundIdPicker(_("Sound"), &edited.soundId)) changed = true;
 			ImGui::SetItemTooltip(_("PlayerPlaySound. Any ID from the game's data/AudioEvents.txt works."));
-			if(ImGui::InputFloat(_("Radius"), &edited.soundRadius, 1.0f, 10.0f, "%.1f m")) changed = true;
+			if(UiInputFloat(_("Radius"), &edited.soundRadius, 1.0f, 10.0f, "%.1f m")) changed = true;
 			ImGui::SetItemTooltip(_("It plays when a player walks within this distance."));
-			if(ImGui::Checkbox(_("Stop when the player leaves"), &edited.soundStopOnLeave)) changed = true;
+			if(UiCheckbox(_("Stop when the player leaves"), &edited.soundStopOnLeave)) changed = true;
 			ImGui::SetItemTooltip(_("Plays sound 0, which stops the sound playing. Use it for music and loops."));
 		}
 		break;
 	}
 	case SAMP_ELEMENT_GANGZONE:
-		if(ImGui::DragFloat2(_("Size (X, Y)"), &edited.zoneSizeX, 0.5f, 1.0f, 12000.0f, "%.1f")) changed = true;
+		if(UiDragFloat2(_("Size (X, Y)"), &edited.zoneSizeX, 0.5f, 1.0f, 12000.0f, "%.1f")) changed = true;
 		if(uiPawnColorEdit(_("Colour"), &edited.zoneColor)) changed = true;
 		{
 			static const char *zoneModes[] = { N_("Global"), N_("Per player"), N_("Streamed per player") };
@@ -10949,7 +12370,9 @@ static const UiBatchField uiBatchFields[] = {
 	UI_BATCH_FIELD(drawDistance, false), UI_BATCH_FIELD(streamDistance, false),
 	UI_BATCH_FIELD(virtualWorld, false),
 	UI_BATCH_FIELD(moveEnabled, false), UI_BATCH_FIELD(moveOffset, false), UI_BATCH_FIELD(moveRotation, false),
-	UI_BATCH_FIELD(moveRotates, false), UI_BATCH_FIELD(moveSpeed, false),
+	UI_BATCH_FIELD(moveRotates, false), UI_BATCH_FIELD(moveSpeed, false), UI_BATCH_FIELD(moveTrigger, false),
+	UI_BATCH_FIELD(gateKey, false), UI_BATCH_FIELD(gateRange, false), UI_BATCH_FIELD(gateCloseDelay, false),
+	UI_BATCH_FIELD(gateSilent, false),
 	UI_BATCH_FIELD(pickupType, true), UI_BATCH_FIELD(labelText, true),
 	UI_BATCH_FIELD(labelColor, true), UI_BATCH_FIELD(labelTestLOS, true),
 	UI_BATCH_FIELD(elementModel, true), UI_BATCH_FIELD(actorInvulnerable, true),
@@ -11113,7 +12536,7 @@ uiBatchEditHeader(ObjectInst *inst)
 	for(size_t i = 0; i < selected.size(); i++)
 		if(uiSameElementKind(inst, selected[i]))
 			same++;
-	ImGui::Checkbox(_("Edit all selected"), &gBatchEditSelection);
+	UiCheckbox(_("Edit all selected"), &gBatchEditSelection);
 	ImGui::SetItemTooltip(_("A field you change here is set on every selected instance that has it,\n"
 		"and Position & Rotation move and turn the whole selection, keeping its layout\n"
 		"(the first selected is the pivot). Other fields keep their own values.\n"
@@ -11157,7 +12580,7 @@ uiAreaPicker(ObjectPawnProperties &edited)
 		snprintf(preview, sizeof(preview), _("%s (missing)"), edited.areaName);
 	else
 		snprintf(preview, sizeof(preview), "%s", edited.areaName[0] ? edited.areaName : _("Everywhere"));
-	if(ImGui::BeginCombo(_("Only inside area"), preview)){
+	if(UiBeginCombo(_("Only inside area"), preview)){
 		if(ImGui::Selectable(_("Everywhere"), edited.areaName[0] == '\0')){
 			edited.areaName[0] = '\0';
 			changed = true;
@@ -11186,8 +12609,8 @@ uiAttachmentFields(ObjectPawnProperties &edited, bool playerTarget, bool showSlo
 {
 	bool changed = false;
 	if(hasObject){
-		if(ImGui::DragFloat3(_("Offset"), &edited.attachOffset.x, 0.01f, 0.0f, 0.0f, "%.3f")) changed = true;
-		if(ImGui::DragFloat3(_("Rotation"), &edited.attachRotation.x, 0.5f, -360.0f, 360.0f, "%.2f")) changed = true;
+		if(UiDragFloat3(_("Offset"), &edited.attachOffset.x, 0.01f, 0.0f, 0.0f, "%.3f")) changed = true;
+		if(UiDragFloat3(_("Rotation"), &edited.attachRotation.x, 0.5f, -360.0f, 360.0f, "%.2f")) changed = true;
 	}
 	if(playerTarget){
 		static const char *bones[] = {
@@ -11203,8 +12626,8 @@ uiAttachmentFields(ObjectPawnProperties &edited, bool playerTarget, bool showSlo
 			changed = true;
 		}
 		ImGui::SetItemTooltip(_("Choose the ped bone. Its coloured axes are marked in the viewport."));
-		if(showSlot && ImGui::SliderInt(_("Player slot"), &edited.attachSlot, 0, 9)) changed = true;
-		if(ImGui::DragFloat3(_("Scale"), &edited.attachScale.x, 0.01f, 0.01f, 50.0f, "%.3f")) changed = true;
+		if(showSlot && UiSliderInt(_("Player slot"), &edited.attachSlot, 0, 9)) changed = true;
+		if(UiDragFloat3(_("Scale"), &edited.attachScale.x, 0.01f, 0.01f, 50.0f, "%.3f")) changed = true;
 		if(hasObject){
 			if(ImGui::InputScalar(_("Material colour 1"), ImGuiDataType_U32, &edited.attachColor1,
 				nil, nil, "0x%08X", ImGuiInputTextFlags_CharsHexadecimal)) changed = true;
@@ -11213,7 +12636,7 @@ uiAttachmentFields(ObjectPawnProperties &edited, bool playerTarget, bool showSlo
 			ImGui::SetItemTooltip(_("Optional material colours for the attached model."));
 		}
 	}else if(hasObject && syncRotation){
-		if(ImGui::Checkbox(_("Sync rotation"), &edited.attachSyncRotation)) changed = true;
+		if(UiCheckbox(_("Sync rotation"), &edited.attachSyncRotation)) changed = true;
 		ImGui::SetItemTooltip(_("On: the object turns with its parent. Off: it keeps the rotation above\n"
 			"in world space (AttachObjectToObject's SyncRotation)."));
 	}
@@ -11242,8 +12665,8 @@ uiObjectProperties(ObjectInst *inst, int part)
 		strncpy(nameBuffer, edited.name, sizeof(nameBuffer));
 		nameInstance = inst->m_id;
 	}
-	ImGui::TextUnformatted(_("Name"));
-	ImGui::SetNextItemWidth(-FLT_MIN);
+	char nameId[64];
+	UiFieldLabel(_("Name"), nameId, sizeof(nameId));	// its name on the left, as the other fields
 	ImGui::InputTextWithHint("##pawn_variable", _("automatic"), nameBuffer, sizeof(nameBuffer));
 	nameEditing = ImGui::IsItemActive();
 	ImGui::SetItemTooltip(_("Pawn variable for this object, e.g. bank_door. Leave empty and Haumea\n"
@@ -11265,7 +12688,7 @@ uiObjectProperties(ObjectInst *inst, int part)
 	if(part == UI_PROPS_NOTES){
 		if(uiGroupPicker(_("Group"), edited.group, sizeof(edited.group))) changed = true;
 		ImGui::SetItemTooltip(_("Groups sort Map Objects and get a heading comment in the .pwn."));
-		if(ImGui::InputTextWithHint(_("Note"), _("comment in the .pwn"),
+		if(UiInputTextWithHint(_("Note"), _("comment in the .pwn"),
 			edited.comment, sizeof(edited.comment))) changed = true;
 		ImGui::SetItemTooltip(_("Written as a comment after this line in the saved map."));
 	}
@@ -11275,27 +12698,27 @@ uiObjectProperties(ObjectInst *inst, int part)
 
 	if(part == UI_PROPS_WORLD){
 	if(kind == SAMP_ELEMENT_OBJECT){
-		if(ImGui::InputFloat(_("Draw distance"), &edited.drawDistance, 10.0f, 100.0f, "%.1f")) changed = true;
+		if(UiInputFloat(_("Draw distance"), &edited.drawDistance, 10.0f, 100.0f, "%.1f")) changed = true;
 		ImGui::SetItemTooltip(_("CreateObject DrawDistance / streamer drawdistance. 0 uses the default\n"
 			"(the model's own distance natively, STREAMER_OBJECT_DD for the streamer)."));
 	}
 	if(kind != SAMP_ELEMENT_CLASS && kind != SAMP_ELEMENT_GANGZONE && kind != SAMP_ELEMENT_NPC &&
 	   kind != SAMP_ELEMENT_PATHPOINT && kind != SAMP_ELEMENT_SOUND && kind != SAMP_ELEMENT_AREA){
-		if(ImGui::InputFloat(_("Stream distance"), &edited.streamDistance, 10.0f, 100.0f, "%.1f")) changed = true;
+		if(UiInputFloat(_("Stream distance"), &edited.streamDistance, 10.0f, 100.0f, "%.1f")) changed = true;
 		ImGui::SetItemTooltip(_("Streamer only. 0 uses the streamer's default for this kind."));
 	}
 	if(kind == SAMP_ELEMENT_NPC){
-		if(ImGui::InputInt(_("Virtual world"), &edited.virtualWorld)) changed = true;
+		if(UiInputInt(_("Virtual world"), &edited.virtualWorld)) changed = true;
 		ImGui::SetItemTooltip(_("NPC_SetVirtualWorld. NPCs are in one world; the interior is set\n"
 			"under Position."));
 	}else if(kind == SAMP_ELEMENT_SOUND){
 		ImGui::BeginDisabled(edited.soundKind == SAMP_SOUND_STREAM);
-		if(ImGui::InputInt(_("Virtual world"), &edited.virtualWorld)) changed = true;
+		if(UiInputInt(_("Virtual world"), &edited.virtualWorld)) changed = true;
 		ImGui::EndDisabled();
 		ImGui::SetItemTooltip(_("Game sounds only: -1 plays it in every world. The interior is set\n"
 			"under Position."));
 	}else if(kind != SAMP_ELEMENT_CLASS && kind != SAMP_ELEMENT_GANGZONE && kind != SAMP_ELEMENT_PATHPOINT){
-		if(ImGui::InputInt(_("Virtual world"), &edited.virtualWorld)) changed = true;
+		if(UiInputInt(_("Virtual world"), &edited.virtualWorld)) changed = true;
 		ImGui::SetItemTooltip("%s", kind == SAMP_ELEMENT_OBJECT ?
 			_("Streamer only; -1 shows the object in every world.\n"
 			"Native CreateObject objects exist in all worlds.") :
@@ -11307,7 +12730,7 @@ uiObjectProperties(ObjectInst *inst, int part)
 	}
 
 	if(part == UI_PROPS_MOVE && kind == SAMP_ELEMENT_OBJECT){
-		if(ImGui::Checkbox(_("Moves when the map loads"), &edited.moveEnabled)){
+		if(UiCheckbox(_("Moves"), &edited.moveEnabled)){
 			if(edited.moveEnabled && edited.moveSpeed <= 0.0f){
 				edited.moveSpeed = 2.0f;
 				edited.moveOffset = { 0.0f, 0.0f, 3.0f };
@@ -11316,22 +12739,78 @@ uiObjectProperties(ObjectInst *inst, int part)
 		}
 		ImGui::SetItemTooltip(_("MoveObject (MoveDynamicObject with the streamer) right after the object is made."));
 		if(edited.moveEnabled){
-			if(ImGui::DragFloat3(_("Move by"), &edited.moveOffset.x, 0.05f, -20000.0f, 20000.0f, "%.3f")) changed = true;
+			const char *starts[] = { _("When the map loads"), _("When a player presses a key"),
+				_("When a driver sounds the horn") };
+			int trigger = edited.moveTrigger;
+			if(UiCombo(_("Starts"), &trigger, starts, IM_ARRAYSIZE(starts))){
+				if(edited.moveTrigger == MOVE_ON_LOAD && trigger != MOVE_ON_LOAD){
+					// A gate: these are reset while it isn't one.
+					edited.gateKey = GATE_DEFAULT_KEY;
+					edited.gateRange = 10.0f;
+					edited.gateCloseDelay = 5000;
+					edited.gateSilent = false;
+				}
+				edited.moveTrigger = trigger;
+				changed = true;
+			}
+			if(edited.moveTrigger != MOVE_ON_LOAD){
+				ImGui::SetItemTooltip(_("A gate: it moves back after a while. The map's code needs\n"
+					"<map>_Gates(playerid, newkeys, oldkeys) called from OnPlayerKeyStateChange;\n"
+					"Test in game does that."));
+				if(edited.moveTrigger == MOVE_ON_KEY){
+					// KEY_CROUCH is left out: in a car it is the horn.
+					static const struct { int value; const char *name; } keys[] = {
+						{ 65536, "Y  KEY_YES" }, { 131072, "N  KEY_NO" }, { 262144, "H  KEY_CTRL_BACK" },
+						{ 16, "F / Enter  KEY_SECONDARY_ATTACK" }, { 1, "Tab  KEY_ACTION" }, { 8, "Space  KEY_SPRINT" },
+						{ 32, "Shift  KEY_JUMP" }, { 1024, "Alt  KEY_WALK" }, { 4, "LMB  KEY_FIRE" },
+						{ 128, "RMB  KEY_HANDBRAKE" }, { 256, "Q  KEY_LOOK_LEFT" }, { 64, "E  KEY_LOOK_RIGHT" },
+						{ 512, "Num +  KEY_SUBMISSION" },
+					};
+					const char *shown = keys[0].name;
+					for(const auto &k : keys)
+						if(k.value == edited.gateKey)
+							shown = k.name;
+					if(UiBeginCombo(_("Key"), shown)){
+						for(const auto &k : keys)
+							if(ImGui::Selectable(k.name, k.value == edited.gateKey)){
+								edited.gateKey = k.value;
+								changed = true;
+							}
+						ImGui::EndCombo();
+					}
+				}
+				if(UiInputFloat(_("Range"), &edited.gateRange, 1.0f, 5.0f, "%.1f m")) changed = true;
+				float closeAfter = edited.gateCloseDelay / 1000.0f;
+				if(UiInputFloat(_("Closes after"), &closeAfter, 0.5f, 5.0f, "%.1f s")){
+					edited.gateCloseDelay = (int)lroundf(std::max(closeAfter, 0.0f) * 1000.0f);
+					changed = true;
+				}
+				ImGui::SetItemTooltip(_("Seconds it stands open."));
+				bool sounds = !edited.gateSilent;
+				if(UiCheckbox(_("Garage door sounds"), &sounds)){
+					edited.gateSilent = !sounds;
+					changed = true;
+				}
+			}
+			if(UiDragFloat3(_("Move by"), &edited.moveOffset.x, 0.05f, -20000.0f, 20000.0f, "%.3f")) changed = true;
 			ImGui::SetItemTooltip(_("How far it goes, in metres along the world axes. It follows the object when\n"
 				"you move it."));
-			if(ImGui::InputFloat(_("Speed"), &edited.moveSpeed, 0.5f, 5.0f, "%.2f m/s")) changed = true;
-			if(ImGui::Checkbox(_("Turns on the way"), &edited.moveRotates)){
+			if(UiInputFloat(_("Speed"), &edited.moveSpeed, 0.5f, 5.0f, "%.2f m/s")) changed = true;
+			if(UiCheckbox(_("Turns on the way"), &edited.moveRotates)){
 				if(edited.moveRotates)
 					edited.moveRotation = GetInstanceRotationDegrees(inst);
 				changed = true;
 			}
 			if(edited.moveRotates &&
-			   ImGui::DragFloat3(_("Turns to"), &edited.moveRotation.x, 0.5f, -360.0f, 360.0f, "%.1f")) changed = true;
+			   UiDragFloat3(_("Turns to"), &edited.moveRotation.x, 0.5f, -360.0f, 360.0f, "%.1f")) changed = true;
 			float length = sqrtf(edited.moveOffset.x*edited.moveOffset.x + edited.moveOffset.y*edited.moveOffset.y +
 				edited.moveOffset.z*edited.moveOffset.z);
-			if(edited.moveSpeed > 0.0f)
-				ImGui::TextDisabled(_("%.2f m in %.2f s"), length, length / edited.moveSpeed);
-			ImGui::Checkbox(_("Preview the movement"), &gPreviewObjectMoves);
+			if(edited.moveSpeed > 0.0f){
+				char trip[64];
+				snprintf(trip, sizeof(trip), _("%.2f m in %.2f s"), length, length / edited.moveSpeed);
+				UiInfoRow(_("Trip"), trip);
+			}
+			UiCheckbox(_("Preview the movement"), &gPreviewObjectMoves);
 		}
 	}
 
@@ -11354,33 +12833,38 @@ uiObjectProperties(ObjectInst *inst, int part)
 			other = selected;
 	}
 	if(parent || (IsPlayerAttachedObject(inst) && edited.attachParent == PAWN_ATTACH_PLAYER)){
+		// What it hangs on, then what to do: select that, or let go.
+		char target[160];
 		if(edited.attachParent == PAWN_ATTACH_PLAYER)
-			ImGui::Text(_("Attached to player preview (skin %d)"), edited.attachSkin);
+			snprintf(target, sizeof(target), _("Player preview (skin %d)"), edited.attachSkin);
 		else
-			ImGui::Text(_("Attached to %s"), uiObjectLabel(parent, label, sizeof(label)));
-		if(edited.attachParent != PAWN_ATTACH_PLAYER){
-			if(ImGui::SmallButton(_("Select parent"))){
+			uiObjectLabel(parent, target, sizeof(target));
+		UiInfoRow(_("Attached to"), target, _("Moving this object updates the offset; moving the parent carries it along."));
+		float spacing = ImGui::GetStyle().ItemSpacing.x;
+		bool player = edited.attachParent == PAWN_ATTACH_PLAYER;
+		float width = player ? -FLT_MIN : floorf((ImGui::GetContentRegionAvail().x - spacing) * 0.5f);
+		if(!player){
+			if(ImGui::Button(_("Select parent"), ImVec2(width, 0))){
 				ClearSelection();
 				parent->Select();
 			}
 			ImGui::SameLine();
 		}
-		if(ImGui::SmallButton(_("Detach"))){
+		if(ImGui::Button(_("Detach"), ImVec2(width, 0))){
 			DetachObjectInstance(inst);
 			edited = *GetObjectPawnProperties(inst);
 		}
 		if(uiAttachmentFields(edited, IsPlayerAttachedObject(inst), true, parent && !parent->m_isVehicle))
 			changed = true;
-		if(ImGui::SmallButton(_("Edit in attachment workspace"))){
+		if(ImGui::Button(_("Edit in attachment workspace"), ImVec2(-FLT_MIN, 0))){
 			if(edited.attachParent == PAWN_ATTACH_PLAYER)
 				OpenPlayerAttachmentWorkspace(edited.attachSkin, false);
 			else
 				OpenAttachmentWorkspace(parent, false);
 		}
-		ImGui::TextDisabled(_("Moving this object updates the offset; moving the parent carries it along."));
 	}else if(edited.attachParent >= 0){
 		uiStatusLine(false, _("The parent was deleted, so this attachment is not exported."));
-		if(ImGui::SmallButton(_("Detach"))){
+		if(ImGui::Button(_("Detach"), ImVec2(-FLT_MIN, 0))){
 			DetachObjectInstance(inst);
 			edited = *GetObjectPawnProperties(inst);
 		}
@@ -11393,12 +12877,12 @@ uiObjectProperties(ObjectInst *inst, int part)
 		bool otherCanBeChild = !other->m_isVehicle && GetSampElementKind(other) == SAMP_ELEMENT_OBJECT;
 		if(canAttachToOther){
 			snprintf(buttonLabel, sizeof(buttonLabel), _("Attach this to %s"), otherLabel);
-			if(ImGui::Button(buttonLabel) && !AttachObjectInstance(inst, other))
+			if(ImGui::Button(buttonLabel, ImVec2(-FLT_MIN, 0)) && !AttachObjectInstance(inst, other))
 				Toast(TOAST_SPAWN, _("Could not attach this object to that target."));
 		}
 		if(otherCanBeChild){
 			snprintf(buttonLabel, sizeof(buttonLabel), _("Attach %s to this"), otherLabel);
-			if(ImGui::Button(buttonLabel) && !AttachObjectInstance(other, inst))
+			if(ImGui::Button(buttonLabel, ImVec2(-FLT_MIN, 0)) && !AttachObjectInstance(other, inst))
 				Toast(TOAST_SPAWN, _("Could not attach this object to that target."));
 		}
 		if(!canAttachToOther && !otherCanBeChild)
@@ -11411,13 +12895,16 @@ uiObjectProperties(ObjectInst *inst, int part)
 		uiCommitProperties(inst, before, edited);
 
 	if(numSelected > 1){
-		ImGui::SeparatorText(_("Selection"));
+		// The whole selection: a group for all of it, and this one's streaming
+		// copied to the rest.
+		ImGui::Spacing();
 		static char batchGroup[PAWN_OBJECT_GROUP_LEN];
-		uiGroupPicker("##batchgroup", batchGroup, sizeof(batchGroup));
-		ImGui::SameLine();
+		uiGroupPicker(_("Group"), batchGroup, sizeof(batchGroup));
+		float spacing = ImGui::GetStyle().ItemSpacing.x;
+		float width = floorf((ImGui::GetContentRegionAvail().x - spacing) * 0.5f);
 		char buttonLabel[64];
 		snprintf(buttonLabel, sizeof(buttonLabel), _("Group %d selected"), numSelected);
-		if(ImGui::Button(buttonLabel)){
+		if(ImGui::Button(buttonLabel, ImVec2(width, 0))){
 			UndoBeginGroup();
 			for(CPtrNode *p = selection.first; p; p = p->next){
 				ObjectInst *selected = (ObjectInst*)p->item;
@@ -11429,8 +12916,9 @@ uiObjectProperties(ObjectInst *inst, int part)
 			}
 			UndoEndGroup();
 		}
+		ImGui::SameLine();
 		snprintf(buttonLabel, sizeof(buttonLabel), _("Copy streaming to %d selected"), numSelected);
-		if(ImGui::Button(buttonLabel)){
+		if(ImGui::Button(buttonLabel, ImVec2(width, 0))){
 			const ObjectPawnProperties *source = GetObjectPawnProperties(inst);
 			UndoBeginGroup();
 			for(CPtrNode *p = selection.first; p; p = p->next){
@@ -11455,7 +12943,7 @@ uiInspectorSection(const char *label, ImGuiTreeNodeFlags flags = 0)
 {
 	ImGui::Spacing();
 	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(8.0f, 5.0f));
-	bool open = ImGui::CollapsingHeader(label, flags);
+	bool open = UiSection(label, flags);
 	ImGui::PopStyleVar();
 	if(open) ImGui::Spacing();
 	return open;
@@ -11469,16 +12957,29 @@ uiAttachmentWorkspaceWindow(void)
 	bool open = true;
 	ImRect workArea = uiPanelWorkArea();
 #ifdef IMGUI_HAS_DOCK
-	// Over the 3D view, at its left edge: the panels dock on the right, so
-	// the model browser stays reachable even when it opens after this.
-	if(ImGuiDockNode *central = ImGui::DockBuilderGetCentralNode(ImHashStr("HaumeaDockSpace")))
+	// Over the 3D view, at its top-right corner: the target sits in the
+	// middle of the view, and the left edge is where the tool windows open.
+	// (Not before the dock space is laid out: a central node of no size would
+	// put it at the screen's left edge, and that first place is kept.)
+	ImGuiDockNode *central = ImGui::DockBuilderGetCentralNode(ImHashStr("HaumeaDockSpace"));
+	if(central && central->Size.x > ImGui::GetFontSize() * 32.0f)
 		workArea = ImRect(central->Pos, ImVec2(central->Pos.x + central->Size.x, central->Pos.y + central->Size.y));
 #endif
-	ImGui::SetNextWindowPos(ImVec2(workArea.Min.x + uiPanelGap(), workArea.Min.y + uiPanelGap()),
-		ImGuiCond_FirstUseEver, ImVec2(0.0f, 0.0f));
+	ImGui::SetNextWindowPos(ImVec2(workArea.Max.x - uiPanelGap(), workArea.Min.y + uiPanelGap()),
+		ImGuiCond_FirstUseEver, ImVec2(1.0f, 0.0f));
 	ImGui::SetNextWindowSize(ImVec2(ImGui::GetFontSize() * 30.0f, 0.0f), ImGuiCond_FirstUseEver);
-	ImGui::SetNextWindowSizeConstraints(ImVec2(ImGui::GetFontSize() * 24.0f, 0.0f),
-		ImVec2(ImGui::GetIO().DisplaySize.x, ImGui::GetIO().DisplaySize.y - 48.0f));
+	// A fixed width: its rows fill the window, so auto-resizing them to their
+	// content would grow it a little every frame, to the screen's width.
+	// With the Asset Browser docked along the bottom, it stops above it and
+	// scrolls, so the browser's sources and search stay reachable.
+	float maxHeight = ImGui::GetIO().DisplaySize.y - 48.0f;
+	ImGuiWindow *browserWindow = ImGui::FindWindowByName(LI(ICON_FA_MAGNIFYING_GLASS, "Asset Browser"));
+	bool browserAlongBottom = browserWindow && browserWindow->WasActive &&
+		browserWindow->Pos.y > workArea.GetCenter().y && browserWindow->Size.x > workArea.GetWidth() * 0.5f;
+	if(browserAlongBottom)
+		maxHeight = std::max(ImGui::GetFontSize() * 10.0f, browserWindow->Pos.y - workArea.Min.y - uiPanelGap() * 2.0f);
+	ImGui::SetNextWindowSizeConstraints(ImVec2(ImGui::GetFontSize() * 30.0f, 0.0f),
+		ImVec2(ImGui::GetFontSize() * 30.0f, maxHeight));
 	if(ImGui::Begin(LI(ICON_FA_LINK, "Attachment Workspace"), &open, ImGuiWindowFlags_AlwaysAutoResize)){
 		ObjectInst *target = GetAttachmentWorkspaceTarget();
 		ObjectInst *player = GetAttachmentWorkspacePlayerPreview();
@@ -11486,36 +12987,41 @@ uiAttachmentWorkspaceWindow(void)
 			target = nil;
 		if(player){
 			int skin = GetAttachmentWorkspacePlayerSkin();
-			if(ImGui::InputInt(_("Player skin"), &skin)){
+			if(UiInputInt(_("Player skin"), &skin)){
 				SetAttachmentWorkspacePlayerSkin(skin);
 				target = GetAttachmentWorkspaceTarget();
 			}
 			ImGui::SetItemTooltip(_("Preview skin used to position bone attachments."));
 		}else if(target){
 			char targetLabel[128];
-			ImGui::Text(_("Target: %s"), uiObjectLabel(target, targetLabel, sizeof(targetLabel)));
+			UiInfoRow(_("Target"), uiObjectLabel(target, targetLabel, sizeof(targetLabel)));
 		}else
 			ImGui::TextWrapped(_("Select a ped, NPC, or vehicle in the map."));
 
 		ImGui::BeginDisabled(target == nil);
 		bool voidView = AttachmentWorkspaceHidesWorld();
-		if(ImGui::Button(voidView ? _("Return to map") : _("Isolate view")))
+		// The view: isolate and focus as an even pair, then the five sides as
+		// one even row.
+		float spacing = ImGui::GetStyle().ItemSpacing.x;
+		float half = floorf((ImGui::GetContentRegionAvail().x - spacing) * 0.5f);
+		if(ImGui::Button(voidView ? _("Return to map") : _("Isolate view"), ImVec2(half, 0)))
 			SetAttachmentWorkspaceVoid(!voidView);
 		ImGui::SetItemTooltip(voidView ?
 			_("Leave the isolated attachment view and restore the map camera.") :
 			_("Show only the target and its attachments against an empty background."));
 		ImGui::SameLine();
-		if(ImGui::Button(_("Focus"))) SetAttachmentWorkspaceCameraView(ATTACHMENT_VIEW_FOCUS);
+		if(ImGui::Button(_("Focus"), ImVec2(half, 0))) SetAttachmentWorkspaceCameraView(ATTACHMENT_VIEW_FOCUS);
 		ImGui::SetItemTooltip(_("Center the target and fit it in view."));
-		if(ImGui::Button(_("Front"))) SetAttachmentWorkspaceCameraView(ATTACHMENT_VIEW_FRONT);
+		float fifth = floorf((ImGui::GetContentRegionAvail().x - spacing * 4.0f) / 5.0f);
+		if(ImGui::Button(_("Front"), ImVec2(fifth, 0))) SetAttachmentWorkspaceCameraView(ATTACHMENT_VIEW_FRONT);
 		ImGui::SameLine();
-		if(ImGui::Button(_("Back"))) SetAttachmentWorkspaceCameraView(ATTACHMENT_VIEW_BACK);
+		if(ImGui::Button(_("Back"), ImVec2(fifth, 0))) SetAttachmentWorkspaceCameraView(ATTACHMENT_VIEW_BACK);
 		ImGui::SameLine();
-		if(ImGui::Button(_("Left"))) SetAttachmentWorkspaceCameraView(ATTACHMENT_VIEW_LEFT);
+		if(ImGui::Button(_("Left"), ImVec2(fifth, 0))) SetAttachmentWorkspaceCameraView(ATTACHMENT_VIEW_LEFT);
 		ImGui::SameLine();
-		if(ImGui::Button(_("Right"))) SetAttachmentWorkspaceCameraView(ATTACHMENT_VIEW_RIGHT);
+		if(ImGui::Button(_("Right"), ImVec2(fifth, 0))) SetAttachmentWorkspaceCameraView(ATTACHMENT_VIEW_RIGHT);
 		ImGui::SameLine();
-		if(ImGui::Button(_("Top"))) SetAttachmentWorkspaceCameraView(ATTACHMENT_VIEW_TOP);
+		if(ImGui::Button(_("Top"), ImVec2(fifth, 0))) SetAttachmentWorkspaceCameraView(ATTACHMENT_VIEW_TOP);
 		ImGui::EndDisabled();
 
 		bool mapEditMode = !InTextDrawMode() && !InPawnIdeMode();
@@ -11567,7 +13073,7 @@ uiAttachmentWorkspaceWindow(void)
 		}
 		char childLabel[128];
 		if(!attachments.empty()){
-			if(ImGui::BeginCombo(_("Attachment"), child ? uiObjectLabel(child, childLabel, sizeof(childLabel)) : _("Choose an attachment"))){
+			if(UiBeginCombo(_("Attachment"), child ? uiObjectLabel(child, childLabel, sizeof(childLabel)) : _("Choose an attachment"))){
 				for(ObjectInst *attached : attachments){
 					ImGui::PushID(attached->m_id);
 					if(ImGui::Selectable(uiObjectLabel(attached, childLabel, sizeof(childLabel)), child == attached)){
@@ -11585,33 +13091,39 @@ uiAttachmentWorkspaceWindow(void)
 			editedAttachmentId = child->m_id;
 		bool playerTarget = player || IsPlayerAttachmentTarget(target);
 		if(!child && playerTarget)
-			ImGui::SeparatorText(_("Placement settings"));
+			UiHeading(_("Placement settings"));
 		ObjectPawnProperties settings = child ? *GetObjectPawnProperties(child) : placement;
 		if(uiAttachmentFields(settings, playerTarget, child != nil, target && !target->m_isVehicle, child != nil)){
 			if(child) SetObjectPawnProperties(child, settings);
 			else placement = settings;
 		}
 		SetAttachmentTargetPickOptions(settings.attachBone, settings.attachScale);
-		if(child && ImGui::Button(_("Detach"))){
+		if(child && ImGui::Button(_("Detach"), ImVec2(-FLT_MIN, 0))){
 			DetachObjectInstance(child);
 			ClearSelection();
 			if(target && !player) target->Select();
 		}
 
-		ImGui::Separator();
-		if(ImGui::Button(_("Browse models"))){
+		ImGui::Spacing();
+		// Browse and add the model picked there: an even pair on one row.
+		float pairW = floorf((ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x) * 0.5f);
+		if(ImGui::Button(_("Browse models"), ImVec2(pairW, 0))){
 			showBrowserWindow = true;
 			gBrowserDiscoveryFocusPending = true;
 			// Docked browser panels stay below floating windows. Move this
 			// window out of the browser's way before handing input to it.
 			// A browser not open yet will dock in the right-hand column.
-			ImGuiWindow *browser = ImGui::FindWindowByName(LI(ICON_FA_MAGNIFYING_GLASS, "Object Browser"));
+			ImGuiWindow *browser = ImGui::FindWindowByName(LI(ICON_FA_MAGNIFYING_GLASS, "Asset Browser"));
 			bool browserShown = browser && browser->WasActive;
 			ImRect area = uiPanelWorkArea();
 			float browserLeft = browserShown ? browser->Pos.x : area.Max.x - area.GetWidth() * 0.3f;
 			float browserRight = browserShown ? browser->Pos.x + browser->Size.x : area.Max.x;
 			ImVec2 pos = ImGui::GetWindowPos(), size = ImGui::GetWindowSize();
-			if(pos.x < browserRight && pos.x + size.x > browserLeft){
+			if(browserAlongBottom){
+				// Along the bottom: up to the top, where its height stops above it.
+				pos.y = workArea.Min.y + uiPanelGap();
+				ImGui::SetWindowPos(pos);
+			}else if(pos.x < browserRight && pos.x + size.x > browserLeft){
 				pos.x = (browserLeft + browserRight)*0.5f < area.GetCenter().x ? area.Max.x - size.x - uiPanelGap() : area.Min.x + uiPanelGap();
 				ImGui::SetWindowPos(pos);
 			}
@@ -11622,7 +13134,7 @@ uiAttachmentWorkspaceWindow(void)
 		bool canAddModel = target && modelDef && !modelDef->m_isVehicle && !modelDef->m_isPed &&
 			GetSpawnElementKind() == SAMP_ELEMENT_OBJECT;
 		ImGui::BeginDisabled(!canAddModel);
-		if(ImGui::Button(_("Add selected model"))){
+		if(ImGui::Button(_("Add selected model"), ImVec2(-FLT_MIN, 0))){
 			UndoBeginGroup();
 			rw::Quat rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
 			ObjectInst *added = SpawnDocumentInstance(model, target->m_translation, rotation);
@@ -11708,7 +13220,7 @@ uiAttachmentTargetPickWindow(void)
 		if(changed)
 			bone = boneIndex + 1;
 		ImGui::SetItemTooltip(_("Choose the ped bone. Its coloured axes are marked in the viewport."));
-		if(ImGui::DragFloat3(_("Scale"), &scale.x, 0.01f, 0.01f, 50.0f, "%.2f"))
+		if(UiDragFloat3(_("Scale"), &scale.x, 0.01f, 0.01f, 50.0f, "%.2f"))
 			changed = true;
 		ImGui::SetItemTooltip(_("Bone and scale apply to ped/NPC targets."));
 		if(changed)
@@ -11745,6 +13257,9 @@ uiInstWindow(void)
 		int kind = GetSampElementKind(inst);
 		bool isObject = !inst->m_isVehicle && kind == SAMP_ELEMENT_OBJECT;
 		const ObjectPawnProperties *properties = GetObjectPawnProperties(inst);
+		// The header: its name, with the actions at the right end; what it
+		// is under it, in grey.
+		ImGui::SetWindowFontScale(1.12f);
 		if(!isObject && !inst->m_isVehicle)
 			ImGui::TextUnformatted(_(GetSampElementKindName(kind)));
 		else if(properties->name[0])
@@ -11753,6 +13268,36 @@ uiInstWindow(void)
 			ImGui::Text("%s", _(GetSampElementKindName(GetSampElementKind(inst))));
 		else
 			ImGui::Text("%s", obj ? obj->m_name : "?");
+		ImGui::SetWindowFontScale(1.0f);
+		ImGui::SameLine(ImGui::GetWindowContentRegionMax().x - ImGui::GetFrameHeight());
+		if(ImGui::SmallButton(ICON_FA_GEAR "##inspector_actions"))
+			ImGui::OpenPopup("##inspector_actions");
+		ImGui::SetItemTooltip(_("More actions"));
+		if(ImGui::BeginPopup("##inspector_actions")){
+			ImGui::BeginDisabled(!canEdit);
+			if(inst->m_isDeleted){
+				if(ImGui::MenuItem(_("Undelete"))) inst->Undelete();
+			}else if(ImGui::MenuItem(TI(ICON_FA_TRASH, "Delete"))){
+				finishTransformPanelEdit();
+				inst->Delete();
+			}
+			uiSelectAllOfKindButton(inst);
+			ImGui::EndDisabled();
+			ImGui::EndPopup();
+		}
+		if(IsPawnWorldObject(inst)){
+			ImGui::TextColored(UiSemanticColor(UI_COLOR_WARNING), "%s", properties->forceWorldReplacement ?
+				_("Map object") : _("GTA world object"));
+			ImGui::SetItemTooltip("%s", properties->forceWorldReplacement ?
+				_("Keep the selected GTA objects in place. Saving removes the originals and recreates them as CreateObject or CreateDynamicObject, using the map's format.") :
+				_("Unchanged world objects are not saved in the map. Once you move,\n"
+				"rotate, retexture or delete one, the map removes the original with\n"
+				"RemoveBuildingForPlayer and creates your version instead."));
+			if(numSelected > 1) ImGui::SameLine();
+		}
+		if(numSelected > 1)
+			ImGui::TextDisabled(_("(+%d more selected)"), numSelected - 1);
+		ImGui::Spacing();
 		if(isObject && numSelected == 1){
 			static int modelIdInstance = -1;
 			static int modelIdInput;
@@ -11771,13 +13316,14 @@ uiInstWindow(void)
 				invalidModelId = false;
 			}
 			bool canChangeModel = canEdit && CanChangeInstanceModelId(inst);
-			ImGui::SetNextItemWidth(ImGui::GetFontSize() * 9.0f);
+			if(!canChangeModel)
+				ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - ImGui::GetFrameHeight() - ImGui::GetStyle().ItemSpacing.x);
 			ImGui::BeginDisabled(!canChangeModel);
-			bool submitted = ImGui::InputInt(_("Model ID"), &modelIdInput, 1, 100,
+			bool submitted = UiInputInt(_("Model ID"), &modelIdInput, 1, 100,
 				ImGuiInputTextFlags_EnterReturnsTrue);
 			ImGui::EndDisabled();
 			ImGui::SetItemTooltip("%s\n%s", _("Model ID"),
-				_("Search several IDs or ranges. Custom models use their negative Pawn IDs."));
+				_("Type a model ID and press Enter to swap the model. Custom models use their negative Pawn IDs."));
 			if(submitted){
 				if(canChangeModel && ChangeInstanceModelId(inst, EditorModelId(modelIdInput))){
 					invalidModelId = false;
@@ -11801,38 +13347,6 @@ uiInstWindow(void)
 			ImGui::SameLine();
 			ImGui::TextDisabled(_("%s  model %d"), properties->name[0] && obj ? obj->m_name : "",
 				inst->m_objectId);
-		}
-		if(numSelected > 1){
-			ImGui::SameLine();
-			ImGui::TextDisabled(_("(+%d more selected)"), numSelected - 1);
-		}
-		if(!isObject && numSelected == 1)
-			ImGui::SameLine(ImGui::GetWindowContentRegionMax().x - ImGui::GetFrameHeight());
-		if(ImGui::SmallButton(ICON_FA_GEAR "##inspector_actions"))
-			ImGui::OpenPopup("##inspector_actions");
-		ImGui::SetItemTooltip(_("More actions"));
-		if(ImGui::BeginPopup("##inspector_actions")){
-			ImGui::BeginDisabled(!canEdit);
-			if(inst->m_isDeleted){
-				if(ImGui::MenuItem(_("Undelete"))) inst->Undelete();
-			}else if(ImGui::MenuItem(TI(ICON_FA_TRASH, "Delete"))){
-				finishTransformPanelEdit();
-				inst->Delete();
-			}
-			uiSelectAllOfKindButton(inst);
-			ImGui::EndDisabled();
-			ImGui::EndPopup();
-		}
-
-		if(IsPawnWorldObject(inst)){
-			ImGui::SameLine();
-			ImGui::TextColored(UiSemanticColor(UI_COLOR_WARNING), properties->forceWorldReplacement ?
-				_("Map object") : _("GTA world object"));
-			ImGui::SetItemTooltip("%s", properties->forceWorldReplacement ?
-				_("Keep the selected GTA objects in place. Saving removes the originals and recreates them as CreateObject or CreateDynamicObject, using the map's format.") :
-				_("Unchanged world objects are not saved in the map. Once you move,\n"
-				"rotate, retexture or delete one, the map removes the original with\n"
-				"RemoveBuildingForPlayer and creates your version instead."));
 		}
 		uiConvertWorldObjectAction(inst, false);
 		uiReplayParticlesAction(inst, false);
@@ -11889,7 +13403,8 @@ uiInstWindow(void)
 			uiObjInfo(obj);
 			char exportDir[1024];
 			bool haveExportDir = GetHaumeaDataPath(exportDir, sizeof(exportDir), "dff-txd-exports");
-			if(ImGui::Button(_("Export DFF"))){
+			float exportWidth = floorf((ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x) * 0.5f);
+			if(ImGui::Button(_("Export DFF"), ImVec2(exportWidth, 0))){
 				int failed = 0;
 				int exported = haveExportDir ? ExportSelectedDffs(exportDir, &failed) : 0;
 				if(haveExportDir && (exported > 0 || failed == 0))
@@ -11899,7 +13414,7 @@ uiInstWindow(void)
 					Toast(TOAST_SAVE, _("Failed to export DFF(s)"));
 			}
 			ImGui::SameLine();
-			if(ImGui::Button(_("Export TXD"))){
+			if(ImGui::Button(_("Export TXD"), ImVec2(exportWidth, 0))){
 				int failed = 0;
 				int exported = haveExportDir ? ExportSelectedTxds(exportDir, &failed) : 0;
 				if(haveExportDir && (exported > 0 || failed == 0))
@@ -11920,7 +13435,7 @@ uiInstWindow(void)
 		ImGui::Spacing();
 		if(ImGui::Button(TI(ICON_FA_MAGNIFYING_GLASS, "Browse")))
 			showBrowserWindow = true;
-		ImGui::SetItemTooltip(_("Object Browser (%s): pick something to place."), uiKey(SC_WINDOW_BROWSER));
+		ImGui::SetItemTooltip(_("Asset Browser (%s): pick something to place."), uiKey(SC_WINDOW_BROWSER));
 		ImGui::Spacing();
 
 		if(SAPaths::selectedNode && SAPaths::HasInfoToShow()){
@@ -11937,11 +13452,15 @@ uiInstWindow(void)
 // Helper: check if category index is or is a child of parent
 static bool isCategoryOrChild(int cat, int parent);
 
-// Which shelf a model belongs on: skins and vehicles each have their own.
+// Which shelf a model belongs on: skins, vehicles and particles each have
+// their own. Particles are still objects in the map (CreateObject).
 static int
 browserKindOf(const ObjectDef *obj)
 {
-	return obj->m_isPed ? BROWSER_KIND_SKINS : obj->m_isVehicle ? BROWSER_KIND_VEHICLES : BROWSER_KIND_OBJECTS;
+	if(obj->m_isPed) return BROWSER_KIND_SKINS;
+	if(obj->m_isVehicle) return BROWSER_KIND_VEHICLES;
+	if(GetObjectCategory(obj->m_id) == CAT_SAMP_EFFECTS) return BROWSER_KIND_PARTICLES;
+	return BROWSER_KIND_OBJECTS;
 }
 
 // The categories a shelf offers in its drop-down.
@@ -11950,8 +13469,8 @@ browserKindHasCategory(int kind, int cat)
 {
 	bool vehicle = isCategoryOrChild(cat, CAT_VEHICLES_ROOT);
 	if(kind == BROWSER_KIND_VEHICLES) return vehicle && cat != CAT_VEHICLES_ROOT;
-	if(kind == BROWSER_KIND_SKINS) return false;
-	return !vehicle && cat != CAT_PEOPLE;
+	if(kind == BROWSER_KIND_SKINS || kind == BROWSER_KIND_PARTICLES) return false;
+	return !vehicle && cat != CAT_PEOPLE && cat != CAT_SAMP_EFFECTS;
 }
 
 static bool
@@ -12413,21 +13932,34 @@ static void
 uiPrefabList(int *filtered, int numFiltered)
 {
 	ImGui::BeginChild("##PrefabList", UiFillRest(UiListMinHeight()), true);
+	// Wide (docked along the bottom): the names flow into columns, so a
+	// short panel still shows most of them.
+	float spacing = ImGui::GetStyle().ItemSpacing.x;
+	int columns = std::max(1, (int)((ImGui::GetContentRegionAvail().x + spacing) / (ImGui::GetFontSize() * 18.0f)));
+	float colW = floorf((ImGui::GetContentRegionAvail().x - spacing * (columns - 1)) / columns);
+	int rows = (numFiltered + columns - 1) / columns;
 	ImGuiListClipper clipper;
-	clipper.Begin(numFiltered);
+	clipper.Begin(rows);
 	while(clipper.Step()){
 		for(int row = clipper.DisplayStart; row < clipper.DisplayEnd; row++){
-			int i = filtered[row];
-			const PrefabListing &prefab = gBrowserPrefabs[i];
-			ImGui::PushID(i);
-			char label[320];
-			snprintf(label, sizeof(label), "%s  (%d)", prefab.name.c_str(), prefab.info.instances);
-			if(ImGui::Selectable(label, gBrowserSelectedPrefab == i))
-				gBrowserSelectedPrefab = i;
-			if(ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
-				importBrowserPrefab(i);
-			uiPrefabTooltip(prefab);
-			ImGui::PopID();
+			for(int col = 0; col < columns; col++){
+				int at = row * columns + col;
+				if(at >= numFiltered)
+					break;
+				int i = filtered[at];
+				const PrefabListing &prefab = gBrowserPrefabs[i];
+				if(col > 0)
+					ImGui::SameLine();
+				ImGui::PushID(i);
+				char label[320];
+				snprintf(label, sizeof(label), "%s  (%d)", prefab.name.c_str(), prefab.info.instances);
+				if(ImGui::Selectable(label, gBrowserSelectedPrefab == i, 0, ImVec2(columns > 1 ? colW : 0.0f, 0.0f)))
+					gBrowserSelectedPrefab = i;
+				if(ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+					importBrowserPrefab(i);
+				uiPrefabTooltip(prefab);
+				ImGui::PopID();
+			}
 		}
 	}
 	ImGui::EndChild();
@@ -12527,47 +14059,69 @@ uiBrowserPrefabsTab(void)
 	char foldersHeader[160];
 	snprintf(foldersHeader, sizeof(foldersHeader), _("Folder: %s###prefabfolders"),
 		gBrowserPrefabFolder.empty() ? _("all") : gBrowserPrefabFolder.c_str());
-	if(ImGui::CollapsingHeader(foldersHeader))
+	if(UiSection(foldersHeader))
 		uiPrefabFolders();
 
-	if(gBrowserSelectedPrefab >= 0 && gBrowserSelectedPrefab < (int)gBrowserPrefabs.size()){
-		const PrefabListing &prefab = gBrowserPrefabs[gBrowserSelectedPrefab];
-		// A small picture with the details and buttons beside it.
-		rw::Texture *thumb = GetPrefabThumbnailTexture(prefab.path.c_str());
-		float side = ImGui::GetFontSize() * 6.0f;
-		if(thumb && thumb->raster)
-			ImGui::Image((void*)(intptr_t)thumb, ImVec2(side, side), ImVec2(0, 1), ImVec2(1, 0));
-		else
-			ImGui::Dummy(ImVec2(side, side));
-		ImGui::SameLine();
-		ImGui::BeginGroup();
-		ImGui::TextUnformatted(prefab.name.c_str());
-		ImGui::TextDisabled(_("%s, %d instance(s)"), prefab.folder.c_str(), prefab.info.instances);
-		ImGui::SetItemTooltip(_("%d SA-MP element(s), %d vehicle(s)\n%s"), prefab.info.elements,
-			prefab.info.vehicles, prefab.path.c_str());
-		if(!prefab.info.tags.empty())
-			ImGui::TextDisabled(_("Tags: %s"), prefab.info.tags.c_str());
-		bool placing = gPrefabPlaceMode && prefab.path == GetPrefabPlacePath();
-		if(ImGui::Button(placing ? _("Stop placing") : TI(ICON_FA_PLUS, "Place"))){
-			if(gPrefabPlaceMode)
-				ExitPrefabPlaceMode();
+	// The picked prefab: a small picture with its name and what it holds,
+	// then Place and how to place.
+	auto details = [&](){
+		if(!(gBrowserSelectedPrefab >= 0 && gBrowserSelectedPrefab < (int)gBrowserPrefabs.size()))
+			return;
+		{
+			const PrefabListing &prefab = gBrowserPrefabs[gBrowserSelectedPrefab];
+			// A small picture with its name and what it holds beside it; then
+			// Place and how to place.
+			rw::Texture *thumb = GetPrefabThumbnailTexture(prefab.path.c_str());
+			float side = ImGui::GetFontSize() * 4.5f;
+			if(thumb && thumb->raster)
+				ImGui::Image((void*)(intptr_t)thumb, ImVec2(side, side), ImVec2(0, 1), ImVec2(1, 0));
+			else
+				ImGui::Dummy(ImVec2(side, side));
+			ImGui::SameLine();
+			ImGui::BeginGroup();
+			UiElidedText(prefab.name.c_str(), ImGui::GetContentRegionAvail().x);
+			ImGui::TextDisabled(_("%s, %d instance(s)"), prefab.folder.c_str(), prefab.info.instances);
+			ImGui::SetItemTooltip(_("%d SA-MP element(s), %d vehicle(s)\n%s"), prefab.info.elements,
+				prefab.info.vehicles, prefab.path.c_str());
+			if(!prefab.info.tags.empty())
+				ImGui::TextDisabled(_("Tags: %s"), prefab.info.tags.c_str());
+			ImGui::EndGroup();
+			bool placing = gPrefabPlaceMode && prefab.path == GetPrefabPlacePath();
+			ImVec4 fill = UiAccentFill();
+			if(!placing){
+				ImGui::PushStyleColor(ImGuiCol_Button, fill);
+				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(fill.x*1.12f, fill.y*1.12f, fill.z*1.12f, 1.0f));
+				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 1, 1, 1));
+			}
+			bool press = ImGui::Button(placing ? _("Stop placing") : TI(ICON_FA_PLUS, "Place"), ImVec2(-FLT_MIN, 0));
 			if(!placing)
-				importBrowserPrefab(gBrowserSelectedPrefab);
+				ImGui::PopStyleColor(3);
+			if(press){
+				if(gPrefabPlaceMode)
+					ExitPrefabPlaceMode();
+				if(!placing)
+					importBrowserPrefab(gBrowserSelectedPrefab);
+			}
+			ImGui::SetItemTooltip(_("Click in the world to place it. Q/E (or , and .) and the wheel turn it, Shift\n"
+				"in smaller steps; Shift+click keeps placing; Esc stops."));
+			char heading[24];
+			snprintf(heading, sizeof(heading), "%.0f\xC2\xB0", fmodf(fmodf(gPrefabPlaceHeading, 360.0f) + 360.0f, 360.0f));
+			UiInfoRow(_("Heading"), heading, _("The heading it is placed at."));
+			UiCheckbox(_("Keep placing"), &gPrefabPlaceRepeat);
+			ImGui::SetItemTooltip(_("Stay in placement after each click, as Shift+click does."));
+			UiCheckbox(_("As a group"), &gPrefabPlaceAsGroup);
+			ImGui::SetItemTooltip(_("Put what is placed in a group named after the prefab."));
+			ImGui::Spacing();
 		}
-		ImGui::SetItemTooltip(_("Click in the world to place it. Q/E (or , and .) and the wheel turn it, Shift\n"
-			"in smaller steps; Shift+click keeps placing; Esc stops."));
-		ImGui::SameLine();
-		ImGui::TextDisabled("%.0f\xC2\xB0", fmodf(fmodf(gPrefabPlaceHeading, 360.0f) + 360.0f, 360.0f));
-		ImGui::SetItemTooltip(_("The heading it is placed at."));
-		ImGui::Checkbox(_("Keep placing"), &gPrefabPlaceRepeat);
-		ImGui::SetItemTooltip(_("Stay in placement after each click, as Shift+click does."));
-		ImGui::SameLine();
-		ImGui::Checkbox(_("As a group"), &gPrefabPlaceAsGroup);
-		ImGui::SetItemTooltip(_("Put what is placed in a group named after the prefab."));
-		ImGui::EndGroup();
-		ImGui::Separator();
-	}
-
+	};
+	bool hasPick = gBrowserSelectedPrefab >= 0 && gBrowserSelectedPrefab < (int)gBrowserPrefabs.size();
+	// Wide (docked along the bottom): the list, with the pick beside it.
+	bool side = hasPick && ImGui::GetContentRegionAvail().x > ImGui::GetFontSize() * 44.0f;
+	float detailW = floorf(ImGui::GetFontSize() * 20.0f);
+	if(side)
+		ImGui::BeginChild("##prefab_list_col", ImVec2(ImGui::GetContentRegionAvail().x - detailW - ImGui::GetStyle().ItemSpacing.x, 0));
+	else
+		details();
 	std::vector<int> filtered;
 	for(int i = 0; i < (int)gBrowserPrefabs.size(); i++){
 		const PrefabListing &prefab = gBrowserPrefabs[i];
@@ -12584,6 +14138,13 @@ uiBrowserPrefabsTab(void)
 		ImGui::TextDisabled(_("No prefabs yet: select objects and use File > Export > Selection as Prefab."));
 	else if(!filtered.empty())
 		uiPrefabResults(filtered.data(), (int)filtered.size());
+	if(side){
+		ImGui::EndChild();
+		ImGui::SameLine();
+		ImGui::BeginChild("##prefab_detail_col", ImVec2(0, 0));
+		details();
+		ImGui::EndChild();
+	}
 }
 
 static void
@@ -12597,6 +14158,17 @@ uiOpenObjectDiscovery(int model, bool similar, const char *ids)
 	else BrowserFindInstances(model);
 }
 
+// The picked model, along the panel's foot: its name and ID, the favourite
+// star and more actions, then Keep placing and Place, the main action.
+static float
+uiBrowserFooterHeight(int selId)
+{
+	if(selId < 0 || GetObjectDef(selId) == nil)
+		return 0.0f;
+	bool twoRows = ImGui::GetContentRegionAvail().x < ImGui::GetFontSize() * 34.0f;
+	return (ImGui::GetFrameHeight() + ImGui::GetStyle().ItemSpacing.y) * (twoRows ? 2.0f : 1.0f) + ImGui::GetStyle().ItemSpacing.y;
+}
+
 static void
 uiBrowserSelectedObject(int selId)
 {
@@ -12607,38 +14179,44 @@ uiBrowserSelectedObject(int selId)
 	if(sel == nil)
 		return;
 
-
-	ImGui::BeginGroup();
-	UiElidedText(sel->m_name, ImGui::GetContentRegionAvail().x);
-	ImGui::TextDisabled(_("ID %d"), PawnModelId(sel->m_id));
-
-	// Place and Brush are mutually exclusive
-	if(gPlaceMode){
-		if(ImGui::Button(_("Stop placing")))
-			SpawnExitPlaceMode();
-	}else if(ImGui::Button(TI(ICON_FA_PLUS, "Place"))){
-		if(gBrushMode) ExitBrushMode();
-		if(gPrefabPlaceMode) ExitPrefabPlaceMode();
-		gPlaceMode = true;
+	// A hairline over it, the width of the panel.
+	{
+		ImVec2 p = ImGui::GetCursorScreenPos();
+		ImGuiWindow *w = ImGui::GetCurrentWindow();
+		ImGui::GetWindowDrawList()->AddLine(ImVec2(w->Pos.x, p.y), ImVec2(w->Pos.x + w->Size.x, p.y), ImGui::GetColorU32(ImGuiCol_Separator));
+		ImGui::Dummy(ImVec2(0.0f, ImGui::GetStyle().ItemSpacing.y*0.5f));
 	}
-	ImGui::SetItemTooltip(_("Choose Place, then click the world. Double-click a tile also works."));
-	UiSameLineIfFits(ImGui::GetFrameHeight() + ImGui::GetStyle().ItemInnerSpacing.x + ImGui::CalcTextSize(_("Keep placing")).x);
-	ImGui::Checkbox(_("Keep placing"), &gPlaceRepeat);
-	ImGui::SetItemTooltip(_("Stay in placement after each click, as Shift+click does."));
-	float iconButtonsWidth = ImGui::GetFrameHeight()*2 + ImGui::GetStyle().ItemSpacing.x*2;
-	if(ImGui::GetItemRectMax().x + iconButtonsWidth < ImGui::GetWindowPos().x + ImGui::GetWindowContentRegionMax().x)
-		ImGui::SameLine();
+	float avail = ImGui::GetContentRegionAvail().x, fs = ImGui::GetFontSize();
+	bool twoRows = avail < fs * 34.0f;
+	float icon = ImGui::GetFrameHeight(), spacing = ImGui::GetStyle().ItemSpacing.x;
+	float placeW = floorf(fs * 9.0f), keepW = floorf(fs * 9.5f);
+	float right = twoRows ? icon*2.0f + spacing : icon*2.0f + spacing*3.0f + keepW + placeW;
+
+	// The name in the bold face, the ID dim beside it.
+	ImGui::AlignTextToFramePadding();
+	char idText[32];
+	snprintf(idText, sizeof(idText), _("ID %d"), PawnModelId(sel->m_id));
+	float idW = ImGui::CalcTextSize(idText).x;
+	if(gBoldFont) ImGui::PushFont(gBoldFont);
+	UiElidedText(sel->m_name, std::max(fs, avail - right - idW - spacing*2.0f));
+	if(gBoldFont) ImGui::PopFont();
+	ImGui::SameLine();
+	ImGui::TextDisabled("%s", idText);
+	ImGui::SameLine(ImGui::GetWindowContentRegionMax().x - right + (twoRows ? 0.0f : 0.0f));
 	bool favourite = IsFavourite(selId);
+	ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
+	ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0, 0, 0, 0));
 	if(favourite)
 		ImGui::PushStyleColor(ImGuiCol_Text, UiSemanticColor(UI_COLOR_WARNING));
-	if(ImGui::Button(ICON_FA_STAR "##favourite"))
+	if(ImGui::Button(ICON_FA_STAR "##favourite", ImVec2(icon, 0)))
 		ToggleFavourite(selId);
 	if(favourite)
 		ImGui::PopStyleColor();
 	ImGui::SetItemTooltip("%s", favourite ? _("Remove from Favourites") : _("Add to Favourites"));
 	ImGui::SameLine();
-	if(ImGui::Button(ICON_FA_GEAR "##object_actions"))
+	if(ImGui::Button(ICON_FA_GEAR "##object_actions", ImVec2(icon, 0)))
 		ImGui::OpenPopup("##object_actions");
+	ImGui::PopStyleColor(2);
 	ImGui::SetItemTooltip(_("More actions"));
 	if(ImGui::BeginPopup("##object_actions")){
 		if(ImGui::MenuItem(gBrushMode ? _("Stop brush") : _("Brush with this object"))){
@@ -12652,7 +14230,7 @@ uiBrowserSelectedObject(int selId)
 		}
 		if(ImGui::MenuItem(_("Find similar models")))
 			uiOpenObjectDiscovery(selId, true);
-		ImGui::Spacing();
+		ImGui::Separator();
 		if(ImGui::MenuItem(_("Copy model name")))
 			SetEditorClipboardText(sel->m_name);
 		if(ImGui::MenuItem(_("Copy model ID"))){
@@ -12660,20 +14238,47 @@ uiBrowserSelectedObject(int selId)
 			snprintf(id, sizeof(id), "%d", sel->m_id);
 			SetEditorClipboardText(id);
 		}
+		// The model's files, read-only.
+		ImGui::Separator();
+		TxdDef *txd = GetTxdDef(sel->m_txdSlot);
+		ImGui::TextDisabled("TXD  %s", txd ? txd->name : "-");
+		ImGui::TextDisabled("%s  %.0f m", _("Draw distance"), sel->GetLargestDrawDist());
+		int lodId = GetLodForObject(selId);
+		if(ObjectDef *lod = lodId >= 0 ? GetObjectDef(lodId) : nil)
+			ImGui::TextDisabled("LOD  %s", lod->m_name);
 		ImGui::EndPopup();
 	}
-	if(ImGui::CollapsingHeader(L("Model details###browser_model_details"))){
-		TxdDef *txd = GetTxdDef(sel->m_txdSlot);
-		ImGui::TextDisabled(_("TXD %s"), txd ? txd->name : "-");
-		int lodId = GetLodForObject(selId);
-		ObjectDef *lod = lodId >= 0 ? GetObjectDef(lodId) : nil;
-		if(lod)
-			ImGui::TextDisabled(_("Draw distance %.0f  ·  LOD %s"), sel->GetLargestDrawDist(), lod->m_name);
-		else
-			ImGui::TextDisabled(_("Draw distance %.0f"), sel->GetLargestDrawDist());
+
+	// Keep placing, then Place (Place and Brush are mutually exclusive):
+	// beside the name, or on a row of their own at the right end.
+	if(twoRows){
+		ImGui::Dummy(ImVec2(0.0f, ImGui::GetFrameHeight()));
+		ImGui::SameLine(ImGui::GetWindowContentRegionMax().x - keepW - placeW - spacing);
+	}else
+		ImGui::SameLine();
+	UiCheckbox(_("Keep placing"), &gPlaceRepeat);	// after SameLine: the switch and its name
+	ImGui::SetItemTooltip(_("Stay in placement after each click, as Shift+click does."));
+	ImGui::SameLine(ImGui::GetWindowContentRegionMax().x - placeW);
+	if(gPlaceMode){
+		ImVec4 w = UiSemanticColor(UI_COLOR_WARNING);
+		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(w.x, w.y, w.z, 0.25f));
+		if(ImGui::Button(_("Stop placing"), ImVec2(placeW, 0)))
+			SpawnExitPlaceMode();
+		ImGui::PopStyleColor();
+	}else{
+		ImVec4 fill = UiAccentFill();
+		ImGui::PushStyleColor(ImGuiCol_Button, fill);
+		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(fill.x*1.12f, fill.y*1.12f, fill.z*1.12f, 1.0f));
+		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 1, 1, 1));
+		bool place = ImGui::Button(TI(ICON_FA_PLUS, "Place"), ImVec2(placeW, 0));
+		ImGui::PopStyleColor(3);
+		if(place){
+			if(gBrushMode) ExitBrushMode();
+			if(gPrefabPlaceMode) ExitPrefabPlaceMode();
+			gPlaceMode = true;
+		}
 	}
-	ImGui::EndGroup();
-	ImGui::Spacing();
+	ImGui::SetItemTooltip(_("Choose Place, then click the world. Double-click a tile also works."));
 }
 
 // Shown in place of the recent list until something has been placed:
@@ -12746,7 +14351,7 @@ uiBrowserViewToggle(void)
 			gBrowserThumbnailView = true;
 		if(gBrowserThumbnailView){
 			ImGui::SetNextItemWidth(ImGui::GetFontSize() * 10.0f);
-			ImGui::SliderFloat(_("Tile size"), &gBrowserTileSize, 4.0f, 14.0f, "%.0f");
+			UiSliderFloat(_("Tile size"), &gBrowserTileSize, 4.0f, 14.0f, "%.0f");
 		}
 		ImGui::EndPopup();
 	}
@@ -12755,7 +14360,8 @@ uiBrowserViewToggle(void)
 // Full-width search field. Ctrl+F focuses it. On model tabs, the view switch
 // shares this row so it does not push the browser content down by itself.
 static void
-uiBrowserSearchBox(ImGuiTextFilter &filter, const char *id, const char *hint, bool showViewToggle = false)
+uiBrowserSearchBox(ImGuiTextFilter &filter, const char *id, const char *hint, bool showViewToggle = false, float reserve = 0.0f,
+	int count = -1, const char *countFormat = nil)
 {
 	if(ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_F, ImGuiInputFlags_RouteFromRootWindow))
 		ImGui::SetKeyboardFocusHere();
@@ -12764,10 +14370,22 @@ uiBrowserSearchBox(ImGuiTextFilter &filter, const char *id, const char *hint, bo
 	// so it is plain why objects are missing.
 	bool active = filter.InputBuf[0] != '\0';
 	float clearWidth = active ? ImGui::GetFrameHeight() + ImGui::GetStyle().ItemSpacing.x : 0.0f;
-	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - toggleWidth - clearWidth);
+	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - toggleWidth - clearWidth - reserve);
 	if(active) ImGui::PushStyleColor(ImGuiCol_Border, UiSemanticColor(UI_COLOR_WARNING));
 	if(ImGui::InputTextWithHint(id, hint, filter.InputBuf, IM_ARRAYSIZE(filter.InputBuf)))
 		filter.Build();
+	// How many it shows, dim at the field's right end, instead of a line of
+	// its own (one result needs no count: its tile says it).
+	if(countFormat && count >= 0 && count != 1){
+		char text[64];
+		snprintf(text, sizeof(text), countFormat, count);
+		ImVec2 mn = ImGui::GetItemRectMin(), mx = ImGui::GetItemRectMax();
+		float tw = ImGui::CalcTextSize(text).x, pad = ImGui::GetStyle().FramePadding.x;
+		float typed = ImGui::CalcTextSize(filter.InputBuf[0] ? filter.InputBuf : hint).x;
+		if(mx.x - mn.x > typed + tw + pad*4.0f)
+			ImGui::GetWindowDrawList()->AddText(ImVec2(mx.x - pad - tw, mn.y + ImGui::GetStyle().FramePadding.y),
+				ImGui::GetColorU32(ImGuiCol_TextDisabled), text);
+	}
 	if(active){
 		ImGui::PopStyleColor();
 		ImGui::SameLine();
@@ -12863,6 +14481,14 @@ uiBrowserElementsTab(void)
 	}
 	if(selected == nil) return;
 	gBrowserElementKind = selected->kind;
+	// Wide (docked along the bottom): the kinds a column on the left, the
+	// chosen one's settings beside it, so both stay in the short panel.
+	bool side = choices > 1 && ImGui::GetContentRegionAvail().x > ImGui::GetFontSize() * 40.0f;
+	// In a padded child either way: a selectable row reaches half a spacing
+	// past its column, past the edge of a panel with no padding.
+	if(choices > 1)
+		ImGui::BeginChild("##element_kinds", ImVec2(side ? floorf(ImGui::GetFontSize() * 15.0f) : 0.0f, 0),
+			ImGuiChildFlags_AlwaysUseWindowPadding | (side ? 0 : ImGuiChildFlags_AutoResizeY));
 	if(choices > 1){
 		for(const Row &r : rows){
 			if(uiElementFeature(r.kind) != gBrowserElementFeature) continue;
@@ -12898,16 +14524,21 @@ uiBrowserElementsTab(void)
 				ImGui::EndPopup();
 			}
 		}
-		ImGui::Spacing();
+		ImGui::EndChild();
+		if(side) ImGui::SameLine();
 	}
 	int kind = selected->kind;
 	bool character = kind == SAMP_ELEMENT_ACTOR || kind == SAMP_ELEMENT_CLASS || kind == SAMP_ELEMENT_NPC;
 	int skinIndex = kind == SAMP_ELEMENT_ACTOR ? 0 : kind == SAMP_ELEMENT_CLASS ? 1 : 2;
 	int model = character ? GetSampElementDisplayModel(kind, skins[skinIndex]) :
 		kind == SAMP_ELEMENT_PICKUP ? pickupModel : GetSampElementProxyModel(kind);
+	// Wide: the settings scroll in their column, Keep placing and Place stay
+	// along its foot.
+	float footRow = ImGui::GetFrameHeight() + ImGui::GetStyle().ItemSpacing.y;
+	if(side) ImGui::BeginGroup();
 	ImGui::PushStyleColor(ImGuiCol_ChildBg, ImGui::GetStyleColorVec4(ImGuiCol_FrameBg));
-	ImGui::BeginChild("##element_setup", ImVec2(0, 0),
-		ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_AlwaysUseWindowPadding);
+	ImGui::BeginChild("##element_setup", ImVec2(0, side ? -footRow : 0.0f),
+		(side ? 0 : ImGuiChildFlags_AutoResizeY) | ImGuiChildFlags_AlwaysUseWindowPadding);
 	ImGui::TextUnformatted(_(GetSampElementKindName(kind)));
 	ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
 	ImGui::TextWrapped("%s", _(selected->help));
@@ -12947,21 +14578,39 @@ uiBrowserElementsTab(void)
 		kind == SAMP_ELEMENT_PICKUP ? pickupModel : GetSampElementProxyModel(kind);
 	bool placing = gPlaceMode && GetSpawnElementKind() == kind;
 	if(changed && placing) uiStartSampPlacement(kind, model);
-	ImGui::Spacing();
-	ImGui::Checkbox(_("Keep placing"), &gPlaceRepeat);
+	float placeW = floorf(ImGui::GetFontSize() * 10.0f);
+	if(side){
+		ImGui::EndChild();
+		ImGui::PopStyleColor();
+		// One row: the switch with its name, Place at the right end.
+		ImGui::Dummy(ImVec2(0.0f, ImGui::GetFrameHeight()));
+		ImGui::SameLine(0.0f, 0.0f);
+		footRow = ImGui::GetCursorScreenPos().x + ImGui::GetContentRegionAvail().x;	// the row's right edge
+	}else
+		ImGui::Spacing();
+	UiCheckbox(_("Keep placing"), &gPlaceRepeat);
 	ImGui::SetItemTooltip(_("Stay in placement after each click, as Shift+click does."));
-	ImGui::Spacing();
+	if(side){
+		ImGui::SameLine();
+		ImGui::SetCursorScreenPos(ImVec2(footRow - placeW, ImGui::GetCursorScreenPos().y));
+	}else
+		ImGui::Spacing();
 	char action[96];
 	snprintf(action, sizeof(action), "%s##element_place", placing ? _("Stop placing") : _("Place"));
 	ImVec4 accent = ImGui::GetStyleColorVec4(ImGuiCol_CheckMark);
 	ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(accent.x, accent.y, accent.z, 0.3f));
 	ImGui::BeginDisabled(GetObjectDef(model) == nil);
-	if(ImGui::Button(action, ImVec2(-FLT_MIN, 0))){
+	if(ImGui::Button(action, ImVec2(side ? placeW : -FLT_MIN, 0))){
 		if(placing) SpawnExitPlaceMode();
 		else uiStartSampPlacement(kind, model);
 	}
 	ImGui::EndDisabled();
 	ImGui::PopStyleColor();
+	if(side){
+		if(placing) ImGui::SetItemTooltip("%s", _("Click in the world. Esc stops."));
+		ImGui::EndGroup();
+		return;
+	}
 	if(placing) ImGui::TextWrapped(_("Click in the world. Esc stops."));
 	ImGui::EndChild();
 	ImGui::PopStyleColor();
@@ -12980,7 +14629,7 @@ uiBrowserWindow(void)
 	uiDefaultPanelLayout(PANEL_LEFT_TOP);
 	uiNextPanelSizeConstraints(ImVec2(360, 360));
 	if(gBrowserDiscoveryFocusPending){ ImGui::SetNextWindowFocus(); gBrowserDiscoveryFocusPending = false; }
-	ImGui::Begin(LI(ICON_FA_MAGNIFYING_GLASS, "Object Browser"), &showBrowserWindow);
+	ImGui::Begin(LI(ICON_FA_MAGNIFYING_GLASS, "Asset Browser"), &showBrowserWindow);
 	uiFitItemsToPanel();
 
 	int selId = GetSpawnObjectId();
@@ -12995,31 +14644,8 @@ uiBrowserWindow(void)
 		return;
 	}
 
-	// Docked in a wide, low strip (under the 3D view), the browser lays out
-	// like a content browser: what to show in a column on the left, the
-	// thumbnails filling the rest. In a tall column everything stacks.
-	ImVec2 room = ImGui::GetContentRegionAvail();
-	bool wide = room.x > room.y * 1.7f && room.x > ImGui::GetFontSize() * 34.0f;
-	bool sideOpen = false, resultsOpen = false;
-	if(wide){
-		ImGui::BeginChild("##browser_side", ImVec2(ImGui::GetFontSize() * 15.0f, 0), ImGuiChildFlags_None);
-		sideOpen = true;
-	}
-	auto toResults = [&](){
-		if(!sideOpen || resultsOpen)
-			return;
-		ImGui::EndChild();
-		ImGui::SameLine(0.0f, ImGui::GetFontSize() * 0.6f);
-		// A quiet line between the two halves.
-		ImVec2 p = ImGui::GetCursorScreenPos();
-		ImVec4 c = ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled);
-		c.w *= 0.25f;
-		ImGui::GetWindowDrawList()->AddLine(ImVec2(p.x - ImGui::GetFontSize()*0.3f, p.y),
-			ImVec2(p.x - ImGui::GetFontSize()*0.3f, p.y + ImGui::GetContentRegionAvail().y), ImGui::GetColorU32(c));
-		ImGui::BeginChild("##browser_results", ImVec2(0, 0), ImGuiChildFlags_None);
-		resultsOpen = true;
-	};
-
+	// RbxNative's Toolbox: the sources as chips, the search filling its row,
+	// a count, the results filling the panel; the picked model along the foot.
 	// group: the element feature for Elements, the shelf (objects, skins,
 	// vehicles) for Categories.
 	struct Feature { int tab, group; const char *name; };
@@ -13027,6 +14653,7 @@ uiBrowserWindow(void)
 		{ BROWSER_TAB_CATEGORIES, BROWSER_KIND_OBJECTS, N_("Objects") },
 		{ BROWSER_TAB_CATEGORIES, BROWSER_KIND_SKINS, N_("Skins") },
 		{ BROWSER_TAB_CATEGORIES, BROWSER_KIND_VEHICLES, N_("Vehicles") },
+		{ BROWSER_TAB_CATEGORIES, BROWSER_KIND_PARTICLES, N_("Particles") },
 		{ BROWSER_TAB_ELEMENTS, BROWSER_CHARACTERS, N_("Characters") },
 		{ BROWSER_TAB_ELEMENTS, BROWSER_PATHS, N_("Paths") },
 		{ BROWSER_TAB_ELEMENTS, BROWSER_MARKERS, N_("Markers") },
@@ -13041,84 +14668,247 @@ uiBrowserWindow(void)
 		if(feature.tab == BROWSER_TAB_CATEGORIES) return feature.group == gBrowserKind;
 		return feature.group < 0 || feature.group == gBrowserElementFeature;
 	};
-	const char *featureName = _("Objects");
-	for(const Feature &feature : features)
-		if(featureActive(feature))
-			featureName = _(feature.name);
-	ImGui::SetNextItemWidth(-FLT_MIN);
-	if(ImGui::BeginCombo("##browser_source", featureName, ImGuiComboFlags_HeightLarge)){
-		for(const Feature &feature : features){
-			bool active = featureActive(feature);
-			if(ImGui::Selectable(_(feature.name), active) && !active){
-				if(gPlaceMode) SpawnExitPlaceMode();
-				gBrowserActiveTab = feature.tab;
-				if(feature.tab == BROWSER_TAB_CATEGORIES && feature.group != gBrowserKind){
-					// Objects open on what was placed recently; skins and
-					// vehicles, a short catalogue, on all of them.
-					gBrowserKind = feature.group;
-					gBrowserSelectedCategory = gBrowserKind == BROWSER_KIND_OBJECTS ? BROWSER_CATEGORY_RECENT : BROWSER_CATEGORY_ALL;
-				}else if(feature.group >= 0)
-					gBrowserElementFeature = feature.group;
-			}
-			// Objects, skins and vehicles first, then the map's other elements.
-			if(feature.tab == BROWSER_TAB_CATEGORIES && feature.group == BROWSER_KIND_VEHICLES)
-				ImGui::Separator();
+	auto openFeature = [](const Feature &feature){
+		if(gPlaceMode) SpawnExitPlaceMode();
+		gBrowserActiveTab = feature.tab;
+		if(feature.tab == BROWSER_TAB_CATEGORIES && feature.group != gBrowserKind){
+			// Objects open on what was placed recently; skins and
+			// vehicles, a short catalogue, on all of them.
+			gBrowserKind = feature.group;
+			gBrowserSelectedCategory = gBrowserKind == BROWSER_KIND_OBJECTS ? BROWSER_CATEGORY_RECENT : BROWSER_CATEGORY_ALL;
+		}else if(feature.group >= 0)
+			gBrowserElementFeature = feature.group;
+	};
+	float u = ImGui::GetFontSize() / 16.0f;
+	// Docked wide and short (along the bottom): the sources, the search, the
+	// category and Filters share one toolbar row so the results keep the height.
+	bool wide = ImGui::GetContentRegionAvail().x > ImGui::GetFontSize() * 52.0f;
+	static int lastCount = -1;	// last frame's result count, shown in the search field
+	auto countFormat = [](){
+		return gBrowserActiveTab == BROWSER_TAB_FAVOURITES ? _("%d favourites") :
+			gBrowserKind == BROWSER_KIND_SKINS ? _("%d skins") :
+			gBrowserKind == BROWSER_KIND_VEHICLES ? _("%d vehicles") :
+			gBrowserKind == BROWSER_KIND_PARTICLES ? _("%d particles") : _("%d objects");
+	};
+
+	// A row of chips in a segmented well (field grey, 2px inset): the one
+	// showing wears the accent's wash. Returns the chip clicked, or -1.
+	auto chips = [&](const char *const *labels, const bool *on, int n, const char *trailingId) -> int {
+		float pad = floorf(2.0f*u), chipH = floorf(26.0f*u), gap = floorf(2.0f*u);
+		float avail = ImGui::GetContentRegionAvail().x;
+		float trail = trailingId ? chipH + gap : 0.0f;
+		float natural = 0.0f;
+		for(int i = 0; i < n; i++)
+			natural += ImGui::CalcTextSize(labels[i]).x + floorf(20.0f*u);
+		float room = avail - pad*2.0f - gap*(n - 1) - trail;
+		// As wide as its chips; squeezed only when the panel is narrower.
+		float wellW = std::min(avail, natural + pad*2.0f + gap*(n - 1) + trail);
+		ImVec2 at = ImGui::GetCursorScreenPos();
+		ImDrawList *dl = ImGui::GetWindowDrawList();
+		dl->AddRectFilled(at, ImVec2(at.x + wellW, at.y + chipH + pad*2.0f), ImGui::GetColorU32(ImGuiCol_FrameBg), floorf(3.0f*u));
+		float x = at.x + pad;
+		int clicked = -1;
+		for(int i = 0; i < n; i++){
+			float w = ImGui::CalcTextSize(labels[i]).x + floorf(20.0f*u);
+			if(natural > room) w = floorf(w * room / natural);
+			ImGui::SetCursorScreenPos(ImVec2(x, at.y + pad));
+			ImGui::PushID(i);
+			if(ImGui::InvisibleButton(labels[i], ImVec2(w, chipH)))
+				clicked = i;
+			bool hovered = ImGui::IsItemHovered();
+			ImGui::PopID();
+			ImVec2 p0(x, at.y + pad), p1(x + w, at.y + pad + chipH);
+			if(on[i])
+				dl->AddRectFilled(p0, p1, ImGui::GetColorU32(ImVec4(0x6C/255.0f, 0x7F/255.0f, 0xDB/255.0f, 0x1F/255.0f)), floorf(1.0f*u));
+			else if(hovered)
+				dl->AddRectFilled(p0, p1, IM_COL32(255, 255, 255, 0x0D), floorf(1.0f*u));
+			ImVec2 ts = ImGui::CalcTextSize(labels[i]);
+			dl->PushClipRect(p0, p1, true);
+			dl->AddText(ImVec2(floorf(x + (w - ts.x)*0.5f), floorf(at.y + pad + (chipH - ts.y)*0.5f)),
+				on[i] || hovered ? ImGui::GetColorU32(ImGuiCol_Text) : ImGui::GetColorU32(ImGuiCol_TextDisabled), labels[i]);
+			dl->PopClipRect();
+			x += w + gap;
 		}
-		ImGui::EndCombo();
-	}
-	ImGui::Spacing();
-	if(gBrowserActiveTab == BROWSER_TAB_CATEGORIES)
-		uiBrowserSearchBox(gBrowserCategoryFilter, "##search_objects", TI(ICON_FA_MAGNIFYING_GLASS, "Search"), true);
-	else if(gBrowserActiveTab == BROWSER_TAB_FAVOURITES)
-		uiBrowserSearchBox(gBrowserFavFilter, "##search_fav", TI(ICON_FA_MAGNIFYING_GLASS, "Search"), true);
-	else if(gBrowserActiveTab == BROWSER_TAB_IDE)
-		uiBrowserSearchBox(gBrowserIdeFilter, "##search_ide", TI(ICON_FA_MAGNIFYING_GLASS, "Search"), true);
+		if(trailingId){
+			ImGui::SetCursorScreenPos(ImVec2(at.x + wellW - pad - chipH, at.y + pad));
+			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
+			ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0, 0, 0, 0));
+			ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0.0f, floorf((chipH - ImGui::GetFontSize())*0.5f)));
+			if(ImGui::Button(ICON_FA_CARET_DOWN "##browser_source", ImVec2(chipH, chipH)))
+				ImGui::OpenPopup("##browser_sources");
+			ImGui::PopStyleVar();
+			ImGui::PopStyleColor(2);
+			ImGui::SetItemTooltip("%s", _("Everything the browser can show"));
+		}
+		ImGui::SetCursorScreenPos(at);
+		ImGui::Dummy(ImVec2(wellW, chipH + pad*2.0f));
+		return clicked;
+	};
 
+	// The shelves.
 	{
-		// Outside Categories, the side column holds only the source and search.
-		if(gBrowserActiveTab != BROWSER_TAB_CATEGORIES)
-			toResults();
-		if(gBrowserActiveTab == BROWSER_TAB_CATEGORIES){
-			gBrowserActiveTab = BROWSER_TAB_CATEGORIES;
-			if(gBrowserSelectedCategory >= 0 && !browserKindHasCategory(gBrowserKind, gBrowserSelectedCategory))
-				gBrowserSelectedCategory = gBrowserKind == BROWSER_KIND_OBJECTS ? BROWSER_CATEGORY_RECENT : BROWSER_CATEGORY_ALL;
-
-			uiBrowserSelectedObject(selId);
-			// Category dropdown: the shelf's own categories only.
-			const char *allLabel = gBrowserKind == BROWSER_KIND_SKINS ? _("People (skins)") :
-				gBrowserKind == BROWSER_KIND_VEHICLES ? _("Vehicles") : _("All objects");
-			char catLabel[128];
-			if(gBrowserSelectedCategory >= 0 && gBrowserSelectedCategory < NUM_OBJ_CATEGORIES)
-				snprintf(catLabel, sizeof(catLabel), "%s", _(objCategories[gBrowserSelectedCategory].name));
-			else if(gBrowserSelectedCategory == BROWSER_CATEGORY_RECENT)
-				snprintf(catLabel, sizeof(catLabel), TI(ICON_FA_CLOCK_ROTATE_LEFT, "Recently placed"));
-			else
-				snprintf(catLabel, sizeof(catLabel), "%s", allLabel);
-			ImGui::SetNextItemWidth(-FLT_MIN);
-			if(ImGui::BeginCombo("##CatCombo", catLabel, ImGuiComboFlags_HeightLarge)){
-				if(ImGui::Selectable(TI(ICON_FA_CLOCK_ROTATE_LEFT, "Recently placed"), gBrowserSelectedCategory == BROWSER_CATEGORY_RECENT))
-					gBrowserSelectedCategory = BROWSER_CATEGORY_RECENT;
-				if(ImGui::Selectable(allLabel, gBrowserSelectedCategory == BROWSER_CATEGORY_ALL))
-					gBrowserSelectedCategory = BROWSER_CATEGORY_ALL;
-				bool separated = false;
-				static char lb[128];
-				for(int c = 0; c < NUM_OBJ_CATEGORIES; c++){
-					if(!browserKindHasCategory(gBrowserKind, c))
-						continue;
-					if(!separated){ ImGui::Separator(); separated = true; }
-					buildCategoryLabel(c, lb, sizeof(lb));
-					if(gBrowserKind == BROWSER_KIND_VEHICLES)	// one level, under Vehicles
-						snprintf(lb, sizeof(lb), "%s", _(objCategories[c].name));
-					bool isSel = (c == gBrowserSelectedCategory);
-					if(ImGui::Selectable(lb, isSel)){
-						gBrowserSelectedCategory = c;
-					}
-				}
-				ImGui::EndCombo();
+		static const int shelves[] = { 0, 2, 1, 3, 4, 9, 10 };	// Objects, Vehicles, Skins, Particles, Elements, Prefabs, Favourites
+		const char *labels[IM_ARRAYSIZE(shelves)];
+		bool on[IM_ARRAYSIZE(shelves)];
+		for(int i = 0; i < IM_ARRAYSIZE(shelves); i++){
+			const Feature &f = features[shelves[i]];
+			labels[i] = f.tab == BROWSER_TAB_ELEMENTS ? _("Elements") : _(f.name);
+			on[i] = f.tab == BROWSER_TAB_ELEMENTS ? gBrowserActiveTab == BROWSER_TAB_ELEMENTS : featureActive(f);
+		}
+		int pick = chips(labels, on, IM_ARRAYSIZE(shelves), "##browser_source");
+		if(pick >= 0 && !on[pick]){
+			const Feature &f = features[shelves[pick]];
+			if(f.tab == BROWSER_TAB_ELEMENTS){
+				if(gPlaceMode) SpawnExitPlaceMode();
+				gBrowserActiveTab = BROWSER_TAB_ELEMENTS;
+			}else
+				openFeature(f);
+		}
+		if(ImGui::BeginPopup("##browser_sources")){
+			for(const Feature &feature : features){
+				bool active = featureActive(feature);
+				if(ImGui::Selectable(_(feature.name), active) && !active)
+					openFeature(feature);
+				// Objects, skins, vehicles and particles first, then the map's other elements.
+				if(feature.tab == BROWSER_TAB_CATEGORIES && feature.group == BROWSER_KIND_PARTICLES)
+					ImGui::Separator();
 			}
-			uiObjectFiltersPanel();
-			toResults();
+			ImGui::EndPopup();
+		}
+	}
+	// Elements: what kind of element, a second row of chips.
+	if(gBrowserActiveTab == BROWSER_TAB_ELEMENTS){
+		const char *labels[5];
+		bool on[5];
+		const int first = 4;	// features[]: Characters
+		for(int i = 0; i < 5; i++){
+			labels[i] = _(features[first + i].name);
+			on[i] = featureActive(features[first + i]);
+		}
+		if(wide) ImGui::SameLine();
+		int pick = chips(labels, on, 5, nil);
+		if(pick >= 0 && !on[pick])
+			openFeature(features[first + pick]);
+	}
 
+	// The search, filling its row, with the shelf's category and Filters at
+	// its right end (on a row of their own when the panel is narrow).
+	float comboW = floorf(ImGui::GetFontSize() * 13.0f);
+	float spacingX = ImGui::GetStyle().ItemSpacing.x;
+	bool comboBeside = ImGui::GetContentRegionAvail().x > ImGui::GetFontSize() * 30.0f;
+	// Beside the chips only with room for a real search field after them.
+	bool searchBeside = wide && gBrowserActiveTab != BROWSER_TAB_ELEMENTS && gBrowserActiveTab != BROWSER_TAB_PREFABS &&
+		ImGui::GetWindowContentRegionMax().x - (ImGui::GetItemRectMax().x - ImGui::GetWindowPos().x) >
+			ImGui::GetFontSize() * 40.0f;
+	if(searchBeside){
+		ImGui::SameLine();
+		// The frame-high search centred on the chips' taller well.
+		float well = floorf(30.0f*u);
+		ImGui::SetCursorPosY(ImGui::GetCursorPosY() + floorf((well - ImGui::GetFrameHeight())*0.5f));
+	}
+	if(gBrowserActiveTab == BROWSER_TAB_CATEGORIES){
+		if(gBrowserSelectedCategory >= 0 && !browserKindHasCategory(gBrowserKind, gBrowserSelectedCategory))
+			gBrowserSelectedCategory = gBrowserKind == BROWSER_KIND_OBJECTS ? BROWSER_CATEGORY_RECENT : BROWSER_CATEGORY_ALL;
+		float filtersW = floorf(ObjectFiltersButtonWidth());
+		uiBrowserSearchBox(gBrowserCategoryFilter, "##search_objects", TI(ICON_FA_MAGNIFYING_GLASS, "Search"), true,
+			comboBeside ? comboW + filtersW + spacingX*2.0f : 0.0f, lastCount, countFormat());
+		// Category dropdown: the shelf's own categories only.
+		const char *allLabel = gBrowserKind == BROWSER_KIND_SKINS ? _("People (skins)") :
+			gBrowserKind == BROWSER_KIND_VEHICLES ? _("Vehicles") :
+			gBrowserKind == BROWSER_KIND_PARTICLES ? _("Particles") : _("All objects");
+		char catLabel[128];
+		if(gBrowserSelectedCategory >= 0 && gBrowserSelectedCategory < NUM_OBJ_CATEGORIES)
+			snprintf(catLabel, sizeof(catLabel), "%s", _(objCategories[gBrowserSelectedCategory].name));
+		else if(gBrowserSelectedCategory == BROWSER_CATEGORY_RECENT)
+			snprintf(catLabel, sizeof(catLabel), TI(ICON_FA_CLOCK_ROTATE_LEFT, "Recently placed"));
+		else
+			snprintf(catLabel, sizeof(catLabel), "%s", allLabel);
+		if(comboBeside){
+			ImGui::SameLine();
+			ImGui::SetNextItemWidth(comboW);
+		}else
+			ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - filtersW - spacingX);
+		if(ImGui::BeginCombo("##CatCombo", catLabel, ImGuiComboFlags_HeightLarge)){
+			if(ImGui::Selectable(TI(ICON_FA_CLOCK_ROTATE_LEFT, "Recently placed"), gBrowserSelectedCategory == BROWSER_CATEGORY_RECENT))
+				gBrowserSelectedCategory = BROWSER_CATEGORY_RECENT;
+			if(ImGui::Selectable(allLabel, gBrowserSelectedCategory == BROWSER_CATEGORY_ALL))
+				gBrowserSelectedCategory = BROWSER_CATEGORY_ALL;
+			bool separated = false;
+			static char lb[128];
+			for(int c = 0; c < NUM_OBJ_CATEGORIES; c++){
+				if(!browserKindHasCategory(gBrowserKind, c))
+					continue;
+				if(!separated){ ImGui::Separator(); separated = true; }
+				buildCategoryLabel(c, lb, sizeof(lb));
+				if(gBrowserKind == BROWSER_KIND_VEHICLES)	// one level, under Vehicles
+					snprintf(lb, sizeof(lb), "%s", _(objCategories[c].name));
+				if(ImGui::Selectable(lb, c == gBrowserSelectedCategory))
+					gBrowserSelectedCategory = c;
+			}
+			ImGui::EndCombo();
+		}
+		ImGui::SameLine();
+		uiObjectFiltersButton(filtersW);
+		// Wide: the open filters are a column beside the results (below).
+		if(!(wide && ObjectFiltersOpen()))
+			uiObjectFiltersPanel();
+	}else if(gBrowserActiveTab == BROWSER_TAB_FAVOURITES)
+		uiBrowserSearchBox(gBrowserFavFilter, "##search_fav", TI(ICON_FA_MAGNIFYING_GLASS, "Search"), true,
+			0.0f, lastCount, countFormat());
+	else if(gBrowserActiveTab == BROWSER_TAB_IDE){
+		// Collect unique IDE file names
+		static const char *ideFiles[512];
+		static int numIdeFiles = 0;
+		if(gBrowserIdeListDirty){
+			numIdeFiles = 0;
+			for(int i = 0; i < NUMOBJECTDEFS; i++){
+				ObjectDef *obj = GetObjectDef(i);
+				if(obj == nil || obj->m_file == nil) continue;
+				bool found = false;
+				for(int j = 0; j < numIdeFiles; j++)
+					if(strcmp(ideFiles[j], obj->m_file->name) == 0){
+						found = true; break;
+					}
+				if(!found && numIdeFiles < 512)
+					ideFiles[numIdeFiles++] = obj->m_file->name;
+			}
+			gBrowserIdeListDirty = false;
+		}
+		uiBrowserSearchBox(gBrowserIdeFilter, "##search_ide", TI(ICON_FA_MAGNIFYING_GLASS, "Search"), true,
+			comboBeside ? comboW + ImGui::GetStyle().ItemSpacing.x : 0.0f, lastCount, _("%d objects"));
+		const char *ideLabel = gBrowserSelectedIde[0] ? gBrowserSelectedIde : _("All IDE files");
+		if(comboBeside){
+			ImGui::SameLine();
+			ImGui::SetNextItemWidth(comboW);
+		}else
+			ImGui::SetNextItemWidth(-FLT_MIN);
+		if(ImGui::BeginCombo("##IdeCombo", ideLabel)){
+			if(ImGui::Selectable(_("All IDE files"), gBrowserSelectedIde[0] == '\0'))
+				gBrowserSelectedIde[0] = '\0';
+			for(int j = 0; j < numIdeFiles; j++){
+				bool isSel = strcmp(gBrowserSelectedIde, ideFiles[j]) == 0;
+				if(ImGui::Selectable(ideFiles[j], isSel))
+					snprintf(gBrowserSelectedIde, sizeof(gBrowserSelectedIde), "%s", ideFiles[j]);
+			}
+			ImGui::EndCombo();
+		}
+	}
+
+	// The results fill what is left, above the picked model's bar.
+	bool modelTab = gBrowserActiveTab == BROWSER_TAB_CATEGORIES || gBrowserActiveTab == BROWSER_TAB_FAVOURITES ||
+		gBrowserActiveTab == BROWSER_TAB_IDE;
+	float footer = modelTab ? uiBrowserFooterHeight(selId) : 0.0f;
+	ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, 0.0f);
+	if(wide && ObjectFiltersOpen() && gBrowserActiveTab == BROWSER_TAB_CATEGORIES){
+		ImGui::BeginChild("##browser_filters", ImVec2(floorf(ImGui::GetFontSize() * 24.0f), -footer), ImGuiChildFlags_None);
+		uiObjectFiltersPanel();
+		ImGui::EndChild();
+		ImGui::SameLine();
+	}
+	ImGui::BeginChild("##browser_results", ImVec2(0, -footer), ImGuiChildFlags_None);
+	ImGui::PopStyleVar();
+	{
+		if(gBrowserActiveTab == BROWSER_TAB_CATEGORIES){
 			// Searching from the recent list searches everything.
 			bool showRecent = gBrowserSelectedCategory == BROWSER_CATEGORY_RECENT &&
 				!gBrowserCategoryFilter.IsActive();
@@ -13167,19 +14957,13 @@ uiBrowserWindow(void)
 			}
 			if(showRecent && numFiltered == 0 && !ObjectFiltersActive())
 				uiBrowserStartSuggestions();
-			else{
-				ImGui::TextDisabled(gBrowserKind == BROWSER_KIND_SKINS ? _("%d skins") :
-					gBrowserKind == BROWSER_KIND_VEHICLES ? _("%d vehicles") : _("%d objects"), numFiltered);
+			else
 				uiObjectResults(filtered, numFiltered, selId);
-			}
-
+			// The starter suggestions are not results: no count over them.
+			lastCount = showRecent && numFiltered == 0 && !ObjectFiltersActive() ? -1 : numFiltered;
 		}
 
-		// === Favourites tab ===
 		if(gBrowserActiveTab == BROWSER_TAB_FAVOURITES){
-			gBrowserActiveTab = BROWSER_TAB_FAVOURITES;
-			uiBrowserSelectedObject(selId);
-
 			numFiltered = 0;
 			for(int i = 0; i < NUMOBJECTDEFS; i++){
 				if(!IsFavourite(i)) continue;
@@ -13190,61 +14974,17 @@ uiBrowserWindow(void)
 			}
 			if(numFiltered == 0 && !gBrowserFavFilter.IsActive())
 				ImGui::TextDisabled(_("No favourites yet. Pick an object and click %s to keep it here."), ICON_FA_STAR);
-			else
-				ImGui::TextDisabled(_("%d favourites"), numFiltered);
 			uiObjectResults(filtered, numFiltered, selId);
-
+			lastCount = numFiltered;
 		}
 
-		// === Feature-specific map elements ===
-		if(gBrowserActiveTab == BROWSER_TAB_ELEMENTS){
-			gBrowserActiveTab = BROWSER_TAB_ELEMENTS;
+		if(gBrowserActiveTab == BROWSER_TAB_ELEMENTS)
 			uiBrowserElementsTab();
-		}
 
-		// === Prefabs tab ===
-		if(gBrowserActiveTab == BROWSER_TAB_PREFABS){
-			gBrowserActiveTab = BROWSER_TAB_PREFABS;
+		if(gBrowserActiveTab == BROWSER_TAB_PREFABS)
 			uiBrowserPrefabsTab();
-		}
 
-		// === IDE tab ===
 		if(gBrowserActiveTab == BROWSER_TAB_IDE){
-			gBrowserActiveTab = BROWSER_TAB_IDE;
-			uiBrowserSelectedObject(selId);
-			// Collect unique IDE file names
-			static const char *ideFiles[512];
-			static int numIdeFiles = 0;
-			if(gBrowserIdeListDirty){
-				numIdeFiles = 0;
-				for(int i = 0; i < NUMOBJECTDEFS; i++){
-					ObjectDef *obj = GetObjectDef(i);
-					if(obj == nil || obj->m_file == nil) continue;
-					bool found = false;
-					for(int j = 0; j < numIdeFiles; j++)
-						if(strcmp(ideFiles[j], obj->m_file->name) == 0){
-							found = true; break;
-						}
-					if(!found && numIdeFiles < 512)
-						ideFiles[numIdeFiles++] = obj->m_file->name;
-				}
-				gBrowserIdeListDirty = false;
-			}
-
-			// IDE dropdown
-			const char *ideLabel = gBrowserSelectedIde[0] ? gBrowserSelectedIde : _("All IDE files");
-			ImGui::SetNextItemWidth(-FLT_MIN);
-			if(ImGui::BeginCombo("##IdeCombo", ideLabel)){
-				if(ImGui::Selectable(_("All IDE files"), gBrowserSelectedIde[0] == '\0'))
-					gBrowserSelectedIde[0] = '\0';
-				for(int j = 0; j < numIdeFiles; j++){
-					bool isSel = strcmp(gBrowserSelectedIde, ideFiles[j]) == 0;
-					if(ImGui::Selectable(ideFiles[j], isSel))
-						snprintf(gBrowserSelectedIde, sizeof(gBrowserSelectedIde), "%s", ideFiles[j]);
-				}
-				ImGui::EndCombo();
-			}
-
 			numFiltered = 0;
 			for(int i = 0; i < NUMOBJECTDEFS; i++){
 				ObjectDef *obj = GetObjectDef(i);
@@ -13255,16 +14995,15 @@ uiBrowserWindow(void)
 				if(!uiBrowserMatches(gBrowserIdeFilter, obj)) continue;
 				filtered[numFiltered++] = i;
 			}
-			ImGui::TextDisabled(_("%d objects"), numFiltered);
 			uiObjectResults(filtered, numFiltered, selId);
-
+			lastCount = numFiltered;
 		}
 
 		gBrowserTabRestorePending = false;
 	}
-
-	if(resultsOpen || sideOpen)
-		ImGui::EndChild();
+	ImGui::EndChild();
+	if(footer > 0.0f)
+		uiBrowserSelectedObject(selId);
 	ImGui::End();
 }
 
@@ -14173,44 +15912,21 @@ uiOutlinerHeaderMenu(const UiOutlinerRow &row, bool *openRename, char *renameFro
 static void
 uiMapObjectsList(void)
 {
-	// Toolbar: view, search and filters.
-	int mode = gOutliner.mode;
-	if(ImGui::RadioButton(_("Groups"), mode == UI_OUTLINER_BY_GROUP)) gOutliner.mode = UI_OUTLINER_BY_GROUP;
-	ImGui::SameLine();
-	if(ImGui::RadioButton(_("Kinds"), mode == UI_OUTLINER_BY_KIND)) gOutliner.mode = UI_OUTLINER_BY_KIND;
-	// The kind filter goes on its own row when the panel is too narrow for it.
-	if(ImGui::GetWindowPos().x + ImGui::GetWindowContentRegionMax().x - ImGui::GetItemRectMax().x -
-	   ImGui::GetStyle().ItemSpacing.x > ImGui::GetFontSize() * 8.0f)
-		ImGui::SameLine();
-	const char *kindName = gOutliner.kind < 0 ? _("All kinds") : gOutliner.kind == UI_OUTLINER_VEHICLES ? _("Vehicles") :
-		gOutliner.kind == UI_OUTLINER_TEXTDRAWS ? _("TextDraws") : _(GetSampElementKindName(gOutliner.kind));
-	ImGui::SetNextItemWidth(-1.0f);
-	if(ImGui::BeginCombo("##kind", kindName)){
-		if(ImGui::Selectable(_("All kinds"), gOutliner.kind < 0)) gOutliner.kind = -1;
-		for(int k = 0; k <= UI_OUTLINER_TEXTDRAWS; k++){
-			const char *name = k == UI_OUTLINER_VEHICLES ? _("Vehicles") : k == UI_OUTLINER_TEXTDRAWS ? _("TextDraws") :
-				k == SAMP_ELEMENT_OBJECT ? _("Objects") : _(GetSampElementKindName(k));
-			if(ImGui::Selectable(name, gOutliner.kind == k)) gOutliner.kind = k;
-		}
-		ImGui::EndCombo();
-	}
-	// Search, then two filter toggles.
+	// Toolbar, as an explorer's: search with its filters at the right end,
+	// then how the list is sorted and which kinds it shows.
 	auto toggle = [](const char *label, bool *on, const char *tip){
-		// On, it hides rows: drawn in the warning colour.
-		if(*on){
-			ImVec4 w = UiSemanticColor(UI_COLOR_WARNING);
-			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(w.x, w.y, w.z, 0.30f));
-			ImGui::PushStyleColor(ImGuiCol_Text, w);
-		}
-		if(ImGui::Button(label))
+		// Flat; on, it hides rows: tinted with the warning colour.
+		ImVec4 w = UiSemanticColor(UI_COLOR_WARNING);
+		ImGui::PushStyleColor(ImGuiCol_Button, *on ? ImVec4(w.x, w.y, w.z, 0.25f) : ImVec4(0, 0, 0, 0));
+		if(*on) ImGui::PushStyleColor(ImGuiCol_Text, w);
+		if(ImGui::Button(label, ImVec2(ImGui::GetFrameHeight(), 0)))
 			*on = !*on;
-		if(*on)
-			ImGui::PopStyleColor(2);
+		ImGui::PopStyleColor(*on ? 2 : 1);
 		ImGui::SetItemTooltip("%s", tip);
 	};
-	float toggles = ImGui::GetFrameHeight() * 2.0f + ImGui::GetStyle().ItemSpacing.x * 2.0f +
-		ImGui::GetStyle().FramePadding.x * 4.0f;
-	ImGui::SetNextItemWidth(-toggles);
+	float spacing = ImGui::GetStyle().ItemSpacing.x;
+	float toggles = (ImGui::GetFrameHeight() + 2.0f) * 2.0f;
+	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - toggles - spacing);
 	// The long hint when it fits, else just "Search".
 	const char *searchHint = _("Search name, model, ID, kind, variable");
 	if(ImGui::CalcTextSize(searchHint).x + ImGui::GetStyle().FramePadding.x*2.0f > ImGui::GetContentRegionAvail().x - toggles)
@@ -14221,11 +15937,32 @@ uiMapObjectsList(void)
 		gOutliner.search, sizeof(gOutliner.search));
 	if(searching) ImGui::PopStyleColor();
 	ImGui::SetItemTooltip(_("Names, models, kinds, groups and comments; or IDs like 1337, 19000-19100."));
-	ImGui::SameLine();
+	ImGui::SameLine(0.0f, spacing);
 	toggle(ICON_FA_EYE_SLASH "##hiddenonly", &gOutliner.hiddenOnly, _("Only hidden objects."));
-	ImGui::SameLine();
+	ImGui::SameLine(0.0f, 2.0f);
 	toggle(ICON_FA_TRIANGLE_EXCLAMATION "##problemsonly", &gOutliner.problemsOnly, gMapCheckDone ?
 		_("Only objects with a Map check problem.") : _("Only objects with a Map check problem. Runs Map check first."));
+
+	// Groups | Kinds as one switch, the kind filter filling the rest.
+	int mode = gOutliner.mode;
+	ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(1.0f, ImGui::GetStyle().ItemSpacing.y));
+	if(uiSegment(_("Groups"), mode == UI_OUTLINER_BY_GROUP)) gOutliner.mode = UI_OUTLINER_BY_GROUP;
+	ImGui::SameLine();
+	if(uiSegment(_("Kinds"), mode == UI_OUTLINER_BY_KIND)) gOutliner.mode = UI_OUTLINER_BY_KIND;
+	ImGui::PopStyleVar();
+	ImGui::SameLine(0.0f, spacing);
+	const char *kindName = gOutliner.kind < 0 ? _("All kinds") : gOutliner.kind == UI_OUTLINER_VEHICLES ? _("Vehicles") :
+		gOutliner.kind == UI_OUTLINER_TEXTDRAWS ? _("TextDraws") : _(GetSampElementKindName(gOutliner.kind));
+	ImGui::SetNextItemWidth(-FLT_MIN);
+	if(ImGui::BeginCombo("##kind", kindName)){
+		if(ImGui::Selectable(_("All kinds"), gOutliner.kind < 0)) gOutliner.kind = -1;
+		for(int k = 0; k <= UI_OUTLINER_TEXTDRAWS; k++){
+			const char *name = k == UI_OUTLINER_VEHICLES ? _("Vehicles") : k == UI_OUTLINER_TEXTDRAWS ? _("TextDraws") :
+				k == SAMP_ELEMENT_OBJECT ? _("Objects") : _(GetSampElementKindName(k));
+			if(ImGui::Selectable(name, gOutliner.kind == k)) gOutliner.kind = k;
+		}
+		ImGui::EndCombo();
+	}
 	if(gOutliner.problemsOnly && !gMapCheckDone){
 		RunMapCheck(gPawnSaveFormat, &gMapCheck, true);
 		gMapCheckDone = true;
@@ -14280,7 +16017,11 @@ uiMapObjectsList(void)
 	static char renameFrom[PAWN_OBJECT_GROUP_LEN];
 	static char renameTo[PAWN_OBJECT_GROUP_LEN];
 	bool openRename = false;
-	ImGui::BeginChild("##map_objects_tree", UiFillRest(UiListMinHeight()));
+	// Room at the sides for half a spacing: a selectable row reaches that far
+	// past its column, past the edge of a child with no padding.
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(floorf(ImGui::GetStyle().ItemSpacing.x * 0.5f), 0.0f));
+	ImGui::BeginChild("##map_objects_tree", UiFillRest(UiListMinHeight()), ImGuiChildFlags_AlwaysUseWindowPadding);
+	ImGui::PopStyleVar();
 	gOutliner.hovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows);
 	if(gOutliner.scrollToRenaming){
 		gOutliner.scrollToRenaming = false;
@@ -14431,14 +16172,14 @@ uiMapObjectsList(void)
 	clipper.End();
 	if(gOutliner.rows.empty())
 		ImGui::TextDisabled("%s", gOutliner.search[0] || gOutliner.kind >= 0 || gOutliner.hiddenOnly || gOutliner.problemsOnly ?
-			_("Nothing matches.") : _("Nothing placed yet. Pick an object in the Object Browser and click Place."));
+			_("Nothing matches.") : _("Nothing placed yet. Pick an object in the Asset Browser and click Place."));
 	ImGui::EndChild();
 
 	if(openRename)
 		ImGui::OpenPopup(L("Rename group"));
 	if(ImGui::BeginPopupModal(L("Rename group"), nil, ImGuiWindowFlags_AlwaysAutoResize)){
-		ImGui::InputText(_("Name"), renameTo, sizeof(renameTo));
-		if(ImGui::Button(_("Rename"), ImVec2(120, 0))){
+		UiInputText(_("Name"), renameTo, sizeof(renameTo));
+		if((uiDialogButtonsStart(2), uiDialogPrimary(_("Rename")))){
 			std::vector<ObjectInst*> members;
 			for(CPtrNode *p = instances.first; p; p = p->next){
 				ObjectInst *inst = (ObjectInst*)p->item;
@@ -14449,7 +16190,7 @@ uiMapObjectsList(void)
 			ImGui::CloseCurrentPopup();
 		}
 		ImGui::SameLine();
-		if(ImGui::Button(_("Cancel"), ImVec2(120, 0)))
+		if(uiDialogSecondary(_("Cancel")))
 			ImGui::CloseCurrentPopup();
 		ImGui::EndPopup();
 	}
@@ -14471,14 +16212,14 @@ uiMapObjectsList(void)
 		uiGroupPicker(_("Group"), groupName, sizeof(groupName));
 		ImGui::SetItemTooltip(_("Pick a group or type a new name. Empty: ungrouped."));
 		bool enter = ImGui::IsKeyPressed(ImGuiKey_Enter) || ImGui::IsKeyPressed(ImGuiKey_KeypadEnter);
-		if(ImGui::Button(_("Group"), ImVec2(120, 0)) || enter){
+		if((uiDialogButtonsStart(2), uiDialogPrimary(_("Group"))) || enter){
 			std::vector<ObjectInst*> selected;
 			uiSelectedInstances(selected);
 			uiOutlinerSetGroup(selected, groupName);
 			ImGui::CloseCurrentPopup();
 		}
 		ImGui::SameLine();
-		if(ImGui::Button(_("Cancel"), ImVec2(120, 0)))
+		if(uiDialogSecondary(_("Cancel")))
 			ImGui::CloseCurrentPopup();
 		ImGui::EndPopup();
 	}
@@ -14500,8 +16241,8 @@ uiMapObjectsWindow(void)
 static void
 uiDiffWindow(void)
 {
-	uiNextPanelSizeConstraints();
-	ImGui::Begin(LI(ICON_FA_CODE_COMPARE, "Changes for Pawn Export"), &showDiffWindow);
+	ImGuiWindowFlags flags = UiPlaceToolWindow(LI(ICON_FA_CODE_COMPARE, "Changes for Pawn Export"), 32.0f, false);
+	ImGui::Begin(LI(ICON_FA_CODE_COMPARE, "Changes for Pawn Export"), &showDiffWindow, flags);
 	uiFitItemsToPanel();
 
 	// Count changes by category
@@ -14522,37 +16263,38 @@ uiDiffWindow(void)
 
 	int total = numAdded + numDeleted + numMoved + numRotated + numModel + numMaterial + numRestored;
 	if(total == 0){
+		ImGui::Spacing();
 		ImGui::TextDisabled(_("No changes requiring Pawn export."));
 		ImGui::End();
 		return;
 	}
 
-	if(numAdded + numDeleted + numMoved + numRotated + numMaterial > 0)
-		ImGui::Text(_("%d added, %d deleted, %d moved, %d rotated, %d material"), numAdded, numDeleted, numMoved, numRotated, numMaterial);
-	if(numModel > 0)
-		ImGui::TextDisabled(_("Model ID changes: %d"), numModel);
-	if(numRestored > 0)
-		ImGui::SameLine(), ImGui::Text(_(", %d restored"), numRestored);
-	ImGui::Separator();
-
-	// Filter buttons (bitmask — 0 = show all)
-	if(ImGui::RadioButton(_("All"), gDiffFilter == 0)) gDiffFilter = 0;
-	ImGui::SameLine();
-	if(ImGui::RadioButton(_("Added"), gDiffFilter == DIFF_ADDED)) gDiffFilter = DIFF_ADDED;
-	ImGui::SameLine();
-	if(ImGui::RadioButton(_("Deleted"), gDiffFilter == DIFF_DELETED)) gDiffFilter = DIFF_DELETED;
-	ImGui::SameLine();
-	if(ImGui::RadioButton(_("Moved"), gDiffFilter == DIFF_MOVED)) gDiffFilter = DIFF_MOVED;
-	ImGui::SameLine();
-	if(ImGui::RadioButton(_("Rotated"), gDiffFilter == DIFF_ROTATED)) gDiffFilter = DIFF_ROTATED;
-	ImGui::SameLine();
-	if(ImGui::RadioButton(_("Model ID"), gDiffFilter == DIFF_MODEL)) gDiffFilter = DIFF_MODEL;
-	ImGui::SameLine();
-	if(ImGui::RadioButton(_("Material"), gDiffFilter == DIFF_MATERIAL)) gDiffFilter = DIFF_MATERIAL;
-	if(numRestored > 0){
-		ImGui::SameLine();
-		if(ImGui::RadioButton(_("Restored"), gDiffFilter == DIFF_RESTORED)) gDiffFilter = DIFF_RESTORED;
+	// Which changes to list, each kind with its count; only the kinds there are.
+	struct DiffChoice { int filter; const char *name; int count; };
+	const DiffChoice choices[] = {
+		{ 0, _("All"), total }, { DIFF_ADDED, _("Added"), numAdded }, { DIFF_DELETED, _("Deleted"), numDeleted },
+		{ DIFF_MOVED, _("Moved"), numMoved }, { DIFF_ROTATED, _("Rotated"), numRotated },
+		{ DIFF_MODEL, _("Model ID"), numModel }, { DIFF_MATERIAL, _("Material"), numMaterial },
+		{ DIFF_RESTORED, _("Restored"), numRestored },
+	};
+	{
+		static char labels[IM_ARRAYSIZE(choices)][64];
+		const char *shown[IM_ARRAYSIZE(choices)];
+		int filters[IM_ARRAYSIZE(choices)], n = 0, current = 0;
+		for(const DiffChoice &c : choices){
+			if(c.filter != 0 && c.count == 0)
+				continue;
+			snprintf(labels[n], sizeof(labels[n]), "%s %d###diff%d", c.name, c.count, c.filter);
+			shown[n] = labels[n];
+			filters[n] = c.filter;
+			if(c.filter == gDiffFilter)
+				current = n;
+			n++;
+		}
+		if(UiSegmented("##diff_filter", shown, n, &current, false) || filters[current] != gDiffFilter)
+			gDiffFilter = filters[current];
 	}
+	ImGui::Spacing();
 
 	// Collect changed instances into temp array for sorting
 	ObjectInst *changed[4096];
@@ -14659,6 +16401,26 @@ InPawnIdeMode(void)
  return showPawnCodeWindow && !InTextDrawMode();
 }
 
+// The editor in use, like the menu bar's tile: 0 the map, 1 TextDraws, 2 the
+// Pawn IDE (for Namaka).
+void
+SetEditorWorkspaceMode(int mode)
+{
+	if(mode == 1){
+		showPawnCodeWindow = false;
+		EnterTextDrawMode();
+	}else{
+		ExitTextDrawMode();
+		showPawnCodeWindow = mode == 2;
+	}
+}
+
+int
+GetEditorWorkspaceMode(void)
+{
+	return InTextDrawMode() ? 1 : InPawnIdeMode() ? 2 : 0;
+}
+
 // Workspace navigation shares the menu bar; panel tabs keep their own docks.
 static void
 uiWorkspaceNavigation(void)
@@ -14669,46 +16431,66 @@ uiWorkspaceNavigation(void)
 		if(gShowTextDrawsHint){ gShowTextDrawsHint = false; hintChanged = true; }
 	}
 	if(InPawnIdeMode() && gShowCodeHint){ gShowCodeHint = false; hintChanged = true; }
-	const char *labels[] = { L("Map"), L("TextDraws"), L("Code") };
+	// One tile, the editor in use; a click lists the editors to switch to.
+	static const char *ids[] = { "Map", "TextDraws", "Code" };
+	static const char *names[] = { N_("Map"), N_("TextDraws"), N_("Code") };
+	static const char *icons[] = { ICON_FA_GLOBE, ICON_FA_FONT, ICON_FA_CODE };	// in the list's text
+	static const char *tileIcons[] = { LU_GLOBE, LU_TYPE, LU_CODE_XML };	// on the tile
+	int mode = InTextDrawMode() ? 1 : (InPawnIdeMode() ? 2 : 0);
+	char label[64];
+	snprintf(label, sizeof(label), "%s " ICON_FA_CARET_DOWN, _(names[mode]));
+	ImVec2 tileAt = ImGui::GetCursorScreenPos();
+	// One width whichever editor it names, so nothing after it moves on a switch.
+	gRibbonTileMinWidth = 0.0f;
 	for(int i = 0; i < 3; i++){
-		int mode = InTextDrawMode() ? 1 : (InPawnIdeMode() ? 2 : 0);
-		bool selected = mode == i;
-		ImGui::PushStyleColor(ImGuiCol_Button, selected ? ImGui::GetStyleColorVec4(ImGuiCol_ButtonHovered) : ImVec4(0, 0, 0, 0));
-		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGui::GetStyleColorVec4(ImGuiCol_ButtonHovered));
-		ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0, 0, 0, 0));
-		ImGui::PushStyleColor(ImGuiCol_Text, selected ? ImGui::GetStyleColorVec4(ImGuiCol_Text) : ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
-		bool clicked = ImGui::Button(labels[i]);
-		ImGui::PopStyleColor(4);
-		if(clicked){
-			if(i == 1){
-				showPawnCodeWindow = false;
-				EnterTextDrawMode();
-				if(gShowTextDrawsHint){ gShowTextDrawsHint = false; hintChanged = true; }
-			}else{
-				ExitTextDrawMode();
-				showPawnCodeWindow = i == 2;
-				if(i == 2 && gShowCodeHint){ gShowCodeHint = false; hintChanged = true; }
+		char other[64];
+		snprintf(other, sizeof(other), "%s " ICON_FA_CARET_DOWN, _(names[i]));
+		gRibbonTileMinWidth = std::max(gRibbonTileMinWidth, uiRibbonTileWidth(other));
+	}
+	bool editorClicked = uiRibbonTile("editor", tileIcons[mode], label, _("Switch between the map, TextDraws and Code editors."));
+	gRibbonTileMinWidth = 0.0f;
+	if(editorClicked)
+		ImGui::OpenPopup("##editors");
+	// The "new" dots sit on the tile until the list shows them by their editor.
+	ImVec2 corner(ImGui::GetItemRectMax().x, ImGui::GetItemRectMin().y);
+	gTextDrawsHintAnchor = gCodeHintAnchor = corner;
+	ImGui::SetNextWindowPos(ImVec2(tileAt.x, ImGui::GetItemRectMax().y + 2.0f));
+	if(ImGui::BeginPopup("##editors")){
+		for(int i = 0; i < 3; i++){
+			char item[96];
+			snprintf(item, sizeof(item), "%s  %s###%s", icons[i], _(names[i]), ids[i]);
+			bool clicked = ImGui::Selectable(item, mode == i, 0, ImVec2(ImGui::GetFontSize()*10.0f, 0.0f));
+			if(clicked){
+				if(i == 1){
+					showPawnCodeWindow = false;
+					EnterTextDrawMode();
+					if(gShowTextDrawsHint){ gShowTextDrawsHint = false; hintChanged = true; }
+				}else{
+					ExitTextDrawMode();
+					showPawnCodeWindow = i == 2;
+					if(i == 2 && gShowCodeHint){ gShowCodeHint = false; hintChanged = true; }
+				}
+			}
+			if(i == 1 || i == 2){
+				ImVec2 anchor(ImGui::GetItemRectMax().x, ImGui::GetItemRectMin().y);
+				// Right-click hides the "new" dot without opening the editor.
+				bool &dot = i == 1 ? gShowTextDrawsHint : gShowCodeHint;
+				if(dot && ImGui::IsItemClicked(ImGuiMouseButton_Right)){
+					dot = false;
+					hintChanged = true;
+				}
+				const char *dotTip = dot ? _("Right-click to hide the new dot.") : "";
+				if(i == 1){
+					gTextDrawsHintAnchor = anchor;
+					ImGui::SetItemTooltip("%s%s%s", _("TextDraw mode: edit the textdraw file on a canvas instead of the world."),
+						dot ? "\n" : "", dotTip);
+				}else{
+					gCodeHintAnchor = anchor;
+					ImGui::SetItemTooltip("%s%s%s", ShortcutLabel(SC_WINDOW_PAWN_CODE), dot ? "\n" : "", dotTip);
+				}
 			}
 		}
-		if(i == 1 || i == 2){
-			// The button's top-right corner: where its "new" dot sits.
-			ImVec2 anchor(ImGui::GetItemRectMax().x, ImGui::GetItemRectMin().y);
-			// Right-click hides the "new" dot without opening the editor.
-			bool &dot = i == 1 ? gShowTextDrawsHint : gShowCodeHint;
-			if(dot && ImGui::IsItemClicked(ImGuiMouseButton_Right)){
-				dot = false;
-				hintChanged = true;
-			}
-			const char *dotTip = dot ? _("Right-click to hide the new dot.") : "";
-			if(i == 1){
-				gTextDrawsHintAnchor = anchor;
-				ImGui::SetItemTooltip("%s%s%s", _("TextDraw mode: edit the textdraw file on a canvas instead of the world."),
-					dot ? "\n" : "", dotTip);
-			}else{
-				gCodeHintAnchor = anchor;
-				ImGui::SetItemTooltip("%s%s%s", ShortcutLabel(SC_WINDOW_PAWN_CODE), dot ? "\n" : "", dotTip);
-			}
-		}
+		ImGui::EndPopup();
 	}
 	if(hintChanged) saveSaveSettings();
 }
@@ -14772,7 +16554,7 @@ countMapContents(int *objects, int *removed)
 	*removed = cachedRemoved;
 }
 
-// Bottom bar: what mode the editor is in, what to do next, and the map state.
+// Bottom bar: the frame rate on the left; the map's state on the right.
 static void
 uiStatusBar(void)
 {
@@ -14792,57 +16574,6 @@ uiStatusBar(void)
 		ImGui::GetWindowDrawList()->AddLine(lo, ImVec2(lo.x + ImGui::GetWindowWidth(), lo.y), ImGui::GetColorU32(ImGuiCol_Separator));
 	}
 
-	int selected = 0;
-	for(CPtrNode *p = selection.first; p; p = p->next)
-		selected++;
-	ObjectDef *spawn = GetObjectDef(GetSpawnObjectId());
-	const char *mode;
-	ImVec4 modeColor;
-	char hint[512];
-	if(InPawnIdeMode()){
-		mode = "PAWN";
-		modeColor = UiSemanticColor(UI_COLOR_INFO);
-		snprintf(hint, sizeof(hint), _("Edit Pawn · Ctrl+S saves · Ctrl+F searches."));
-	}else if(InTextDrawMode()){
-		mode = _("TEXTDRAW");
-		modeColor = UiSemanticColor(UI_COLOR_WARNING);
-		snprintf(hint, sizeof(hint), _("Drag to move · drag a corner to resize · %s stops."), uiKey(SC_CANCEL));
-	}else if(gBrushMode && spawn){
-		mode = _("BRUSH");
-		modeColor = UiSemanticColor(UI_COLOR_WARNING);
-		snprintf(hint, sizeof(hint), _("Click or drag to paint · %s stops."), uiKey(SC_CANCEL));
-	}else if(gPrefabPlaceMode){
-		mode = _("PREFAB");
-		modeColor = UiSemanticColor(UI_COLOR_INFO);
-		snprintf(hint, sizeof(hint), _("Click to place · Shift+click repeats · %s stops."), uiKey(SC_CANCEL));
-	}else if(gPlaceMode && spawn){
-		mode = _("PLACE");
-		modeColor = UiSemanticColor(UI_COLOR_SUCCESS);
-		snprintf(hint, sizeof(hint), _("Click to place · Shift+click repeats · %s stops."), uiKey(SC_CANCEL));
-	}else if(selected > 0){
-		mode = _("SELECT");
-		modeColor = ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled);
-		snprintf(hint, sizeof(hint), _("%d selected · Drag gizmo to move or rotate · %s deletes."),
-			selected, uiKey(SC_DELETE));
-	}else{
-		mode = _("READY");
-		modeColor = ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled);
-		snprintf(hint, sizeof(hint), _("%s Browse · %s Map objects · %s Save · %s Shortcuts"),
-			uiKey(SC_WINDOW_BROWSER), uiKey(SC_WINDOW_MAP_OBJECTS), uiKey(SC_SAVE_MAP), uiKey(SC_WINDOW_SHORTCUTS));
-	}
-	// Left: the mode as a badge, then what to do next.
-	{
-		ImVec2 p = ImGui::GetCursorScreenPos();
-		ImVec2 t = ImGui::CalcTextSize(mode);
-		float padX = 5.0f;
-		ImDrawList *draw = ImGui::GetWindowDrawList();
-		draw->AddRectFilled(ImVec2(p.x, p.y - 1.0f), ImVec2(p.x + t.x + padX*2.0f, p.y + t.y + 1.0f),
-			ImGui::GetColorU32(ImVec4(modeColor.x, modeColor.y, modeColor.z, 0.18f)), 2.0f);
-		ImGui::SetCursorScreenPos(ImVec2(p.x + padX, p.y));
-		ImGui::TextColored(modeColor, "%s", mode);
-		ImGui::SameLine(0.0f, padX + ImGui::GetFontSize()*0.6f);
-	}
-
 	int objects, removed;
 	countMapContents(&objects, &removed);
 	char removedText[32] = "";
@@ -14855,6 +16586,7 @@ uiStatusBar(void)
 	const char *savedText = unsaved ? _("Unsaved changes") : _("Saved");
 	char fps[32];
 	snprintf(fps, sizeof(fps), _("%.0f FPS"), io.Framerate);
+	ImGui::TextDisabled("%s", fps);
 
 	// Hidden objects (H / Shift+H), with a way back.
 	int hidden = CountHiddenInstances();
@@ -14869,22 +16601,16 @@ uiStatusBar(void)
 	char errorsText[48];
 	snprintf(errorsText, sizeof(errorsText), TI(ICON_FA_TRIANGLE_EXCLAMATION, "%d errors"), newErrors);
 
-	// Right: segments split by thin lines, measured first so the hint can give way.
+	// Right: segments split by thin lines.
 	float gap = ImGui::GetFontSize() * 1.2f;
 	float right = ImGui::CalcTextSize(currentMapName()).x + ImGui::GetFontSize()*0.5f + ImGui::CalcTextSize(savedText).x +
-		gap + ImGui::CalcTextSize(objectsText).x + gap + ImGui::CalcTextSize(fps).x;
+		gap + ImGui::CalcTextSize(objectsText).x;
 	if(newErrors > 0)
 		right += ImGui::CalcTextSize(errorsText).x + gap;
 	if(hidden > 0)
 		right += ImGui::CalcTextSize(hiddenText).x + ImGui::CalcTextSize(_("Show all")).x +
 			ImGui::GetStyle().FramePadding.x*2.0f + ImGui::GetStyle().ItemSpacing.x + gap;
 	float rightX = ImGui::GetWindowContentRegionMax().x - right;
-	float hintRoom = rightX - ImGui::GetCursorPosX() - gap;
-	if(ImGui::CalcTextSize(hint).x <= hintRoom)
-		ImGui::TextDisabled("%s", hint);
-	else
-		ImGui::Dummy(ImVec2(0, 0));
-	ImGui::SetItemTooltip("%s", hint);
 
 	auto divider = [&](void){
 		ImGui::SameLine(0.0f, gap*0.5f);
@@ -14920,8 +16646,6 @@ uiStatusBar(void)
 	ImGui::TextColored(unsaved ? UiSemanticColor(UI_COLOR_WARNING) : ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled), "%s", savedText);
 	divider();
 	ImGui::TextDisabled("%s", objectsText);
-	divider();
-	ImGui::TextDisabled("%s", fps);
 	ImGui::End();
 }
 
@@ -14979,12 +16703,14 @@ uiStartGuide(void)
 	}
 	ImGui::TextDisabled(_("Choose an object, then click the world to place it."));
 	const char *workspace = GetWorkspaceDir();
-	ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_HeaderActive));
-	ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGui::GetStyleColorVec4(ImGuiCol_SeparatorHovered));
-	ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImGui::GetStyleColorVec4(ImGuiCol_SeparatorActive));
+	ImVec4 fill = UiAccentFill();
+	ImGui::PushStyleColor(ImGuiCol_Button, fill);
+	ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(fill.x*1.12f, fill.y*1.12f, fill.z*1.12f, 1.0f));
+	ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(fill.x*0.9f, fill.y*0.9f, fill.z*0.9f, 1.0f));
+	ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 1, 1, 1));
 	if(ImGui::Button(TI(ICON_FA_MAGNIFYING_GLASS, "Browse objects")))
 		showBrowserWindow = true;
-	ImGui::PopStyleColor(3);
+	ImGui::PopStyleColor(4);
 	ImGui::SetItemTooltip(_("Pick an object, then click in the world to place it."));
 	ImGui::SameLine();
 	if(ImGui::Button(TI(ICON_FA_FOLDER_OPEN, "Open a map...")))
@@ -15488,7 +17214,6 @@ gui(void)
 	uiCommandBar();
 	uiWorkspaceWindow();
 	uiStatusBar();
-	uiPanelStrip();
 #ifdef IMGUI_HAS_DOCK
 	uiDockSpace();
 #endif
@@ -15499,12 +17224,16 @@ gui(void)
 		uiDrawNpcPaths();
 	}
 	uiUnsavedMapPopup();
+	uiMapChangedOnDiskPopup();
 	uiGoToCoordinatesPopup();
+	uiServerDownloadToast();
 	DrawStartScreen(true);
 	// TODO: restore when the Destroy Entire Map workflow is finished.
 	UpdaterDrawGui();
 	CrashReportsDrawBanner();
 	autosaveTick();
+	CustomModelsTick();
+	mapDiskWatchTick();
 
 	// While looking around, W/A/S/D fly and no key is a shortcut (W/E/R
 	// don't switch the gizmo).
@@ -15527,8 +17256,8 @@ gui(void)
 	// the map's panels go, and their docks give the canvas the room.
 	const bool mapPanels = !InTextDrawMode() && !InPawnIdeMode();
 	if(mapPanels && showTimeWeatherWindow){
-		uiNextPanelSizeConstraints();
-		ImGui::Begin(LI(ICON_FA_CLOUD_SUN, "Time & Weather"), &showTimeWeatherWindow);
+		ImGuiWindowFlags flags = UiPlaceToolWindow(LI(ICON_FA_CLOUD_SUN, "Time & Weather"), 24.0f, true);
+		ImGui::Begin(LI(ICON_FA_CLOUD_SUN, "Time & Weather"), &showTimeWeatherWindow, flags);
 		uiFitItemsToPanel();
 		uiTimeWeather();
 		ImGui::End();
@@ -15541,9 +17270,8 @@ gui(void)
 		uiHistoryWindow();
 
 	if(mapPanels && showViewWindow){
-		ImGui::SetNextWindowSize(ImVec2(460.0f, 640.0f), ImGuiCond_FirstUseEver);
-		uiNextPanelSizeConstraints();
-		ImGui::Begin(LI(ICON_FA_EYE, "View"), &showViewWindow);
+		ImGuiWindowFlags flags = UiPlaceToolWindow(LI(ICON_FA_EYE, "View"), 24.0f, true);
+		ImGui::Begin(LI(ICON_FA_EYE, "View"), &showViewWindow, flags);
 		uiFitItemsToPanel();
 		uiView();
 		ImGui::End();
@@ -15789,6 +17517,22 @@ OpenPawnMapFile(const char *path)
 	return path && path[0] && openPawnMap(path);
 }
 
+// An autosave of the open map's unsaved work, before something else throws
+// it away (an agent asking to discard it): File > Recover Autosave brings it
+// back. The path written, or empty if there was nothing to keep or it failed.
+std::string
+AutosaveBeforeDiscard(void)
+{
+	if(!mapHasUnsavedChanges())
+		return std::string();
+	std::string path = writeAutosave();
+	if(!path.empty()){
+		gAutosaveLastSavedSeq = GetLatestChangeSeq();
+		ToastFor(TOAST_SAVE, 8.0f, _("Unsaved changes were kept in an autosave (File > Recover Autosave)"));
+	}
+	return path;
+}
+
 void
 NewPawnMapDocument(void)
 {
@@ -15861,6 +17605,12 @@ SetPawnMapFormat(int format)
 {
 	if(format == PAWN_CODE_NATIVE || format == PAWN_CODE_STREAMER)
 		gPawnSaveFormat = format;
+}
+
+bool
+PawnMapChangedOnDisk(void)
+{
+	return mapChangedOnDisk();
 }
 
 bool

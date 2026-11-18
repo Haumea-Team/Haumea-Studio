@@ -1,4 +1,5 @@
 #include "haumea.h"
+#include "tracksnap.h"
 #include "particles.h"
 #include "coordinatepin.h"
 #include "layoutpaths.h"
@@ -23,6 +24,7 @@
 #include "rec.h"
 #include "shortcuts.h"
 #include "playerview.h"
+#include "buildreplay.h"
 #include "version.h"
 #include "versionutil.h"
 #ifdef LIBRW_GLFW
@@ -879,6 +881,62 @@ GetGroundPlacementSurface(rw::V3d pos, rw::V3d *hitPos, rw::V3d *hitNormal, bool
 	return found;
 }
 
+// What a ped standing at pos would stand on in the game: the highest
+// collision from just above its feet down to maxDrop below them, leaving out
+// custom models whose DFF carries no collision (only Haumea has one for
+// them). Interiors aren't told apart. under: the instance hit, or nil.
+bool
+FindGameSurfaceBelow(rw::V3d pos, float maxDrop, rw::V3d *hitPos, ObjectInst **under)
+{
+	const float above = 0.6f;
+	Ray ray;
+	ray.start = pos;
+	ray.start.z += above;
+	ray.dir = { 0.0f, 0.0f, -1.0f };
+	float bestT = above + maxDrop;
+	ObjectInst *best = nil;
+	rw::V3d bestHit = pos;
+	auto scan = [&](CPtrList *list){
+		for(CPtrNode *p = list->first; p; p = p->next){
+			ObjectInst *inst = (ObjectInst*)p->item;
+			if(inst->m_isDeleted || inst->m_editorHidden || InstUsesEditorIcon(inst))
+				continue;
+			ObjectDef *obj = GetObjectDef(inst->m_objectId);
+			if(obj == nil || obj->m_colModel == nil || obj->m_isPed || obj->m_isVehicle ||
+			   GetSampElementKind(inst) != SAMP_ELEMENT_OBJECT || CustomModelHasNoGameCollision(inst->m_objectId))
+				continue;
+			if(!PointInsideInstBounds(inst, pos.x, pos.y))
+				continue;
+			rw::V3d hit, normal;
+			if(!IntersectRayColModelDetailed(ray, inst, &hit, &normal))
+				continue;
+			float t = dot(sub(hit, ray.start), ray.dir);
+			if(t >= 0.0f && t <= bestT){
+				bestT = t;
+				bestHit = hit;
+				best = inst;
+			}
+		}
+	};
+	if(pos.x >= worldBounds.left && pos.x < worldBounds.right &&
+	   pos.y >= worldBounds.bottom && pos.y < worldBounds.top){
+		Sector *s = GetSector(GetSectorIndexX(pos.x), GetSectorIndexY(pos.y));
+		scan(&s->buildings);
+		scan(&s->buildings_overlap);
+		scan(&s->bigbuildings);
+		scan(&s->bigbuildings_overlap);
+	}
+	scan(&outOfBoundsSector.buildings);
+	scan(&outOfBoundsSector.bigbuildings);
+	if(best == nil)
+		return false;
+	if(hitPos)
+		*hitPos = bestHit;
+	if(under)
+		*under = best;
+	return true;
+}
+
 float
 GetPlacementBaseOffset(int objectId)
 {
@@ -1505,6 +1563,20 @@ SnapSelectedToGround(bool alignRotation)
 	return snapped;
 }
 
+// A tube or stunt road being placed joins the piece it comes near (Alt:
+// anywhere), turned to fit.
+static bool
+placementTrackSnap(rw::V3d pos, rw::V3d *outPos, rw::Quat *outRot)
+{
+	rw::V3d joinRot;
+	rw::V3d origin = TheCamera.m_position, dir = normalize(TheCamera.m_mouseDir);
+	if(CPad::IsAltDown() || GetSpawnObjectId() < 0 || !IsTrackPiece(PawnModelId(GetSpawnObjectId())) ||
+	   !FindTrackSnap(GetSpawnObjectId(), nil, pos, rw::V3d{ 0.0f, 0.0f, 0.0f }, outPos, &joinRot, &origin, &dir))
+		return false;
+	*outRot = MakeObjectRotationDegrees(joinRot);
+	return true;
+}
+
 rw::V3d
 GetPlacementPosition(void)
 {
@@ -1805,7 +1877,8 @@ handleBrushTool(void)
 // --- Select tool: drag the selection itself ---
 //
 // Press on an object that is already selected and drag: the selection slides
-// along the ground (or objects) under the cursor. While dragging, the wheel
+// level, the point grabbed staying under the cursor (with Follow ground, at
+// its height above the ground under it). While dragging, the wheel
 // raises or lowers it by the move step and Alt+wheel turns it by the rotate
 // step. One undo step, like a gizmo drag.
 static void
@@ -1814,7 +1887,9 @@ updateObjectDragEarly(void)
 	static bool armed, dragging;
 	static float startX, startY;
 	static ObjectInst *leader;
-	static rw::V3d startHit, startLeaderPos;
+	static rw::V3d grab, startLeaderPos;	// grab: where the press hit the object
+	static float startGroundZ;
+	static bool haveStartGround;
 	static rw::Quat startLeaderRot;
 	static std::vector<UndoTransform> transforms;
 	auto stop = [&](void){
@@ -1839,6 +1914,12 @@ updateObjectDragEarly(void)
 		if(hit && hit->m_selected && !hit->m_isDeleted && IsPawnObjectEditable(hit)){
 			armed = true;
 			leader = hit;
+			// The point under the cursor on the object: the drag keeps it there.
+			Ray ray;
+			ray.start = TheCamera.m_position;
+			ray.dir = normalize(TheCamera.m_mouseDir);
+			if(!IntersectRayColModelDetailed(ray, hit, &grab, nil))
+				grab = hit->m_translation;
 			startX = (float)CPad::newMouseState.x;
 			startY = (float)CPad::newMouseState.y;
 			gObjectDragActive = true;	// keeps the camera off the button
@@ -1862,16 +1943,30 @@ updateObjectDragEarly(void)
 			stop();
 			return;
 		}
-		rw::V3d n;
-		GetPlacementSurfaceHit(&startHit, &n);
 		startLeaderPos = leader->m_translation;
+		rw::V3d ground;
+		haveStartGround = GetGroundPlacementSurface(startLeaderPos, &ground, nil, true);
+		startGroundZ = ground.z;
 		startLeaderRot = NormalizeQuatOrIdentity(leader->m_rotation);
 		sObjectDragHeight = sObjectDragHeading = 0.0f;
 		dragging = true;
 	}
-	rw::V3d hit, n;
-	GetPlacementSurfaceHit(&hit, &n);
-	rw::V3d pos = add(startLeaderPos, sub(hit, startHit));
+	// Where the cursor's ray crosses the level of the grabbed point; a ray
+	// near the horizon stops a long way off instead of at infinity.
+	rw::V3d origin = TheCamera.m_position, dir = normalize(TheCamera.m_mouseDir);
+	float t = fabs(dir.z) > 1e-4f ? (grab.z - origin.z) / dir.z : -1.0f;
+	float far = 2000.0f;
+	if(t < 0.0f || t > far)
+		t = far;
+	rw::V3d at = add(origin, scale(dir, t));
+	rw::V3d pos = startLeaderPos;
+	pos.x += at.x - grab.x;
+	pos.y += at.y - grab.y;
+	if(gDragFollowGround && haveStartGround){
+		rw::V3d ground;
+		if(GetGroundPlacementSurface(pos, &ground, nil, true))
+			pos.z = ground.z + (startLeaderPos.z - startGroundZ);
+	}
 	pos.z += sObjectDragHeight;
 	rw::Quat rot = sObjectDragHeading != 0.0f ?
 		ApplyObjectRotationDelta(startLeaderRot, rw::makeV3d(0.0f, 0.0f, sObjectDragHeading), true) : startLeaderRot;
@@ -2149,8 +2244,12 @@ handleTool(void)
 	// Place mode intercepts all clicks
 	if(gPlaceMode){
 		if(CPad::IsMButtonClicked(1)){
-			rw::V3d pos = GetPlacementPosition();
-			SpawnPlaceObject(pos);
+			rw::V3d pos = GetPlacementPosition(), joined;
+			rw::Quat joinedRot;
+			if(placementTrackSnap(pos, &joined, &joinedRot))
+				SpawnPlaceObject(joined, &joinedRot);
+			else
+				SpawnPlaceObject(pos);
 			// Shift+click or Keep placing = stay in placement mode.
 			if(!gPlaceRepeat && !CPad::IsKeyDown(KEY_LSHIFT) && !CPad::IsKeyDown(KEY_RSHIFT))
 				gPlaceMode = false;
@@ -2304,93 +2403,138 @@ SplashHash(int i, int salt)
 	return (h & 0xFFFFFF) / (float)0x1000000;
 }
 
-// Haumea itself: an elongated icy dwarf planet with a ring and two moons,
-// Hi'iaka and Namaka. Back halves of the ring and orbits go behind it.
-static void
-DrawSplashPlanet(ImDrawList *dl, ImVec2 c, float r, float t, ImU32 accent)
+// Haumea seen from just above its surface: its limb is a circle whose top is
+// at topY in the middle of the window and whose edges meet the window's sides
+// at edgeY. from..to is the arc between the two sides, left to right.
+struct SplashLimb { ImVec2 centre; float radius, from, to, topY; };
+
+static SplashLimb
+SplashLimbFor(float W, float H)
 {
-	const float tilt = -0.32f;
-	ImVec2 body(r * 1.38f, r * 0.86f);
-	ImVec2 ring(r * 2.15f, r * 0.42f);
+	float half = W * 0.5f;
+	float edgeY = H * 0.79f;
+	SplashLimb l;
+	l.topY = H * 0.56f;
+	float sag = edgeY - l.topY;
+	l.radius = (half * half + sag * sag) / (2.0f * sag);
+	l.centre = ImVec2(half, l.topY + l.radius);
+	l.from = atan2f(edgeY - l.centre.y, -half);
+	l.to = atan2f(edgeY - l.centre.y, half);
+	return l;
+}
+
+// Sky, ring, moons and the planet's surface. The progress runs along the
+// horizon as a line of light; at the end it flares like a sunrise while the
+// window grows into the editor.
+static void
+DrawSplashHorizon(ImDrawList *dl, float W, float H, float time, ImU32 accent)
+{
 	ImVec4 a = ImGui::ColorConvertU32ToFloat4(accent);
 	int ar = (int)(a.x * 255), ag = (int)(a.y * 255), ab = (int)(a.z * 255);
+	float s = min(W / HAUMEA_SPLASH_WIDTH, H / HAUMEA_SPLASH_HEIGHT);
+	SplashLimb limb = SplashLimbFor(W, H);
+	const int arcSegments = 128;
 
-	// Glow.
-	for(int i = 8; i >= 1; i--){
-		float k = i / 8.0f;
-		dl->AddEllipseFilled(c, ImVec2(body.x * (1.0f + k * 0.9f), body.y * (1.0f + k * 1.3f)),
-			SplashColor(ar, ag, ab, 0.035f * (1.0f - k) + 0.01f), tilt, 64);
+	// Sky.
+	float mid = H * 0.55f;
+	dl->AddRectFilledMultiColor(ImVec2(0, 0), ImVec2(W, mid),
+		IM_COL32(6, 6, 14, 255), IM_COL32(6, 6, 14, 255),
+		IM_COL32(13, 11, 31, 255), IM_COL32(13, 11, 31, 255));
+	dl->AddRectFilledMultiColor(ImVec2(0, mid), ImVec2(W, H),
+		IM_COL32(13, 11, 31, 255), IM_COL32(13, 11, 31, 255),
+		IM_COL32(28, 20, 56, 255), IM_COL32(28, 20, 56, 255));
+	// Stars drift slowly; nearer ones are bigger, faster and brighter. The
+	// planet covers the ones below its limb.
+	for(int i = 0; i < 160; i++){
+		float depth = 0.25f + 0.75f * SplashHash(i, 3);
+		float x = fmodf(SplashHash(i, 1) * W - time * 4.0f * depth + W * 4.0f, W);
+		float y = SplashHash(i, 2) * H * 0.78f;
+		float twinkle = 0.55f + 0.45f * sinf(time * (1.0f + 2.5f * SplashHash(i, 4)) + i);
+		float size = 0.5f + 1.2f * depth * depth;
+		dl->AddCircleFilled(ImVec2(x, y), size, SplashColor(220, 225, 255, (0.2f + 0.6f * depth) * twinkle), 8);
+		if(depth > 0.93f)
+			dl->AddCircleFilled(ImVec2(x, y), size * 3.5f, SplashColor(ar, ag, ab, 0.08f * twinkle), 12);
+	}
+	// Its ring, seen from inside its plane: a faint arc across the sky.
+	ImVec2 r0(-W * 0.07f, H * 0.42f), r1(W * 0.5f, H * 0.14f), r2(W * 1.07f, H * 0.34f);
+	dl->AddBezierQuadratic(r0, r1, r2, SplashColor(200, 206, 245, 0.16f), 5.0f * s, 64);
+	dl->AddBezierQuadratic(r0, r1, r2, SplashColor(230, 232, 255, 0.35f), 1.0f, 64);
+	// Hi'iaka and Namaka.
+	float m1 = time * 0.05f, m2 = time * 0.08f + 2.0f;
+	ImVec2 hiiaka(W * 0.795f + cosf(m1) * W * 0.045f, H * 0.24f + sinf(m1) * H * 0.02f);
+	ImVec2 namaka(W * 0.636f + cosf(m2) * W * 0.068f, H * 0.34f + sinf(m2) * H * 0.016f);
+	dl->AddCircleFilled(hiiaka, 22.0f * s, SplashColor(ar, ag, ab, 0.06f), 24);
+	dl->AddCircleFilled(hiiaka, 9.0f * s, SplashColor(200, 205, 225, 1.0f), 24);
+	dl->AddCircleFilled(ImVec2(hiiaka.x - 3.0f * s, hiiaka.y - 3.0f * s), 5.0f * s, SplashColor(245, 247, 255, 0.8f), 16);
+	dl->AddCircleFilled(namaka, 5.0f * s, SplashColor(180, 185, 210, 1.0f), 16);
+
+	// The progress head, and its dawn glow behind the planet. When loading
+	// is done the glow flares as the window grows into the editor.
+	float progress = clamp(splashProgress, 0.0f, 1.0f);
+	float headAngle = limb.from + (limb.to - limb.from) * progress;
+	ImVec2 head(limb.centre.x + cosf(headAngle) * limb.radius, limb.centre.y + sinf(headAngle) * limb.radius);
+	float flare = progress >= 1.0f ? 0.4f + 0.6f * splashExpand : 0.0f;
+	ImVec2 dawn((90.0f + 500.0f * flare) * s, (40.0f + 260.0f * flare) * s);
+	for(int i = 12; i >= 1; i--){
+		float k = i / 12.0f;
+		dl->AddEllipseFilled(head, ImVec2(dawn.x * k, dawn.y * k),
+			SplashColor(ar, ag, ab, (0.025f + 0.04f * flare) * (1.0f - k * 0.5f)), 0.0f, 48);
+	}
+	for(int i = 4; i >= 1; i--){
+		float k = i / 4.0f;
+		dl->AddEllipseFilled(head, ImVec2(dawn.x * 0.25f * k, dawn.y * 0.25f * k),
+			SplashColor(232, 236, 255, 0.05f + 0.1f * flare), 0.0f, 32);
 	}
 
-	struct Moon { float orbitX, orbitY, period, phase, size; };
-	const Moon moons[] = {
-		{ 2.65f, 0.62f, 11.0f, 0.6f, 0.085f },	// Hi'iaka
-		{ 1.85f, 0.44f, 7.0f, 2.4f, 0.055f },	// Namaka
-	};
-	float ct = cosf(tilt), st = sinf(tilt);
-	auto orbitPoint = [&](float ox, float oy, float angle){
-		float x = cosf(angle) * ox * r, y = sinf(angle) * oy * r;
-		return ImVec2(c.x + x * ct - y * st, c.y + x * st + y * ct);
-	};
-	auto drawMoons = [&](bool front){
-		for(const Moon &m : moons){
-			float angle = t * 6.2831853f / m.period + m.phase;
-			if((sinf(angle) > 0.0f) != front)
-				continue;
-			ImVec2 p = orbitPoint(m.orbitX, m.orbitY, angle);
-			float size = r * m.size * (front ? 1.0f : 0.85f);
-			dl->AddCircleFilled(p, size * 2.6f, SplashColor(ar, ag, ab, 0.08f), 24);
-			dl->AddCircleFilled(p, size, SplashColor(200, 205, 225, front ? 1.0f : 0.55f), 24);
-			dl->AddCircleFilled(ImVec2(p.x - size * 0.3f, p.y - size * 0.3f), size * 0.55f,
-				SplashColor(245, 247, 255, front ? 0.9f : 0.4f), 16);
+	// Atmosphere: many faint layers just outside the limb, so it fades
+	// instead of banding.
+	for(int i = 16; i >= 1; i--){
+		dl->PathArcTo(limb.centre, limb.radius + i * 1.0f * s, limb.from - 0.05f, limb.to + 0.05f, arcSegments);
+		dl->PathStroke(SplashColor(ar, ag, ab, 0.028f), 0, i * 2.5f * s);
+	}
+	// The surface, lighter where it meets the sky.
+	float from = limb.from - 0.02f, to = limb.to + 0.02f;
+	int firstVertex = dl->VtxBuffer.Size;
+	dl->PathArcTo(limb.centre, limb.radius, from, to, arcSegments);
+	dl->PathLineTo(ImVec2(limb.centre.x + cosf(to) * limb.radius, H + 1.0f));
+	dl->PathLineTo(ImVec2(limb.centre.x + cosf(from) * limb.radius, H + 1.0f));
+	dl->PathFillConvex(IM_COL32_WHITE);
+	ImGui::ShadeVertsLinearColorGradientKeepAlpha(dl, firstVertex, dl->VtxBuffer.Size,
+		ImVec2(0, limb.topY), ImVec2(0, H), IM_COL32(52, 56, 98, 255), IM_COL32(14, 15, 34, 255));
+	// Its dark red spot and a few faint patches, soft edged: stacked
+	// layers that shrink toward the middle.
+	auto patch = [&](ImVec2 c, ImVec2 r, int pr, int pg, int pb, float alpha){
+		const int layers = 8;
+		for(int i = 0; i < layers; i++){
+			float k = 1.0f - i / (float)layers;
+			dl->AddEllipseFilled(c, ImVec2(r.x * k, r.y * k), SplashColor(pr, pg, pb, alpha / layers * 1.6f), 0.0f, 48);
 		}
 	};
-	auto drawOrbitPath = [&](float ox, float oy, float from, float to, float alpha){
-		dl->PathEllipticalArcTo(c, ImVec2(ox * r, oy * r), tilt, from, to, 64);
-		dl->PathStroke(SplashColor(ar, ag, ab, alpha), 0, 1.0f);
-	};
-	auto drawRing = [&](float from, float to, float alpha){
-		dl->PathEllipticalArcTo(c, ImVec2(ring.x * 1.06f, ring.y * 1.06f), tilt, from, to, 96);
-		dl->PathStroke(SplashColor(ar, ag, ab, alpha * 0.35f), 0, r * 0.05f);
-		dl->PathEllipticalArcTo(c, ring, tilt, from, to, 96);
-		dl->PathStroke(SplashColor(230, 232, 255, alpha), 0, 2.0f);
-	};
-
-	// Behind the planet.
-	for(const Moon &m : moons)
-		drawOrbitPath(m.orbitX, m.orbitY, 3.14159265f, 6.2831853f, 0.12f);
-	drawRing(3.14159265f, 6.2831853f, 0.45f);
-	drawMoons(false);
-
-	// The body, lit from the upper left.
-	dl->AddEllipseFilled(c, body, SplashColor(34, 36, 62, 1.0f), tilt, 96);
-	// Many faint layers so the shading blends instead of banding.
-	const int layers = 28;
-	for(int i = 0; i < layers; i++){
-		float k = i / (float)layers;
-		ImVec2 off(-body.x * 0.2f * k, -body.y * 0.24f * k);
-		float shade = 0.2f + 0.8f * k;
-		dl->AddEllipseFilled(ImVec2(c.x + off.x, c.y + off.y),
-			ImVec2(body.x * (1.0f - k * 0.6f), body.y * (1.0f - k * 0.6f)),
-			SplashColor((int)(70 + 175 * shade), (int)(74 + 172 * shade), (int)(110 + 140 * shade), 0.16f),
-			tilt, 96);
+	patch(ImVec2(W * 0.693f, H * 0.704f), ImVec2(W * 0.15f, H * 0.04f), 150, 60, 70, 0.32f);
+	patch(ImVec2(W * 0.284f, H * 0.66f), ImVec2(W * 0.06f, H * 0.016f), 255, 255, 255, 0.05f);
+	patch(ImVec2(W * 0.477f, H * 0.8f), ImVec2(W * 0.1f, H * 0.024f), 0, 0, 0, 0.16f);
+	patch(ImVec2(W * 0.17f, H * 0.86f), ImVec2(W * 0.075f, H * 0.018f), 0, 0, 0, 0.16f);
+	// Rim light along the edge.
+	for(int i = 1; i <= 4; i++){
+		dl->PathArcTo(limb.centre, limb.radius - i * 2.5f * s, from, to, arcSegments);
+		dl->PathStroke(SplashColor(154, 164, 224, 0.05f), 0, 2.5f * s);
 	}
-	// Its dark red spot turns with the planet (Haumea spins in four hours).
-	float spin = t * 0.9f;
-	float facing = cosf(spin);
-	if(facing > 0.0f){
-		float x = sinf(spin) * body.x * 0.62f;
-		ImVec2 spot(c.x + x * ct, c.y + x * st + body.y * 0.12f);
-		dl->AddEllipseFilled(spot, ImVec2(body.x * 0.16f * facing, body.y * 0.13f),
-			SplashColor(150, 60, 70, 0.55f * facing), tilt, 32);
-	}
-	dl->AddEllipse(c, body, SplashColor(ar, ag, ab, 0.35f), tilt, 96, 1.5f);
+	dl->PathArcTo(limb.centre, limb.radius, from, to, arcSegments);
+	dl->PathStroke(SplashColor(154, 164, 224, 0.25f), 0, 1.0f);
 
-	// In front of it.
-	for(const Moon &m : moons)
-		drawOrbitPath(m.orbitX, m.orbitY, 0.0f, 3.14159265f, 0.22f);
-	drawRing(0.0f, 3.14159265f, 0.95f);
-	drawMoons(true);
+	// Progress along the horizon.
+	if(progress > 0.0f){
+		int segments = max(2, (int)(arcSegments * progress));
+		for(int i = 3; i >= 1; i--){
+			dl->PathArcTo(limb.centre, limb.radius, limb.from, headAngle, segments);
+			dl->PathStroke(SplashColor(ar, ag, ab, 0.14f), 0, (2.0f + i * 3.0f) * s);
+		}
+		dl->PathArcTo(limb.centre, limb.radius, limb.from, headAngle, segments);
+		dl->PathStroke(SplashColor(230, 232, 255, 1.0f), 0, 2.0f * s);
+		dl->AddCircleFilled(head, 14.0f * s, SplashColor(ar, ag, ab, 0.18f), 24);
+		dl->AddCircleFilled(head, 7.0f * s, SplashColor(ar, ag, ab, 0.35f), 16);
+		dl->AddCircleFilled(head, 2.5f * s, IM_COL32_WHITE, 12);
+	}
 }
 
 static void
@@ -2439,88 +2583,41 @@ DrawSplash(float dt)
 	int ar = (int)(a.x * 255), ag = (int)(a.y * 255), ab = (int)(a.z * 255);
 	float W = io.DisplaySize.x, H = io.DisplaySize.y;
 
-	// Deep space.
-	dl->AddRectFilledMultiColor(ImVec2(0, 0), ImVec2(W, H),
-		IM_COL32(7, 7, 15, 255), IM_COL32(12, 10, 26, 255),
-		IM_COL32(22, 14, 34, 255), IM_COL32(9, 9, 20, 255));
-	// Nebula behind the planet.
-	ImVec2 planet(W * 0.72f, H * 0.45f);
-	for(int i = 0; i < 6; i++){
-		float k = i / 6.0f;
-		float wobble = sinf(time * 0.15f + i) * 0.04f;
-		dl->AddEllipseFilled(ImVec2(planet.x - W * (0.12f - k * 0.05f), planet.y + H * (0.1f - k * 0.08f)),
-			ImVec2(W * (0.34f - k * 0.04f), H * (0.42f + wobble - k * 0.05f)),
-			i % 2 ? SplashColor(90, 40, 140, 0.035f) : SplashColor(ar, ag, ab, 0.03f),
-			0.6f + k, 48);
-	}
-	// Stars drift slowly; nearer ones are bigger, faster and brighter.
-	for(int i = 0; i < 190; i++){
-		float depth = 0.25f + 0.75f * SplashHash(i, 3);
-		float x = fmodf(SplashHash(i, 1) * W - time * 6.0f * depth + W * 4.0f, W);
-		float y = SplashHash(i, 2) * H;
-		float twinkle = 0.55f + 0.45f * sinf(time * (1.0f + 2.5f * SplashHash(i, 4)) + i);
-		float size = 0.5f + 1.3f * depth * depth;
-		dl->AddCircleFilled(ImVec2(x, y), size, SplashColor(220, 225, 255, (0.25f + 0.6f * depth) * twinkle), 8);
-		if(depth > 0.92f)
-			dl->AddCircleFilled(ImVec2(x, y), size * 3.5f, SplashColor(ar, ag, ab, 0.08f * twinkle), 12);
-	}
+	DrawSplashHorizon(dl, W, H, time, accent);
 
-	float planetRadius = min(W, H) * 0.2f;
-	DrawSplashPlanet(dl, planet, planetRadius, time, accent);
-
-	// Wordmark.
-	float left = floorf(W * 0.075f);
-	float y = floorf(H * 0.27f);
+	// Wordmark, top left.
+	float left = floorf(W * 0.06f);
+	float y = floorf(H * 0.104f);
 	ImFont *title = gTitleFont ? gTitleFont : font;
-	float titleSize = floorf(min(min(W, H) * 0.17f, title->LegacySize));
-	// "Haumea Studio" on one line, narrowed to stay clear of the planet.
+	float titleSize = floorf(min(H * 0.112f, title->LegacySize));
 	float wordmarkWidth = title->CalcTextSizeA(titleSize, FLT_MAX, 0.0f, "Haumea Studio").x;
-	if(wordmarkWidth > W * 0.5f)
-		titleSize = floorf(titleSize * W * 0.5f / wordmarkWidth);
+	if(wordmarkWidth > W * 0.62f)
+		titleSize = floorf(titleSize * W * 0.62f / wordmarkWidth);
 	float haumeaWidth = title->CalcTextSizeA(titleSize, FLT_MAX, 0.0f, "Haumea ").x;
 	dl->AddText(title, titleSize, ImVec2(left + 2.0f, y + 3.0f), IM_COL32(0, 0, 0, 110), "Haumea Studio");
 	dl->AddText(title, titleSize, ImVec2(left, y), IM_COL32(245, 246, 255, 255), "Haumea");
 	dl->AddText(title, titleSize, ImVec2(left + haumeaWidth, y), IM_COL32(190, 196, 230, 255), "Studio");
-	y += titleSize * 1.02f;
-	float bySize = floorf(fontSize * 1.15f);
-	dl->AddText(font, bySize, ImVec2(left + 3.0f, y), SplashColor(ar, ag, ab, 1.0f), "by itsneufox");
-	y += bySize + fontSize * 1.1f;
-	dl->AddText(font, fontSize, ImVec2(left + 3.0f, y), IM_COL32(170, 172, 195, 230),
+	y += titleSize * 1.12f;
+	// "by itsneufox  /  tagline" on one line.
+	float x = left + 3.0f;
+	const char *byline = "by itsneufox";
+	dl->AddText(font, fontSize, ImVec2(x, y), SplashColor(ar, ag, ab, 1.0f), byline);
+	x += font->CalcTextSizeA(fontSize, FLT_MAX, 0.0f, byline).x + fontSize * 0.7f;
+	dl->AddText(font, fontSize, ImVec2(x, y), IM_COL32(92, 95, 128, 255), "/");
+	x += font->CalcTextSizeA(fontSize, FLT_MAX, 0.0f, "/").x + fontSize * 0.7f;
+	dl->AddText(font, fontSize, ImVec2(x, y), IM_COL32(166, 168, 194, 240),
 		_("The all-in-one editor for open.mp and SA-MP"));
 
-	// Progress: a glowing bar with a light sweeping along it.
-	float barWidth = floorf(min(W * 0.4f, 420.0f));
-	float barY = floorf(H * 0.66f);
-	ImVec2 barMin(left, barY), barMax(left + barWidth, barY + 6.0f);
-	float fill = barWidth * splashProgress;
-	dl->AddRectFilled(barMin, barMax, IM_COL32(255, 255, 255, 22), 3.0f);
-	if(fill > 1.0f){
-		for(int i = 3; i >= 1; i--)
-			dl->AddRectFilled(ImVec2(barMin.x - i * 2.0f, barMin.y - i * 2.0f),
-				ImVec2(barMin.x + fill + i * 2.0f, barMax.y + i * 2.0f),
-				SplashColor(ar, ag, ab, 0.06f), 3.0f + i * 2.0f);
-		dl->AddRectFilledMultiColor(barMin, ImVec2(barMin.x + fill, barMax.y),
-			SplashColor(ar / 2, ag / 2, ab, 1.0f), SplashColor(ar, ag, ab, 1.0f),
-			SplashColor(ar, ag, ab, 1.0f), SplashColor(ar / 2, ag / 2, ab, 1.0f));
-		float sweep = fmodf(time * 0.8f, 1.4f) - 0.2f;
-		float sx = barMin.x + fill * sweep;
-		dl->PushClipRect(barMin, ImVec2(barMin.x + fill, barMax.y), true);
-		dl->AddRectFilledMultiColor(ImVec2(sx - 40.0f, barMin.y), ImVec2(sx, barMax.y),
-			IM_COL32(255, 255, 255, 0), IM_COL32(255, 255, 255, 140),
-			IM_COL32(255, 255, 255, 140), IM_COL32(255, 255, 255, 0));
-		dl->AddRectFilledMultiColor(ImVec2(sx, barMin.y), ImVec2(sx + 40.0f, barMax.y),
-			IM_COL32(255, 255, 255, 140), IM_COL32(255, 255, 255, 0),
-			IM_COL32(255, 255, 255, 0), IM_COL32(255, 255, 255, 140));
-		dl->PopClipRect();
-	}
+	// Status, in the sky above the horizon line it describes.
+	ImFont *mono = gCodeFont ? gCodeFont : font;
 	char percent[16];
 	snprintf(percent, sizeof(percent), "%d%%", (int)(splashProgress * 100.0f + 0.5f));
-	ImVec2 percentSize = font->CalcTextSizeA(fontSize, FLT_MAX, 0.0f, percent);
-	dl->AddText(font, fontSize, ImVec2(barMax.x - percentSize.x, barMax.y + 8.0f),
-		IM_COL32(235, 236, 250, 230), percent);
-	dl->AddText(font, fontSize, ImVec2(left, barMax.y + 8.0f), IM_COL32(180, 182, 205, 230), splashStatus);
+	float statusY = floorf(H * 0.464f);
+	dl->AddText(mono, fontSize, ImVec2(left, statusY), IM_COL32(235, 236, 250, 240), percent);
+	float percentWidth = mono->CalcTextSizeA(fontSize, FLT_MAX, 0.0f, "100%").x;
+	dl->AddText(font, fontSize, ImVec2(left + percentWidth + fontSize, statusY), IM_COL32(180, 182, 205, 230), splashStatus);
 
-	// Footer.
+	// Footer, on the planet's surface.
 	char tipText[200];
 	char tipBody[160];
 	if(tips[tip].shortcut >= 0)
@@ -2528,13 +2625,13 @@ DrawSplash(float dt)
 	else
 		snprintf(tipBody, sizeof(tipBody), "%s", _(tips[tip].text));
 	snprintf(tipText, sizeof(tipText), _("Tip: %s"), tipBody);
-	dl->AddText(font, fontSize, ImVec2(left, H - fontSize * 2.6f), IM_COL32(170, 172, 195, 210), tipText);
+	dl->AddText(font, fontSize, ImVec2(left, H - fontSize * 2.6f), IM_COL32(176, 178, 204, 220), tipText);
 	char version[64];
 	const char *channel = HAUMEA_CHANNEL_DISPLAY;	// empty for production
 	snprintf(version, sizeof(version), "%s%s%s", HaumeaFullVersion(), channel[0] ? "  \xC2\xB7  " : "", channel);
-	ImVec2 versionSize = font->CalcTextSizeA(fontSize, FLT_MAX, 0.0f, version);
-	dl->AddText(font, fontSize, ImVec2(W - versionSize.x - left * 0.5f, H - fontSize * 2.6f),
-		IM_COL32(150, 152, 175, 190), version);
+	ImVec2 versionSize = mono->CalcTextSizeA(fontSize, FLT_MAX, 0.0f, version);
+	dl->AddText(mono, fontSize, ImVec2(W - versionSize.x - left * 0.75f, H - fontSize * 2.6f),
+		IM_COL32(141, 144, 174, 200), version);
 
 	// Fade in at start, and into the editor's background as it grows.
 	float fadeIn = clamp(time / 0.6f, 0.0f, 1.0f);
@@ -2551,6 +2648,7 @@ DrawSplash(float dt)
 	ImGui::Render();
 	ImGui_ImplRW_RenderDrawLists(ImGui::GetDrawData());
 	cam->endUpdate();
+	TitleBarRoundCorners();
 	cam->showRaster(0);
 	ShowEditorWindow();
 }
@@ -3172,6 +3270,40 @@ FindSelectionSnapDelta(const std::vector<ObjectInst*> &objs, const std::vector<r
 	return found;
 }
 
+// The transform gizmo's look: an arrow per axis for Move and a ring per axis
+// for Rotate, in plain red, green and blue, the same size on screen however
+// far the selection is; no plane squares and no outer ring. The handle under
+// the mouse lights up.
+static void
+styleGizmo(void)
+{
+	float s = GetUiScale();
+	ImGuizmo::Style &style = ImGuizmo::GetStyle();
+	style.TranslationLineThickness = 4.0f*s;
+	style.TranslationLineArrowSize = 11.0f*s;
+	style.RotationLineThickness = 4.0f*s;
+	style.RotationOuterLineThickness = 0.0f;
+	style.CenterCircleSize = 4.0f*s;
+	style.HatchedAxisLineThickness = 0.0f;
+	style.Colors[ImGuizmo::DIRECTION_X] = ImVec4(0.90f, 0.16f, 0.16f, 1.0f);
+	style.Colors[ImGuizmo::DIRECTION_Y] = ImVec4(0.16f, 0.78f, 0.22f, 1.0f);
+	style.Colors[ImGuizmo::DIRECTION_Z] = ImVec4(0.20f, 0.36f, 0.95f, 1.0f);
+	style.Colors[ImGuizmo::SELECTION] = ImVec4(1.0f, 0.86f, 0.30f, 1.0f);
+	style.Colors[ImGuizmo::TRANSLATION_LINE] = ImVec4(1.0f, 1.0f, 1.0f, 0.55f);
+	style.Colors[ImGuizmo::ROTATION_USING_BORDER] = ImVec4(1.0f, 0.86f, 0.30f, 1.0f);
+	style.Colors[ImGuizmo::ROTATION_USING_FILL] = ImVec4(1.0f, 0.86f, 0.30f, 0.18f);
+	// Studio's reach: an arrow about a tenth of the view's height. ImGuizmo
+	// draws its rings a little wider than its arrows; this keeps both modest.
+	ImGuizmo::SetGizmoSizeClipSpace(0.085f);
+	// ImGuizmo shows a plane while its area is over the "axis" limit (the
+	// names are crossed there): past any real area, no planes to see or grab.
+	ImGuizmo::SetAxisLimit(1e9f);
+}
+
+// Move's arrows and Rotate's rings, without the planes and the screen ring.
+static const ImGuizmo::OPERATION GIZMO_MOVE_AXES = (ImGuizmo::OPERATION)(ImGuizmo::TRANSLATE_X | ImGuizmo::TRANSLATE_Y | ImGuizmo::TRANSLATE_Z);
+static const ImGuizmo::OPERATION GIZMO_ROTATE_AXES = (ImGuizmo::OPERATION)(ImGuizmo::ROTATE_X | ImGuizmo::ROTATE_Y | ImGuizmo::ROTATE_Z);
+
 void
 dogizmo(void)
 {
@@ -3222,7 +3354,8 @@ dogizmo(void)
 			snapPtr = snapValues;
 		}
 
-		ImGuizmo::Manipulate(fview, fproj, ImGuizmo::TRANSLATE, ImGuizmo::WORLD, fobj, nil, snapPtr);
+		styleGizmo();
+		ImGuizmo::Manipulate(fview, fproj, GIZMO_MOVE_AXES, ImGuizmo::WORLD, fobj, nil, snapPtr);
 
 		gGizmoHovered = ImGuizmo::IsOver();
 		bool isUsing = ImGuizmo::IsUsing();
@@ -3295,7 +3428,7 @@ dogizmo(void)
 	ImVec2 origin = ImGui::GetMainViewport()->Pos;
 	ImGuizmo::SetRect(origin.x, origin.y, io.DisplaySize.x, io.DisplaySize.y);
 
-	ImGuizmo::OPERATION op = gGizmoMode == GIZMO_ROTATE ? ImGuizmo::ROTATE : ImGuizmo::TRANSLATE;
+	ImGuizmo::OPERATION op = gGizmoMode == GIZMO_ROTATE ? GIZMO_ROTATE_AXES : GIZMO_MOVE_AXES;
 	float snapValues[3];
 	float *snapPtr = nil;
 	bool useSnap = gGizmoSnap && CPad::IsShiftDown();
@@ -3312,6 +3445,7 @@ dogizmo(void)
 		snapPtr = snapValues;
 	}
 	ImGuizmo::MODE space = gGizmoSpace == GIZMO_WORLD ? ImGuizmo::WORLD : ImGuizmo::LOCAL;
+	styleGizmo();
 	ImGuizmo::Manipulate(fview, fproj, op, space, fobj, nil, snapPtr);
 
 	gGizmoHovered = ImGuizmo::IsOver();
@@ -3447,6 +3581,15 @@ dogizmo(void)
 				   SnapTrainToTrack(obj->m_objectId, newPos, GetTrainInstAngle(obj), &onTrack))
 					newPos = onTrack;
 
+				// A tube or stunt road joins the piece it comes near (Alt: anywhere).
+				rw::V3d joinPos, joinRot;
+				if(dragTransforms.size() == 1 && !obj->m_isVehicle && !CPad::IsAltDown() &&
+				   IsTrackPiece(PawnModelId(obj->m_objectId)) &&
+				   FindTrackSnap(obj->m_objectId, obj, newPos, GetInstanceRotationDegrees(obj), &joinPos, &joinRot)){
+					newPos = joinPos;
+					obj->m_rotation = MakeObjectRotationDegrees(joinRot);
+				}
+
 				obj->m_translation = newPos;
 				obj->m_isDirty = true;
 			}
@@ -3556,8 +3699,12 @@ renderWorld(void)
 				else if(IsTrainEngineModel(GetSpawnObjectId()) && !CPad::IsAltDown() &&
 				   ComputeTrainCars(GetSpawnObjectId(), pos, 0.0f, cars) > 0)
 					RenderTrainPlacementGhost(GetSpawnObjectId(), pos, 0.0f);
-				else
+				else{
+					rw::V3d joined;
+					if(placementTrackSnap(pos, &joined, &rot))
+						pos = joined;
 					RenderPlacementGhost(GetSpawnObjectId(), pos, rot, col);
+				}
 			}
 		}
 	}
@@ -3664,6 +3811,7 @@ Draw(void)
 		updateRectSelectEarly();
 		updateObjectDragEarly();
 		TheCamera.Process();
+		BuildReplayUpdate();
 	}
 	AgentBridgeUpdate();
 	MultiplayerUpdate();
@@ -3789,6 +3937,7 @@ Draw(void)
 	AgentBridgeCaptureAfterUiRender();
 
 	Scene.camera->endUpdate();
+	TitleBarRoundCorners();
 	Scene.camera->showRaster(gVSync ? rw::Raster::FLIPWAITVSYNCH : 0);
 #if defined(_WIN32) && defined(RW_D3D9)
 	RenderDetachedEditorWindows();

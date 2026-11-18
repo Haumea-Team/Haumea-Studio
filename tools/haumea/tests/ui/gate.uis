@@ -1,0 +1,38 @@
+# Gate: an object that moves on a key, set up in Object Info's Movement;
+# Ctrl+S writes <map>_AddGate and the helpers, and reopening keeps it a gate.
+open "$UI_FIXTURES/ui_gate.pwn"
+camera 2000 -3030 12 2000 -3000 7
+wait 10
+click_object model=980
+wait 4
+assert selected.model == 980
+shortcut window_object_info
+wait 5
+scroll_until 'Object Info' 'Movement'
+click_item 'Object Info' 'Movement'
+wait 3
+click_item 'Object Info' 'Moves'
+wait 3
+scroll_until 'Object Info' 'Starts'
+click_item 'Object Info' 'Starts'
+wait 3
+click_item '*' 'When a player presses a key'
+wait 3
+scroll_until 'Object Info' 'Key'
+click_item 'Object Info' 'Key'
+wait 3
+click_item '*' 'H  KEY_CTRL_BACK'
+wait 3
+scroll_until 'Object Info' 'Closes after'
+set_item 'Object Info' 'Closes after' "3"
+wait 3
+key Ctrl+S
+wait 5
+assert pawn_contains "_AddGate(Haumea_ui_gate_obj_0, 2000.0, -3000.0, 10.0, 2.0, -1000.0, -1000.0, -1000.0, KEY_CTRL_BACK, 10.0, 3000, true);"
+assert pawn_contains "stock Haumea_ui_gate_Gates(playerid, newkeys, oldkeys)"
+assert pawn_contains "// Gates open with a key or the horn: call Haumea_ui_gate_Gates(playerid, newkeys, oldkeys)"
+reopen
+wait 10
+assert objects == 2
+assert pawn_contains "KEY_CTRL_BACK, 10.0, 3000, true);"
+exit

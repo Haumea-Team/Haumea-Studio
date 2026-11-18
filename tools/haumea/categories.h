@@ -1,6 +1,6 @@
 #pragma once
 
-// The Object Browser's categories (categories.cpp): Haumea's own, filed at
+// The Asset Browser's categories (categories.cpp): Haumea's own, filed at
 // load from the game's files. CAT(id, name, parent): parents come first.
 #define CATEGORY_LIST \
 	CAT(CAT_NATURE_ROOT, N_("Nature"), -1) \

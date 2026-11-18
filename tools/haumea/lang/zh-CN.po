@@ -132,10 +132,6 @@ msgstr ""
 "%s"
 
 #, c-format
-msgid "%d added, %d deleted, %d moved, %d rotated, %d material"
-msgstr "%d 个已添加，%d 个已删除，%d 个已移动，%d 个已旋转，%d 个材质"
-
-#, c-format
 msgid "%d attached or referenced objects excluded from cleanup."
 msgstr "清理已排除 %d 个附加或被引用的物体。"
 
@@ -188,9 +184,6 @@ msgid "%d element(s) outside SA-MP's world bounds (±%d): the server clamps or i
 msgstr "%d 个元素超出 SA-MP 的世界边界（±%d）：服务器会限制或忽略这些位置。"
 
 #, c-format
-msgid "%d element(s) use custom models: the server needs them in models/artconfig.txt (or AddSimpleModel) and artwork enabled%s; players need SA-MP 0.3.DL or an open.mp client.%s"
-msgstr "%d 个元素使用自定义模型：服务器需要在 models/artconfig.txt（或 AddSimpleModel）中提供它们并启用 artwork%s；玩家需要 SA-MP 0.3.DL 或 open.mp 客户端。%s"
-
 #, c-format
 msgid "%d elements share the variable name \"%s\": the Pawn code won't compile."
 msgstr "%d 个元素共用了变量名 \"%s\"：Pawn 代码将无法编译。"
@@ -263,6 +256,9 @@ msgstr "%d 个物体使用了编辑器不认识的模型，打开地图时被排
 msgid "%d objects"
 msgstr "%d 个物体"
 
+msgid "%d particles"
+msgstr "%d 个粒子"
+
 #, c-format
 msgid "%d objects along this path"
 msgstr "此路径上有 %d 个物体"
@@ -300,9 +296,6 @@ msgid "%d of %d objects (%s): the rest of the gamemode has little room left."
 msgstr "%d / %d 个物体（%s）：gamemode 其余部分几乎没有余量了。"
 
 #, c-format
-msgid "%d of those models were imported into the game's modloader/Haumea folder, which SA-MP players don't have. They can become custom models in the server's models folder (SA-MP 0.3.DL / open.mp)."
-msgstr "%d 个此类模型被导入到了游戏的 modloader/Haumea 文件夹，而 SA-MP 玩家并没有这个文件夹。它们可以在服务器的 models 文件夹中成为自定义模型（SA-MP 0.3.DL / open.mp）。"
-
 #, c-format
 msgid "%d per-player or streamed gang zone(s): CreatePlayerGangZone only compiles and runs on open.mp, not on a SA-MP 0.3.7 server. For 0.3.7, set them to Global (Object Info > Shown as, or radar art's Shown as)."
 msgstr "%d 个按玩家或流送的 gang zone：CreatePlayerGangZone 只能在 open.mp 上编译并运行，在 SA-MP 0.3.7 服务器上则不行。对于 0.3.7，请将它们设为全局（物体信息 > 显示方式，或 radar art 的显示方式）。"
@@ -318,10 +311,6 @@ msgstr "%d 个点"
 #, c-format
 msgid "%d selected world object(s) will be replaced in the map."
 msgstr "%d 个选中的世界物体将在地图中被替换。"
-
-#, c-format
-msgid "%d selected · Drag gizmo to move or rotate · %s deletes."
-msgstr "已选中 %d 个 · 拖动 gizmo 移动或旋转 · %s 删除。"
 
 #, c-format
 msgid "%d selected, %d of this kind"
@@ -502,10 +491,6 @@ msgstr "%s  模型 %d"
 #, c-format
 msgid "%s (missing)"
 msgstr "%s（缺失）"
-
-#, c-format
-msgid "%s Browse · %s Map objects · %s Save · %s Shortcuts"
-msgstr "%s 浏览 · %s 地图物体 · %s 保存 · %s 快捷键"
 
 #, c-format
 msgid "%s The update installs the next time Haumea starts."
@@ -726,15 +711,8 @@ msgstr "（版本未知）"
 msgid ", %d removed"
 msgstr "，已移除 %d 个"
 
-#, c-format
-msgid ", %d restored"
-msgstr "，已恢复 %d 个"
-
 msgid ", and it has none"
 msgstr "，而它一个也没有"
-
-msgid ", but config.json has artwork.enable off"
-msgstr "，但 config.json 中的 artwork.enable 已关闭"
 
 msgid ""
 "-1 keeps the original texture, 0 is SA-MP's blank white texture.\n"
@@ -979,13 +957,6 @@ msgstr "一个只含 textdraw 的 .pwn 或 .inc 文件；你的 gamemode 会包�
 msgid "A copy of the shape under it, this far down and right. 0 for none."
 msgstr "其下方形状的副本，向下和向右偏移此距离。0 表示无。"
 
-msgid ""
-"A custom model's texture: players on 0.3.DL and open.mp download it;\n"
-"0.3.7 players see nothing there."
-msgstr ""
-"自定义模型的贴图：使用 0.3.DL 和 open.mp 的玩家会下载它；\n"
-"使用 0.3.7 的玩家在那里什么都看不到。"
-
 msgid "A driver recording: the NPC must be in a vehicle"
 msgstr "驾驶录制：NPC 必须在载具内"
 
@@ -1069,9 +1040,6 @@ msgstr "演员"
 msgid "Add"
 msgstr "添加"
 
-msgid "Add Custom Model (SA-MP 0.3.DL / open.mp)"
-msgstr "添加自定义模型 (SA-MP 0.3.DL / open.mp)"
-
 msgid "Add a marker to the radar."
 msgstr "在雷达上添加标记。"
 
@@ -1105,9 +1073,6 @@ msgstr "添加点"
 msgid "Add text in the 3D world."
 msgstr "在 3D 世界中添加文本。"
 
-msgid "Add the shape"
-msgstr "添加形状"
-
 msgid "Add to Favourites"
 msgstr "添加到收藏夹"
 
@@ -1128,8 +1093,8 @@ msgid "Added %d object(s) and %d removed building(s)."
 msgstr "已添加 %d 个物体和 %d 个已移除的建筑。"
 
 #, c-format
-msgid "Added %d to the server: Object Browser > Custom models"
-msgstr "已将 %d 个添加到服务器：物体浏览器 > 自定义模型"
+msgid "Added %d to the server: Asset Browser > Custom models"
+msgstr "已将 %d 个添加到服务器：资源浏览器 > 自定义模型"
 
 #, c-format
 msgid "Added the node, but couldn't link it: %s"
@@ -1458,10 +1423,6 @@ msgstr "将 %s 附加到此"
 msgid "Attach this to %s"
 msgstr "将此附加到 %s"
 
-#, c-format
-msgid "Attached to %s"
-msgstr "已附加到 %s"
-
 msgid "Attachment"
 msgstr "附加"
 
@@ -1510,9 +1471,6 @@ msgstr "可用的 prefab："
 
 msgid "Axis"
 msgstr "轴"
-
-msgid "BRUSH"
-msgstr "笔刷"
 
 msgid "Back and forth"
 msgstr "来回"
@@ -1756,10 +1714,6 @@ msgstr "建筑砌块"
 msgid "Building the world"
 msgstr "构建世界"
 
-#, c-format
-msgid "Bundled: Namaka %s"
-msgstr "内置：Namaka %s"
-
 msgid "Burger Shot"
 msgstr "Burger Shot"
 
@@ -1816,9 +1770,6 @@ msgstr "相机目标"
 #, c-format
 msgid "Can't add a node: %s"
 msgstr "无法添加节点: %s"
-
-msgid "Can't be dragged or resized on the canvas. The fields here still change it."
-msgstr "无法在画布上拖动或调整大小。此处的字段仍可更改它。"
 
 #, c-format
 msgid "Can't link: %s"
@@ -2103,10 +2054,6 @@ msgstr ""
 "点击一个节点，再点击另一个，即可连接它们。\n"
 "点击两个已连接的节点则会断开连接。右键或 Esc 停止。"
 
-#, c-format
-msgid "Click or drag to paint · %s stops."
-msgstr "点击或拖动进行绘制 · %s 停止。"
-
 msgid ""
 "Click points in the world one after another.\n"
 "Right-click or Esc stops."
@@ -2145,10 +2092,6 @@ msgstr "点击穿透已锁定项"
 
 msgid "Click to place the pin. Esc cancels."
 msgstr "点击放置图钉。Esc 取消。"
-
-#, c-format
-msgid "Click to place · Shift+click repeats · %s stops."
-msgstr "点击放置 · Shift+点击重复放置 · %s 停止。"
 
 msgid "Click to place. Q/E or the wheel turn it, Esc stops."
 msgstr "点击放置。Q/E 或滚轮旋转它，Esc 停止。"
@@ -2201,9 +2144,6 @@ msgstr "碰撞与细节"
 
 msgid "Collisions"
 msgstr "碰撞"
-
-msgid "Color 0: the model's own color is kept."
-msgstr "颜色 0：保留模型自身的颜色。"
 
 msgid "Colour"
 msgstr "颜色"
@@ -2309,9 +2249,6 @@ msgstr "副本数"
 msgid "Copies of the selection, not counting it."
 msgstr "所选物体的副本数量，不含原物体本身。"
 
-msgid "Copies the DFF and TXD into the server's models folder and adds them to models/artconfig.txt, so SA-MP 0.3.DL and open.mp send them to players. Nothing is written into the game folder."
-msgstr "将 DFF 和 TXD 复制到服务器的 models 文件夹，并把它们添加到 models/artconfig.txt，这样 SA-MP 0.3.DL 和 open.mp 就能把它们发送给玩家。游戏文件夹中不会写入任何内容。"
-
 msgid "Copies the lines shown, to paste in a bug report"
 msgstr "复制所显示的行，供粘贴到 bug 报告中"
 
@@ -2394,9 +2331,6 @@ msgstr "复制相机位置"
 
 msgid "Copy the visible X Y Z values"
 msgstr "复制可见的 X Y Z 值"
-
-msgid "Copy transform"
-msgstr "复制变换"
 
 #, c-format
 msgid "Copy: %s"
@@ -2563,9 +2497,6 @@ msgstr "曲线控制柄"
 msgid "Custom"
 msgstr "自定义"
 
-msgid "Custom Model... (0.3.DL)"
-msgstr "自定义模型... (0.3.DL)"
-
 msgid "Custom import is wired for GTA San Andreas only in this v1."
 msgstr "本 v1 的自定义导入仅支持 GTA San Andreas。"
 
@@ -2574,9 +2505,6 @@ msgstr "自定义导入需要同一文件夹内有配对的 .dff 和 .txd"
 
 msgid "Custom models"
 msgstr "自定义模型"
-
-msgid "Custom models (0.3.DL)"
-msgstr "自定义模型 (0.3.DL)"
 
 #, c-format
 msgid "Custom models that couldn't be loaded: %d (see the log)"
@@ -2812,9 +2740,6 @@ msgstr "点大小"
 msgid "Dots"
 msgstr "点"
 
-msgid "Down"
-msgstr "向下"
-
 msgid "Download updates automatically"
 msgstr "自动下载更新"
 
@@ -2863,10 +2788,6 @@ msgstr "拖动以移动端点"
 msgid "Drag to move pin"
 msgstr "拖动以移动图钉"
 
-#, c-format
-msgid "Drag to move · drag a corner to resize · %s stops."
-msgstr "拖动以移动 · 拖动角点调整大小 · %s 停止。"
-
 msgid "Drag to move, wheel to zoom, double-click to fly there."
 msgstr "拖动移动，滚轮缩放，双击飞往该处。"
 
@@ -2896,19 +2817,8 @@ msgstr "绘制距离"
 msgid "Draw Last"
 msgstr "最后绘制"
 
-msgid "Draw dist:"
-msgstr "绘制距离："
-
 msgid "Draw distance"
 msgstr "绘制距离"
-
-#, c-format
-msgid "Draw distance %.0f"
-msgstr "绘制距离 %.0f"
-
-#, c-format
-msgid "Draw distance %.0f  ·  LOD %s"
-msgstr "绘制距离 %.0f  ·  LOD %s"
 
 msgid "Draw distance (m)"
 msgstr "绘制距离 (m)"
@@ -3007,9 +2917,6 @@ msgstr "每个点代表一个 textdraw：SA-MP 允许全局 2048 个、每个玩
 
 msgid "Edit"
 msgstr "编辑"
-
-msgid "Edit Pawn · Ctrl+S saves · Ctrl+F searches."
-msgstr "编辑 Pawn · Ctrl+S 保存 · Ctrl+F 搜索。"
 
 msgid "Edit all selected"
 msgstr "编辑所有选中项"
@@ -3348,11 +3255,8 @@ msgstr "查找重复物体"
 msgid "Find instances"
 msgstr "查找实例"
 
-msgid "Find it in Object Browser > Custom models and place it like any object."
-msgstr "在“物体浏览器 > 自定义模型”中找到它，像普通物体一样放置。"
-
-msgid "Find objects by model or TXD"
-msgstr "按模型或 TXD 查找物体"
+msgid "Find it in Asset Browser > Custom models and place it like any object."
+msgstr "在“资源浏览器 > 自定义模型”中找到它，像普通物体一样放置。"
 
 msgid "Find similar models"
 msgstr "查找相似模型"
@@ -3439,9 +3343,6 @@ msgstr "文件夹"
 
 msgid "Folder for NODES*.DAT (a server's scriptfiles/NPCs/nodes)"
 msgstr "NODES*.DAT 所在的文件夹（服务器的 scriptfiles/NPCs/nodes）"
-
-msgid "Folder missing"
-msgstr "文件夹不存在"
 
 msgid "Folder with the server's .rec files; empty: the workspace's npcmodes/recordings"
 msgstr "存放服务器 .rec 文件的文件夹；留空则为 workspace 的 npcmodes/recordings"
@@ -3540,9 +3441,6 @@ msgstr "从此处"
 msgid "From textures"
 msgstr "从贴图"
 
-msgid "From the workspace's models/artconfig.txt."
-msgstr "来自 workspace 的 models/artconfig.txt。"
-
 msgid "Front passenger"
 msgstr "前排乘客"
 
@@ -3587,9 +3485,6 @@ msgstr "GTA 世界物体"
 
 msgid "Game HUD"
 msgstr "游戏 HUD"
-
-msgid "Game folder"
-msgstr "游戏文件夹"
 
 msgid "Game nodes"
 msgstr "游戏节点"
@@ -3727,9 +3622,6 @@ msgstr "前往坐标……"
 
 msgid "Go to coordinates (pasted x, y, z)"
 msgstr "前往坐标（粘贴的 x, y, z）"
-
-msgid "Go to node"
-msgstr "前往节点"
 
 msgid "Golf club"
 msgstr "高尔夫球杆"
@@ -4082,10 +3974,6 @@ msgstr "ID %d 已被使用"
 msgid "ID %d is out of range"
 msgstr "ID %d 超出范围"
 
-#, c-format
-msgid "ID: %d\n"
-msgstr "ID：%d\n"
-
 msgid "IDE"
 msgstr "IDE"
 
@@ -4172,10 +4060,6 @@ msgstr ""
 
 msgid "In canvas units: 0 to 640 across, 0 to 448 down."
 msgstr "以画布单位计：横向 0 到 640，纵向 0 到 448。"
-
-#, c-format
-msgid "In game: SetPlayerTime(playerid, %d, %d); SetPlayerWeather(playerid, %d);"
-msgstr "在游戏内：SetPlayerTime(playerid, %d, %d); SetPlayerWeather(playerid, %d);"
 
 msgid "In the open map"
 msgstr "在打开的地图中"
@@ -4301,9 +4185,6 @@ msgstr "隔离所选物体（隐藏其他所有物体）"
 msgid "Isolated the selection, %d other instance(s) hidden | %s: show all"
 msgstr "已隔离所选物体，隐藏了其他 %d 个实例 | %s: 显示全部"
 
-msgid "It goes into the workspace's models folder and artconfig.txt."
-msgstr "它会进入 workspace 的 models 文件夹和 artconfig.txt。"
-
 msgid "It installs the next time Haumea starts."
 msgstr "它会在 Haumea 下次启动时安装。"
 
@@ -4418,10 +4299,6 @@ msgstr "启动游戏会加入该服务器。修改后，请在测试服务器窗
 
 msgid "Launch game with"
 msgstr "启动游戏所用程序"
-
-#, c-format
-msgid "Layers - %s"
-msgstr "图层 - %s"
 
 msgid "Layout"
 msgstr "布局"
@@ -4614,9 +4491,6 @@ msgstr "锁定参考线"
 
 msgid "Lock or unlock the group"
 msgstr "锁定或解锁该组"
-
-msgid "Locked"
-msgstr "已锁定"
 
 msgid "Locked external reference — reopen its source IPL to edit it."
 msgstr "外部引用已锁定 — 重新打开其源 IPL 才能编辑。"
@@ -4868,10 +4742,6 @@ msgstr "中点"
 msgid "Min"
 msgstr "最小"
 
-#, c-format
-msgid "Min Draw dist: %.0f"
-msgstr "最小绘制距离：%.0f"
-
 msgid "Mine"
 msgstr "我的"
 
@@ -4957,10 +4827,6 @@ msgstr "模型 0：SA-MP 的纯白 \"blanktex\"；TXD 和贴图名称会被忽�
 msgid "Model ID"
 msgstr "模型 ID"
 
-#, c-format
-msgid "Model ID changes: %d"
-msgstr "模型 ID 更改：%d"
-
 msgid "Model IDs can't be changed for objects linked to an LOD or outside the active map."
 msgstr "无法更改与 LOD 关联或不属于当前地图的物体的模型 ID。"
 
@@ -5011,9 +4877,6 @@ msgstr "更多操作"
 
 msgid "More bands blend more smoothly. Each band is a textdraw."
 msgstr "色带越多，过渡越平滑。每个色带都是一个 textdraw。"
-
-msgid "More display and snapping options"
-msgstr "更多显示和吸附选项"
 
 msgid "Motor, stopping"
 msgstr "发动机停止"
@@ -5409,9 +5272,6 @@ msgstr "未选择节点。请在视口中点击一个节点。"
 msgid "No object is in a group."
 msgstr "没有物体位于组中。"
 
-msgid "No object selected"
-msgstr "未选择物体"
-
 msgid "No parts fit this model."
 msgstr "没有适合此模型的部件。"
 
@@ -5542,8 +5402,8 @@ msgstr "备注"
 msgid "Nothing matches."
 msgstr "没有匹配项。"
 
-msgid "Nothing placed yet. Pick an object in the Object Browser and click Place."
-msgstr "尚未放置任何内容。在物体浏览器中选择一个物体，然后点击放置。"
+msgid "Nothing placed yet. Pick an object in the Asset Browser and click Place."
+msgstr "尚未放置任何内容。在资源浏览器中选择一个物体，然后点击放置。"
 
 msgid "Nothing selected"
 msgstr "未选中任何内容"
@@ -5601,19 +5461,19 @@ msgstr "物体"
 msgid "Object (AddSimpleModel)"
 msgstr "物体 (AddSimpleModel)"
 
-msgid "Object Browser"
-msgstr "物体浏览器"
+msgid "Asset Browser"
+msgstr "资源浏览器"
 
 #, c-format
-msgid "Object Browser (%s): pick an object, Place, then click in the world."
-msgstr "物体浏览器 (%s)：选择一个物体，点击放置，然后在世界中点击。"
+msgid "Asset Browser (%s): pick an object, Place, then click in the world."
+msgstr "资源浏览器 (%s)：选择一个物体，点击放置，然后在世界中点击。"
 
 #, c-format
-msgid "Object Browser (%s): pick something to place."
-msgstr "物体浏览器 (%s)：选择要放置的内容。"
+msgid "Asset Browser (%s): pick something to place."
+msgstr "资源浏览器 (%s)：选择要放置的内容。"
 
-msgid "Object Browser list"
-msgstr "物体浏览器列表"
+msgid "Asset Browser list"
+msgstr "资源浏览器列表"
 
 msgid "Object ID"
 msgstr "物体 ID"
@@ -5677,13 +5537,6 @@ msgid ""
 msgstr ""
 "关闭时在录制位置播放。开启时移动整条路线，让它\n"
 "从 NPC 所在的位置开始 (NPC_StartPlayback 的起始位置)。"
-
-msgid ""
-"Off: the outer ones stay and the gaps between come out equal.\n"
-"On: each is this far from the one before, from the first."
-msgstr ""
-"关闭：两端保持原位，中间的间隔相等。\n"
-"开启：从第一个起，每个都与前一个相距此距离。"
 
 msgid "Offer it again"
 msgstr "再次提供"
@@ -5762,9 +5615,6 @@ msgstr "仅由图标 0 和 1（彩色标记）使用。"
 
 msgid "Opacity"
 msgstr "不透明度"
-
-msgid "Opacity of the red overlay drawn on selected objects."
-msgstr "绘制在所选物体上的红色叠加层的不透明度。"
 
 msgid "Open"
 msgstr "打开"
@@ -5895,28 +5745,12 @@ msgstr "轮廓"
 msgid "Outline every map object"
 msgstr "描边每个地图物体"
 
-msgid "Outline map objects"
-msgstr "地图物体描边"
-
 #, c-format
 msgid "Outline map objects (%s)"
 msgstr "地图物体描边 (%s)"
 
-msgid "Outline selected and hovered objects"
-msgstr "描边所选物体和悬停物体"
-
 msgid "Outline selected objects"
 msgstr "描边所选物体"
-
-#, c-format
-msgid "Output: %s"
-msgstr "输出：%s"
-
-msgid "PLACE"
-msgstr "放置"
-
-msgid "PREFAB"
-msgstr "PREFAB"
 
 #, c-format
 msgid "Page %d of %d (%d models)"
@@ -5931,10 +5765,6 @@ msgstr "在表面上绘制所选物体"
 #, c-format
 msgid "Painted %d x %s"
 msgstr "已绘制 %d 个 %s"
-
-#, c-format
-msgid "Painting: %s"
-msgstr "正在绘制：%s"
 
 msgid "Paintjob"
 msgstr "涂装"
@@ -5994,9 +5824,6 @@ msgstr "原位粘贴"
 
 msgid "Paste in front of the camera"
 msgstr "粘贴到相机前方"
-
-msgid "Paste transform"
-msgstr "粘贴变换"
 
 msgid "Paste where it was copied"
 msgstr "粘贴到复制时的位置"
@@ -6537,13 +6364,6 @@ msgstr "将所选物体放入一个组"
 msgid "Put what is placed in a group named after the prefab."
 msgstr "将放置的内容放入以该 Prefab 命名的组。"
 
-msgid ""
-"Puts a DFF and TXD in the server's models folder and artconfig.txt,\n"
-"so SA-MP 0.3.DL and open.mp players get it. The game folder isn't touched."
-msgstr ""
-"将 DFF 和 TXD 放入服务器的 models 文件夹及 artconfig.txt，\n"
-"使 SA-MP 0.3.DL 和 open.mp 玩家能够获取。不会改动游戏文件夹。"
-
 msgid "Puts back the version before the last update, then restarts."
 msgstr "恢复到上次更新之前的版本，然后重启。"
 
@@ -6561,9 +6381,6 @@ msgstr "Python"
 
 msgid "Quarry"
 msgstr "采石场"
-
-msgid "READY"
-msgstr "就绪"
 
 msgid "RMB"
 msgstr "RMB"
@@ -6695,10 +6512,6 @@ msgstr "正在读取多边形和贴图..."
 msgid "Ready"
 msgstr "就绪"
 
-#, c-format
-msgid "Ready: %s"
-msgstr "就绪：%s"
-
 msgid "Rebuild objects"
 msgstr "重新生成物体"
 
@@ -6773,14 +6586,6 @@ msgstr "刷新"
 
 msgid "Refresh from map"
 msgstr "从地图刷新"
-
-#, c-format
-msgid "Related timed: %s\n"
-msgstr "定时关联：%s\n"
-
-#, c-format
-msgid "Related: %s\n"
-msgstr "关联：%s\n"
 
 msgid "Release page"
 msgstr "发布页面"
@@ -6890,10 +6695,6 @@ msgstr "报告"
 #, c-format
 msgid "Reports waiting: %d"
 msgstr "待处理报告：%d"
-
-#, c-format
-msgid "Requested: %s"
-msgstr "已请求：%s"
 
 msgid "Required"
 msgstr "必填"
@@ -7143,9 +6944,6 @@ msgstr ""
 "（96 x 82，按屏幕高度缩放）。默认开启，除非玩家已将其关闭\n"
 "（sa-mp.cfg 中的 nohudscalefix=1）。使用 Widescreen Fix 时无此效果，它会自行设定雷达大小。"
 
-msgid "SA-MP 0.3.DL and open.mp clients download custom models."
-msgstr "SA-MP 0.3.DL 与 open.mp 客户端会下载自定义模型。"
-
 msgid "SA-MP chat"
 msgstr "SA-MP 聊天"
 
@@ -7169,9 +6967,6 @@ msgstr "SA-MP 的默认值"
 
 msgid "SA-MP's own objects won't show without its client files."
 msgstr "缺少 SA-MP 客户端文件时，无法显示其自带物体。"
-
-msgid "SELECT"
-msgstr "SELECT"
 
 #, c-format
 msgid "Safe area (5%)"
@@ -7396,9 +7191,6 @@ msgstr "座位"
 msgid "Seconds. -1 with a static vehicle writes AddStaticVehicle."
 msgstr "秒数。静态载具设为 -1 时会写入 AddStaticVehicle。"
 
-msgid "Section"
-msgstr "分区"
-
 msgid "See-through (alpha)"
 msgstr "半透明（透明度）"
 
@@ -7550,10 +7342,6 @@ msgstr "服务器日志"
 msgid "Server package"
 msgstr "服务器程序包"
 
-#, c-format
-msgid "Server: %s"
-msgstr "服务器：%s"
-
 msgid "Set X, Y and Z rotation to zero."
 msgstr "将 X、Y、Z 旋转设为零。"
 
@@ -7566,10 +7354,6 @@ msgstr "SetVehicleNumberPlate，最多 32 个字符。留空则保留游戏默�
 #, c-format
 msgid "Sets the interior of all %d selected."
 msgstr "设置全部 %d 个所选物体的内部。"
-
-#, c-format
-msgid "Settings and editor data: %s"
-msgstr "设置和编辑器数据：%s"
 
 msgid "Setup, elements, NPCs, textdraws, testing and saving, with screenshots."
 msgstr "设置、元素、NPC、textdraw、测试与保存，附带截图。"
@@ -7655,9 +7439,6 @@ msgstr "显示参考线："
 
 msgid "Show material indexes"
 msgstr "显示材质索引"
-
-msgid "Show object edges, including invisible and see-through objects."
-msgstr "显示物体边缘，包括不可见和透明物体。"
 
 msgid "Show or hide the group in the editor"
 msgstr "在编辑器中显示或隐藏该组"
@@ -8139,19 +7920,12 @@ msgstr "已关闭"
 msgid "Sync rotation"
 msgstr "同步旋转"
 
-msgid "TEXTDRAW"
-msgstr "TEXTDRAW"
-
 msgid "TXD"
 msgstr "TXD"
 
 #, c-format
 msgid "TXD \"%s\" was not found; the original texture stays."
 msgstr "未找到 TXD \"%s\"；保留原贴图。"
-
-#, c-format
-msgid "TXD %s"
-msgstr "TXD %s"
 
 msgid "TXD contains"
 msgstr "TXD 包含"
@@ -8207,10 +7981,12 @@ msgstr "游戏内测试 (%s) 会在私有的 open.mp 服务器上运行该地图
 
 msgid ""
 "Test in game runs the map on a private open.mp server in Haumea's config\n"
-"folder. Its files come from this package, or from the workspace server when empty."
+"folder. Its files come from this package, or when empty from the workspace server,\n"
+"or else from the latest open.mp release, downloaded the first time."
 msgstr ""
 "游戏内测试会在 Haumea 配置文件夹内的私有 open.mp 服务器上运行该地图。\n"
-"其文件来自本软件包；留空时则来自 workspace 的服务器。"
+"其文件来自本软件包；留空时来自 workspace 的服务器，\n"
+"都没有时则来自首次下载的最新 open.mp 版本。"
 
 #, c-format
 msgid "Test in game: %s"
@@ -8656,10 +8432,6 @@ msgstr "时间与天气"
 msgid "Time (ms)"
 msgstr "时间 (ms)"
 
-#, c-format
-msgid "Time: %d %d (visible now: %s)"
-msgstr "时间：%d %d（当前可见：%s）"
-
 msgid "Timed (day or night)"
 msgstr "定时（白天或夜晚）"
 
@@ -8690,9 +8462,6 @@ msgstr "要改为编辑该文件本身，请使用文件 > 打开地图。"
 
 msgid "To everyone (TextDrawCreate)"
 msgstr "对所有人 (TextDrawCreate)"
-
-msgid "To keep them: a SA-MP 0.3.DL or open.mp custom model goes in the workspace's models/artconfig.txt (AddSimpleModel) with its DFF and TXD; anything else needs a similar game or SA-MP object in its place (search the Object Browser)."
-msgstr "要保留它们：SA-MP 0.3.DL 或 open.mp 的自定义模型要连同其 DFF 和 TXD 一起放入 workspace 的 models/artconfig.txt (AddSimpleModel)；其余情况则需要用一个相似的游戏或 SA-MP 物体来代替（可在物体浏览器中搜索）。"
 
 msgid "To the key one"
 msgstr "到关键物体"
@@ -8835,9 +8604,6 @@ msgstr "界面缩放"
 msgid "URL"
 msgstr "URL"
 
-msgid "Uncapped"
-msgstr "不限帧率"
-
 msgid ""
 "Unchanged world objects are not saved in the map. Once you move,\n"
 "rotate, retexture or delete one, the map removes the original with\n"
@@ -8919,9 +8685,6 @@ msgstr "未保存的 textdraw"
 
 msgid "Untitled map"
 msgstr "未命名地图"
-
-msgid "Up"
-msgstr "上移"
 
 msgid "Up / Down"
 msgstr "上 / 下"
@@ -9327,9 +9090,6 @@ msgstr "世界"
 msgid "World & streaming"
 msgstr "世界与流送"
 
-msgid "World object: it stays unchanged and is omitted from Pawn export. If you move, rotate, delete, or edit its materials, export removes the original per player and creates the scripted replacement."
-msgstr "世界物体：它保持不变，且不会包含在 Pawn 导出中。如果你移动、旋转、删除或编辑它的材质，导出会按玩家移除原物体，并创建脚本化的替代物体。"
-
 msgid "World origin"
 msgstr "世界原点"
 
@@ -9706,9 +9466,6 @@ msgstr "为这些区域所在的组命名"
 msgid "new path name"
 msgstr "新路径名称"
 
-msgid "no"
-msgstr "否"
-
 #, c-format
 msgid "no NODES*.DAT files in %s"
 msgstr "%s 中没有 NODES*.DAT 文件"
@@ -9887,9 +9644,6 @@ msgstr "正在选择物体"
 msgid "set an open.mp server package (folder, .tar.gz or .zip) in Preferences > Test server"
 msgstr "请在 首选项 > 测试服务器 中设置 open.mp 服务器包（文件夹、.tar.gz 或 .zip）"
 
-msgid "show"
-msgstr "显示"
-
 msgid "sphere"
 msgstr "球体"
 
@@ -10012,9 +9766,6 @@ msgstr "载具节点只连接载具节点，行人节点只连接行人节点"
 msgid "walks NODES%d.DAT from point %d"
 msgstr "沿 NODES%d.DAT 从点 %d 行走"
 
-msgid "yes"
-msgstr "是"
-
 msgid "yesterday"
 msgstr "昨天"
 
@@ -10045,10 +9796,6 @@ msgstr "%s 使用了玩家骨骼附件，但目标不是玩家或 NPC。"
 
 msgid "Add selected model"
 msgstr "添加所选模型"
-
-#, c-format
-msgid "Attached to player preview (skin %d)"
-msgstr "已附加到玩家预览（皮肤 %d）"
 
 msgid "Attachment Workspace"
 msgstr "附件工作区"
@@ -10152,10 +9899,6 @@ msgstr "仅在空背景中显示目标及其附件。"
 msgid "Spine"
 msgstr "脊柱"
 
-#, c-format
-msgid "Target: %s"
-msgstr "目标：%s"
-
 msgid "Attach selected objects"
 msgstr "附加选中的物体"
 
@@ -10247,6 +9990,9 @@ msgstr "选择当前范围内此模型的所有实例。"
 msgid "Particle effects"
 msgstr "粒子效果"
 
+msgid "Particles"
+msgstr "粒子"
+
 msgid "Animate fire, smoke, water and other particle objects in the viewport."
 msgstr "在视口中播放火焰、烟雾、水和其他粒子物体的动画。"
 
@@ -10255,9 +10001,6 @@ msgstr "重播粒子效果"
 
 msgid "Restart the selected particle emitters, including one-shot effects such as explosions."
 msgstr "重新启动所选粒子发射器，包括爆炸等一次性效果。"
-
-msgid "Arrange"
-msgstr "排列"
 
 msgid "Browse sprites..."
 msgstr "浏览精灵..."
@@ -10315,15 +10058,8 @@ msgstr "每个人都会保留地图的当前状态。"
 msgid "Go to"
 msgstr "前往"
 
-msgid "Host"
-msgstr "托管"
-
 msgid "Host this map"
 msgstr "托管这张地图"
-
-#, c-format
-msgid "Hosting on port %d"
-msgstr "正在端口 %d 上托管"
 
 #, c-format
 msgid "In %s's session"
@@ -10361,10 +10097,6 @@ msgstr "端口 %d 已被占用或不允许使用。"
 msgid "Receiving the map..."
 msgstr "正在接收地图..."
 
-#, c-format
-msgid "Session code: %s"
-msgstr "会话代码：%s"
-
 msgid "Stop hosting"
 msgstr "停止托管"
 
@@ -10389,15 +10121,6 @@ msgstr "一起编辑一张地图：由一人托管打开的地图，或由 haume
 
 msgid "Lost the connection to the session."
 msgstr "与会话的连接已断开。"
-
-msgid ""
-"Others join with this computer's address, the port and the session code.\n"
-"Over the internet the port must be forwarded to this computer, or use a VPN such as Tailscale.\n"
-"For a session that stays up without you, run haumea-server where your SA-MP server runs."
-msgstr ""
-"其他人使用这台电脑的地址、端口和会话代码加入。\n"
-"通过互联网时，需要将端口转发到这台电脑，或使用 Tailscale 等 VPN。\n"
-"若想让会话在你离开后继续运行，请在运行 SA-MP 服务器的机器上运行 haumea-server。"
 
 msgid "Refused: "
 msgstr "被拒绝："
@@ -10441,9 +10164,6 @@ msgstr "在我的路由器上打开端口"
 
 msgid "Opening the port on your router..."
 msgstr "正在路由器上打开端口..."
-
-msgid "Over the internet, others join at %s"
-msgstr "通过互联网，其他人在 %s 加入"
 
 msgid "That isn't a Haumea session."
 msgstr "那不是 Haumea 会话。"
@@ -10555,9 +10275,6 @@ msgstr "物体创建后立即执行 MoveObject（使用 streamer 时为 MoveDyna
 
 msgid "Moves the objects across the path, to its right; negative for its left."
 msgstr "将物体横向移离路径，向右；负值向左。"
-
-msgid "Moves when the map loads"
-msgstr "地图加载时移动"
 
 msgid "Next checkpoint"
 msgstr "下一个 checkpoint"
@@ -10708,10 +10425,6 @@ msgstr "渲染器"
 msgid "Automatic uses OpenGL, and Direct3D 9 when OpenGL doesn't start on this PC."
 msgstr "自动：使用 OpenGL；如果 OpenGL 无法在此电脑上启动，则使用 Direct3D 9。"
 
-#, c-format
-msgid "Running: %s"
-msgstr "正在使用：%s"
-
 msgid "OpenGL didn't start on this PC, so Automatic uses Direct3D 9."
 msgstr "OpenGL 无法在此电脑上启动，因此自动模式使用 Direct3D 9。"
 
@@ -10829,9 +10542,6 @@ msgstr "收藏：会保留并置顶。点击改为最近使用。"
 msgid "Keep it as a favourite"
 msgstr "收藏它"
 
-msgid "Its password is kept on this computer."
-msgstr "它的密码保存在这台电脑上。"
-
 msgid "Forget it"
 msgstr "忘记它"
 
@@ -10863,9 +10573,6 @@ msgstr "此处的 AI 代理"
 
 msgid "Account"
 msgstr "账号"
-
-msgid "Admin"
-msgstr "管理"
 
 msgid "Choose a name"
 msgstr "选择一个名字"
@@ -10924,9 +10631,6 @@ msgstr "密码"
 msgid "Remove from the room"
 msgstr "移出房间"
 
-msgid "Room"
-msgstr "房间"
-
 msgid "Room password"
 msgstr "房间密码"
 
@@ -10983,9 +10687,6 @@ msgstr "建造者"
 
 msgid "builders"
 msgstr "建造者"
-
-msgid "empty: pick from the list"
-msgstr "留空：从列表中选择"
 
 msgid "new room's name"
 msgstr "新房间名称"
@@ -11245,8 +10946,8 @@ msgstr "数量："
 msgid "Number of objects scattered per click when Radius > 0."
 msgstr "半径 > 0 时每次点击散布的物体数量。"
 
-msgid "Pick the object to paint in the Object Browser first."
-msgstr "请先在物体浏览器中选择要绘制的物体。"
+msgid "Pick the object to paint in the Asset Browser first."
+msgstr "请先在资源浏览器中选择要绘制的物体。"
 
 msgid "Radius:"
 msgstr "半径："
@@ -11269,8 +10970,8 @@ msgstr "在所有 TXD 中找到 %d 个纹理"
 msgid "A saved selection has this name: saving replaces it."
 msgstr "已有同名的保存选择：保存会替换它。"
 
-msgid "Brush\nPaint copies of the Object Browser's object onto the world. Its settings are over the 3D view."
-msgstr "画笔\n把对象浏览器中的对象复制并绘制到世界中。它的设置在 3D 视图上方。"
+msgid "Brush\nPaint copies of the Asset Browser's object onto the world. Its settings are over the 3D view."
+msgstr "画笔\n把资源浏览器中的对象复制并绘制到世界中。它的设置在 3D 视图上方。"
 
 msgid "Click to select these objects; Ctrl+click adds them to the selection."
 msgstr "单击选择这些对象；Ctrl+单击将它们加入选择。"
@@ -11338,9 +11039,6 @@ msgstr "保存选择..."
 msgid "Saved selections"
 msgstr "保存的选择"
 
-msgid "Saved selections: keep a selection under a name and select it again later."
-msgstr "保存的选择：以名称保存一个选择，稍后再次选择它。"
-
 msgid "Saved the selection \"%s\" (%d object(s))"
 msgstr "已保存选择“%s”（%d 个对象）"
 
@@ -11359,11 +11057,375 @@ msgstr "已选择 %d 个对象（来自“%s”）"
 msgid "Selection %d"
 msgstr "选择 %d"
 
-msgid "Selections"
-msgstr "选择集"
-
 msgid "To ground"
 msgstr "贴地"
 
 msgid "blank white"
 msgstr "纯白"
+
+msgid "New"
+msgstr "新建"
+
+msgid "Open..."
+msgstr "打开..."
+
+msgid "Switch between the map, TextDraws and Code editors."
+msgstr "在地图、TextDraws 和代码编辑器之间切换。"
+
+msgid "The screen, previews, background, HUD, guides and nudging."
+msgstr "屏幕、预览、背景、HUD、参考线和微移。"
+
+msgid "Zoom in"
+msgstr "放大"
+
+msgid "Zoom out"
+msgstr "缩小"
+
+msgid "Layers"
+msgstr "图层"
+
+msgid "Off: the outer ones stay and the gaps between come out equal.\nOn: each is this far from the one before, from the first."
+msgstr "关闭：两端的保持不动，中间的间距变得相等。\n开启：从第一个开始，每个都与前一个相隔这个距离。"
+
+msgid "Properties"
+msgstr "属性"
+
+msgid "Same height"
+msgstr "相同高度"
+
+msgid "Same width"
+msgstr "相同宽度"
+
+msgid "The gap, in canvas units. Drag or double-click to type."
+msgstr "间距，以画布单位计。拖动或双击输入。"
+
+msgid "File missing"
+msgstr "文件缺失"
+
+msgid "Open or close a panel."
+msgstr "打开或关闭面板。"
+
+msgid "Panels"
+msgstr "面板"
+
+msgid "Arrow keys"
+msgstr "方向键"
+
+msgid "Attached to"
+msgstr "附着于"
+
+msgid "Detail"
+msgstr "细节"
+
+msgid "Far version"
+msgstr "远景版本"
+
+msgid "Grid size"
+msgstr "网格大小"
+
+msgid "Hidden at the editor's time now."
+msgstr "编辑器当前时间下隐藏。"
+
+msgid "Hours"
+msgstr "时段"
+
+msgid "In game"
+msgstr "游戏中"
+
+msgid "Now"
+msgstr "当前"
+
+msgid "Opacity of the tint drawn on selected objects."
+msgstr "选中对象上叠加色调的不透明度。"
+
+msgid "Output"
+msgstr "输出"
+
+msgid "Player preview (skin %d)"
+msgstr "玩家预览（皮肤 %d）"
+
+msgid "Related"
+msgstr "关联"
+
+msgid "Related timed"
+msgstr "按时间关联"
+
+msgid "Screen"
+msgstr "屏幕"
+
+msgid "Shown at the editor's time now."
+msgstr "编辑器当前时间下可见。"
+
+msgid "Shows from"
+msgstr "显示距离"
+
+msgid "Sign in with"
+msgstr "登录方式"
+
+msgid "The model is only drawn from this far away."
+msgstr "模型仅从此距离起绘制。"
+
+msgid "Trip"
+msgstr "行程"
+
+msgid "Editor data"
+msgstr "编辑器数据"
+
+msgid "Selection outline"
+msgstr "选择轮廓"
+
+msgid "Build Replay"
+msgstr "建造回放"
+
+msgid "Plays the map being built, element by element in the order they were added, while the camera circles it."
+msgstr "按添加顺序逐个显示地图的建造过程，同时镜头环绕地图。"
+
+msgid "Elements built so far. Drag to scrub."
+msgstr "目前已建造的元素。拖动以跳转。"
+
+msgid "Circle the map. Moving the camera stops it."
+msgstr "环绕地图。移动镜头会停止环绕。"
+
+msgid "Add one with + above, or from the ribbon."
+msgstr "用上方的 + 或功能区添加一个。"
+
+msgid "Admin"
+msgstr "管理"
+
+msgid "All lines, warnings and errors, or errors only"
+msgstr "全部行、警告和错误，或仅错误"
+
+msgid "Also list what is fine but worth knowing."
+msgstr "也列出没问题但值得了解的内容。"
+
+msgid "An admin of this server makes them."
+msgstr "由此服务器的管理员创建。"
+
+msgid "Arrange"
+msgstr "排列"
+
+msgid "Bundled"
+msgstr "内置"
+
+msgid "Click to fill in the form; double-click to join."
+msgstr "单击填入表单；双击加入。"
+
+msgid "Click to fill in the form; double-click to join. Its password is kept on this computer."
+msgstr "单击填入表单；双击加入。其密码保存在此电脑上。"
+
+msgid "Create"
+msgstr "创建"
+
+msgid "Everything the browser can show"
+msgstr "浏览器可显示的全部内容"
+
+msgid "Find objects"
+msgstr "查找物体"
+
+msgid "Go to this view"
+msgstr "前往此视角"
+
+msgid "Join a session"
+msgstr "加入会话"
+
+msgid "Keeps this view: the camera, the time, the weather and the interior."
+msgstr "保存此视角：摄像机、时间、天气和室内。"
+
+msgid "Make one with the + button above."
+msgstr "用上方的 + 按钮创建一个。"
+
+msgid "Maximize"
+msgstr "最大化"
+
+msgid "Minimize"
+msgstr "最小化"
+
+msgid "Name the current view and Save it to come back to it."
+msgstr "为当前视角命名并保存，以便回到这里。"
+
+msgid "No messages yet."
+msgstr "还没有消息。"
+
+msgid "No one else here yet."
+msgstr "这里还没有其他人。"
+
+msgid "No output yet."
+msgstr "还没有输出。"
+
+msgid "No saved views yet."
+msgstr "还没有保存的视角。"
+
+msgid "Only textures from TXDs whose name matches"
+msgstr "仅显示名称匹配的 TXD 中的纹理"
+
+msgid "Others join with this computer's address, the port and the session code shown once you host."
+msgstr "其他人使用此电脑的地址、端口以及开始主持后显示的会话代码加入。"
+
+msgid ""
+"Over the internet the port must be forwarded to this computer, or use a VPN such as Tailscale.\n"
+"For a session that stays up without you, run haumea-server where your SA-MP server runs."
+msgstr ""
+"通过互联网时，端口必须转发到此电脑，或使用 Tailscale 等 VPN。\n"
+"若要会话在你离开后继续，请在 SA-MP 服务器所在处运行 haumea-server。"
+
+msgid "Restore"
+msgstr "还原"
+
+msgid "Send them the port and session code above."
+msgstr "把上方的端口和会话代码发给他们。"
+
+msgid "Show the target point"
+msgstr "显示目标点"
+
+msgid "Snap to steps"
+msgstr "按步长吸附"
+
+msgid "Test in game starts the server; what it prints shows here."
+msgstr "“游戏内测试”会启动服务器；其输出会显示在这里。"
+
+msgid "Type a model ID and press Enter to swap the model. Custom models use their negative Pawn IDs."
+msgstr "输入模型 ID 并按回车更换模型。自定义模型使用负数的 Pawn ID。"
+
+msgid "Moves"
+msgstr "移动"
+
+msgid "Starts"
+msgstr "开始于"
+
+msgid "When the map loads"
+msgstr "地图加载时"
+
+msgid "When a player presses a key"
+msgstr "玩家按下按键时"
+
+msgid "When a driver sounds the horn"
+msgstr "司机按喇叭时"
+
+msgid "A gate: it moves back after a while. The map's code needs\n<map>_Gates(playerid, newkeys, oldkeys) called from OnPlayerKeyStateChange;\nTest in game does that."
+msgstr "大门：过一会儿会移回原位。地图代码需要在 OnPlayerKeyStateChange 中调用\n<map>_Gates(playerid, newkeys, oldkeys)；\n“游戏内测试”会自动完成。"
+
+msgid "Closes after"
+msgstr "关闭延迟"
+
+msgid "Seconds it stands open."
+msgstr "保持打开的秒数。"
+
+msgid "Garage door sounds"
+msgstr "车库门音效"
+
+msgid "The open.mp server (%s) is in %s."
+msgstr "open.mp 服务器（%s）已放入 %s。"
+
+msgid "Could not download the open.mp server: %s"
+msgstr "无法下载 open.mp 服务器：%s"
+
+msgid "Download the open.mp server into it"
+msgstr "将 open.mp 服务器下载到其中"
+
+msgid "The latest open.mp release from GitHub, so Test in game and pawncc work in it.\nFiles already in the folder are kept."
+msgstr "来自 GitHub 的最新 open.mp 版本，使“游戏内测试”和 pawncc 能在其中使用。\n文件夹中已有的文件会保留。"
+
+msgid "Downloading the open.mp server: %.1f MB"
+msgstr "正在下载 open.mp 服务器：%.1f MB"
+
+msgid "It already has a server."
+msgstr "它已经有服务器了。"
+
+msgid "%d of those models were imported into the game's modloader/Haumea folder, which SA-MP players don't have. They can become custom models in the server's models folder."
+msgstr "其中 %d 个模型被导入到了游戏的 modloader/Haumea 文件夹，SA-MP 玩家没有这些文件。它们可以变成服务器 models 文件夹中的自定义模型。"
+
+msgid ", but artwork is off in the server's config (Add Custom Model turns it on)"
+msgstr "，但服务器配置中的 artwork 已关闭（“添加自定义模型”可以开启它）"
+
+msgid "A custom model's texture: players on the SA-MP 0.3.DL client download it;\n0.3.7 players see nothing there."
+msgstr "自定义模型的贴图：使用 SA-MP 0.3.DL 客户端的玩家会下载它；\n0.3.7 玩家在那里什么也看不到。"
+
+msgid "Add Custom Model"
+msgstr "添加自定义模型"
+
+msgid "Artwork is off on this server: players won't get custom models."
+msgstr "此服务器的 artwork 已关闭：玩家不会收到自定义模型。"
+
+msgid "Artwork is on in %s."
+msgstr "%s 中的 artwork 已开启。"
+
+msgid "Custom Model..."
+msgstr "自定义模型..."
+
+msgid "Players on the SA-MP 0.3.DL client download custom models."
+msgstr "使用 SA-MP 0.3.DL 客户端的玩家会下载自定义模型。"
+
+msgid "Sets artwork.enable in config.json (open.mp), or useartwork 1 in server.cfg (SA-MP)."
+msgstr "在 config.json 中设置 artwork.enable（open.mp），或在 server.cfg 中设置 useartwork 1（SA-MP）。"
+
+msgid "Turn on artwork"
+msgstr "开启 artwork"
+
+msgid "%d element(s) use custom models: their DFF and TXD go in the server's models folder, with artwork enabled%s; players need the SA-MP 0.3.DL client.%s"
+msgstr "%d 个元素使用了自定义模型：它们的 DFF 和 TXD 放在服务器的 models 文件夹中，并需启用 artwork%s；玩家需要 SA-MP 0.3.DL 客户端。%s"
+
+msgid "In the workspace's models folder."
+msgstr "位于工作区的 models 文件夹中。"
+
+msgid "It goes into the workspace's models folder; maps that use it register it in their code."
+msgstr "它会放进工作区的 models 文件夹；使用它的地图会在自己的代码中注册它。"
+
+msgid "Puts your DFF and TXD in the server's models folder; maps that use it register it\nin their own code. Players on the SA-MP 0.3.DL client download it. The game folder isn't touched."
+msgstr "把你的 DFF 和 TXD 放进服务器的 models 文件夹；使用它的地图会在\n自己的代码中注册它。使用 SA-MP 0.3.DL 客户端的玩家会下载它。不会改动游戏文件夹。"
+
+msgid "To keep them: add it as a custom model (File > Import > Custom Model) with its DFF and TXD; anything else needs a similar game or SA-MP object in its place (search the Asset Browser)."
+msgstr "要保留它们：连同 DFF 和 TXD 把它添加为自定义模型（文件 > 导入 > 自定义模型）；其他的需要换成相似的游戏或 SA-MP 物体（在资源浏览器中搜索）。"
+
+msgid "Your own DFF and TXD, copied into the server's models folder. Maps that use them register them in their own code (AddSimpleModel, AddCharModel); the server (open.mp, or SA-MP 0.3.DL) sends them to players as they join, and players need the SA-MP 0.3.DL client. Nothing is written into the game folder."
+msgstr "你自己的 DFF 和 TXD，复制到服务器的 models 文件夹。使用它们的地图会在自己的代码中注册它们（AddSimpleModel、AddCharModel）；服务器（open.mp 或 SA-MP 0.3.DL）会在玩家加入时发送给他们，玩家需要 SA-MP 0.3.DL 客户端。不会向游戏文件夹写入任何内容。"
+
+msgid "Custom models changed on disk were reloaded"
+msgstr "已重新加载磁盘上已更改的自定义模型"
+
+msgid "Reload custom models"
+msgstr "重新加载自定义模型"
+
+msgid "Custom models reloaded: %d"
+msgstr "已重新加载自定义模型：%d"
+
+msgid "Reads the models' DFF and TXD files and the AddSimpleModel lines again. Files rebuilt on disk are also picked up by themselves."
+msgstr "重新读取模型的 DFF 和 TXD 文件以及 AddSimpleModel 行。磁盘上重新生成的文件也会被自动读取。"
+
+msgid "Map changed on disk"
+msgstr "地图在磁盘上已更改"
+
+msgid "%s was changed outside Haumea since it was opened."
+msgstr "%s 自打开以来已在 Haumea 之外被更改。"
+
+msgid "Saving now replaces those changes with the map as it is here."
+msgstr "现在保存会用这里的地图替换那些更改。"
+
+msgid "Reload from disk"
+msgstr "从磁盘重新加载"
+
+msgid "Overwrite"
+msgstr "覆盖"
+
+msgid "%s changed on disk and was opened again"
+msgstr "%s 在磁盘上已更改，已重新打开"
+
+msgid "%s changed on disk outside Haumea: saving will ask before replacing it"
+msgstr "%s 在 Haumea 之外的磁盘上已更改：保存前会先询问再替换它"
+
+msgid "Unsaved changes were kept in an autosave (File > Recover Autosave)"
+msgstr "未保存的更改已保存在自动保存中（文件 > 恢复自动保存）"
+
+msgid "%d object(s) of custom model %d (%s): its DFF has no collision, so in the game players, actors and cars go through it. Haumea makes one from its shape only for clicking and snapping here. Embed a COL in the DFF."
+msgstr "%d 个使用自定义模型 %d（%s）的物体：它的 DFF 没有碰撞，所以在游戏中玩家、演员和车辆会穿过它。Haumea 根据它的形状生成碰撞，仅用于在这里点击和吸附。请在 DFF 中嵌入 COL。"
+
+msgid "%s has nothing to stand on within 2 m under its feet: in the game it falls until it lands on something. Custom models without collision in their DFF don't count."
+msgstr "%s 脚下 2 米内没有可站立的东西：在游戏中它会一直下落，直到落在某物上。DFF 中没有碰撞的自定义模型不算。"
+
+msgid "Downloading the open.mp server..."
+msgstr "正在下载 open.mp 服务器..."
+
+msgid "Downloading the streamer plugin..."
+msgstr "正在下载 streamer 插件..."
+
+msgid "a server download is running; try again when it finishes"
+msgstr "服务器正在下载；下载完成后再试"

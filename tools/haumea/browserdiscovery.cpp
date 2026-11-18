@@ -4,6 +4,7 @@
 #include "modelquery.h"
 #include "modelmeta.h"
 #include "i18n.h"
+#include "icons.h"
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -85,12 +86,11 @@ void instancesPanel()
 	ImGui::InputTextWithHint("##instance_ids", _("Model IDs: 1337, 19353-19355"), query, sizeof(query));
 	ImGui::SetItemTooltip(_("Search several IDs or ranges. Custom models use their negative Pawn IDs."));
 	const char *scopes[] = { _("Both"), _("My map"), _("GTA world") };
-	ImGui::SetNextItemWidth(ImGui::GetFontSize() * 10.0f);
-	ImGui::Combo(_("Scope"), &scope, scopes, 3);
-	ImGui::Checkbox(_("Highlight matches"), &highlight);
+	UiCombo(_("Scope"), &scope, scopes, 3);
+	UiCheckbox(_("Highlight matches"), &highlight);
 	ImGui::SetItemTooltip(_("Yellow marks the search results. Your editing selection stays independent."));
 	collect();
-	if(!validQuery){ ImGui::TextWrapped("%s", _("Enter model IDs separated by commas, spaces or ranges.")); return; }
+	if(!validQuery){ ImGui::TextDisabled("%s", _("Enter model IDs separated by commas, spaces or ranges.")); return; }
 	int total = 0;
 	for(const Group &group : groups) total += (int)group.members.size();
 	ImGui::TextDisabled(_("%d models | %d instances"), (int)groups.size(), total);
@@ -120,13 +120,16 @@ void instancesPanel()
 		int n = (int)members.size();
 		jump(members[(at < 0 ? (step > 0 ? 0 : n - 1) : (at + step + n) % n)]);
 	};
-	if(ImGui::Button(_("Previous"))) next(-1);
-	ImGui::SameLine();
-	if(ImGui::Button(_("Next"))) next(1);
-	ImGui::EndDisabled();
+	// Previous, Next and Select all: one row of equal buttons.
+	float spacing = ImGui::GetStyle().ItemSpacing.x;
+	ImVec2 third(floorf((ImGui::GetContentRegionAvail().x - spacing * 2) / 3), 0);
+	if(ImGui::Button(_("Previous"), third)) next(-1);
 	ImGui::SetItemTooltip(_("Jump the camera between this model's instances, including other interiors."));
-	ImGui::BeginDisabled(members.empty());
-	if(ImGui::Button(_("Select all"))){
+	ImGui::SameLine();
+	if(ImGui::Button(_("Next"), third)) next(1);
+	ImGui::SetItemTooltip(_("Jump the camera between this model's instances, including other interiors."));
+	ImGui::SameLine();
+	if(ImGui::Button(_("Select all"), third)){
 		ClearSelection();
 		for(ObjectInst *inst : members) inst->Select();
 		OpenObjectInspector();
@@ -138,7 +141,12 @@ void instancesPanel()
 	while(clipper.Step()) for(int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++){
 		ObjectInst *inst = members[i];
 		ImGui::PushID(inst->m_id);
-		if(ImGui::SmallButton(_("Jump to"))) jump(inst);
+		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
+		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(ImGui::GetStyle().FramePadding.x, 0));
+		if(ImGui::Button(ICON_FA_LOCATION_CROSSHAIRS "##jump")) jump(inst);
+		ImGui::PopStyleVar();
+		ImGui::PopStyleColor();
+		ImGui::SetItemTooltip("%s", _("Jump to"));
 		ImGui::SameLine();
 		char label[256];
 		snprintf(label, sizeof(label), "%s | %.2f, %.2f, %.2f | %d", PawnObjectNeedsExport(inst) ? _("My map") : _("GTA world"),
@@ -152,16 +160,14 @@ void instancesPanel()
 void similarPanel(void (*drawModels)(int *, int, int), int selectedModel)
 {
 	int pawn = PawnModelId(reference);
-	ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
-	if(ImGui::InputInt(_("Reference ID"), &pawn)) reference = EditorModelId(pawn);
+	if(UiInputInt(_("Reference ID"), &pawn)) reference = EditorModelId(pawn);
 	const char *kinds[] = { _("Dimensions"), _("Proportions") };
-	ImGui::SetNextItemWidth(ImGui::GetFontSize() * 10.0f);
-	ImGui::Combo(_("Match"), &matchKind, kinds, 2);
-	ImGui::SliderFloat(_("Tolerance"), &tolerance, 5.0f, 100.0f, "%.0f%%");
+	UiCombo(_("Match"), &matchKind, kinds, 2);
+	UiSliderFloat(_("Tolerance"), &tolerance, 5.0f, 100.0f, "%.0f%%");
 	ImGui::SetItemTooltip(_("Dimensions compare metres. Proportions compare shape ratios regardless of overall size."));
 	const ModelMeta *base = GetModelMeta(reference);
 	if(!base || !base->hasCollision || std::max(base->width, std::max(base->depth, base->height)) <= 0){
-		ImGui::TextWrapped("%s", _("This model has no collision dimensions available to compare.")); return;
+		ImGui::TextDisabled("%s", _("This model has no collision dimensions available to compare.")); return;
 	}
 	ImGui::TextDisabled(_("Reference: %.2f x %.2f x %.2f units"), base->width, base->depth, base->height);
 	ImGui::SetItemTooltip(_("Sizes come from collision bounds. Use the previews to compare the actual model shapes."));
@@ -200,8 +206,9 @@ void BrowserDiscoveryDraw(void (*drawModels)(int *, int, int), int selectedModel
 {
 	if(ImGui::Button(_("Back to models"))){ mode = CLOSED; return; }
 	ImGui::SameLine();
+	ImGui::AlignTextToFramePadding();
 	ImGui::TextUnformatted(mode == INSTANCES ? _("Instances") : _("Similar models"));
-	ImGui::Separator();
+	ImGui::Spacing();
 	if(mode == INSTANCES) instancesPanel();
 	else similarPanel(drawModels, selectedModel);
 }

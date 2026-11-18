@@ -22,6 +22,9 @@ main(void)
 	v_color = in_nightcolor*u_nightparam + in_daycolor*u_dayparam;
 	v_color.rgb += u_ambLight.rgb*surfAmbient;
 	v_color *= u_matColor / u_colorscale;
+	// As the game and the D3D9 build (a vs_2_0 colour output) have it:
+	// prelight plus ambient never lights a texture past its own colour.
+	v_color = clamp(v_color, 0.0, 1.0);
 
 	v_tex0 = (u_texmat * vec4(in_tex0, 0.0f, 1.0f)).xy;
 

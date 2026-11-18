@@ -9,7 +9,7 @@ table at 0x8D44F8), FindClosestTrackNode (0x6F6BD0),
 FindPositionOnTrackFromCoors (0x6F6CC0) and CTrain::ProcessControl place them
 (SA-MP's ConstructVehicleSlot, 0x100b83d0: clockwise = angle > 180).
 The fixture's cars are boxes: engines 18 m long, Streak coaches 20 m, flat
-freights 16 m, the tram 14 m, with handling lower limits -0.10 (Streak and its
+freights 16 m, the tram 14 m, with handling lower limits -0.1 (Streak and its
 coaches), 0.25 (Freight), 0.0 (flat) and -1.0 (tram).
 Then Map check and the export.
 """
@@ -117,7 +117,7 @@ class TrainTests(unittest.TestCase):
         cars = train['cars']
         self.assertEqual([c['model'] for c in cars], [538, 570, 570, 570])
         # 2 m off the track: the segment ending at x 2000 takes it, centred there.
-        z = 10 - 0.10 + 2.0
+        z = 10 - 0.1 + 2.0
         for car, x in zip(cars, (2000, 2019, 2039, 2059)):
             self.assertTrue(close(car['position'], [x, -3100, z]), car)
             self.assertTrue(close(car['forward'], [-1, 0, 0]), car)
@@ -168,8 +168,8 @@ class TrainTests(unittest.TestCase):
         self.assertEqual(text.count('(537,'), 2, text)
         self.assertNotIn('(569,', text)
         self.assertEqual(text.count('(570,'), 1, text)	# the lone coach, as written
-        self.assertIn('AddStaticVehicle(537, 2000.000000, -3098.000000, 10.000000, 270.000000', text)
-        self.assertIn('AddStaticVehicle(537, 1900.000000, -3098.000000, 10.000000, 90.000000', text)
+        self.assertIn('AddStaticVehicle(537, 2000.0, -3098.0, 10.0, 270.0', text)
+        self.assertIn('AddStaticVehicle(537, 1900.0, -3098.0, 10.0, 90.0', text)
 
 
 if __name__ == '__main__':

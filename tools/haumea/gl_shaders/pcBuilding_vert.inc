@@ -23,6 +23,9 @@ const char *pcBuilding_vert_src =
 "	v_color = in_nightcolor*u_nightparam + in_daycolor*u_dayparam;\n"
 "	v_color.rgb += u_ambLight.rgb*surfAmbient;\n"
 "	v_color *= u_matColor / u_colorscale;\n"
+"	// As the game and the D3D9 build (a vs_2_0 colour output) have it:\n"
+"	// prelight plus ambient never lights a texture past its own colour.\n"
+"	v_color = clamp(v_color, 0.0, 1.0);\n"
 
 "	v_tex0 = (u_texmat * vec4(in_tex0, 0.0f, 1.0f)).xy;\n"
 

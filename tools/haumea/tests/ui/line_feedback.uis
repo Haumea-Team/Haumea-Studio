@@ -8,6 +8,8 @@ wait 5
 assert selected == 1
 camera 2020 -3035 25 2020 -3000 5
 wait 3
+click_item 'Tools' '###tools_arrange'
+wait 2
 click_item 'Tools' 'Along a line'
 wait 5
 set_item 'Tools' 'Model' '1271' tab
@@ -81,10 +83,14 @@ assert line.picking == 0
 assert line.markers == 1
 click_item 'Tools' 'Pick points'
 wait 3
+click_item '*' '##editor'
+wait 2
 click_item '*' 'TextDraws'
 wait 5
 assert line.picking == 0
 assert line.markers == 0
+click_item '*' '##editor'
+wait 2
 click_item '*' 'Map'
 wait 5
 assert line.picking == 0

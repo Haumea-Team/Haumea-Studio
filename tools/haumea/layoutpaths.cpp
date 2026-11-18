@@ -287,7 +287,7 @@ void insertMiddle(LayoutGuide &p, int segment)
 	handle = 0;
 	changed = true;
 }
-void createShape(int shape, int axis, float radius, float turns, float rise)
+void createShape(int shape, int axis, float radius, float turns, float rise, const rw::V3d *at = nullptr)
 {
 	SpawnExitPlaceMode();
 	ExitBrushMode();
@@ -300,7 +300,7 @@ void createShape(int shape, int axis, float radius, float turns, float rise)
 	p.area = currentArea;
 	p.curved = shape != 0;
 	p.closed = shape == 2;
-	Point origin = point(TheCamera.m_target);
+	Point origin = point(at ? *at : TheCamera.m_target);
 	if (shape < 2) {
 		for (int i = 0; i < 3; i++) {
 			Knot k;
@@ -621,21 +621,27 @@ void LayoutPathsOverlay(bool enabled)
 	}
 }
 
+// Panel layout helpers, defined in maptools.cpp.
+float MapToolsButtonWidth(int n);
+float MapToolsWidthBeforeButton(const char *label);
+bool MapToolsMainButton(const char *label, const ImVec2 &size = ImVec2(-FLT_MIN, 0.0f));
+
 void LayoutPathsPanel()
 {
 	panelFrame = ImGui::GetFrameCount();
 	static int shape = 1, axis = 0;
 	static float radius = 15, turns = 1, rise = 15;
 	const char *shapes[] = {_("Line"), _("Curve"), _("Loop"), _("Ramp / helix")};
-	ImGui::Combo(L("Shape"), &shape, shapes, 4);
+	UiCombo(L("Shape"), &shape, shapes, 4);
 	if (shape >= 2) {
-		ImGui::InputFloat(L("Radius"), &radius, 1, 5, "%.2f m");
+		ImGui::SetNextItemWidth(MapToolsWidthBeforeButton(L("Fit to selection")));
+		UiInputFloat(L("Radius"), &radius, 1, 5, "%.2f m");
 		radius = std::isfinite(radius) ? clamp(radius, .5f, 1000.f) : 15.f;
 		// A whole number of pieces around one turn, so the loop closes without
 		// a gap.
 		ImGui::SameLine();
 		ImGui::BeginDisabled(!selection.first);
-		if (ImGui::SmallButton(L("Fit to selection"))) {
+		if (ImGui::Button(L("Fit to selection"))) {
 			float piece = MapToolsModelLength(((ObjectInst *)selection.first->item)->m_objectId, nullptr);
 			if (piece > .05f) {
 				float pieces = std::max(3.f, std::round(6.283185307f * radius / piece));
@@ -645,25 +651,27 @@ void LayoutPathsPanel()
 		ImGui::EndDisabled();
 		ImGui::SetItemTooltip(_("Rounds the radius so a whole number of the selected model's lengths make one turn."));
 		const char *axes[] = {_("Around X"), _("Around Y"), _("Around Z")};
-		ImGui::Combo(L("Plane"), &axis, axes, 3);
+		UiCombo(L("Plane"), &axis, axes, 3);
 		if (shape == 3) {
-			ImGui::InputFloat(L("Turns"), &turns, .25f, 1, "%.2f");
+			UiInputFloat(L("Turns"), &turns, .25f, 1, "%.2f");
 			turns = std::isfinite(turns) ? clamp(turns, .25f, 8.f) : 1.f;
-			ImGui::InputFloat(L("Rise"), &rise, 1, 5, "%.2f m");
+			UiInputFloat(L("Rise"), &rise, 1, 5, "%.2f m");
 			rise = std::isfinite(rise) ? clamp(rise, -1000.f, 1000.f) : 15.f;
 		}
 	}
 	ImGui::BeginDisabled(paths.size() >= 128);
-	if (ImGui::Button(L("New path")))
+	if (ImGui::Button(L("New path"), ImVec2(-FLT_MIN, 0)))
 		createShape(shape, axis, radius, turns, rise);
 	ImGui::EndDisabled();
 	if (paths.empty()) {
-		ImGui::TextWrapped(_("Create a path, then drag its points or segment midpoints in the 3D view."));
+		ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+		ImGui::TextWrapped("%s", _("Create a path, then drag its points or segment midpoints in the 3D view."));
+		ImGui::PopStyleColor();
 		return;
 	}
-	ImGui::SameLine();
-	ImGui::Checkbox(L("Show paths"), &show);
-	if (ImGui::BeginCombo(L("Path"), current() ? current()->name.c_str() : "")) {
+	// The path being edited.
+	ImGui::Spacing();
+	if (UiBeginCombo(L("Path"), current() ? current()->name.c_str() : "")) {
 		for (size_t i = 0; i < paths.size(); i++)
 			if (ImGui::Selectable((paths[i].name + "##" + std::to_string(paths[i].id)).c_str(),
 			                      (int)i == active)) {
@@ -681,11 +689,13 @@ void LayoutPathsPanel()
 	bool change = false;
 	char name[96];
 	snprintf(name, sizeof(name), "%s", p->name.c_str());
-	if (ImGui::InputText(L("Name"), name, sizeof(name))) {
+	if (UiInputText(L("Name"), name, sizeof(name))) {
 		p->name = name;
 		change = true;
 	}
-	if (ImGui::Checkbox(L("Edit in view"), &editing)) {
+	// Its on/off options together, then its actions on one row.
+	UiCheckbox(L("Show paths"), &show);
+	if (UiCheckbox(L("Edit in view"), &editing)) {
 		if (editing) {
 			SpawnExitPlaceMode();
 			ExitBrushMode();
@@ -696,8 +706,18 @@ void LayoutPathsPanel()
 		selected = std::max(selected, 0);
 		picking = false;
 	}
+	change |= UiCheckbox(L("Smooth curve"), &p->curved);
+	change |= UiCheckbox(L("Closed"), &p->closed);
+	float third = MapToolsButtonWidth(3);
+	if (ImGui::Button(picking ? L("Stop picking") : L("Add points"), ImVec2(third, 0))) {
+		picking = !picking;
+		editing = show = true;
+		SpawnExitPlaceMode();
+		ExitBrushMode();
+		ExitPrefabPlaceMode();
+	}
 	ImGui::SameLine();
-	if (ImGui::SmallButton(L("Frame path"))) {
+	if (ImGui::Button(L("Frame path"), ImVec2(third, 0))) {
 		rw::V3d c = {0, 0, 0};
 		for (auto &k : p->knots)
 			c = add(c, vector(k.p));
@@ -707,18 +727,8 @@ void LayoutPathsPanel()
 		TheCamera.m_target = c;
 		TheCamera.m_position = add(TheCamera.m_position, d);
 	}
-	change |= ImGui::Checkbox(L("Smooth curve"), &p->curved);
 	ImGui::SameLine();
-	change |= ImGui::Checkbox(L("Closed"), &p->closed);
-	if (ImGui::SmallButton(picking ? L("Stop picking") : L("Add points"))) {
-		picking = !picking;
-		editing = show = true;
-		SpawnExitPlaceMode();
-		ExitBrushMode();
-		ExitPrefabPlaceMode();
-	}
-	ImGui::SameLine();
-	if (ImGui::SmallButton(L("Delete path"))) {
+	if (ImGui::Button(L("Delete path"), ImVec2(third, 0))) {
 		beginEdit();
 		p->live = false;
 		paths.erase(paths.begin() + active);
@@ -732,7 +742,7 @@ void LayoutPathsPanel()
 	if (!p->knots.empty() && ImGui::TreeNode(L("Point settings"))) {
 		selected = std::max(0, std::min(selected, (int)p->knots.size() - 1));
 		std::string label = std::to_string(selected + 1) + " / " + std::to_string(p->knots.size());
-		if (ImGui::BeginCombo(L("Control point"), label.c_str())) {
+		if (UiBeginCombo(L("Control point"), label.c_str())) {
 			for (size_t i = 0; i < p->knots.size(); i++)
 				if (ImGui::Selectable(std::to_string(i + 1).c_str(), (int)i == selected)) {
 					selected = i;
@@ -741,23 +751,24 @@ void LayoutPathsPanel()
 			ImGui::EndCombo();
 		}
 		Knot &k = p->knots[selected];
-		change |= ImGui::DragFloat3(L("Point position"), k.p.data(), .1f, -100000.f, 100000.f, "%.3f");
+		change |= UiDragFloat3(L("Point position"), k.p.data(), .1f, -100000.f, 100000.f, "%.3f");
 		if (p->curved) {
 			const char *modes[] = {_("Automatic"), _("Aligned"), _("Free"), _("Corner")};
-			change |= ImGui::Combo(L("Handles"), &k.handles, modes, LayoutMath::NUM_HANDLES);
+			change |= UiCombo(L("Handles"), &k.handles, modes, LayoutMath::NUM_HANDLES);
 			ImGui::SetItemTooltip(_("Automatic: smooth through the neighbours. Aligned: opposite each other, each "
 			                        "with its own length. Free: independent. Corner: straight at the neighbours."));
 			if (k.handles != LayoutMath::HANDLES_AUTO && k.handles != LayoutMath::HANDLES_VECTOR &&
 			    ImGui::TreeNode(L("Curve handles"))) {
-				change |= ImGui::DragFloat3(L("Incoming"), k.in.data(), .1f);
-				change |= ImGui::DragFloat3(L("Outgoing"), k.out.data(), .1f);
+				change |= UiDragFloat3(L("Incoming"), k.in.data(), .1f);
+				change |= UiDragFloat3(L("Outgoing"), k.out.data(), .1f);
 				ImGui::TreePop();
 			}
 		}
-		change |= ImGui::DragFloat(L("Tilt"), &k.tilt, .5f, -360, 360, "%.1f");
+		change |= UiDragFloat(L("Tilt"), &k.tilt, .5f, -360, 360, "%.1f");
 		ImGui::SetItemTooltip(_("Banks the objects at this point, easing to the next point's tilt."));
+		float half = MapToolsButtonWidth(2);
 		ImGui::BeginDisabled(p->knots.size() >= 256 || (!p->closed && selected + 1 >= (int)p->knots.size()));
-		if (ImGui::SmallButton(L("Insert midpoint"))) {
+		if (ImGui::Button(L("Insert midpoint"), ImVec2(half, 0))) {
 			if (!before) {
 				beginEdit();
 				before->paths = old;
@@ -768,7 +779,7 @@ void LayoutPathsPanel()
 		ImGui::EndDisabled();
 		ImGui::SameLine();
 		ImGui::BeginDisabled(p->knots.size() <= 2);
-		if (ImGui::SmallButton(L("Remove point"))) {
+		if (ImGui::Button(L("Remove point"), ImVec2(half, 0))) {
 			p->knots.erase(p->knots.begin() + selected);
 			selected = std::min(selected, (int)p->knots.size() - 1);
 			handle = 0;
@@ -780,36 +791,34 @@ void LayoutPathsPanel()
 	if (ImGui::TreeNodeEx(L("Objects along path"), ImGuiTreeNodeFlags_DefaultOpen)) {
 		ImGui::BeginDisabled(p->live);
 		int model = PawnModelId(p->model);
-		float labelWidth = ImGui::CalcTextSize(_("Model ID")).x;
-		float buttonWidth = ImGui::CalcTextSize(_("Use selection")).x + ImGui::GetStyle().FramePadding.x * 2;
-		ImGui::SetNextItemWidth(std::max(ImGui::GetFontSize() * 5, ImGui::GetContentRegionAvail().x -
-		                                                               labelWidth - buttonWidth -
-		                                                               ImGui::GetStyle().ItemSpacing.x * 2));
-		if (ImGui::InputInt(L("Model ID"), &model, 0, 0)) {
+		ImGui::SetNextItemWidth(MapToolsWidthBeforeButton(L("Use selection")));
+		if (UiInputInt(L("Model ID"), &model, 0, 0)) {
 			p->model = EditorModelId(model);
 			change = true;
 		}
 		ImGui::SameLine();
-		if (ImGui::SmallButton(L("Use selection")) && selection.first) {
+		ImGui::BeginDisabled(!selection.first);
+		if (ImGui::Button(L("Use selection")) && selection.first) {
 			p->model = ((ObjectInst *)selection.first->item)->m_objectId;
 			change = true;
 		}
 		ImGui::EndDisabled();
+		ImGui::EndDisabled();
 		int byCount = p->count >= 2;
 		const char *spacingModes[] = {_("Distance"), _("Count")};
-		if (ImGui::Combo(L("Spacing by"), &byCount, spacingModes, 2)) {
+		if (UiCombo(L("Spacing by"), &byCount, spacingModes, 2)) {
 			p->count = byCount ? std::max(2, (int)samples(*p).size()) : 0;
 			change = true;
 		}
 		if (byCount) {
-			change |= ImGui::InputInt(L("Objects"), &p->count, 1, 10);
+			change |= UiInputInt(L("Objects"), &p->count, 1, 10);
 			p->count = clamp(p->count, 2, 2000);
 		} else {
-			change |= ImGui::InputFloat(L("Spacing"), &p->spacing, .5f, 2, "%.2f m");
+			change |= UiInputFloat(L("Spacing"), &p->spacing, .5f, 2, "%.2f m");
 			p->spacing = clamp(p->spacing, .1f, 1000.f);
 		}
 		float range[2] = {p->from * 100, p->to * 100};
-		if (ImGui::DragFloatRange2(L("Range"), &range[0], &range[1], .2f, 0, 100, "%.1f%%", nullptr,
+		if (UiDragFloatRange2(L("Range"), &range[0], &range[1], .2f, 0, 100, "%.1f%%", nullptr,
 		                           ImGuiSliderFlags_AlwaysClamp)) {
 			p->from = clamp(range[0] / 100, 0.f, 1.f);
 			p->to = clamp(range[1] / 100, p->from, 1.f);
@@ -817,25 +826,31 @@ void LayoutPathsPanel()
 		}
 		ImGui::SetItemTooltip(_("The stretch of the path that gets objects, from its first point to its last."));
 		if (ImGui::TreeNode(L("Advanced###path_placement"))) {
-			change |= ImGui::Checkbox(L("Along its length"), &p->alongLength);
-			change |= ImGui::Checkbox(L("Follow curve rotation"), &p->follow);
-			change |= ImGui::Checkbox(L("On ground"), &p->ground);
+			change |= UiCheckbox(L("Along its length"), &p->alongLength);
+			change |= UiCheckbox(L("Follow curve rotation"), &p->follow);
+			change |= UiCheckbox(L("On ground"), &p->ground);
 			ImGui::SetItemTooltip(
 			    _("Off keeps the curve's height, so lifting a point also lifts its objects."));
-			change |= ImGui::DragFloat(L("Heading"), &p->heading, .5f, -360, 360, "%.1f");
-			change |= ImGui::DragFloat(L("Bank"), &p->bank, .5f, -180, 180, "%.1f");
-			change |= ImGui::DragFloat(L("Side offset"), &p->sideOffset, .1f, -2000, 2000, "%.2f m");
+			change |= UiDragFloat(L("Heading"), &p->heading, .5f, -360, 360, "%.1f");
+			change |= UiDragFloat(L("Bank"), &p->bank, .5f, -180, 180, "%.1f");
+			change |= UiDragFloat(L("Side offset"), &p->sideOffset, .1f, -2000, 2000, "%.2f m");
 			ImGui::SetItemTooltip(_("Moves the objects across the path, to its right; negative for its left."));
-			change |= ImGui::DragFloat(L("Height offset"), &p->heightOffset, .1f, -2000, 2000, "%.2f m");
+			change |= UiDragFloat(L("Height offset"), &p->heightOffset, .1f, -2000, 2000, "%.2f m");
 			ImGui::TreePop();
 		}
 		size_t count = samples(*p).size();
-		ImGui::Text(_("%d objects along this path"), (int)count);
-		if (count == 2000 && p->count < 2)
+		ImGui::TextDisabled(_("%d objects along this path"), (int)count);
+		if (count == 2000 && p->count < 2) {
+			ImGui::PushStyleColor(ImGuiCol_Text, UiSemanticColor(UI_COLOR_WARNING));
 			ImGui::TextWrapped(
-			    _("The layout is limited to 2,000 objects. Increase spacing for a longer path."));
+			    "%s", _("The layout is limited to 2,000 objects. Increase spacing for a longer path."));
+			ImGui::PopStyleColor();
+		}
+		// Generate (or Rebuild) is the section's main action; Detach shares
+		// its row once the objects exist.
+		ImVec2 size(p->live ? MapToolsButtonWidth(2) : -FLT_MIN, 0);
 		ImGui::BeginDisabled(count == 0 || !GetObjectDef(p->model));
-		if (ImGui::Button(p->live ? L("Rebuild objects") : L("Generate objects"))) {
+		if (MapToolsMainButton(p->live ? L("Rebuild objects") : L("Generate objects"), size)) {
 			if (!before) {
 				beginEdit();
 				before->paths = old;
@@ -848,7 +863,7 @@ void LayoutPathsPanel()
 		ImGui::EndDisabled();
 		if (p->live) {
 			ImGui::SameLine();
-			if (ImGui::SmallButton(L("Detach objects"))) {
+			if (ImGui::Button(L("Detach objects"), size)) {
 				p->live = false;
 				p->objects.clear();
 				change = true;
@@ -1016,5 +1031,320 @@ bool ReadLayoutPathsXML(const Node &root, std::string *error, bool apply)
 			}
 		}
 	}
+	return true;
+}
+
+// ---- Namaka ----------------------------------------------------------------
+// The panel's actions without the panel. The fields are what the bridge got,
+// so every value is checked here and an error says which one is wrong.
+namespace
+{
+std::string jsonText(const std::string &text)
+{
+	std::string out;
+	for (unsigned char c : text) {
+		if (c == '"' || c == '\\')
+			out += '\\', out += (char)c;
+		else if (c < 0x20) {
+			char hex[8];
+			snprintf(hex, sizeof(hex), "\\u%04x", c);
+			out += hex;
+		} else
+			out += (char)c;
+	}
+	return out;
+}
+std::string jsonNumber(float v)
+{
+	char text[32];
+	snprintf(text, sizeof(text), "%.4g", std::isfinite(v) ? v : 0.0f);
+	return text;
+}
+std::string pathJson(int index, bool withPoints)
+{
+	const LayoutGuide &p = paths[index];
+	std::string json = "{\"index\":" + std::to_string(index) + ",\"id\":" + std::to_string(p.id) + ",\"name\":\"" +
+	                   jsonText(p.name) + "\",\"model\":" + std::to_string(PawnModelId(p.model)) +
+	                   ",\"points\":" + std::to_string(p.knots.size()) +
+	                   ",\"length\":" + jsonNumber(LayoutMath::curveLength(p.knots, p.curved, p.closed)) +
+	                   ",\"curved\":" + (p.curved ? "true" : "false") + ",\"closed\":" + (p.closed ? "true" : "false") +
+	                   ",\"live\":" + (p.live ? "true" : "false") + ",\"follow\":" + (p.follow ? "true" : "false") +
+	                   ",\"ground\":" + (p.ground ? "true" : "false") +
+	                   ",\"along_length\":" + (p.alongLength ? "true" : "false") + ",\"spacing\":" + jsonNumber(p.spacing) +
+	                   ",\"count\":" + std::to_string(p.count) + ",\"from\":" + jsonNumber(p.from) +
+	                   ",\"to\":" + jsonNumber(p.to) + ",\"heading\":" + jsonNumber(p.heading) +
+	                   ",\"bank\":" + jsonNumber(p.bank) + ",\"side_offset\":" + jsonNumber(p.sideOffset) +
+	                   ",\"height_offset\":" + jsonNumber(p.heightOffset) + ",\"interior\":" + std::to_string(p.area) +
+	                   ",\"samples\":" + std::to_string(samples(p).size()) + ",\"objects\":[";
+	for (size_t i = 0; i < p.objects.size(); i++)
+		json += (i ? "," : "") + std::to_string(p.objects[i]);
+	json += "]";
+	if (withPoints) {
+		json += ",\"knots\":[";
+		for (size_t i = 0; i < p.knots.size(); i++) {
+			const Knot &k = p.knots[i];
+			json += std::string(i ? "," : "") + "[" + jsonNumber(k.p[0]) + "," + jsonNumber(k.p[1]) + "," +
+			        jsonNumber(k.p[2]) + "]";
+		}
+		json += "]";
+	}
+	return json + "}";
+}
+bool parseNumber(const std::string &text, float *out)
+{
+	char *end = nullptr;
+	float v = strtof(text.c_str(), &end);
+	if (end == text.c_str() || *end != '\0' || !std::isfinite(v))
+		return false;
+	*out = v;
+	return true;
+}
+bool parseVector(const std::string &text, rw::V3d *out)
+{
+	float v[3];
+	size_t at = 0;
+	for (int i = 0; i < 3; i++) {
+		size_t end = text.find(',', at);
+		if ((i < 2) != (end != std::string::npos) || !parseNumber(text.substr(at, end - at), &v[i]) ||
+		    std::abs(v[i]) > 1000000)
+			return false;
+		at = end + 1;
+	}
+	*out = {v[0], v[1], v[2]};
+	return true;
+}
+bool parsePoints(const std::string &text, std::vector<Knot> &out)
+{
+	out.clear();
+	for (size_t at = 0; at <= text.size();) {
+		size_t end = text.find(';', at);
+		if (end == std::string::npos)
+			end = text.size();
+		rw::V3d v;
+		if (!parseVector(text.substr(at, end - at), &v))
+			return false;
+		Knot k;
+		k.p = point(v);
+		out.push_back(k);
+		at = end + 1;
+	}
+	return true;
+}
+bool parseFlag(const std::string &text, bool *out)
+{
+	if (text == "1" || text == "true" || text == "yes")
+		*out = true;
+	else if (text == "0" || text == "false" || text == "no")
+		*out = false;
+	else
+		return false;
+	return true;
+}
+} // namespace
+
+std::shared_ptr<void> LayoutPathsSnapshot()
+{
+	return snapshot();
+}
+
+bool LayoutPathsAgent(const std::string &op, const std::map<std::string, std::string> &f, std::string *json,
+                      std::string *error)
+{
+	auto has = [&](const char *key) { return f.count(key) > 0; };
+	auto get = [&](const char *key) { return has(key) ? f.at(key) : std::string(); };
+	auto fail = [&](const std::string &message) {
+		*error = message;
+		return false;
+	};
+	if (op == "list") {
+		*json = "\"paths\":[";
+		for (size_t i = 0; i < paths.size(); i++)
+			*json += (i ? "," : "") + pathJson((int)i, false);
+		*json += "]";
+		return true;
+	}
+	if (op == "new") {
+		if (paths.size() >= 128)
+			return fail("a map holds at most 128 paths");
+		static const char *shapes[] = {"line", "curve", "loop", "helix"};
+		int shape = -1;
+		std::string name = has("shape") ? get("shape") : "curve";
+		for (int i = 0; i < 4; i++)
+			if (name == shapes[i])
+				shape = i;
+		if (shape < 0)
+			return fail("shape is line, curve, loop or helix");
+		std::string axisName = has("axis") ? get("axis") : "z";
+		int axis = axisName == "x" ? 0 : axisName == "y" ? 1 : axisName == "z" ? 2 : -1;
+		float radius = 10, turns = 1, rise = 15;
+		rw::V3d centre;
+		std::vector<Knot> knots;
+		if (axis < 0)
+			return fail("axis is x, y or z (the loop's or helix's turning axis)");
+		if ((has("radius") && !parseNumber(get("radius"), &radius)) ||
+		    (has("turns") && !parseNumber(get("turns"), &turns)) || (has("rise") && !parseNumber(get("rise"), &rise)))
+			return fail("radius, turns and rise are numbers");
+		if (has("centre") && !parseVector(get("centre"), &centre))
+			return fail("centre is x,y,z");
+		if (has("points") && (!parsePoints(get("points"), knots) || knots.size() < 2 || knots.size() > 256))
+			return fail("points are 2-256 x,y,z separated by ;");
+		// Fit: a whole number of the model's lengths around one turn, so a loop closes without a gap.
+		if (has("fit_model")) {
+			float model;
+			if (!parseNumber(get("fit_model"), &model) || !GetObjectDef(EditorModelId((int)model)))
+				return fail("fit_model is a model id");
+			float piece = MapToolsModelLength(EditorModelId((int)model), nullptr);
+			if (piece > .05f)
+				radius = std::max(3.f, std::round(6.283185307f * radius / piece)) * piece / 6.283185307f;
+		}
+		radius = clamp(radius, .5f, 1000.f);
+		turns = clamp(turns, .25f, 8.f);
+		rise = clamp(rise, -1000.f, 1000.f);
+		createShape(shape, axis, radius, turns, rise, has("centre") ? &centre : nullptr);
+		if (f.size() > (size_t)(has("shape") + has("axis") + has("radius") + has("turns") + has("rise") +
+		                        has("centre") + has("fit_model"))) {
+			// Its other settings (points, name, model...) go through set: a second undo step.
+			std::map<std::string, std::string> rest(f);
+			rest["index"] = std::to_string(active);
+			for (const char *key : {"shape", "axis", "radius", "turns", "rise", "centre", "fit_model"})
+				rest.erase(key);
+			return LayoutPathsAgent("set", rest, json, error);
+		}
+		*json = "\"path\":" + pathJson(active, true);
+		return true;
+	}
+	float indexValue;
+	if (!has("index") || !parseNumber(get("index"), &indexValue) || indexValue < 0 ||
+	    (int)indexValue >= (int)paths.size())
+		return fail("index: no such path (list shows them)");
+	int index = (int)indexValue;
+	if (op == "get") {
+		*json = "\"path\":" + pathJson(index, true);
+		return true;
+	}
+	if (op == "delete") {
+		active = index;
+		beginEdit();
+		paths[index].live = false;
+		paths.erase(paths.begin() + index);
+		active = paths.empty() ? -1 : std::min(index, (int)paths.size() - 1);
+		selected = -1;
+		changed = true;
+		finishEdit();
+		*json = "\"deleted\":" + std::to_string(index) + ",\"paths\":" + std::to_string(paths.size());
+		return true;
+	}
+	std::vector<LayoutGuide> old = paths;
+	LayoutGuide &p = paths[index];
+	auto point = [&](const char *key, int *out) {
+		float v;
+		if (!has(key) || !parseNumber(get(key), &v) || v < 0 || (int)v >= (int)p.knots.size())
+			return false;
+		*out = (int)v;
+		return true;
+	};
+	if (op == "set") {
+		bool liveBefore = p.live;
+		for (const auto &field : f) {
+			const std::string &key = field.first, &value = field.second;
+			float v;
+			bool b;
+			if (key == "index")
+				continue;
+			if (key == "name") {
+				if (value.empty() || value.size() >= 64)
+					return paths = old, fail("name: 1-63 characters");
+				p.name = value;
+			} else if (key == "model") {
+				if (!parseNumber(value, &v) || !GetObjectDef(EditorModelId((int)v)))
+					return paths = old, fail("model: not a model id");
+				if (liveBefore && EditorModelId((int)v) != p.model)
+					return paths = old, fail("model: detach the objects first; a live path keeps its model");
+				p.model = EditorModelId((int)v);
+			} else if (key == "points") {
+				std::vector<Knot> knots;
+				if (!parsePoints(value, knots) || knots.size() < 2 || knots.size() > 256)
+					return paths = old, fail("points are 2-256 x,y,z separated by ;");
+				p.knots = knots;
+			} else if (key == "curved" || key == "closed" || key == "follow" || key == "ground" ||
+			           key == "along_length") {
+				if (!parseFlag(value, &b))
+					return paths = old, fail(key + ": true or false");
+				(key == "curved" ? p.curved : key == "closed" ? p.closed : key == "follow" ? p.follow
+				 : key == "ground" ? p.ground : p.alongLength) = b;
+			} else if (key == "count") {
+				if (!parseNumber(value, &v) || v < 0 || v > 2000 || v == 1)
+					return paths = old, fail("count: 0 (every spacing metres) or 2-2000");
+				p.count = (int)v;
+			} else if (key == "spacing" || key == "from" || key == "to" || key == "heading" || key == "bank" ||
+			           key == "side_offset" || key == "height_offset") {
+				if (!parseNumber(value, &v) || std::abs(v) > 1000000)
+					return paths = old, fail(key + ": a number");
+				if (key == "spacing" && v < .05f)
+					return paths = old, fail("spacing: at least 0.05 m");
+				if ((key == "from" || key == "to") && (v < 0 || v > 1))
+					return paths = old, fail(key + ": a fraction of the length, 0-1");
+				(key == "spacing" ? p.spacing : key == "from" ? p.from : key == "to" ? p.to : key == "heading"
+				 ? p.heading : key == "bank" ? p.bank : key == "side_offset" ? p.sideOffset : p.heightOffset) = v;
+			} else
+				return paths = old, fail("unknown path setting " + key);
+		}
+		if (p.from >= p.to)
+			return paths = old, fail("from must be below to");
+	} else if (op == "add_point" || op == "move_point") {
+		rw::V3d v;
+		int at = -1;
+		if (!has("position") || !parseVector(get("position"), &v))
+			return fail("position is x,y,z");
+		if (op == "move_point" && !point("point", &at))
+			return fail("point: no such point on this path");
+		if (op == "add_point") {
+			if (p.knots.size() >= 256)
+				return fail("a path holds at most 256 points");
+			Knot k;
+			k.p = ::point(v);
+			if (has("after")) {
+				if (!point("after", &at))
+					return fail("after: no such point on this path");
+				p.knots.insert(p.knots.begin() + at + 1, k);
+			} else
+				p.knots.push_back(k);
+		} else
+			p.knots[at].p = ::point(v);
+	} else if (op == "insert_point") {
+		int segment;
+		if (!point("point", &segment) || (!p.closed && segment == (int)p.knots.size() - 1))
+			return fail("point: the segment's first point (not the last point of an open path)");
+		if (p.knots.size() >= 256)
+			return fail("a path holds at most 256 points");
+		insertMiddle(p, segment);
+	} else if (op == "remove_point") {
+		int at;
+		if (!point("point", &at))
+			return fail("point: no such point on this path");
+		if (p.knots.size() <= 2)
+			return fail("a path keeps at least 2 points");
+		p.knots.erase(p.knots.begin() + at);
+	} else if (op == "generate") {
+		if (samples(p).empty() || !GetObjectDef(p.model))
+			return fail("nothing to generate: the path is too short or its model is missing");
+		if (!p.live)
+			ClearSelection();
+		p.live = true;
+	} else if (op == "detach") {
+		if (!p.live)
+			return fail("the path has no objects to detach");
+		p.live = false;
+		p.objects.clear();
+	} else
+		return fail("unknown path operation (list, get, new, set, add_point, insert_point, remove_point, "
+		            "move_point, generate, detach, delete)");
+	active = index;
+	selected = std::min(selected, (int)paths[index].knots.size() - 1);
+	beginEdit();
+	before->paths = std::move(old);
+	touched(paths[index]);
+	finishEdit();
+	*json = "\"path\":" + pathJson(index, true);
 	return true;
 }

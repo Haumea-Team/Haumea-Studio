@@ -74,7 +74,7 @@ construções do jogo. A visão do jogador (`P`) sempre usa as distâncias do jo
 
 ## Colocando objetos
 
-1. Abra o **Navegador de objetos** (`Ctrl+1`) e escolha um objeto. Busque por nome, ID, uma lista
+1. Abra o **Navegador de recursos** (`Ctrl+1`) e escolha um objeto. Busque por nome, ID, uma lista
    ou um intervalo (`1337, 19000-19100`). Todo modelo, do jogo e do SA-MP, fica numa categoria
    conforme o que os próprios arquivos do jogo dizem dele (o nome, o arquivo IDE, o tamanho da
    colisão), e **Favoritos** guarda os que você usa com frequência.
@@ -89,7 +89,7 @@ Ela só move a vista, então não há nada a desfazer. **Editar → Copiar posi�
 a câmera está como `x, y, z`.
 
 Clique com o botão direito num objeto no mundo ou no navegador e escolha **Encontrar instâncias**.
-O Navegador de objetos lista as contagens por modelo e as posições. Informe vários IDs ou intervalos
+O Navegador de recursos lista as contagens por modelo e as posições. Informe vários IDs ou intervalos
 e escolha **Ambos**, **Meu mapa** ou **Mundo do GTA**. **Ir para**, **Anterior** e **Próxima** movem a
 câmera, inclusive entre interiores. Os resultados ficam amarelos e não alteram sua seleção de edição.
 Fechar o navegador ou voltar aos modelos remove o destaque da busca.
@@ -243,7 +243,7 @@ Um prefab é um grupo de objetos salvo para colocar de novo. Selecione os objeto
 Exportar → Seleção como prefab** (`Ctrl+Shift+E`). Dê a ele um nome e tags e salve-o em **Mine**
 (a sua pasta de configuração) ou no workspace.
 
-A aba **Prefabs** do Navegador de objetos lista os seus, os do workspace e um conjunto **Starter**.
+A aba **Prefabs** do Navegador de recursos lista os seus, os do workspace e um conjunto **Starter**.
 Busque por nome ou tag, escolha um e clique em **Colocar**; `Q`, `E` ou a roda do mouse o giram antes
 de você clicar. **Como grupo** coloca os objetos dele num grupo com o nome do prefab.
 
@@ -316,8 +316,10 @@ com o botão direito para copiar o código Pawn que leva um jogador até lá (`S
 
 **Testar no jogo** (`F5`) roda o mapa num servidor open.mp privado na pasta de configuração do
 Haumea. O seu arquivo de mapa e o seu próprio servidor não são tocados. **Abrir o jogo** entra
-nele, e **Recarregar mapa** pega as suas mudanças. Escolha o pacote do servidor e a porta em
-**Preferências → Servidor de teste**. No Linux 64 bits, o servidor e o compilador do open.mp
+nele, e **Recarregar mapa** pega as suas mudanças. Você não precisa de um servidor seu: sem
+pacote do servidor em **Preferências → Servidor de teste** e sem servidor no workspace, a primeira
+vez baixa o open.mp mais recente, junto com o plugin streamer, que a maioria dos mapas usa
+(cerca de um minuto). A porta também fica lá. No Linux 64 bits, o servidor e o compilador do open.mp
 precisam da biblioteca C de 32 bits: veja [Instalação](../README.pt-BR.md#instalação).
 
 ![Testar no jogo com o registro do servidor](images/testserver.png)

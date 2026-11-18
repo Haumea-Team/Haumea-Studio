@@ -123,7 +123,24 @@ bool InTextDrawMode(void);
 bool TextDrawModeHidesWorld(void);	// false for the frame the still frame is taken in
 void EnterTextDrawMode(void);
 void ExitTextDrawMode(void);
-void DrawTextDrawsToolbar(void);
+void TextDrawsZoom(int dir);	// 1 in, -1 out, 0 fit
+float TextDrawsZoomPercent(void);
+bool TextDrawsCanvasOption(int which);	// 0 grid, 1 snap, 2 rulers
+void TextDrawsToggleCanvasOption(int which);
+const char *TextDrawsBoardName(void);
+void TextDrawsBoardMenu(void);
+void TextDrawsCanvasSettings(void);
+bool TextDrawsCanArrange(int command);	// 0-5 align, 6/7 space, 8/9 same size, 10/11 flip
+void TextDrawsArrange(int command);
+int TextDrawsAlignTo(void);	// 0 the selection, 1 the key one, 2 the screen
+void TextDrawsSetAlignTo(int to);
+bool *TextDrawsFixedGap(void);
+float *TextDrawsGap(void);
+// The ribbon's TextDraws commands.
+void TextDrawsFileCommand(int which);	// 0 new, 1 open, 2 save, 3 save as, 4 undo, 5 redo
+void TextDrawsFileOptionsItems(void);
+void TextDrawsAdd(int which);	// 0 text, 1 box, 2 sprite, 3 model, 4 image
+void TextDrawsShapeMenu(void);	// the shapes; a click adds one
 void DrawTextDrawsWindow(void);
 float TextDrawCanvasToScreen(float at, bool vertical, bool ruler);	// for UI scripts
 float TextDrawCanvasZoom(void);	// 1 when it fits
@@ -145,3 +162,9 @@ const std::vector<std::string> &GetRecentTextDrawFiles(void);
 void AddRecentTextDrawFile(const char *path);	// on top
 bool LoadTextDrawSetting(const char *key, const char *value);	// false: not a textdraw setting
 void SaveTextDrawSettings(FILE *f);
+
+// Namaka's way into the TextDraws window (textdraws_ui.cpp): an operation and
+// its key=value fields, answered as JSON members. agentbridge.cpp lists them.
+#include <map>
+bool TextDrawsAgent(const std::string &op, const std::map<std::string, std::string> &fields,
+	std::string *json, std::string *error);

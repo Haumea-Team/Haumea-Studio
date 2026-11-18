@@ -19,6 +19,11 @@
 // (NPC_PlayNode, NPC_OpenNode). Saving writes into a folder of your choice,
 // such as a server's scriptfiles/NPCs/nodes, never into the game's files.
 
+// Panel layout helpers, defined in maptools.cpp.
+float MapToolsButtonWidth(int n);
+float MapToolsWidthBeforeButton(const char *label);
+bool MapToolsMainButton(const char *label, const ImVec2 &size = ImVec2(-FLT_MIN, 0.0f));
+
 namespace SAPaths {
 
 enum NodesMode {
@@ -33,8 +38,6 @@ static bool gChain = true;
 static char gFolder[1024];
 static bool gFolderRead;
 static int gGotoArea, gGotoPoint;
-
-static const ImVec4 WARN_COLOR(1.0f, 0.6f, 0.4f, 1.0f);
 
 static void
 readFolderSetting(void)
@@ -150,17 +153,25 @@ HandleNodesViewportClick(void)
 	return true;
 }
 
+// One of the tool buttons sharing a row; the tool in use is filled with the
+// accent.
 static void
-drawModeButton(const char *label, int mode, const char *tooltip)
+drawModeButton(const char *label, int mode, const char *tooltip, float width)
 {
 	bool active = gMode == mode;
-	if(active)
-		ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
-	if(ImGui::Button(label))
+	bool pressed = active ? MapToolsMainButton(label, ImVec2(width, 0.0f))
+		: ImGui::Button(label, ImVec2(width, 0.0f));
+	if(pressed)
 		gMode = active ? NODES_SELECT : mode;
-	if(active)
-		ImGui::PopStyleColor();
 	ImGui::SetItemTooltip("%s", tooltip);
+}
+
+// Buttons of the same width for a popup that sizes itself to its contents.
+static float
+popupButtonWidth(const char *a, const char *b)
+{
+	float text = std::max(ImGui::CalcTextSize(a, nil, true).x, ImGui::CalcTextSize(b, nil, true).x);
+	return std::max(text + ImGui::GetStyle().FramePadding.x * 2.0f, ImGui::GetFontSize() * 6.0f);
 }
 
 static void
@@ -180,7 +191,7 @@ drawSelectedNode(void)
 		"nodes in that file renumbers the ones after it."), area, area);
 
 	float p[3] = { pos.x, pos.y, pos.z };
-	if(ImGui::DragFloat3(L("Position"), p, 0.125f, -3000.0f, 3000.0f, "%.3f")){
+	if(UiDragFloat3(L("Position"), p, 0.125f, -3000.0f, 3000.0f, "%.3f")){
 		rw::V3d np = { p[0], p[1], p[2] };
 		SetSelectedNodePosition(np, false);
 	}
@@ -189,37 +200,122 @@ drawSelectedNode(void)
 	ImGui::SetItemTooltip("%s", _("Stored in steps of 0.125. A node can't leave its 750x750 area;\n"
 		"press W to drag it with the gizmo instead."));
 
+	// The links: one row each, the node it goes to filling the row and its
+	// Unlink button at the end.
 	Node *links[16];
 	int numLinks = GetNodeLinks(node, links, 16);
-	ImGui::Text(_("Links: %d / 15"), numLinks);
+	ImGui::Spacing();
+	ImGui::TextDisabled(_("Links: %d / 15"), numLinks);
+	const char *unlinkLabel = LI(ICON_FA_XMARK, "Unlink");
+	const ImGuiStyle &style = ImGui::GetStyle();
+	float unlinkWidth = ImGui::CalcTextSize(unlinkLabel, nil, true).x + style.FramePadding.x * 2.0f;
 	for(int i = 0; i < numLinks; i++){
 		int la = 0, lp = 0;
 		GetNodeInfo(links[i], &la, &lp, nil, nil);
 		ImGui::PushID(i);
+		const char *otherFile = la != area ? _("(other file)") : nil;
+		float rest = unlinkWidth + style.ItemSpacing.x;
+		if(otherFile)
+			rest += ImGui::CalcTextSize(otherFile).x + style.ItemSpacing.x;
 		char label[48];
 		snprintf(label, sizeof(label), "%d:%d", la, lp);
-		if(ImGui::SmallButton(label))
+		if(ImGui::Button(label, ImVec2(std::max(ImGui::GetContentRegionAvail().x - rest, ImGui::GetFontSize() * 3.0f), 0.0f)))
 			jumpToNode(links[i]);
 		ImGui::SetItemTooltip("%s", _("Select and go to this node."));
+		if(otherFile){
+			ImGui::SameLine();
+			ImGui::AlignTextToFramePadding();
+			ImGui::TextDisabled("%s", otherFile);
+			ImGui::SetItemTooltip(_("An NPC reaching this link leaves NODES%d.DAT;\nopen.mp then reports a node change."), area);
+		}
 		ImGui::SameLine();
-		if(ImGui::SmallButton(LI(ICON_FA_XMARK, "Unlink"))){
+		if(ImGui::Button(unlinkLabel)){
 			UnlinkNodes(node, links[i]);
 			ImGui::PopID();
 			return;
 		}
-		if(la != area){
-			ImGui::SameLine();
-			ImGui::TextDisabled("%s", _("(other file)"));
-			ImGui::SetItemTooltip(_("An NPC reaching this link leaves NODES%d.DAT;\nopen.mp then reports a node change."), area);
-		}
 		ImGui::PopID();
 	}
 
-	if(ImGui::Button(LI(ICON_FA_TRASH, "Delete node")))
+	ImGui::Spacing();
+	if(ImGui::Button(LI(ICON_FA_TRASH, "Delete node"), ImVec2(-FLT_MIN, 0.0f)))
 		DeleteNode(node);
 	ImGui::SetItemTooltip(_("Removes the node and its links. Later nodes in NODES%d.DAT move up one point id."), area);
 }
 
+// Two jobs, one at a time: Edit (add, link, move and delete nodes) and Go to
+// (a node by its file and point id).
+enum { NODES_TASK_EDIT, NODES_TASK_GOTO };
+static int gTask = NODES_TASK_EDIT;
+
+static void
+drawEditTask(void)
+{
+	// The tools: four equal buttons, the one in use filled.
+	float quarter = MapToolsButtonWidth(4);
+	drawModeButton(LI(ICON_FA_ARROW_POINTER, "Select"), NODES_SELECT,
+		_("Click nodes to select them; W moves the selected node."), quarter);
+	ImGui::SameLine();
+	drawModeButton(LI(ICON_FA_PLUS, "Vehicle"), NODES_ADD_VEHICLE,
+		_("Click the ground to add vehicle nodes. Right-click or Esc stops."), quarter);
+	ImGui::SameLine();
+	drawModeButton(LI(ICON_FA_PLUS, "Ped"), NODES_ADD_PED,
+		_("Click the ground to add ped nodes. Right-click or Esc stops."), quarter);
+	ImGui::SameLine();
+	drawModeButton(LI(ICON_FA_LINK, "Link"), NODES_LINK,
+		_("Click one node, then another, to link them.\n"
+		"Clicking two linked nodes unlinks them. Right-click or Esc stops."), quarter);
+	if(gMode == NODES_ADD_VEHICLE || gMode == NODES_ADD_PED){
+		UiCheckbox(L("Link each new node to the previous one"), &gChain);
+		showNodeKind(gMode == NODES_ADD_VEHICLE);
+	}else if(gMode == NODES_LINK){
+		ImGui::TextDisabled("%s", selectedNode ? _("Click the node to link to.") : _("Click the first node."));
+		ImGui::SetItemTooltip("%s", _("Vehicle nodes link to vehicle nodes, ped to ped."));
+	}
+
+	UiHeading(_("Selected node"));
+	drawSelectedNode();
+}
+
+static void
+drawGotoTask(void)
+{
+	if(UiInputInt(L("File##goarea"), &gGotoArea))
+		gGotoArea = clamp(gGotoArea, 0, 63);
+	ImGui::SetItemTooltip("%s", _("Each 750x750 square is one NODES<id>.DAT file."));
+	if(UiInputInt(L("Point##gopoint"), &gGotoPoint))
+		gGotoPoint = clamp(gGotoPoint, 0, 65535);
+	int veh = 0, ped = 0, lnk = 0;
+	GetAreaCounts(gGotoArea, &veh, &ped, &lnk);
+	ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+	ImGui::TextWrapped(_("NODES%d.DAT: %d vehicle, %d ped nodes (points 0-%d are vehicle)"),
+		gGotoArea, veh, ped, veh > 0 ? veh-1 : 0);
+	ImGui::PopStyleColor();
+	if(ImGui::Button(LI(ICON_FA_LOCATION_DOT, "Go"), ImVec2(-FLT_MIN, 0.0f))){
+		Node *node = FindNode(gGotoArea, gGotoPoint);
+		if(node){
+			jumpToNode(node);
+			showNodeKind(IsVehicleNode(node));
+			gTask = NODES_TASK_EDIT;	// the node it went to, selected, to edit
+		}else
+			Toast(TOAST_SELECTION, _("NODES%d.DAT has no point %d"), gGotoArea, gGotoPoint);
+	}
+	ImGui::SetItemTooltip("%s", _("Select and go to this node."));
+}
+
+static void
+loadFromFolder(void)
+{
+	int loaded = 0;
+	char err[512];
+	if(LoadAreasFromFolder(gFolder, &loaded, err, sizeof(err)))
+		Toast(TOAST_SAVE, _("Loaded %d node files"), loaded);
+	else
+		Toast(TOAST_SAVE, _("Couldn't load the nodes: %s"), err);
+}
+
+// Edit open.mp NPC nodes: pick what the viewport shows, add, link, move or
+// delete nodes (or go to one by its id), then save the files to a server.
 void
 DrawNodesWindow(bool *open)
 {
@@ -227,106 +323,92 @@ DrawNodesWindow(bool *open)
 		return;
 	readFolderSetting();
 	defaultFolderFromWorkspace();
-	ImGui::SetNextWindowSize(ImVec2(ImGui::GetFontSize() * 24.0f, 0.0f), ImGuiCond_FirstUseEver);
 	// ###nodes, not LI(): the ID the window has always had, so saved layouts stay.
 	char title[64];
 	snprintf(title, sizeof(title), ICON_FA_LOCATION_DOT " %s###nodes", _("Nodes"));
-	if(!ImGui::Begin(title, open)){
+	ImGuiWindowFlags flags = UiPlaceToolWindow(title, 24.0f, true);
+	if(!ImGui::Begin(title, open, flags)){
 		ImGui::End();
 		return;
 	}
 	if(!*open)
 		gMode = NODES_SELECT;
+	UiFitItemsToPanel();
 
 	UiBadge(_("open.mp only"), _("open.mp NPCs walk and drive along NODES0-63.DAT with NPC_PlayNode.\n"
 		"SA-MP and the game itself don't read the files you save here."));
 
 	if(!isSA() || !NodesLoaded()){
-		ImGui::TextColored(WARN_COLOR, "%s", _("The game's NODES*.DAT files couldn't be loaded."));
+		ImGui::TextColored(UiSemanticColor(UI_COLOR_WARNING), "%s", _("The game's NODES*.DAT files couldn't be loaded."));
 		ImGui::End();
 		return;
 	}
 
-	ImGui::Checkbox(L("Vehicle nodes"), &gRenderSaCarPaths);
-	ImGui::SameLine();
-	ImGui::Checkbox(L("Ped nodes"), &gRenderSaPedPaths);
-	ImGui::SameLine();
-	ImGui::Checkbox(L("Area grid"), &gRenderSaAreaGrid);
+	// What the viewport shows, whichever job is on.
+	UiCheckbox(L("Vehicle nodes"), &gRenderSaCarPaths);
+	UiCheckbox(L("Ped nodes"), &gRenderSaPedPaths);
+	UiCheckbox(L("Area grid"), &gRenderSaAreaGrid);
 	ImGui::SetItemTooltip("%s", _("Each 750x750 square is one NODES<id>.DAT file."));
 
-	const char *source = GetFolderSource();
-	ImGui::TextDisabled(_("Editing: %s"), source ? source : _("a copy of the game's nodes"));
-	if(source)
-		ImGui::SetItemTooltip("%s", _("Files missing from that folder came from the game."));
+	ImGui::Spacing();
+	const char *tasks[] = { _("Edit"), _("Go to") };
+	if(UiSegmented("##nodes_task", tasks, 2, &gTask) && gTask != NODES_TASK_EDIT)
+		gMode = NODES_SELECT;	// no adding or linking while the tools are out of sight
+	ImGui::Spacing();
+	if(gTask == NODES_TASK_EDIT)
+		drawEditTask();
+	else
+		drawGotoTask();
 
-	ImGui::SeparatorText(_("Tools"));
-	drawModeButton(LI(ICON_FA_ARROW_POINTER, "Select"), NODES_SELECT,
-		_("Click nodes to select them; W moves the selected node."));
-	ImGui::SameLine();
-	drawModeButton(LI(ICON_FA_PLUS, "Vehicle"), NODES_ADD_VEHICLE,
-		_("Click the ground to add vehicle nodes. Right-click or Esc stops."));
-	ImGui::SameLine();
-	drawModeButton(LI(ICON_FA_PLUS, "Ped"), NODES_ADD_PED,
-		_("Click the ground to add ped nodes. Right-click or Esc stops."));
-	ImGui::SameLine();
-	drawModeButton(LI(ICON_FA_LINK, "Link"), NODES_LINK,
-		_("Click one node, then another, to link them.\n"
-		"Clicking two linked nodes unlinks them. Right-click or Esc stops."));
-	if(gMode == NODES_ADD_VEHICLE || gMode == NODES_ADD_PED){
-		ImGui::Checkbox(L("Link each new node to the previous one"), &gChain);
-		showNodeKind(gMode == NODES_ADD_VEHICLE);
-	}else if(gMode == NODES_LINK){
-		ImGui::TextDisabled("%s", selectedNode ? _("Click the node to link to.") : _("Click the first node."));
-		ImGui::SetItemTooltip("%s", _("Vehicle nodes link to vehicle nodes, ped to ped."));
-	}
-
-	ImGui::SeparatorText(_("Selected node"));
-	drawSelectedNode();
-
-	if(ImGui::CollapsingHeader(L("Go to node"))){
-	ImGui::SetNextItemWidth(ImGui::GetFontSize() * 6.0f);
-	if(ImGui::InputInt(L("File##goarea"), &gGotoArea))
-		gGotoArea = clamp(gGotoArea, 0, 63);
-	ImGui::SameLine();
-	ImGui::SetNextItemWidth(ImGui::GetFontSize() * 6.0f);
-	if(ImGui::InputInt(L("Point##gopoint"), &gGotoPoint))
-		gGotoPoint = clamp(gGotoPoint, 0, 65535);
-	ImGui::SameLine();
-	if(ImGui::Button(L("Go"))){
-		Node *node = FindNode(gGotoArea, gGotoPoint);
-		if(node){
-			jumpToNode(node);
-			showNodeKind(IsVehicleNode(node));
-		}else
-			Toast(TOAST_SELECTION, _("NODES%d.DAT has no point %d"), gGotoArea, gGotoPoint);
-	}
-	int veh = 0, ped = 0, lnk = 0;
-	GetAreaCounts(gGotoArea, &veh, &ped, &lnk);
-	ImGui::TextDisabled(_("NODES%d.DAT: %d vehicle, %d ped nodes (points 0-%d are vehicle)"),
-		gGotoArea, veh, ped, veh > 0 ? veh-1 : 0);
-	}
-
-	ImGui::SeparatorText(_("Files"));
+	// The files: where they go, Load and Game nodes, then Save at the foot.
 	int dirty = GetDirtyAreaCount();
+	UiHeading(_("Files"));
+	const char *source = GetFolderSource();
 	if(dirty > 0)
-		ImGui::TextColored(WARN_COLOR, _("Files changed and not saved: %d"), dirty);
+		ImGui::TextColored(UiSemanticColor(UI_COLOR_WARNING), _("Files changed and not saved: %d"), dirty);
 	else
 		ImGui::TextDisabled("%s", _("No unsaved changes"));
+	char editing[1200];
+	snprintf(editing, sizeof(editing), _("Editing: %s"), source ? source : _("a copy of the game's nodes"));
+	ImGui::SetItemTooltip("%s%s%s", editing, source ? "\n" : "", source ? _("Files missing from that folder came from the game.") : "");
 
-	ImGui::SetNextItemWidth(-ImGui::GetFontSize() * 5.0f);
+	const char *browseLabel = L("Browse...");
+	ImGui::SetNextItemWidth(MapToolsWidthBeforeButton(browseLabel));
 	if(ImGui::InputTextWithHint("##nodesfolder", "server/scriptfiles/NPCs/nodes", gFolder, sizeof(gFolder)))
 		writeFolderSetting();
+	ImGui::SetItemTooltip("%s", _("Folder for NODES*.DAT (a server's scriptfiles/NPCs/nodes)"));
 	ImGui::SameLine();
-	if(ImGui::Button(L("Browse...")) && PickFolderDialog(gFolder, sizeof(gFolder),
+	if(ImGui::Button(browseLabel) && PickFolderDialog(gFolder, sizeof(gFolder),
 	   _("Folder for NODES*.DAT (a server's scriptfiles/NPCs/nodes)"), gFolder))
 		writeFolderSetting();
 	bool gameFolder = gFolder[0] && IsGameNodesFolder(gFolder);
-	if(gameFolder)
-		ImGui::TextColored(WARN_COLOR, "%s", _("That's the game's own data. Pick a server's scriptfiles/NPCs/nodes."));
+	if(gameFolder){
+		ImGui::PushStyleColor(ImGuiCol_Text, UiSemanticColor(UI_COLOR_WARNING));
+		ImGui::TextWrapped("%s", _("That's the game's own data. Pick a server's scriptfiles/NPCs/nodes."));
+		ImGui::PopStyleColor();
+	}
+	bool canWrite = gFolder[0] != '\0' && !gameFolder;
 
-	if(gFolder[0] == '\0' || gameFolder)
-		ImGui::BeginDisabled();
-	if(ImGui::Button(LI(ICON_FA_FLOPPY_DISK, "Save"))){
+	float half = MapToolsButtonWidth(2);
+	ImGui::BeginDisabled(!canWrite);
+	if(ImGui::Button(LI(ICON_FA_FOLDER_OPEN, "Load"), ImVec2(half, 0.0f))){
+		if(dirty > 0)
+			ImGui::OpenPopup(L("Discard node changes?"));
+		else
+			loadFromFolder();
+	}
+	ImGui::SetItemTooltip("%s", _("Edit the NODES*.DAT files already in that folder."));
+	ImGui::EndDisabled();
+	ImGui::SameLine();
+	if(ImGui::Button(LI(ICON_FA_ROTATE_LEFT, "Game nodes"), ImVec2(half, 0.0f))){
+		if(dirty > 0)
+			ImGui::OpenPopup(L("Discard node changes?##game"));
+		else
+			ReloadGameNodes();
+	}
+	ImGui::SetItemTooltip("%s", _("Start again from the game's own nodes."));
+
+	if(UiFooterButton(LI(ICON_FA_FLOPPY_DISK, "Save"), canWrite)){
 		int saved = 0;
 		char err[512];
 		if(SaveAreasToFolder(gFolder, &saved, err, sizeof(err)))
@@ -336,60 +418,30 @@ DrawNodesWindow(bool *open)
 	}
 	ImGui::SetItemTooltip("%s", _("Writes all 64 NODES*.DAT files to this folder. open.mp loads them when the\n"
 		"server starts."));
-	ImGui::SameLine();
-	if(ImGui::Button(LI(ICON_FA_FOLDER_OPEN, "Load"))){
-		if(dirty > 0)
-			ImGui::OpenPopup(L("Discard node changes?"));
-		else{
-			int loaded = 0;
-			char err[512];
-			if(LoadAreasFromFolder(gFolder, &loaded, err, sizeof(err)))
-				Toast(TOAST_SAVE, _("Loaded %d node files"), loaded);
-			else
-				Toast(TOAST_SAVE, _("Couldn't load the nodes: %s"), err);
-		}
-	}
-	ImGui::SetItemTooltip("%s", _("Edit the NODES*.DAT files already in that folder."));
-	if(gFolder[0] == '\0' || gameFolder)
-		ImGui::EndDisabled();
-	// On a narrow panel the last button goes to the next line instead of off the edge.
-	const char *gameLabel = LI(ICON_FA_ROTATE_LEFT, "Game nodes");
-	float gameWidth = ImGui::CalcTextSize(gameLabel).x + ImGui::GetStyle().FramePadding.x * 2.0f;
-	ImGui::SameLine();
-	if(ImGui::GetContentRegionAvail().x < gameWidth)
-		ImGui::NewLine();
-	if(ImGui::Button(gameLabel)){
-		if(dirty > 0)
-			ImGui::OpenPopup(L("Discard node changes?##game"));
-		else
-			ReloadGameNodes();
-	}
-	ImGui::SetItemTooltip("%s", _("Start again from the game's own nodes."));
 
 	if(ImGui::BeginPopupModal(L("Discard node changes?"), nil, ImGuiWindowFlags_AlwaysAutoResize)){
 		ImGui::Text(_("Changed files not saved: %d"), dirty);
-		if(ImGui::Button(L("Discard and load"))){
-			int loaded = 0;
-			char err[512];
-			if(LoadAreasFromFolder(gFolder, &loaded, err, sizeof(err)))
-				Toast(TOAST_SAVE, _("Loaded %d node files"), loaded);
-			else
-				Toast(TOAST_SAVE, _("Couldn't load the nodes: %s"), err);
+		ImGui::Spacing();
+		float width = popupButtonWidth(L("Discard and load"), L("Cancel"));
+		if(ImGui::Button(L("Discard and load"), ImVec2(width, 0.0f))){
+			loadFromFolder();
 			ImGui::CloseCurrentPopup();
 		}
 		ImGui::SameLine();
-		if(ImGui::Button(L("Cancel")))
+		if(ImGui::Button(L("Cancel"), ImVec2(width, 0.0f)))
 			ImGui::CloseCurrentPopup();
 		ImGui::EndPopup();
 	}
 	if(ImGui::BeginPopupModal(L("Discard node changes?##game"), nil, ImGuiWindowFlags_AlwaysAutoResize)){
 		ImGui::Text(_("Changed files not saved: %d"), dirty);
-		if(ImGui::Button(L("Discard"))){
+		ImGui::Spacing();
+		float width = popupButtonWidth(L("Discard"), L("Cancel"));
+		if(ImGui::Button(L("Discard"), ImVec2(width, 0.0f))){
 			ReloadGameNodes();
 			ImGui::CloseCurrentPopup();
 		}
 		ImGui::SameLine();
-		if(ImGui::Button(L("Cancel")))
+		if(ImGui::Button(L("Cancel"), ImVec2(width, 0.0f)))
 			ImGui::CloseCurrentPopup();
 		ImGui::EndPopup();
 	}

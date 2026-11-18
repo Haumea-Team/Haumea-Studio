@@ -1,6 +1,8 @@
 # A layer selected in the list wins over overlapping canvas hits. Groups move
 # together; double-click enters one so its members can be edited separately.
 open "$UI_FIXTURES/ui_map.pwn"
+click_item '*' '##editor'
+wait 2
 click_item '*' 'TextDraws'
 wait 5
 click_item 'TextDraws' 'Text' 1
@@ -21,8 +23,6 @@ hold Ctrl
 click_item 'TextDraws' 'text  Text' 2
 release Ctrl
 wait 2
-click_item 'TextDraws' 'Arrange'
-wait 3
 click_item 'TextDraws' 'Group'
 wait 3
 click_item 'TextDraws' 'text  Text' 1

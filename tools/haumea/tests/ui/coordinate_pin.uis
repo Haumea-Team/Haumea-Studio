@@ -4,6 +4,8 @@ shortcut window_tools
 wait 5
 click_object model=1271
 wait 5
+click_item 'Tools' '###tools_place'
+wait 2
 click_item 'Tools' 'Coordinate pin'
 click_item 'Tools' 'Pin at selected centre'
 wait 3

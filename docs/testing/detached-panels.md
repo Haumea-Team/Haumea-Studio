@@ -10,13 +10,13 @@ Window positions are saved in the editor's existing `imgui.ini`.
 
 ## Acceptance checks
 
-- Drag View, Time & Weather, Object Info and Object Browser out and back. Resize
+- Drag View, Time & Weather, Object Info and Asset Browser out and back. Resize
   and close a detached panel, then reopen it from Window. Closing a panel must
   not close the editor.
 - Change weather/rendering settings and numeric object properties in detached
   panels. Verify the main scene updates and text editing does not move the camera
   or trigger editor shortcuts. Check Ctrl+A/C/V and scrolling in text fields.
-- Check Object Browser thumbnails and the rotating model preview on both screens.
+- Check Asset Browser thumbnails and the rotating model preview on both screens.
 - Move the main window to a different monitor, including one to the left or above
   the primary monitor. Test translation/rotation, water gizmos, rectangle
   selection, placement/brush markers and notification positions.

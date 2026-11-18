@@ -1,6 +1,7 @@
 #include "haumea.h"
 #include "modloader.h"
 #include <limits.h>
+#include <algorithm>
 
 namespace WaterLevel
 {
@@ -139,8 +140,8 @@ Initialise(void)
 	TxdPop();
 }
 
-#define TEMPBUFFERVERTSIZE 256
-#define TEMPBUFFERINDEXSIZE 1024
+#define TEMPBUFFERVERTSIZE 4096
+#define TEMPBUFFERINDEXSIZE 16384
 static int TempBufferIndicesStored;
 static int TempBufferVerticesStored;
 static rw::RWDEVICE::Im3DVertex TempVertexBuffer[TEMPBUFFERVERTSIZE];
@@ -252,12 +253,24 @@ RenderOneFlatLargeWaterPoly(float x, float y, float z, rw::RGBA const &color)
 	TempIndexBuffer[TempBufferIndicesStored++] = i+3;
 }
 
+// The texture repeats every 32 units. Binding a raster gives it the wrap
+// mode of whatever was drawn last (and librw's GL3 address state only takes
+// with no raster bound), so with something clamped before it the water
+// clamped too: the sea past the map's edge was one flat colour.
+static void
+BindWaterTexture(void)
+{
+	rw::SetRenderStatePtr(rw::TEXTURERASTER, nil);
+	rw::SetRenderState(rw::TEXTUREADDRESS, rw::Texture::WRAP);
+	rw::SetRenderStatePtr(rw::TEXTURERASTER, gpWaterTex->raster);
+}
+
 void
 RenderWaterpro(void)
 {
 	int i, j;
 
-	rw::SetRenderStatePtr(rw::TEXTURERASTER, gpWaterTex->raster);
+	BindWaterTexture();
 	rw::SetRenderState(rw::VERTEXALPHA, 1);
 	rw::SetRenderState(rw::FOGENABLE, gEnableFog);
 
@@ -324,10 +337,13 @@ RenderEditorWaterQuad(float x0, float y0, float x1, float y1, float z,
 		RenderAndEmptyRenderBuffer();
 
 	int i = TempBufferVerticesStored;
-	float u0 = x0*uvscale;
-	float u1 = x1*uvscale;
-	float v0 = y0*uvscale;
-	float v1 = y1*uvscale;
+	// From a corner on the texture's 32-unit grid, so it lines up with the
+	// native water while the values stay small.
+	float ox = floorf(x0/32.0f)*32.0f, oy = floorf(y0/32.0f)*32.0f;
+	float u0 = (x0-ox)*uvscale;
+	float u1 = (x1-ox)*uvscale;
+	float v0 = (y0-oy)*uvscale;
+	float v1 = (y1-oy)*uvscale;
 	TempVertexBuffer[i + 0].setX(x0);
 	TempVertexBuffer[i + 0].setY(y0);
 	TempVertexBuffer[i + 0].setZ(z);
@@ -406,6 +422,36 @@ GetWaterHeight(float x, float y, float *z)
 	return false;
 }
 
+// Part of the sea past the map, as tiles in reach of the camera. Fog is
+// worked out at the corners, so one quad thousands of units wide took the fog
+// of its far corners across all of it, the sky's colour; tiles the size of
+// water.dat's keep it to the distance.
+static void
+RenderEditorWaterRect(float x0, float y0, float x1, float y1, float z, rw::RGBA const &color)
+{
+	const float tile = 250.0f;
+	const rw::V3d &cam = TheCamera.m_position;
+	float reach = TheCamera.m_rwcam->farPlane + tile;
+	float ax = std::max(x0, cam.x - reach), bx = std::min(x1, cam.x + reach);
+	float ay = std::max(y0, cam.y - reach), by = std::min(y1, cam.y + reach);
+	if(ax >= bx || ay >= by)
+		return;
+	// The grid is fixed to the world, so tiles do not swim as the camera moves.
+	ax = std::max(x0, x0 + floorf((ax - x0) / tile) * tile);
+	ay = std::max(y0, y0 + floorf((ay - y0) / tile) * tile);
+	rw::Sphere sph;
+	sph.radius = tile * 0.7072f;
+	for(float x = ax; x < bx; x += tile)
+		for(float y = ay; y < by; y += tile){
+			float tx = std::min(x + tile, x1), ty = std::min(y + tile, y1);
+			sph.center.x = (x + tx) * 0.5f;
+			sph.center.y = (y + ty) * 0.5f;
+			sph.center.z = z;
+			if(TheCamera.m_rwcam->frustumTestSphere(&sph) != rw::Camera::SPHEREOUTSIDE)
+				RenderEditorWaterQuad(x, y, tx, ty, z, color);
+		}
+}
+
 static void
 RenderEditorWaterExtension(void)
 {
@@ -421,47 +467,67 @@ RenderEditorWaterExtension(void)
 	const float z = 0.0f;
 
 	// Four sides and four corners form a ring around the native ±3,000 area.
-	RenderEditorWaterQuad(-outer, -inner, -inner, inner, z, color);
-	RenderEditorWaterQuad(inner, -inner, outer, inner, z, color);
-	RenderEditorWaterQuad(-inner, -outer, inner, -inner, z, color);
-	RenderEditorWaterQuad(-inner, inner, inner, outer, z, color);
-	RenderEditorWaterQuad(-outer, -outer, -inner, -inner, z, color);
-	RenderEditorWaterQuad(inner, -outer, outer, -inner, z, color);
-	RenderEditorWaterQuad(-outer, inner, -inner, outer, z, color);
-	RenderEditorWaterQuad(inner, inner, outer, outer, z, color);
+	RenderEditorWaterRect(-outer, -inner, -inner, inner, z, color);
+	RenderEditorWaterRect(inner, -inner, outer, inner, z, color);
+	RenderEditorWaterRect(-inner, -outer, inner, -inner, z, color);
+	RenderEditorWaterRect(-inner, inner, inner, outer, z, color);
+	RenderEditorWaterRect(-outer, -outer, -inner, -inner, z, color);
+	RenderEditorWaterRect(inner, -outer, outer, -inner, z, color);
+	RenderEditorWaterRect(-outer, inner, -inner, outer, z, color);
+	RenderEditorWaterRect(inner, inner, outer, outer, z, color);
 }
+
+// water.dat's quads are v0 v1 along one edge and v2 v3 along the other, some
+// of them thousands of units long. Fog is worked out at the corners, so one
+// that long took the fog of its far ends across all of it: a light strip
+// across the sea (the bay west of the Gant Bridge). Drawn as cells of about
+// WATER_CELL, it keeps to the distance.
+static const float WATER_CELL = 125.0f;
 
 static void
 RenderWaterQuad(WaterQuad *q)
 {
-	if(TempBufferVerticesStored+4 >= TEMPBUFFERVERTSIZE ||
-	   TempBufferIndicesStored+6 >= TEMPBUFFERINDEXSIZE)
-		RenderAndEmptyRenderBuffer();
-
 	rw::RGBA color;
-
 	rw::convColor(&color, &Timecycle::currentColours.water);
 
-	WaterVertex *v;
-	int i = TempBufferVerticesStored;
-	int j;
-	for(j = 0; j < 4; j++){
-		v = &waterVertices[q->indices[j]];
-		TempVertexBuffer[i + j].setX(v->pos.x);
-		TempVertexBuffer[i + j].setY(v->pos.y);
-		TempVertexBuffer[i + j].setZ(v->pos.z);
-		TempVertexBuffer[i + j].setU(v->pos.x*uvscale);
-		TempVertexBuffer[i + j].setV(v->pos.y*uvscale);
-		TempVertexBuffer[i + j].setColor(color.red, color.green, color.blue, color.alpha);
+	const rw::V3d &p0 = waterVertices[q->indices[0]].pos, &p1 = waterVertices[q->indices[1]].pos;
+	const rw::V3d &p2 = waterVertices[q->indices[2]].pos, &p3 = waterVertices[q->indices[3]].pos;
+	float lenS = std::max(length(sub(p1, p0)), length(sub(p3, p2)));
+	float lenT = std::max(length(sub(p2, p0)), length(sub(p3, p1)));
+	int ns = clamp((int)ceilf(lenS / WATER_CELL), 1, 64);
+	int nt = clamp((int)ceilf(lenT / WATER_CELL), 1, 64);
+	auto at = [&](int i, int j){
+		float s = (float)i / ns, t = (float)j / nt;
+		rw::V3d a = add(p0, scale(sub(p1, p0), s));
+		rw::V3d b = add(p2, scale(sub(p3, p2), s));
+		return add(a, scale(sub(b, a), t));
+	};
+	for(int j = 0; j < nt; j++){
+		if(TempBufferVerticesStored + 2*(ns+1) >= TEMPBUFFERVERTSIZE ||
+		   TempBufferIndicesStored + 6*ns >= TEMPBUFFERINDEXSIZE)
+			RenderAndEmptyRenderBuffer();
+		int base = TempBufferVerticesStored;
+		for(int row = 0; row < 2; row++)
+			for(int i = 0; i <= ns; i++){
+				rw::V3d v = at(i, j + row);
+				int k = TempBufferVerticesStored++;
+				TempVertexBuffer[k].setX(v.x);
+				TempVertexBuffer[k].setY(v.y);
+				TempVertexBuffer[k].setZ(v.z);
+				TempVertexBuffer[k].setU(v.x*uvscale);
+				TempVertexBuffer[k].setV(v.y*uvscale);
+				TempVertexBuffer[k].setColor(color.red, color.green, color.blue, color.alpha);
+			}
+		for(int i = 0; i < ns; i++){
+			int a = base + i, b = base + i + 1, c = base + ns + 1 + i, d = c + 1;
+			TempIndexBuffer[TempBufferIndicesStored++] = a;
+			TempIndexBuffer[TempBufferIndicesStored++] = b;
+			TempIndexBuffer[TempBufferIndicesStored++] = c;
+			TempIndexBuffer[TempBufferIndicesStored++] = c;
+			TempIndexBuffer[TempBufferIndicesStored++] = b;
+			TempIndexBuffer[TempBufferIndicesStored++] = d;
+		}
 	}
-
-	TempBufferVerticesStored += 4;
-	TempIndexBuffer[TempBufferIndicesStored++] = i+0;
-	TempIndexBuffer[TempBufferIndicesStored++] = i+1;
-	TempIndexBuffer[TempBufferIndicesStored++] = i+2;
-	TempIndexBuffer[TempBufferIndicesStored++] = i+2;
-	TempIndexBuffer[TempBufferIndicesStored++] = i+1;
-	TempIndexBuffer[TempBufferIndicesStored++] = i+3;
 }
 
 static void
@@ -499,7 +565,7 @@ RenderWater(void)
 {
 	int i;
 
-	rw::SetRenderStatePtr(rw::TEXTURERASTER, gpWaterTex->raster);
+	BindWaterTexture();
 	rw::SetRenderState(rw::VERTEXALPHA, 1);
 	rw::SetRenderState(rw::FOGENABLE, gEnableFog);
 

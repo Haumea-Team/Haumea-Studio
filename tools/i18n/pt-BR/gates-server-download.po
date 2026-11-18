@@ -1,0 +1,123 @@
+#: tools/haumea
+msgid "Moves"
+msgstr "Move-se"
+
+#: tools/haumea
+msgid "Starts"
+msgstr "Começa"
+
+#: tools/haumea
+msgid "When the map loads"
+msgstr "Quando o mapa carrega"
+
+#: tools/haumea
+msgid "When a player presses a key"
+msgstr "Quando um jogador aperta uma tecla"
+
+#: tools/haumea
+msgid "When a driver sounds the horn"
+msgstr "Quando um motorista buzina"
+
+#: tools/haumea
+msgid "A gate: it moves back after a while. The map's code needs\n<map>_Gates(playerid, newkeys, oldkeys) called from OnPlayerKeyStateChange;\nTest in game does that."
+msgstr "Um portão: ele volta depois de um tempo. O código do mapa precisa de\n<map>_Gates(playerid, newkeys, oldkeys) chamado em OnPlayerKeyStateChange;\no Testar no jogo já faz isso."
+
+#: tools/haumea
+msgid "Closes after"
+msgstr "Fecha depois de"
+
+#: tools/haumea
+msgid "Seconds it stands open."
+msgstr "Segundos que ele fica aberto."
+
+#: tools/haumea
+msgid "Garage door sounds"
+msgstr "Sons de portão de garagem"
+
+#: tools/haumea
+msgid "The open.mp server (%s) is in %s."
+msgstr "O servidor open.mp (%s) está em %s."
+
+#: tools/haumea
+msgid "Could not download the open.mp server: %s"
+msgstr "Não foi possível baixar o servidor open.mp: %s"
+
+#: tools/haumea
+msgid "Download the open.mp server into it"
+msgstr "Baixar o servidor open.mp nela"
+
+#: tools/haumea
+msgid "The latest open.mp release from GitHub, so Test in game and pawncc work in it.\nFiles already in the folder are kept."
+msgstr "A versão mais recente do open.mp no GitHub, para o Testar no jogo e o pawncc funcionarem nela.\nOs arquivos que já estão na pasta são mantidos."
+
+#: tools/haumea
+msgid "Downloading the open.mp server: %.1f MB"
+msgstr "Baixando o servidor open.mp: %.1f MB"
+
+#: tools/haumea
+msgid "It already has a server."
+msgstr "Ela já tem um servidor."
+
+#: tools/haumea
+msgid "%d of those models were imported into the game's modloader/Haumea folder, which SA-MP players don't have. They can become custom models in the server's models folder."
+msgstr "%d desses modelos foram importados para a pasta modloader/Haumea do jogo, que os jogadores do SA-MP não têm. Eles podem virar modelos personalizados na pasta models do servidor."
+
+#: tools/haumea
+msgid ", but artwork is off in the server's config (Add Custom Model turns it on)"
+msgstr ", mas o artwork está desativado na configuração do servidor (Adicionar modelo personalizado o ativa)"
+
+#: tools/haumea
+msgid "A custom model's texture: players on the SA-MP 0.3.DL client download it;\n0.3.7 players see nothing there."
+msgstr "Uma textura de modelo personalizado: jogadores com o cliente SA-MP 0.3.DL a baixam;\njogadores do 0.3.7 não veem nada ali."
+
+#: tools/haumea
+msgid "Add Custom Model"
+msgstr "Adicionar modelo personalizado"
+
+#: tools/haumea
+msgid "Artwork is off on this server: players won't get custom models."
+msgstr "O artwork está desativado neste servidor: os jogadores não vão receber modelos personalizados."
+
+#: tools/haumea
+msgid "Artwork is on in %s."
+msgstr "O artwork está ativado em %s."
+
+#: tools/haumea
+msgid "Custom Model..."
+msgstr "Modelo personalizado..."
+
+#: tools/haumea
+msgid "Players on the SA-MP 0.3.DL client download custom models."
+msgstr "Jogadores com o cliente SA-MP 0.3.DL baixam os modelos personalizados."
+
+#: tools/haumea
+msgid "Sets artwork.enable in config.json (open.mp), or useartwork 1 in server.cfg (SA-MP)."
+msgstr "Define artwork.enable no config.json (open.mp) ou useartwork 1 no server.cfg (SA-MP)."
+
+#: tools/haumea
+msgid "Turn on artwork"
+msgstr "Ativar artwork"
+
+#: tools/haumea
+msgid "%d element(s) use custom models: their DFF and TXD go in the server's models folder, with artwork enabled%s; players need the SA-MP 0.3.DL client.%s"
+msgstr "%d elemento(s) usam modelos personalizados: o DFF e o TXD deles vão na pasta models do servidor, com o artwork ativado%s; os jogadores precisam do cliente SA-MP 0.3.DL.%s"
+
+#: tools/haumea
+msgid "In the workspace's models folder."
+msgstr "Na pasta models do workspace."
+
+#: tools/haumea
+msgid "It goes into the workspace's models folder; maps that use it register it in their code."
+msgstr "Ele vai para a pasta models do workspace; os mapas que o usam o registram no próprio código."
+
+#: tools/haumea
+msgid "Puts your DFF and TXD in the server's models folder; maps that use it register it\nin their own code. Players on the SA-MP 0.3.DL client download it. The game folder isn't touched."
+msgstr "Coloca seu DFF e TXD na pasta models do servidor; os mapas que o usam o registram\nno próprio código. Jogadores com o cliente SA-MP 0.3.DL o baixam. A pasta do jogo não é alterada."
+
+#: tools/haumea
+msgid "To keep them: add it as a custom model (File > Import > Custom Model) with its DFF and TXD; anything else needs a similar game or SA-MP object in its place (search the Asset Browser)."
+msgstr "Para mantê-los: adicione-o como modelo personalizado (Arquivo > Importar > Modelo personalizado) com seu DFF e TXD; o resto precisa de um objeto parecido do jogo ou do SA-MP no lugar (procure no Navegador de recursos)."
+
+#: tools/haumea
+msgid "Your own DFF and TXD, copied into the server's models folder. Maps that use them register them in their own code (AddSimpleModel, AddCharModel); the server (open.mp, or SA-MP 0.3.DL) sends them to players as they join, and players need the SA-MP 0.3.DL client. Nothing is written into the game folder."
+msgstr "Seu próprio DFF e TXD, copiados para a pasta models do servidor. Os mapas que os usam os registram no próprio código (AddSimpleModel, AddCharModel); o servidor (open.mp ou SA-MP 0.3.DL) os envia aos jogadores quando entram, e os jogadores precisam do cliente SA-MP 0.3.DL. Nada é gravado na pasta do jogo."

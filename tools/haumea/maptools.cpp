@@ -361,36 +361,72 @@ MapToolsDuplicate(std::string *error)
 	return made > 0 ? made : -1;
 }
 
+// ---- panel layout ---------------------------------------------------------
+// Shared with the Tools panel's other sections (coordinatepin.cpp,
+// layoutpaths.cpp) and the node panels (nodes_ui.cpp, sapaths.cpp).
+
+// The width of each of n buttons sharing the rest of the row.
+float
+MapToolsButtonWidth(int n)
+{
+	float spacing = ImGui::GetStyle().ItemSpacing.x;
+	return floorf((ImGui::GetContentRegionAvail().x - spacing * (n - 1)) / n);
+}
+
+// The item width (negative: from the right edge) that leaves room for a
+// button with this label at the end of the field's row.
+float
+MapToolsWidthBeforeButton(const char *label)
+{
+	const ImGuiStyle &style = ImGui::GetStyle();
+	return -(ImGui::CalcTextSize(label, nil, true).x + style.FramePadding.x * 2.0f + style.ItemSpacing.x);
+}
+
+// A section's one main action: solid accent, white text, size as given
+// (full width by default).
+bool
+MapToolsMainButton(const char *label, const ImVec2 &size = ImVec2(-FLT_MIN, 0.0f))
+{
+	ImVec4 fill = UiAccentFill();
+	ImGui::PushStyleColor(ImGuiCol_Button, fill);
+	ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(fill.x * 1.12f, fill.y * 1.12f, fill.z * 1.12f, fill.w));
+	ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(fill.x * 0.88f, fill.y * 0.88f, fill.z * 0.88f, fill.w));
+	ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
+	bool pressed = ImGui::Button(label, size);
+	ImGui::PopStyleColor(4);
+	return pressed;
+}
+
 static void
 cloneOffsetSection(void)
 {
 	MapCloneOffset &o = gCloneOffset;
-	ImGui::Checkbox(_("Offset each duplicate"), &o.enabled);
+	UiCheckbox(_("Offset each duplicate"), &o.enabled);
 	ImGui::SetItemTooltip(_("Duplicate (Ctrl+D) moves and turns the copies by this much."));
 	if(!o.enabled)
 		return;
+	UiCheckbox(_("Along the object's own axes"), &o.local);
+	ImGui::SetItemTooltip(_("Off: world X, Y and Z. On: the first selected object's axes."));
 	int mode = o.random ? 1 : 0;
 	static const char *modes[] = { N_("Fixed"), N_("Random") };
 	if(UiCombo(_("Mode##cloneoffset"), &mode, modes, IM_ARRAYSIZE(modes)))
 		o.random = mode == 1;
 	ImGui::SetItemTooltip(_("Random: a new amount within the ranges each time."));
-	ImGui::Checkbox(_("Along the object's own axes"), &o.local);
-	ImGui::SetItemTooltip(_("Off: world X, Y and Z. On: the first selected object's axes."));
 	if(!o.random){
-		ImGui::InputFloat3(_("Move##cloneoffset"), o.fixed, "%.3f");
-		ImGui::InputFloat3(_("Turn##cloneoffset"), o.fixed + 3, "%.2f");
+		UiInputFloat3(_("Move##cloneoffset"), o.fixed, "%.3f");
+		UiInputFloat3(_("Turn##cloneoffset"), o.fixed + 3, "%.2f");
 	}else{
 		static const char *labels[6] = { "X", "Y", "Z", "RX", "RY", "RZ" };
 		for(int i = 0; i < 6; i++){
 			ImGui::PushID(i);
 			float range[2] = { o.low[i], o.high[i] };
-			if(ImGui::InputFloat2(labels[i], range, i < 3 ? "%.3f" : "%.2f")){
+			if(UiInputFloat2(labels[i], range, i < 3 ? "%.3f" : "%.2f")){
 				o.low[i] = range[0];
 				o.high[i] = range[1];
 			}
+			ImGui::SetItemTooltip("%s", _("From and to: metres for X, Y and Z, degrees for the turns."));
 			ImGui::PopID();
 		}
-		ImGui::TextDisabled(_("From and to: metres for X, Y and Z, degrees for the turns."));
 	}
 }
 
@@ -1019,38 +1055,41 @@ arraySection(const std::vector<ObjectInst*> &objs)
 	}
 	ImGui::SetItemTooltip(_("Linear: each copy moves and turns by the same step.\n"
 		"Radial: copies go around a centre point."));
-	ImGui::InputInt(_("Copies"), &params.count);
+	UiInputInt(_("Copies"), &params.count);
 	params.count = clamp(params.count, 1, 500);
 	ImGui::SetItemTooltip(_("Copies of the selection, not counting it."));
 	if(!params.radial){
-		ImGui::InputFloat3(_("Offset"), &params.offset.x, "%.3f");
+		UiInputFloat3(_("Offset"), &params.offset.x, "%.3f");
 		ImGui::SetItemTooltip(_("How far each copy moves from the one before, in metres."));
-		ImGui::InputFloat3(_("Rotate"), &params.rotate.x, "%.2f");
+		UiInputFloat3(_("Rotate"), &params.rotate.x, "%.2f");
 		ImGui::SetItemTooltip(_("How much each copy turns from the one before, in degrees\n"
 			"around the world X, Y and Z axes, about the selection's centre."));
-		ImGui::InputInt(_("Rows"), &params.rows);
+		UiInputInt(_("Rows"), &params.rows);
 		params.rows = clamp(params.rows, 1, 500);
 		ImGui::SetItemTooltip(_("Repeats the whole line for a grid. 1 is a single line."));
 		if(params.rows > 1){
-			ImGui::InputFloat3(_("Row offset"), &params.rowOffset.x, "%.3f");
+			UiInputFloat3(_("Row offset"), &params.rowOffset.x, "%.3f");
 			ImGui::SetItemTooltip(_("How far each row moves from the one before, in metres."));
 		}
 	}else{
-		ImGui::InputFloat3(_("Centre"), &params.centre.x, "%.3f");
+		UiInputFloat3(_("Centre"), &params.centre.x, "%.3f");
 		ImGui::SetItemTooltip(_("The point the copies go around (a vertical axis)."));
-		if(ImGui::SmallButton(_("Selection centre")) && !objs.empty())
+		float half = MapToolsButtonWidth(2);
+		ImGui::BeginDisabled(objs.empty());
+		if(ImGui::Button(_("Selection centre"), ImVec2(half, 0)))
 			params.centre = groupCentre(objs);
+		ImGui::EndDisabled();
 		ImGui::SameLine();
-		if(ImGui::SmallButton(_("Camera target")))
+		if(ImGui::Button(_("Camera target"), ImVec2(half, 0)))
 			params.centre = TheCamera.m_target;
-		ImGui::InputFloat(_("Angle"), &params.angle, 15.0f, 90.0f, "%.1f");
+		UiInputFloat(_("Angle"), &params.angle, 15.0f, 90.0f, "%.1f");
 		ImGui::SetItemTooltip(_("The angle the copies cover. 360 spreads them evenly around\n"
 			"a full circle together with the selection."));
 	}
-	ImGui::Checkbox(_("Preview"), &preview);
+	UiCheckbox(_("Preview"), &preview);
 	ImGui::SetItemTooltip(_("Shows where the copies go before you apply."));
 	ImGui::BeginDisabled(objs.empty());
-	if(ImGui::Button(_("Apply##array"))){
+	if(MapToolsMainButton(_("Apply##array"))){
 		std::string error;
 		reportResult(MapToolsArray(params, &error), error, N_("Array"));
 	}
@@ -1079,20 +1118,21 @@ mirrorSection(const std::vector<ObjectInst*> &objs)
 	ImGui::SetItemTooltip(_("Where the mirror is: through the selection's centre, the\n"
 		"world origin, or a coordinate you set."));
 	if(around == 2){
-		ImGui::InputFloat(axis == 0 ? "X##mirrorat" : "Y##mirrorat", &at[axis], 0.5f, 5.0f, "%.3f");
+		ImGui::SetNextItemWidth(MapToolsWidthBeforeButton(_("Camera target")));
+		UiInputFloat(axis == 0 ? "X##mirrorat" : "Y##mirrorat", &at[axis], 0.5f, 5.0f, "%.3f");
 		ImGui::SetItemTooltip(_("The mirror's %s coordinate."), axis == 0 ? "X" : "Y");
 		ImGui::SameLine();
-		if(ImGui::SmallButton(_("Camera target")))
+		if(ImGui::Button(_("Camera target")))
 			at[axis] = axis == 0 ? TheCamera.m_target.x : TheCamera.m_target.y;
 	}
-	ImGui::Checkbox(_("Keep original"), &keepOriginal);
+	UiCheckbox(_("Keep original"), &keepOriginal);
 	ImGui::SetItemTooltip(_("Mirrors a copy, for symmetric builds: the selection stays."));
-	ImGui::Checkbox(_("Preview##mirror"), &preview);
+	UiCheckbox(_("Preview##mirror"), &preview);
 	ImGui::SetItemTooltip(_("Shows the mirror and where the objects go before you apply."));
 	float origin = 0.0f;
 	const float *plane = around == 0 ? nil : around == 1 ? &origin : &at[axis];
 	ImGui::BeginDisabled(objs.empty());
-	if(ImGui::Button(_("Apply##mirror_apply"))){
+	if(MapToolsMainButton(_("Apply##mirror_apply"))){
 		std::string error;
 		reportResult(MapToolsMirror(axis, plane, keepOriginal, &error), error, N_("Mirror"));
 	}
@@ -1131,13 +1171,15 @@ alignSection(const std::vector<ObjectInst*> &objs)
 {
 	static int axis = 2;
 	static float step = 90.0f;
-	ImGui::Combo(_("Axis##align"), &axis, axisNames, IM_ARRAYSIZE(axisNames));
+	UiCombo(_("Axis##align"), &axis, axisNames, IM_ARRAYSIZE(axisNames));
+	// Min, Centre, Max and Distribute share one row.
+	float quarter = MapToolsButtonWidth(4);
 	ImGui::BeginDisabled(objs.size() < 2);
 	static const char *modes[] = { N_("Min"), N_("Centre"), N_("Max") };
 	for(int m = 0; m < 3; m++){
 		if(m > 0)
 			ImGui::SameLine();
-		if(ImGui::Button(_(modes[m]))){
+		if(ImGui::Button(_(modes[m]), ImVec2(quarter, 0))){
 			std::string error;
 			reportResult(MapToolsAlign(axis, m, &error), error, N_("Align"));
 		}
@@ -1147,14 +1189,15 @@ alignSection(const std::vector<ObjectInst*> &objs)
 	ImGui::EndDisabled();
 	ImGui::SameLine();
 	ImGui::BeginDisabled(objs.size() < 3);
-	if(ImGui::Button(_("Distribute"))){
+	if(ImGui::Button(_("Distribute"), ImVec2(quarter, 0))){
 		std::string error;
 		reportResult(MapToolsDistribute(axis, &error), error, N_("Distribute"));
 	}
 	ImGui::SetItemTooltip(_("Spaces the objects evenly along the axis between the two\n"
 		"outermost ones, which stay where they are."));
 	ImGui::EndDisabled();
-	ImGui::InputFloat(_("Step##snaprot"), &step, 5.0f, 15.0f, "%.1f");
+	ImGui::SetNextItemWidth(MapToolsWidthBeforeButton(_("Snap rotations")));
+	UiInputFloat(_("Step##snaprot"), &step, 5.0f, 15.0f, "%.1f");
 	step = clamp(step, 0.1f, 180.0f);
 	ImGui::SameLine();
 	ImGui::BeginDisabled(objs.empty());
@@ -1170,17 +1213,18 @@ static void
 dropSection(const std::vector<ObjectInst*> &objs)
 {
 	ImGui::BeginDisabled(objs.empty());
-	if(ImGui::Button(_("Drop to ground"))){
+	if(ImGui::Button(_("Drop to ground"), ImVec2(-FLT_MIN, 0))){
 		std::string error;
 		reportResult(MapToolsDropToGround(&error), error, N_("Drop to ground"));
 	}
 	ImGui::SetItemTooltip(_("Puts each object on the ground below it."));
 	ImGui::EndDisabled();
 	ImGui::BeginDisabled(objs.size() < 2);
+	float half = MapToolsButtonWidth(2);
 	for(int attach = 1; attach >= 0; attach--){
 		if(attach == 0)
 			ImGui::SameLine();
-		if(ImGui::Button(attach ? _("Copy as attachments") : _("Copy as offsets"))){
+		if(ImGui::Button(attach ? _("Copy as attachments") : _("Copy as offsets"), ImVec2(half, 0))){
 			std::string error;
 			std::string code = MapToolsRelativeOffsetsPawn(attach == 1, &error);
 			if(code.empty())
@@ -1212,7 +1256,7 @@ lineSection(void)
 	if(source > (int)paths.size())
 		source = 0;
 	const char *current = source == 0 ? _("Picked points") : paths[source - 1].c_str();
-	if(ImGui::BeginCombo(_("Line"), current)){
+	if(UiBeginCombo(_("Line"), current)){
 		if(ImGui::Selectable(_("Picked points"), source == 0))
 			source = 0;
 		for(size_t i = 0; i < paths.size(); i++){
@@ -1226,7 +1270,8 @@ lineSection(void)
 	ImGui::SetItemTooltip(_("Points you click in the world, or an NPC path's points in order."));
 	std::vector<rw::V3d> points;
 	if(source == 0){
-		if(ImGui::Button(gPicking ? _("Stop picking") : _("Pick points"))){
+		float half = MapToolsButtonWidth(2);
+		if(ImGui::Button(gPicking ? _("Stop picking") : _("Pick points"), ImVec2(half, 0))){
 			gPicking = !gPicking;
 			if(gPicking){
 				SpawnExitPlaceMode();
@@ -1238,9 +1283,10 @@ lineSection(void)
 		ImGui::SetItemTooltip(_("Click points in the world one after another.\n"
 			"Right-click or Esc stops."));
 		ImGui::SameLine();
-		if(ImGui::Button(_("Clear")))
+		ImGui::BeginDisabled(gPickedLine.empty());
+		if(ImGui::Button(_("Clear"), ImVec2(half, 0)))
 			gPickedLine.clear();
-		ImGui::SameLine();
+		ImGui::EndDisabled();
 		ImGui::TextDisabled(_("%d points"), (int)gPickedLine.size());
 		points = gPickedLine;
 	}else{
@@ -1250,40 +1296,40 @@ lineSection(void)
 			points.push_back(pathPoints[i]->m_translation);
 		gPicking = false;
 	}
-	ImGui::InputInt(_("Model"), &model, 0, 0);
+	ImGui::SetNextItemWidth(MapToolsWidthBeforeButton(_("Selected")));
+	UiInputInt(_("Model"), &model, 0, 0);
 	ImGui::SetItemTooltip("%s", GetObjectDef(model) ? modelName(model) : _("no such model"));
 	ImGui::SameLine();
 	std::vector<ObjectInst*> objs = selectedObjects();
 	ImGui::BeginDisabled(objs.empty());
-	if(ImGui::SmallButton(_("Selected")))
+	if(ImGui::Button(_("Selected")))
 		model = objs[0]->m_objectId;
 	ImGui::SetItemTooltip(_("Use the first selected object's model."));
 	ImGui::EndDisabled();
-	ImGui::InputFloat(_("Spacing"), &spacing, 0.5f, 2.0f, "%.2f m");
+	ImGui::SetNextItemWidth(MapToolsWidthBeforeButton(_("Fit")));
+	UiInputFloat(_("Spacing"), &spacing, 0.5f, 2.0f, "%.2f m");
 	spacing = clamp(spacing, 0.1f, 1000.0f);
 	ImGui::SameLine();
 	ImGui::BeginDisabled(GetObjectDef(model) == nil);
-	if(ImGui::SmallButton(_("Fit")))
+	if(ImGui::Button(_("Fit")))
 		spacing = std::max(MapToolsModelLength(model, nil), 0.1f);
 	ImGui::SetItemTooltip(_("The model's length, so the pieces just touch."));
 	ImGui::EndDisabled();
-	ImGui::Checkbox(_("Along its length"), &alongLength);
+	UiInputFloat(_("Heading"), &heading, 15.0f, 90.0f, "%.1f");
+	ImGui::SetItemTooltip(_("Added to the line's direction, in degrees: 90 turns them sideways."));
+	UiCheckbox(_("Along its length"), &alongLength);
 	ImGui::SetItemTooltip(_("Turns models that are longer sideways (most fences and barriers)\n"
 		"so they run along the line."));
-	ImGui::InputFloat(_("Heading"), &heading, 15.0f, 90.0f, "%.1f");
-	ImGui::SetItemTooltip(_("Added to the line's direction, in degrees: 90 turns them sideways."));
-	ImGui::Checkbox(_("Follow slope"), &followSlope);
+	UiCheckbox(_("Follow slope"), &followSlope);
 	ImGui::SetItemTooltip(_("Tilts each object up or down with the line."));
-	ImGui::SameLine();
-	ImGui::Checkbox(_("On ground"), &toGround);
+	UiCheckbox(_("On ground"), &toGround);
 	ImGui::SetItemTooltip(_("Puts each object on the ground below the line."));
-	ImGui::Checkbox(_("Preview##line"), &preview);
+	UiCheckbox(_("Preview##line"), &preview);
 	std::vector<rw::V3d> positions, degrees;
 	bool ok = MapToolsLayAlongPreview(points, model, spacing, heading, alongLength, followSlope,
 		toGround, positions, degrees);
-	ImGui::SameLine();
 	ImGui::BeginDisabled(!ok || GetObjectDef(model) == nil);
-	if(ImGui::Button(_("Apply##line"))){
+	if(MapToolsMainButton(_("Apply##line"))){
 		std::string error;
 		reportResult(MapToolsLayAlong(points, model, spacing, heading, alongLength, followSlope,
 			toGround, &error),
@@ -1311,7 +1357,7 @@ MapToolsHeader(const char *name, int flags)
 	bool asked = gOpenSection && strcmp(gOpenSection, name) == 0;
 	if(asked)
 		ImGui::SetNextItemOpen(true);
-	bool open = ImGui::CollapsingHeader(L(name), flags);
+	bool open = UiSection(L(name), flags);
 	if(asked){
 		ImGui::SetScrollHereY(0.0f);
 		gOpenSection = nil;
@@ -1319,66 +1365,93 @@ MapToolsHeader(const char *name, int flags)
 	return open;
 }
 
+// The Tools panel's sections of one of its tabs: 0 placing (the coordinate
+// pin, the pivot), 1 arranging what is selected, 2 making more of it.
 void
-MapToolsPanel(void)
+MapToolsTab(int tab)
 {
 	gPanelFrame = ImGui::GetFrameCount();
 	std::vector<ObjectInst*> objs = selectedObjects();
 	bool lineOpen = false;
-	// The everyday tools first; the specialised ones below "More".
-	if(MapToolsHeader(N_("Array")))
-		arraySection(objs);
-	if(MapToolsHeader(N_("Mirror")))
-		mirrorSection(objs);
-	if(MapToolsHeader(N_("Align & distribute")))
-		alignSection(objs);
-	if(MapToolsHeader(N_("Along a line"), gPicking ? ImGuiTreeNodeFlags_DefaultOpen : 0)){
-		lineOpen = true;
-		lineSection();
+	switch(tab){
+	case 0:
+		if(MapToolsHeader(N_("Coordinate pin"))){
+			CoordinatePinPanel();
+			if(CoordinatePinOwnsMouse()) gPicking = false;
+		}
+		if(MapToolsHeader(N_("Pivot"))){
+			ImGui::PushID("mapping_pivot");
+			const char *pivots[] = { _("Active object"), _("Selection centre"), _("Individual origins"), _("Custom point") };
+			UiCombo(L("Pivot mode"), &gGizmoPivot, pivots, 4);
+			if(gGizmoPivot == GIZMO_PIVOT_CUSTOM){
+				UiDragFloat3(L("Pivot position"), &gGizmoCustomPivot.x, .1f, -100000.f, 100000.f, "%.3f");
+				// Where to put the point: three equal buttons on one row.
+				float third = MapToolsButtonWidth(3);
+				if(ImGui::Button(L("Selection centre"), ImVec2(third, 0)))
+					gGizmoCustomPivot = MapToolsSelectionCentre();
+				ImGui::SameLine();
+				if(ImGui::Button(L("Camera target"), ImVec2(third, 0)))
+					gGizmoCustomPivot = TheCamera.m_target;
+				ImGui::SameLine();
+				rw::V3d pin;
+				bool hasPin = CoordinatePinPosition(&pin);
+				ImGui::BeginDisabled(!hasPin);
+				if(ImGui::Button(L("Use active pin"), ImVec2(third, 0)))
+					gGizmoCustomPivot = pin;
+				ImGui::EndDisabled();
+			}
+			ImGui::BeginDisabled(objs.empty());
+			if(ImGui::Button(L("Center Parent"), ImVec2(-FLT_MIN, 0))){
+				std::string error;
+				reportResult(MapToolsCenterParent(&error), error, N_("Center Parent"));
+			}
+			ImGui::EndDisabled();
+			ImGui::SetItemTooltip(_("Moves the attachment root to its family's bounding-box centre while keeping every child's world position and rotation."));
+			ImGui::PopID();
+		}
+		break;
+	case 1:
+		if(MapToolsHeader(N_("Align & distribute")))
+			alignSection(objs);
+		if(MapToolsHeader(N_("Mirror")))
+			mirrorSection(objs);
+		if(MapToolsHeader(N_("Along a line"), gPicking ? ImGuiTreeNodeFlags_DefaultOpen : 0)){
+			lineOpen = true;
+			lineSection();
+		}
+		if(MapToolsHeader(N_("Drop & copy as Pawn")))
+			dropSection(objs);
+		if(MapToolsHeader(N_("Duplicate cleanup"))){
+			ImGui::PushID("duplicate_cleanup");
+			MapCleanupPanel();
+			ImGui::PopID();
+		}
+		break;
+	case 2:
+		if(MapToolsHeader(N_("Array")))
+			arraySection(objs);
+		if(MapToolsHeader(N_("Duplicate offset"), gCloneOffset.enabled ? ImGuiTreeNodeFlags_DefaultOpen : 0))
+			cloneOffsetSection();
+		if(MapToolsHeader(N_("Paths & curves"))){
+			ImGui::PushID("layout_paths");
+			LayoutPathsPanel();
+			ImGui::PopID();
+		}
+		break;
 	}
 	if(!lineOpen)
 		gPicking = false;	// no picking behind a closed section
 }
 
-// The specialised tools, under a "More" divider below the everyday ones.
-void
-MapToolsMorePanel(void)
+// Which tab holds a section MapToolsOpenSection asked for: -1 none asked.
+int
+MapToolsRequestedTab(void)
 {
-	std::vector<ObjectInst*> objs = selectedObjects();
-	ImGui::SeparatorText(_("More"));
-	if(MapToolsHeader(N_("Duplicate offset"), gCloneOffset.enabled ? ImGuiTreeNodeFlags_DefaultOpen : 0))
-		cloneOffsetSection();
-	if(MapToolsHeader(N_("Drop & copy as Pawn")))
-		dropSection(objs);
-	if(MapToolsHeader(N_("Coordinate pin"))){
-		CoordinatePinPanel();
-		if(CoordinatePinOwnsMouse()) gPicking = false;
-	}
-	if(MapToolsHeader(N_("Paths & curves"))){
-		ImGui::PushID("layout_paths");
-		LayoutPathsPanel();
-		ImGui::PopID();
-	}
-	if(MapToolsHeader(N_("Duplicate cleanup"))){
-		ImGui::PushID("duplicate_cleanup");
-		MapCleanupPanel();
-		ImGui::PopID();
-	}
-	if(MapToolsHeader(N_("Pivot"))){
-		ImGui::PushID("mapping_pivot");
-		const char *pivots[]={_("Active object"),_("Selection centre"),_("Individual origins"),_("Custom point")};
-		ImGui::Combo(L("Pivot mode"),&gGizmoPivot,pivots,4);
-		if(gGizmoPivot==GIZMO_PIVOT_CUSTOM){
-			ImGui::DragFloat3(L("Pivot position"),&gGizmoCustomPivot.x,.1f,-100000.f,100000.f,"%.3f");
-			if(ImGui::SmallButton(L("Selection centre"))) gGizmoCustomPivot=MapToolsSelectionCentre();
-			ImGui::SameLine();if(ImGui::SmallButton(L("Camera target"))) gGizmoCustomPivot=TheCamera.m_target;
-			rw::V3d pin;bool hasPin=CoordinatePinPosition(&pin);
-			ImGui::BeginDisabled(!hasPin);if(ImGui::SmallButton(L("Use active pin")))gGizmoCustomPivot=pin;ImGui::EndDisabled();
-		}
-		ImGui::BeginDisabled(objs.empty());
-		if(ImGui::Button(L("Center Parent"))){std::string error;reportResult(MapToolsCenterParent(&error),error,N_("Center Parent"));}
-		ImGui::EndDisabled();
-		ImGui::SetItemTooltip(_("Moves the attachment root to its family's bounding-box centre while keeping every child's world position and rotation."));
-		ImGui::PopID();
-	}
+	if(gOpenSection == nil)
+		return -1;
+	static const char *place[] = { "Coordinate pin", "Pivot" };
+	static const char *create[] = { "Array", "Duplicate offset", "Paths & curves" };
+	for(const char *name : place) if(strcmp(gOpenSection, name) == 0) return 0;
+	for(const char *name : create) if(strcmp(gOpenSection, name) == 0) return 2;
+	return 1;
 }

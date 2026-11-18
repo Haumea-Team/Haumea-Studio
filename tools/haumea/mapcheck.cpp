@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
+#include "serverartwork.h"
 #include "haumea.h"
 #include "i18n.h"
 #include "trains.h"
@@ -451,9 +452,9 @@ RunMapCheck(int pawnFormat, MapCheckResult *result, bool translated)
 			custom.empty() ? "" : list.empty() ? tr(N_(" Custom IDs not in artconfig.txt or AddSimpleModel: ")) :
 				tr(N_(". Custom IDs not in artconfig.txt or AddSimpleModel: ")), custom.c_str());
 		// What to do about it.
-		c.add(MAPCHECK_INFO, MODELS, std::vector<int>(), tr(N_("To keep them: a SA-MP 0.3.DL or open.mp custom model "
-			"goes in the workspace's models/artconfig.txt (AddSimpleModel) with its DFF and TXD; anything "
-			"else needs a similar game or SA-MP object in its place (search the Object Browser).")));
+		c.add(MAPCHECK_INFO, MODELS, std::vector<int>(), tr(N_("To keep them: add it as a custom model "
+			"(File > Import > Custom Model) with its DFF and TXD; anything "
+			"else needs a similar game or SA-MP object in its place (search the Asset Browser).")));
 	}
 	std::vector<ObjectInst*> tiltedTrees, explosive;
 	for(ObjectInst *inst : objects){
@@ -570,6 +571,44 @@ RunMapCheck(int pawnFormat, MapCheckResult *result, bool translated)
 				c.add(MAPCHECK_WARNING, ELEMENTS, inst, tr(N_("%s plays %s / %s, which twists the skin out of shape.")),
 					label(inst, name, sizeof(name)), p->animLib, p->animName);
 		}
+	// Custom models get their collision when their DFF loads: load the ones
+	// the map uses, so the checks below see what the game would.
+	{
+		bool requested = false;
+		for(ObjectInst *inst : customModels){
+			ObjectDef *obj = GetObjectDef(inst->m_objectId);
+			if(obj && !obj->IsLoaded()){
+				RequestObject(inst->m_objectId);
+				requested = true;
+			}
+		}
+		if(requested)
+			LoadAllRequestedObjects();
+	}
+	{
+		std::map<int, std::vector<ObjectInst*>> noCollision;
+		for(ObjectInst *inst : customModels)
+			if(GetSampElementKind(inst) == SAMP_ELEMENT_OBJECT && CustomModelHasNoGameCollision(inst->m_objectId))
+				noCollision[inst->m_objectId].push_back(inst);
+		for(const auto &model : noCollision){
+			ObjectDef *obj = GetObjectDef(model.first);
+			c.add(MAPCHECK_WARNING, ELEMENTS, ids(model.second), tr(N_("%d object(s) of custom model %d (%s): its DFF "
+				"has no collision, so in the game players, actors and cars go through it. Haumea makes one from its "
+				"shape only for clicking and snapping here. Embed a COL in the DFF.")), (int)model.second.size(),
+				PawnModelId(model.first), obj ? obj->m_name : "?");
+		}
+	}
+	// An actor stands where it is put, on whatever collision is under it: with
+	// none close below its feet it drops (or stands in the air) in the game.
+	for(ObjectInst *inst : byKind[SAMP_ELEMENT_ACTOR]){
+		rw::V3d feet = inst->m_translation;
+		feet.z -= 1.0f;	// an actor's position is about 1 m above its feet
+		rw::V3d hit;
+		if(!FindGameSurfaceBelow(feet, 2.0f, &hit))
+			c.add(MAPCHECK_WARNING, ELEMENTS, inst, tr(N_("%s has nothing to stand on within 2 m under its feet: "
+				"in the game it falls until it lands on something. Custom models without collision in their "
+				"DFF don't count.")), label(inst, name, sizeof(name)));
+	}
 	for(ObjectInst *inst : byKind[SAMP_ELEMENT_LABEL]){
 		const ObjectPawnProperties *p = GetObjectPawnProperties(inst);
 		if(p->labelText[0] == '\0')
@@ -948,11 +987,13 @@ RunMapCheck(int pawnFormat, MapCheckResult *result, bool translated)
 			"CreatePlayerGangZone only compiles and runs on open.mp, not on a SA-MP 0.3.7 server. For 0.3.7, "
 			"set them to Global (Object Info > Shown as, or radar art's Shown as).")), (int)ompZones.size());
 	if(!customModels.empty()){
-		bool ready = config.found && config.artwork;
+		// config.json (open.mp) or server.cfg (SA-MP 0.3.DL).
+		int artwork = GetWorkspaceDir()[0] ? ServerArtworkEnabled(GetWorkspaceDir()) : -1;
+		bool ready = artwork == 1;
 		c.add(ready ? MAPCHECK_INFO : MAPCHECK_WARNING, SERVER, ids(customModels), tr(N_("%d element(s) use custom models: "
-			"the server needs them in models/artconfig.txt (or AddSimpleModel) and artwork enabled%s; players "
-			"need SA-MP 0.3.DL or an open.mp client.%s")), (int)customModels.size(),
-			config.found ? (config.artwork ? "" : tr(N_(", but config.json has artwork.enable off"))) : "",
+			"their DFF and TXD go in the server's models folder, with artwork enabled%s; players "
+			"need the SA-MP 0.3.DL client.%s")), (int)customModels.size(),
+			artwork == 0 ? tr(N_(", but artwork is off in the server's config (Add Custom Model turns it on)")) : "",
 			config.found && config.allow037 ? tr(N_(" 0.3.7 clients are allowed and won't see them.")) : "");
 	}
 

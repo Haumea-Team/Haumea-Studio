@@ -44,8 +44,8 @@ class PawnRoundtripTests(unittest.TestCase):
         # a model removal still removes only that model.
         with tempfile.TemporaryDirectory() as tmp:
             out = self.roundtrip(Path(__file__).resolve().parent / 'pawn' / 'maps' / 'hv_removals.pwn', Path(tmp, 'hv_removals.pwn'))
-        self.assertIn('RemoveBuildingForPlayer(playerid, -1, 2063.000000, -1731.000000, 15.000000, 5.000000);', out)
-        self.assertIn('RemoveBuildingForPlayer(playerid, 4206, 1479.554688, -1639.609375, 13.648438, 0.25);', out)
+        self.assertIn('RemoveBuildingForPlayer(playerid, -1, 2063.0, -1731.0, 15.0, 5.0);', out)
+        self.assertIn('RemoveBuildingForPlayer(playerid, 4206, 1479.5547, -1639.6094, 13.648438, 0.25);', out)
         self.assertNotIn('RemoveBuildingForPlayer(playerid, 3563,', out)
         self.assertNotIn('RemoveBuildingForPlayer(playerid, 3555,', out)
 
@@ -103,12 +103,12 @@ class PawnRoundtripTests(unittest.TestCase):
         # The streamer's interiorid 0 means only interior 0, -1 every interior: both stay as they were.
         source = (
             '#include <a_samp>\n#include <streamer>\n\nstock Interiors()\n{\n'
-            '\tCreateDynamicObject(1271, 1600.0, -1900.0, 14.0, 0.0, 0.0, 0.0, -1, 0, -1, 300.00, 300.00);\n'
-            '\tCreateDynamicObject(1271, 1602.0, -1900.0, 14.0, 0.0, 0.0, 0.0, -1, -1, -1, 300.00, 300.00);\n'
-            '\tCreateDynamicObject(1271, 1604.0, -1900.0, 14.0, 0.0, 0.0, 0.0, -1, 5, -1, 300.00, 300.00);\n'
+            '\tCreateDynamicObject(1271, 1600.0, -1900.0, 14.0, 0.0, 0.0, 0.0, -1, 0, -1, 300.0, 300.0);\n'
+            '\tCreateDynamicObject(1271, 1602.0, -1900.0, 14.0, 0.0, 0.0, 0.0, -1, -1, -1, 300.0, 300.0);\n'
+            '\tCreateDynamicObject(1271, 1604.0, -1900.0, 14.0, 0.0, 0.0, 0.0, -1, 5, -1, 300.0, 300.0);\n'
             '\tCreateDynamicPickup(1240, 2, 1606.0, -1900.0, 14.0, -1, 0);\n'
             '\tnew const zone = CreateDynamicCube(1590.0, -1910.0, 10.0, 1610.0, -1890.0, 20.0, -1, 0);\n'
-            '\tCreateDynamicObject(1271, 1608.0, -1900.0, 14.0, 0.0, 0.0, 0.0, -1, 0, -1, 300.00, 300.00, zone);\n'
+            '\tCreateDynamicObject(1271, 1608.0, -1900.0, 14.0, 0.0, 0.0, 0.0, -1, 0, -1, 300.0, 300.0, zone);\n'
             '}\n')
         with tempfile.TemporaryDirectory() as tmp:
             Path(tmp, 'in.pwn').write_text(source)
@@ -117,10 +117,10 @@ class PawnRoundtripTests(unittest.TestCase):
             second = self.roundtrip(Path(tmp, 'copy.pwn'), Path(tmp, 'map.pwn'))
         self.assertEqual(first, second, 'saving an opened map must not change it')
         objects = {x: (world, interior) for x, world, interior in re.findall(
-            r'CreateDynamicObject\(1271, (16\d\d)\.000000, [^\n]*?0\.000000, (-?\d+), (-?\d+), -1,', first)}
+            r'CreateDynamicObject\(1271, (16\d\d)\.0, [^\n]*?0\.0, (-?\d+), (-?\d+), -1,', first)}
         self.assertEqual(objects, {'1600': ('-1', '0'), '1602': ('-1', '-1'), '1604': ('-1', '5'),
                                    '1608': ('-1', '0')}, first)
-        self.assertRegex(first, r'CreateDynamicPickup\(1240, 2, 1606\.000000, -1900\.000000, 14\.000000, -1, 0, -1,')
+        self.assertRegex(first, r'CreateDynamicPickup\(1240, 2, 1606\.0, -1900\.0, 14\.0, -1, 0, -1,')
         self.assertRegex(first, r'new const zone = CreateDynamicCube\([^\n]*, -1, 0\);')
 
     def test_open_save_is_faithful_and_stable(self):
@@ -136,27 +136,27 @@ class PawnRoundtripTests(unittest.TestCase):
         self.assertEqual(len(re.findall(r'RemoveBuildingForPlayer\(playerid, 3563,', first)), 1)
         self.assertNotIn('RemoveBuildingForPlayer(playerid, 3555,', first)
         # Texture Studio's reused tmpobjid: each object keeps its own material.
-        self.assertRegex(first, r'1600\.000000[^\n]*\n[^\n]*"white", 0xFFFF0000')
-        self.assertRegex(first, r'1604\.000000[^\n]*\n[^\n]*"white", 0xFF00FF00')
+        self.assertRegex(first, r'1600\.0[^\n]*\n[^\n]*"white", 0xFFFF0000')
+        self.assertRegex(first, r'1604\.0[^\n]*\n[^\n]*"white", 0xFF00FF00')
         # Variables as optional arguments keep the object (defaults are used).
-        self.assertRegex(first, r'CreateDynamicObject\(3578, 1620\.000000[^\n]*-1, -1, -1, STREAMER_OBJECT_SD, 300\.00\)')
+        self.assertRegex(first, r'CreateDynamicObject\(3578, 1620\.0[^\n]*-1, -1, -1, 300\.0, 300\.0\)')
         self.assertIn('"a51", "concretewall22_256", 0x00000000', first)
         # CreateDynamicObjectEx stream/draw distances.
-        self.assertRegex(first, r'1608\.000000[^\n]*, 150\.00, 120\.00\);')
+        self.assertRegex(first, r'1608\.0[^\n]*, 150\.0, 120\.0\);')
         # Streamer world/interior/distances, names, groups and notes.
-        self.assertIn('new sign = CreateDynamicObject(19353, 1612.000000, -1890.000000, 14.000000, '
-                      '10.000000, 20.000000, 30.000000, 5, 3, -1, 200.00, 150.00); '
+        self.assertIn('new sign = CreateDynamicObject(19353, 1612.0, -1890.0, 14.0, '
+                      '10.0, 20.0, 30.0, 5, 3, -1, 200.0, 150.0); '
                       '// wall001', first)
         # Streamer material text puts the index before the text.
         self.assertIn('SetDynamicObjectMaterialText(sign, 1, "OPEN"', first)
         # The attached crate sits on its parent and the attachment is kept.
-        self.assertIn('new crate = CreateDynamicObject(1271, 1616.000000, -1890.000000, 14.300000, '
-                      '15.000000, 25.000000, 80.000000', first)
-        self.assertIn('AttachDynamicObjectToObject(crate, base, 0.000000, 0.000000, 0.800000, '
-                      '15.000000, 25.000000, 35.000000, true);', first)
+        self.assertIn('new crate = CreateDynamicObject(1271, 1616.0, -1890.0, 14.3, '
+                      '15.0, 25.0, 80.0', first)
+        self.assertIn('AttachDynamicObjectToObject(crate, base, 0.0, 0.0, 0.8, '
+                      '15.0, 25.0, 35.0, true);', first)
         # Vehicle paintjob, parts (one per slot, only fitting ones) and plate.
-        self.assertRegex(first, r'new (\w+) = AddStaticVehicleEx\(562, 1600\.000000, -1900\.000000, '
-                         r'13\.200000, 90\.000000, 140, 201, 300\);[^\n]*\n'
+        self.assertRegex(first, r'new (\w+) = AddStaticVehicleEx\(562, 1600\.0, -1900\.0, '
+                         r'13\.2, 90\.0, 140, 201, 300\);[^\n]*\n'
                          r'\tChangeVehiclePaintjob\(\1, 1\);\n'
                          r'\tAddVehicleComponent\(\1, 1036\);\n'
                          r'\tAddVehicleComponent\(\1, 1009\);\n'
@@ -167,10 +167,10 @@ class PawnRoundtripTests(unittest.TestCase):
         self.assertNotIn('1100)', first)
         # Sound places: the stream goes to _ShowForPlayer, the game sound to this
         # map's own _AddSound helper with a streamer sphere behind it.
-        self.assertIn('PlayAudioStreamForPlayer(playerid, "http://example.com/radio.pls", 1630.000000, '
-                      '-1890.000000, 13.500000, 60.00, true); // sound', first)
-        self.assertRegex(first, r'\tHaumea_\w+_AddSound\(1142, 1634\.000000, -1890\.000000, 13\.500000, '
-                         r'40\.00, false, 3, 1\); // sound')
+        self.assertIn('PlayAudioStreamForPlayer(playerid, "http://example.com/radio.pls", 1630.0, '
+                      '-1890.0, 13.5, 60.0, true); // sound', first)
+        self.assertRegex(first, r'\tHaumea_\w+_AddSound\(1142, 1634\.0, -1890\.0, 13\.5, '
+                         r'40\.0, false, 3, 1\); // sound')
         self.assertIn('CreateDynamicSphere(x, y, z, radius, worldid, interiorid);', first)
         self.assertNotIn('Haumea_old_', first)
         # A hand-written name nothing else uses keeps its name and is marked
@@ -180,12 +180,12 @@ class PawnRoundtripTests(unittest.TestCase):
         self.assertEqual(first.count('#pragma unused'), 2)
         # Checkpoints (streamer only): a race is chained by its next points,
         # written in order; the XML retains its name.
-        self.assertIn('CreateDynamicCP(1644.000000, -1890.000000, 13.500000, 3.00, -1, -1, -1, '
+        self.assertIn('CreateDynamicCP(1644.0, -1890.0, 13.5, 3.0, -1, -1, -1, '
                       'STREAMER_CP_SD); // checkpoint', first)
-        self.assertRegex(first, r'CreateDynamicRaceCP\(0, 1650\.000000, -1890\.000000, 13\.500000, '
-                         r'1660\.000000, -1890\.000000, 13\.500000, 8\.00, [^\n]*// checkpoint\n'
-                         r'\tCreateDynamicRaceCP\(1, 1660\.000000, -1890\.000000, 13\.500000, '
-                         r'0\.000000, 0\.000000, 0\.000000, 8\.00, [^\n]*// checkpoint\n')
+        self.assertRegex(first, r'CreateDynamicRaceCP\(0, 1650\.0, -1890\.0, 13\.5, '
+                         r'1660\.0, -1890\.0, 13\.5, 8\.0, [^\n]*// checkpoint\n'
+                         r'\tCreateDynamicRaceCP\(1, 1660\.0, -1890\.0, 13\.5, '
+                         r'0\.0, 0\.0, 0\.0, 8\.0, [^\n]*// checkpoint\n')
 
 
 if __name__ == '__main__':

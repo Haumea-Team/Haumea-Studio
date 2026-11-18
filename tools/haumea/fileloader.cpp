@@ -231,7 +231,7 @@ LoadVehicle(char *line)
 	char type[16] = "", handling[32], gxt[32], anims[32], vclass[16] = "";
 	if(sscanf(line, "%d %s %s", &id, model, txd) != 3 || id < 400 || id > 611)
 		return;
-	// The type and class columns, for the Object Browser's categories.
+	// The type and class columns, for the Asset Browser's categories.
 	sscanf(line, "%*d %*s %*s %15s %31s %31s %31s %15s", type, handling, gxt, anims, vclass);
 	if(GetObjectDef(id)){
 		log("warning: vehicle model %s (%d) conflicts with an object definition; skipping\n", model, id);

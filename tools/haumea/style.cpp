@@ -1,24 +1,30 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #include "haumea.h"
 #include "icons.h"
+#include "lucide_icons.h"
+#include "imgui/imgui_internal.h"
 #include "font_data.h"
+#include "lucide_data.h"
+#include "manrope_data.h"
 #include "i18n.h"
 #include <algorithm>
 #include <string>
 #include <cstdio>
 
 ImFont *gCodeFont;
+ImFont *gIconFont;	// Lucide: the ribbon's outline icons
 ImFont *gTerminalFont;
 ImFont *gTitleFont;	// large Inter for the splash screen title
+ImFont *gBoldFont;	// Manrope SemiBold at the UI size: tabs, section titles, the selected row
 
 // Accent colors — used for highlights, active elements and selection.
 static int gUiTheme = UI_THEME_DARK;
 static ImVec4 gAccentFill;	// a filled button or tool that is on, under white text
 // Graphite and blue, like a creative suite: the colour stays on what is
 // active or selected, everything else is neutral grey.
-static const ImVec4 kDarkAccent       = ImVec4(0.357f, 0.616f, 1.000f, 1.00f);	// #5B9DFF
-static const ImVec4 kDarkAccentHover  = ImVec4(0.529f, 0.714f, 1.000f, 1.00f);
-static const ImVec4 kDarkAccentActive = ImVec4(0.204f, 0.431f, 0.867f, 1.00f);	// #346EDD
+static const ImVec4 kDarkAccent       = ImVec4(0.424f, 0.498f, 0.859f, 1.00f);	// #6C7FDB
+static const ImVec4 kDarkAccentHover  = ImVec4(0.451f, 0.522f, 0.867f, 1.00f);	// #7385DD
+static const ImVec4 kDarkAccentActive = ImVec4(0.369f, 0.439f, 0.788f, 1.00f);	// #5E70C9
 static const ImVec4 kLightAccent       = ImVec4(0.078f, 0.451f, 0.902f, 1.00f);	// #1473E6
 static const ImVec4 kLightAccentHover  = ImVec4(0.051f, 0.400f, 0.816f, 1.00f);
 static const ImVec4 kLightAccentActive = ImVec4(0.035f, 0.353f, 0.729f, 1.00f);
@@ -219,6 +225,265 @@ UiSemanticColor(int color)
 	return ImGui::GetStyleColorVec4(ImGuiCol_Text);
 }
 
+// A section of a panel, folding: its title in small capitals in the label
+// grey, flat, with a faint wash on hover; no bar of colour. Takes what
+// ImGui::CollapsingHeader takes. The ID stays the label's own.
+bool
+UiSection(const char *label, ImGuiTreeNodeFlags flags)
+{
+	const char *hash = strstr(label, "###");
+	const char *end = ImGui::FindRenderedTextEnd(label);
+	std::string shown(label, end);
+	for(char &ch : shown)
+		if((unsigned char)ch < 128)
+			ch = (char)toupper((unsigned char)ch);
+	std::string full = shown + (hash ? std::string(hash) : std::string("###") + label);
+	bool light = UiThemeIsLight();
+	ImVec4 wash = light ? ImVec4(0, 0, 0, 1) : ImVec4(1, 1, 1, 1);
+	ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0, 0, 0, 0));
+	ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(wash.x, wash.y, wash.z, 0.05f));
+	ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(wash.x, wash.y, wash.z, 0.10f));
+	ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4.0f, 5.0f));
+	bool open = ImGui::TreeNodeEx(full.c_str(), flags | ImGuiTreeNodeFlags_CollapsingHeader);
+	ImGui::PopStyleVar();
+	ImGui::PopStyleColor(4);
+	return open;
+}
+
+// A group's title that doesn't fold: small capitals in the label grey, with
+// room above it (in place of ImGui::SeparatorText).
+void
+UiHeading(const char *label)
+{
+	const char *end = ImGui::FindRenderedTextEnd(label);
+	std::string caps(label, end);
+	for(char &ch : caps)
+		if((unsigned char)ch < 128)
+			ch = (char)toupper((unsigned char)ch);
+	if(ImGui::GetCursorPosY() > ImGui::GetStyle().WindowPadding.y + 1.0f)
+		ImGui::Dummy(ImVec2(0.0f, ImGui::GetFontSize() * 0.35f));
+	ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+	ImGui::TextUnformatted(caps.c_str());
+	ImGui::PopStyleColor();
+}
+
+// A field's name in a properties panel's left column, the field filling the
+// rest of the row; above the field when the panel is too narrow for both or
+// the name too long for its column; just before it when the field follows
+// something on the same line. A width set for the field is kept. Writes
+// the ID the field takes: "###" and its English name, so it stays the
+// same ID (and UI scripts find it by name) whatever the language.
+void
+UiFieldLabel(const char *label, char *id, size_t size)
+{
+	const char *hash = strstr(label, "###");
+	const char *end = ImGui::FindRenderedTextEnd(label);
+	if(hash) snprintf(id, size, "%s", hash);
+	else if(end == label) snprintf(id, size, "%s", label);	// "##id": no name to show
+	else snprintf(id, size, "###%s", label);
+	if(end == label)
+		return;
+	ImGuiContext &g = *ImGui::GetCurrentContext();
+	ImGuiWindow *window = g.CurrentWindow;
+	bool widthSet = (g.NextItemData.HasFlags & ImGuiNextItemDataFlags_HasWidth) != 0;
+	float width = g.NextItemData.Width;
+	bool inRow = window->DC.IsSameLine;
+	float fs = ImGui::GetFontSize();
+	float startX = ImGui::GetCursorPosX();
+	float avail = ImGui::GetContentRegionAvail().x;
+	float column = std::min(fs * 9.4f, avail * 0.42f);
+	float textWidth = ImGui::CalcTextSize(label, end).x;
+	ImGui::AlignTextToFramePadding();
+	ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+	ImGui::TextUnformatted(label, end);
+	ImGui::PopStyleColor();
+	if(inRow)
+		ImGui::SameLine();
+	else if(avail >= fs * 14.0f && textWidth <= column - fs * 0.5f){
+		ImGui::SameLine();
+		ImGui::SetCursorPosX(startX + column);
+	}
+	ImGui::SetNextItemWidth(widthSet ? width : -FLT_MIN);
+}
+
+// The on/off switch: a pill, the accent and a knob at the right when on, the
+// field grey with a ringed knob at the left when off.
+static void
+drawTogglePill(ImDrawList *dl, ImVec2 at, float width, float height, bool on)
+{
+	float r = height * 0.5f, knob = height - 4.0f;
+	ImVec2 end(at.x + width, at.y + height);
+	if(on){
+		dl->AddRectFilled(at, end, ImGui::GetColorU32(ImGuiCol_CheckMark), r);
+		dl->AddCircleFilled(ImVec2(end.x - 2.0f - knob*0.5f, at.y + r), knob*0.5f, ImGui::GetColorU32(ImVec4(1, 1, 1, 1)));
+	}else{
+		dl->AddRectFilled(at, end, ImGui::GetColorU32(ImGuiCol_FrameBg), r);
+		dl->AddRect(at, end, ImGui::GetColorU32(ImVec4(0.54f, 0.54f, 0.54f, 1.0f)), r, 0, 1.0f);
+		dl->AddCircleFilled(ImVec2(at.x + 2.0f + knob*0.5f, at.y + r), knob*0.5f, ImGui::GetColorU32(ImVec4(0.54f, 0.54f, 0.54f, 1.0f)));
+	}
+}
+
+// An option that is on or off, as a properties panel shows one: on its own
+// line, a row with its name on the left and a switch at the right end, the
+// whole row clickable; after something on the same line, the switch and its
+// name; with no name, the switch alone. In place of ImGui::Checkbox.
+bool
+UiCheckbox(const char *label, bool *value)
+{
+	ImGuiContext &g = *ImGui::GetCurrentContext();
+	bool inRow = g.CurrentWindow->DC.IsSameLine;
+	const char *end = ImGui::FindRenderedTextEnd(label);
+	bool named = end != label;
+	float fs = ImGui::GetFontSize();
+	float h = ImGui::GetFrameHeight();
+	float pillW = floorf(fs * 2.0f), pillH = floorf(fs * 1.1f);
+	ImVec2 at = ImGui::GetCursorScreenPos();
+	ImVec2 size;
+	if(!named) size = ImVec2(pillW, h);
+	else if(inRow) size = ImVec2(pillW + ImGui::GetStyle().ItemInnerSpacing.x + ImGui::CalcTextSize(label, end).x, h);
+	else{
+		// The row's width, or SetNextItemWidth's, so a button can end the row.
+		float w = ImGui::GetContentRegionAvail().x;
+		if(g.NextItemData.HasFlags & ImGuiNextItemDataFlags_HasWidth)
+			w = g.NextItemData.Width > 0.0f ? g.NextItemData.Width : w + g.NextItemData.Width;
+		size = ImVec2(std::max(w, pillW), h);
+	}
+	bool pressed = ImGui::InvisibleButton(label, size);
+	if(pressed){
+		*value = !*value;
+		ImGui::MarkItemEdited(g.LastItemData.ID);
+	}
+	bool hovered = ImGui::IsItemHovered();
+	ImDrawList *dl = ImGui::GetWindowDrawList();
+	float pillY = at.y + floorf((h - pillH) * 0.5f);
+	if(named && !inRow){
+		if(hovered)
+			dl->AddRectFilled(at, ImVec2(at.x + size.x, at.y + h), ImGui::GetColorU32(ImGuiCol_HeaderHovered), ImGui::GetStyle().FrameRounding);
+		dl->AddText(ImVec2(at.x, at.y + (h - fs) * 0.5f), ImGui::GetColorU32(ImGuiCol_Text, 0.9f), label, end);
+		drawTogglePill(dl, ImVec2(at.x + size.x - pillW - 2.0f, pillY), pillW, pillH, *value);
+	}else{
+		drawTogglePill(dl, ImVec2(at.x, pillY), pillW, pillH, *value);
+		if(named)
+			dl->AddText(ImVec2(at.x + pillW + ImGui::GetStyle().ItemInnerSpacing.x, at.y + (h - fs) * 0.5f),
+				ImGui::GetColorU32(ImGuiCol_Text), label, end);
+	}
+	return pressed;
+}
+
+// A segmented switch: the choices in one well of the field grey, the current
+// one raised on the panel's grey with the full text, the others dim. fill:
+// share the row's width; otherwise each as wide as its name.
+bool
+UiSegmented(const char *id, const char *const *labels, int count, int *current, bool fill)
+{
+	ImGui::PushID(id);
+	float pad = 3.0f, h = ImGui::GetFrameHeight();
+	float avail = ImGui::GetContentRegionAvail().x;
+	float natural = 0.0f;
+	for(int i = 0; i < count; i++)
+		natural += ImGui::CalcTextSize(labels[i], nil, true).x + ImGui::GetFontSize() * 1.6f;
+	float wellW = fill ? avail : std::min(avail, natural + pad*2.0f);
+	ImVec2 at = ImGui::GetCursorScreenPos();
+	ImDrawList *dl = ImGui::GetWindowDrawList();
+	float r = ImGui::GetStyle().FrameRounding;
+	dl->AddRectFilled(at, ImVec2(at.x + wellW, at.y + h), ImGui::GetColorU32(ImGuiCol_FrameBg), r);
+	float x = at.x + pad, inner = wellW - pad*2.0f;
+	bool changed = false;
+	for(int i = 0; i < count; i++){
+		float natW = ImGui::CalcTextSize(labels[i], nil, true).x + ImGui::GetFontSize() * 1.6f;
+		float w = fill ? floorf(inner / count) : floorf(natW * std::min(1.0f, inner / natural));
+		if(fill && i == count - 1)
+			w = at.x + wellW - pad - x;
+		ImGui::SetCursorScreenPos(ImVec2(x, at.y + pad));
+		if(ImGui::InvisibleButton(labels[i], ImVec2(w, h - pad*2.0f)) && *current != i){
+			*current = i;
+			changed = true;
+		}
+		bool hovered = ImGui::IsItemHovered(), on = *current == i;
+		ImVec2 p0(x, at.y + pad), p1(x + w, at.y + h - pad);
+		if(on)
+			dl->AddRectFilled(p0, p1, ImGui::GetColorU32(ImGuiCol_WindowBg), r - 1.0f);
+		else if(hovered)
+			dl->AddRectFilled(p0, p1, ImGui::GetColorU32(ImGuiCol_HeaderHovered), r - 1.0f);
+		const char *end = ImGui::FindRenderedTextEnd(labels[i]);
+		ImVec2 ts = ImGui::CalcTextSize(labels[i], end);
+		dl->AddText(ImVec2(floorf(x + (w - ts.x)*0.5f), floorf(at.y + (h - ts.y)*0.5f)),
+			ImGui::GetColorU32(on || hovered ? ImGuiCol_Text : ImGuiCol_TextDisabled), labels[i], end);
+		x += w;
+	}
+	ImGui::SetCursorScreenPos(at);
+	ImGui::Dummy(ImVec2(wellW, h));
+	ImGui::PopID();
+	return changed;
+}
+
+// A window's main action, along its foot: full width, the accent fill and
+// white text. Pushed to the bottom of the window when there is room.
+bool
+UiFooterButton(const char *label, bool enabled)
+{
+	float y = ImGui::GetWindowContentRegionMax().y - ImGui::GetFrameHeight();
+	if(ImGui::GetCursorPosY() < y && !(ImGui::GetCurrentWindow()->Flags & ImGuiWindowFlags_AlwaysAutoResize))
+		ImGui::SetCursorPosY(y);
+	else
+		ImGui::Dummy(ImVec2(0, ImGui::GetStyle().ItemSpacing.y));
+	ImVec4 fill = UiAccentFill();
+	ImGui::PushStyleColor(ImGuiCol_Button, fill);
+	ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(fill.x*1.12f, fill.y*1.12f, fill.z*1.12f, 1.0f));
+	ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(fill.x*0.9f, fill.y*0.9f, fill.z*0.9f, 1.0f));
+	ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 1, 1, 1));
+	ImGui::BeginDisabled(!enabled);
+	bool pressed = ImGui::Button(label, ImVec2(-FLT_MIN, 0));
+	ImGui::EndDisabled();
+	ImGui::PopStyleColor(4);
+	return pressed && enabled;
+}
+
+// A read-only detail as a properties-panel row: its name in grey on the
+// left, its value as plain text, and a copy button that shows on the row
+// under the mouse. True when the value was copied.
+bool
+UiInfoRow(const char *label, const char *value, const char *tooltip)
+{
+	ImGui::PushID(label);
+	float fs = ImGui::GetFontSize(), avail = ImGui::GetContentRegionAvail().x;
+	float column = std::min(fs * 9.4f, avail * 0.42f);
+	float h = ImGui::GetFrameHeight();
+	ImVec2 at = ImGui::GetCursorScreenPos();
+	float startX = ImGui::GetCursorPosX();
+	bool hovered = ImGui::IsMouseHoveringRect(at, ImVec2(at.x + avail, at.y + h)) && ImGui::IsWindowHovered();
+	if(hovered)
+		ImGui::GetWindowDrawList()->AddRectFilled(at, ImVec2(at.x + avail, at.y + h),
+			ImGui::GetColorU32(ImGuiCol_HeaderHovered), ImGui::GetStyle().FrameRounding);
+	ImGui::AlignTextToFramePadding();
+	ImGui::TextDisabled("%s", label);
+	ImGui::SameLine();
+	ImGui::SetCursorPosX(startX + column);
+	float valueWidth = avail - column - h - ImGui::GetStyle().ItemSpacing.x;
+	ImVec2 v = ImGui::GetCursorScreenPos();
+	ImGui::PushClipRect(v, ImVec2(v.x + valueWidth, v.y + h), true);
+	ImGui::TextUnformatted(value && value[0] ? value : "-");
+	ImGui::PopClipRect();
+	if(tooltip && tooltip[0])
+		ImGui::SetItemTooltip("%s", tooltip);
+	bool copied = false;
+	ImGui::SameLine();
+	ImGui::SetCursorPosX(startX + avail - h);
+	if(hovered && value && value[0]){
+		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
+		if(ImGui::Button(ICON_FA_COPY "##copy", ImVec2(h, h))){
+			ImGui::SetClipboardText(value);
+			copied = true;
+		}
+		ImGui::PopStyleColor();
+		ImGui::SetItemTooltip("%s", _("Copy"));
+	}else
+		ImGui::Dummy(ImVec2(h, h));
+	ImGui::PopID();
+	return copied;
+}
+
 void
 SetupStyle(void)
 {
@@ -231,12 +496,14 @@ SetupStyle(void)
 	ImVec4 accent = light ? kLightAccent : kDarkAccent;
 	ImVec4 accentHover = light ? kLightAccentHover : kDarkAccentHover;
 	ImVec4 accentActive = light ? kLightAccentActive : kDarkAccentActive;
-	gAccentFill = accentActive;
+	gAccentFill = light ? accentActive : accent;	// the main buttons
 
 	// ---- Geometry: soft, roomy and flat. Surfaces are told apart by tone,
 	// not by outlines; controls are rounded and a little taller. ----
-	style.WindowRounding    = 6.0f;
-	style.ChildRounding     = 6.0f;
+	// ---- Geometry: soft, roomy and flat. Surfaces are told apart by tone,
+	// not by outlines; controls are rounded and a little taller. ----
+	style.WindowRounding    = 8.0f;
+	style.ChildRounding     = 8.0f;
 	style.FrameRounding     = 5.0f;
 	style.PopupRounding     = 8.0f;
 	style.ScrollbarRounding = 8.0f;
@@ -280,21 +547,24 @@ SetupStyle(void)
 	// Every grey below is one of these: the app's frame (menus, bars),
 	// panels, input wells, raised controls, lines and text.
 	auto rgb = [](int hex) { return ImVec4(((hex >> 16) & 255)/255.0f, ((hex >> 8) & 255)/255.0f, (hex & 255)/255.0f, 1.0f); };
-	// Cool, slightly blue greys: each layer a step lighter than the one under it.
-	ImVec4 chrome  = light ? rgb(0xE6E8EE) : rgb(0x14151A);	// menus and bars
-	ImVec4 bar     = light ? rgb(0xEDEFF4) : rgb(0x191B21);	// tab strips and side bars
-	ImVec4 panel   = light ? rgb(0xF3F4F7) : rgb(0x1F2128);	// panels
-	ImVec4 well    = light ? rgb(0xFFFFFF) : rgb(0x2B2E38);	// input wells: a step above the panel
-	ImVec4 raised  = light ? rgb(0xE2E5EC) : rgb(0x323643);	// buttons
-	ImVec4 line    = light ? rgb(0xD2D6E0) : rgb(0x2D303B);
-	ImVec4 divider = light ? rgb(0xC4C9D6) : rgb(0x0E0F13);	// between panels
-	ImVec4 text    = light ? rgb(0x1B1E27) : rgb(0xE4E6EC);
-	ImVec4 muted   = light ? rgb(0x5E6475) : rgb(0x8C91A0);
+	// Dark: neutral near-black, a properties-panel editor's: the ground and
+	// the gaps between panels black, panels and bars one step up, fields
+	// and buttons another. Neutral on purpose: a cool cast would tint every
+	// colour judged against it. Light: soft cool greys.
+	ImVec4 chrome  = light ? rgb(0xE6E8EE) : rgb(0x0A0A0B);	// menus, the ground
+	ImVec4 bar     = light ? rgb(0xEDEFF4) : rgb(0x121213);	// tab strips, side bars, the ribbon
+	ImVec4 panel   = light ? rgb(0xF3F4F7) : rgb(0x121213);	// panels
+	ImVec4 well    = light ? rgb(0xFFFFFF) : rgb(0x191A1C);	// fields
+	ImVec4 raised  = light ? rgb(0xE2E5EC) : rgb(0x1E1F21);	// buttons
+	ImVec4 line    = light ? rgb(0xD2D6E0) : ImVec4(1.0f, 1.0f, 1.0f, 0.07f);
+	ImVec4 divider = light ? rgb(0xC4C9D6) : rgb(0x0A0A0B);	// between panels
+	ImVec4 text    = light ? rgb(0x1B1E27) : rgb(0xE2E2E6);
+	ImVec4 muted   = light ? rgb(0x5E6475) : rgb(0x8F8F97);
 	auto lift = [&](ImVec4 v, float t) { return mixColour(v, light ? ImVec4(0,0,0,1) : ImVec4(1,1,1,1), t); };
 
 	c[ImGuiCol_WindowBg]             = panel;
 	c[ImGuiCol_ChildBg]              = ImVec4(0, 0, 0, 0);
-	c[ImGuiCol_PopupBg]              = light ? rgb(0xFBFCFE) : ImVec4(0.133f, 0.141f, 0.176f, 0.99f);
+	c[ImGuiCol_PopupBg]              = light ? rgb(0xFBFCFE) : rgb(0x191A1C);
 	c[ImGuiCol_Border]               = line;
 	c[ImGuiCol_BorderShadow]         = ImVec4(0, 0, 0, 0);
 	c[ImGuiCol_Text]                 = text;
@@ -311,24 +581,27 @@ SetupStyle(void)
 	c[ImGuiCol_MenuBarBg]            = chrome;
 
 	c[ImGuiCol_ScrollbarBg]          = ImVec4(0, 0, 0, 0);
-	c[ImGuiCol_ScrollbarGrab]        = lift(panel, 0.18f);
-	c[ImGuiCol_ScrollbarGrabHovered] = lift(panel, 0.28f);
-	c[ImGuiCol_ScrollbarGrabActive]  = lift(panel, 0.38f);
+	c[ImGuiCol_ScrollbarGrab]        = light ? lift(panel, 0.18f) : ImVec4(1, 1, 1, 0.10f);
+	c[ImGuiCol_ScrollbarGrabHovered] = light ? lift(panel, 0.28f) : ImVec4(1, 1, 1, 0.16f);
+	c[ImGuiCol_ScrollbarGrabActive]  = light ? lift(panel, 0.38f) : ImVec4(1, 1, 1, 0.22f);
 
 	c[ImGuiCol_CheckMark]            = accent;
 	c[ImGuiCol_SliderGrab]           = mixColour(accent, panel, 0.35f);
 	c[ImGuiCol_SliderGrabActive]     = accent;
 
 	c[ImGuiCol_Button]               = raised;
-	c[ImGuiCol_ButtonHovered]        = lift(raised, 0.08f);
-	c[ImGuiCol_ButtonActive]         = ImVec4(accent.x, accent.y, accent.z, 0.55f);
+	c[ImGuiCol_ButtonHovered]        = light ? lift(raised, 0.08f) : rgb(0x26272A);
+	c[ImGuiCol_ButtonActive]         = light ? ImVec4(accent.x, accent.y, accent.z, 0.55f) : rgb(0x2E2F33);
 
-	// Collapsing headers are flat section bars; selected rows take the accent.
-	c[ImGuiCol_Header]               = lift(panel, 0.05f);
-	c[ImGuiCol_HeaderHovered]        = ImVec4(accent.x, accent.y, accent.z, 0.22f);
-	c[ImGuiCol_HeaderActive]         = ImVec4(accent.x, accent.y, accent.z, 0.42f);
+	// Rows: hover a faint white wash, pressed a stronger one; the selected
+	// row is the accent's, as a tree selects.
+	c[ImGuiCol_Header]               = light ? lift(panel, 0.05f) : ImVec4(accent.x, accent.y, accent.z, 0.72f);
+	c[ImGuiCol_HeaderHovered]        = light ? ImVec4(accent.x, accent.y, accent.z, 0.22f) : ImVec4(1, 1, 1, 0.05f);
+	c[ImGuiCol_HeaderActive]         = light ? ImVec4(accent.x, accent.y, accent.z, 0.42f) : ImVec4(1, 1, 1, 0.10f);
 
-	c[ImGuiCol_Separator]            = divider;
+	// Menus' and lists' dividers: a faint line on dark; the gaps between
+	// panels stay the ground's black (DockingEmptyBg).
+	c[ImGuiCol_Separator]            = light ? divider : ImVec4(1.0f, 1.0f, 1.0f, 0.10f);
 	c[ImGuiCol_SeparatorHovered]     = accentHover;
 	c[ImGuiCol_SeparatorActive]      = accent;
 
@@ -337,13 +610,15 @@ SetupStyle(void)
 	c[ImGuiCol_ResizeGripActive]     = accent;
 
 	// Tabs: the open one is the panel's own colour, the rest sink into the strip.
+	// Tabs: the open one a pill of the field grey on the dock's ground, the
+	// others bare; no line of colour.
 	c[ImGuiCol_Tab]                  = bar;
-	c[ImGuiCol_TabHovered]           = lift(bar, 0.08f);
-	c[ImGuiCol_TabSelected]          = panel;
+	c[ImGuiCol_TabHovered]           = light ? lift(bar, 0.08f) : rgb(0x1A1A1C);
+	c[ImGuiCol_TabSelected]          = light ? panel : well;
 	c[ImGuiCol_TabDimmed]            = bar;
-	c[ImGuiCol_TabDimmedSelected]    = panel;
-	c[ImGuiCol_TabSelectedOverline]  = accent;
-	c[ImGuiCol_TabDimmedSelectedOverline] = ImVec4(accent.x, accent.y, accent.z, 0.5f);
+	c[ImGuiCol_TabDimmedSelected]    = light ? panel : well;
+	c[ImGuiCol_TabSelectedOverline]  = light ? accent : ImVec4(0, 0, 0, 0);
+	c[ImGuiCol_TabDimmedSelectedOverline] = light ? ImVec4(accent.x, accent.y, accent.z, 0.5f) : ImVec4(0, 0, 0, 0);
 #ifdef IMGUI_HAS_DOCK
 	c[ImGuiCol_DockingPreview]       = ImVec4(accent.x, accent.y, accent.z, 0.40f);
 	c[ImGuiCol_DockingEmptyBg]       = chrome;
@@ -353,9 +628,9 @@ SetupStyle(void)
 	c[ImGuiCol_TableBorderStrong]    = line;
 	c[ImGuiCol_TableBorderLight]     = lift(panel, 0.07f);
 	c[ImGuiCol_TableRowBg]           = ImVec4(0, 0, 0, 0);
-	c[ImGuiCol_TableRowBgAlt]        = light ? ImVec4(0, 0, 0, 0.025f) : ImVec4(1, 1, 1, 0.025f);
+	c[ImGuiCol_TableRowBgAlt]        = light ? ImVec4(0, 0, 0, 0.025f) : ImVec4(1, 1, 1, 0.02f);
 
-	c[ImGuiCol_TextSelectedBg]       = ImVec4(accent.x, accent.y, accent.z, 0.35f);
+	c[ImGuiCol_TextSelectedBg]       = ImVec4(accent.x, accent.y, accent.z, light ? 0.35f : 0.45f);
 	c[ImGuiCol_DragDropTarget]       = accent;
 	c[ImGuiCol_NavHighlight]         = accent;
 	c[ImGuiCol_NavWindowingHighlight]= light ? ImVec4(0.10f, 0.10f, 0.10f, 0.55f) : ImVec4(1, 1, 1, 0.70f);
@@ -399,11 +674,12 @@ SetupFonts(void)
 		0xf0ae, 0xf0b0, // list-check, filter
 		0xf0c0, 0xf0c0, // users
 		0xf0d7, 0xf0d7, // caret-down
+		0xf0da, 0xf0da, // caret-right
+		0xf1de, 0xf1de, // sliders
 		0xf120, 0xf120, // terminal
 		0xf043, 0xf043, // droplet
 		0xf047, 0xf047, // arrows-up-down-left-right
-		0xf04b, 0xf04b, // play
-		0xf04d, 0xf04d, // stop
+		0xf04b, 0xf04d, // play, pause, stop
 		0xf059, 0xf05a, // circle-question, circle-info
 		0xf06e, 0xf06e, // eye
 		0xf070, 0xf071, // eye-slash, triangle-exclamation
@@ -411,7 +687,9 @@ SetupFonts(void)
 		0xf07c, 0xf07c, // folder-open
 		0xf0ac, 0xf0ad, // globe, wrench
 		0xf0c1, 0xf0c1, // link
-		0xf0c5, 0xf0c7, // copy, floppy-disk
+		0xf0c4, 0xf0c7, // scissors, copy, floppy-disk
+		0xf24d, 0xf24d, // clone
+		0xf121, 0xf121, // code
 		0xf0db, 0xf0db, // table-columns
 		0xf0e7, 0xf0ea, // bolt, paste
 		0xf0f3, 0xf0f3, // bell
@@ -436,12 +714,19 @@ SetupFonts(void)
 		0,
 	};
 
-	// --- Main font: Inter (embedded) ---
+	// --- Main font: Manrope (embedded), a properties-panel editor's face;
+	// Inter merged under it for the letters Manrope lacks. ---
 	ImFontConfig fontCfg;
 	fontCfg.FontDataOwnedByAtlas = false;
 	io.Fonts->AddFontFromMemoryTTF(
-		(void *)inter_font_data, inter_font_size,
+		(void *)manrope_regular_font_data, manrope_regular_font_size,
 		fontSize, &fontCfg);
+	ImFontConfig fallbackCfg;
+	fallbackCfg.MergeMode = true;
+	fallbackCfg.FontDataOwnedByAtlas = false;
+	io.Fonts->AddFontFromMemoryTTF(
+		(void *)inter_font_data, inter_font_size,
+		fontSize, &fallbackCfg);
 
 	// --- Icon font: FontAwesome 6 (embedded, merged) ---
 	ImFontConfig iconCfg;
@@ -565,7 +850,18 @@ SetupFonts(void)
    if(f){ fclose(f); mono = candidate; break; }
   }
  }
- gCodeFont = mono.empty() ? io.Fonts->AddFontDefault() : io.Fonts->AddFontFromFileTTF(mono.c_str(), fontSize);
+	// --- Ribbon icons: Lucide (embedded), a face of its own: its codepoints
+	// share Font Awesome's private-use range. ---
+	ImFontConfig lucideCfg;
+	lucideCfg.FontDataOwnedByAtlas = false;
+	lucideCfg.PixelSnapH = true;
+	static const ImWchar lucideRanges[] = { 0xe000, 0xe5ff, 0 };
+	gIconFont = io.Fonts->AddFontFromMemoryTTF((void *)lucide_font_data, lucide_font_size, fontSize, &lucideCfg, lucideRanges);
+
+	// Code: JetBrains Mono (embedded).
+	ImFontConfig codeCfg;
+	codeCfg.FontDataOwnedByAtlas = false;
+	gCodeFont = io.Fonts->AddFontFromMemoryTTF((void *)jetbrains_mono_font_data, jetbrains_mono_font_size, fontSize, &codeCfg);
  // Latin, Greek, Cyrillic, punctuation, arrows, maths and shapes. Line drawing
  // isn't here: the terminal draws it itself, so it joins up (terminal.cpp).
  static const ImWchar terminalRanges[] = {
@@ -580,9 +876,24 @@ SetupFonts(void)
 		' ', ' ', 'H', 'H', 'S', 'S', 'a', 'a', 'd', 'e', 'i', 'i', 'm', 'm', 'o', 'o',
 		't', 'u', 0,
 	};
+	ImFontConfig boldCfg;
+	boldCfg.FontDataOwnedByAtlas = false;
+	gBoldFont = io.Fonts->AddFontFromMemoryTTF(
+		(void *)manrope_semibold_font_data, manrope_semibold_font_size,
+		fontSize, &boldCfg);
+	{
+		// Its icons and other scripts, as the main face has them.
+		ImFontConfig fallback;
+		fallback.MergeMode = true;
+		fallback.FontDataOwnedByAtlas = false;
+		io.Fonts->AddFontFromMemoryTTF((void *)inter_font_data, inter_font_size, fontSize, &fallback);
+		ImFontConfig icons = iconCfg;
+		icons.MergeMode = true;
+		io.Fonts->AddFontFromMemoryTTF((void *)fa_solid_font_data, fa_solid_font_size, fontSize - 1.0f, &icons, iconRanges);
+	}
 	ImFontConfig titleCfg;
 	titleCfg.FontDataOwnedByAtlas = false;
 	gTitleFont = io.Fonts->AddFontFromMemoryTTF(
-		(void *)inter_font_data, inter_font_size,
+		(void *)manrope_semibold_font_data, manrope_semibold_font_size,
 		128.0f, &titleCfg, wordmarkRanges);
 }

@@ -10,9 +10,6 @@ msgstr "%s usa um acessório preso a um osso do jogador, mas o alvo não é joga
 msgid "Add selected model"
 msgstr "Adicionar modelo selecionado"
 
-msgid "Attached to player preview (skin %d)"
-msgstr "Anexado à prévia do jogador (skin %d)"
-
 msgid "Attachment Workspace"
 msgstr "Área de trabalho de anexos"
 
@@ -132,9 +129,6 @@ msgstr "Mostra apenas o alvo e seus anexos sobre um fundo vazio."
 
 msgid "Spine"
 msgstr "Coluna"
-
-msgid "Target: %s"
-msgstr "Alvo: %s"
 
 msgid "Top"
 msgstr "Superior"

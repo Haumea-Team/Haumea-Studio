@@ -1,4 +1,4 @@
-# A Brown Streak placed from the Object Browser lands on a track with its
+# A Brown Streak placed from the Asset Browser lands on a track with its
 # three coaches, and only the engine is written. Any game: the click is 3 m from
 # the synthetic game's track (y -3100) and far from the real game's tracks, so
 # it must snap to the nearest one; then the engine stands where the client puts
@@ -7,16 +7,16 @@ open "$UI_FIXTURES/ui_floor.pwn"
 camera 2000 -3060 40 2000 -3100 10
 shortcut window_browser
 wait 5
-click_item 'Object Browser' '##browser_source'
+click_item 'Asset Browser' '##browser_source'
 wait 3
 click_item '*' 'Objects'
 wait 3
-click_item 'Object Browser' '##search_objects'
+click_item 'Asset Browser' '##search_objects'
 type "538"
 wait 5
-click_item 'Object Browser' '##tile'
+click_item 'Asset Browser' '##tile'
 wait 3
-click_item 'Object Browser' 'Place'
+click_item 'Asset Browser' 'Place'
 wait 3
 click_world 2000 -3097 10
 wait 5

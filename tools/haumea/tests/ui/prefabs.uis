@@ -5,41 +5,41 @@ wait 5
 assert objects == 4
 shortcut window_browser
 wait 5
-assert window "Object Browser"
-click_item 'Object Browser' '##browser_source'
+assert window "Asset Browser"
+click_item 'Asset Browser' '##browser_source'
 wait 3
 click_item '*' 'Prefabs'
 wait 5
-click_item 'Object Browser' '##browser_source'
+click_item 'Asset Browser' '##browser_source'
 wait 3
 click_item '*' 'Objects'
 wait 3
-click_item 'Object Browser' '##browser_view' right
+click_item 'Asset Browser' '##browser_view' right
 wait 3
 click_item '*' 'List'
 close_popup
-click_item 'Object Browser' '##browser_source'
+click_item 'Asset Browser' '##browser_source'
 wait 3
 click_item '*' 'Prefabs'
 wait 3
-assert item 'Object Browser' 'Bus stop  (3)'
+assert item 'Asset Browser' 'Bus stop  (3)'
 
 # Search finds a prefab by its tags too
-click_item 'Object Browser' '##search_prefabs'
+click_item 'Asset Browser' '##search_prefabs'
 type "lamp"
 wait 5
-assert item 'Object Browser' 'Street lights  (3)'
-assert no_item 'Object Browser' 'Bus stop  (3)'
+assert item 'Asset Browser' 'Street lights  (3)'
+assert no_item 'Asset Browser' 'Bus stop  (3)'
 key Ctrl+A
 key Backspace
 wait 5
 
 # Place the bus stop, turned, as a group named after it
-click_item 'Object Browser' 'Bus stop  (3)'
+click_item 'Asset Browser' 'Bus stop  (3)'
 wait 3
-click_item 'Object Browser' 'As a group'
-scroll_until 'Object Browser' 'Place'
-click_item 'Object Browser' 'Place'
+click_item 'Asset Browser' 'As a group'
+scroll_until 'Asset Browser' 'Place'
+click_item 'Asset Browser' 'Place'
 wait 3
 move 50% 55%
 key E
@@ -63,4 +63,4 @@ type "my stop"
 click_item '*' 'Save'
 wait 10
 assert toast_contains "Saved 3 instance(s) as my stop"
-assert item 'Object Browser' 'my stop  (3)'
+assert item 'Asset Browser' 'my stop  (3)'

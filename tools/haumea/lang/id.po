@@ -110,9 +110,6 @@ msgstr ""
 "%d elemen SA-MP, %d kendaraan\n"
 "%s"
 
-msgid "%d added, %d deleted, %d moved, %d rotated, %d material"
-msgstr "%d ditambah, %d dihapus, %d dipindah, %d diputar, %d material"
-
 msgid "%d attached or referenced objects excluded from cleanup."
 msgstr "%d objek terpasang atau direferensikan dikecualikan dari pembersihan."
 
@@ -151,9 +148,6 @@ msgstr "%d elemen di luar peta San Andreas (±%d). Tetap berfungsi, tetapi air, 
 
 msgid "%d element(s) outside SA-MP's world bounds (±%d): the server clamps or ignores those positions."
 msgstr "%d elemen di luar batas dunia SA-MP (±%d): server membatasi atau mengabaikan posisi itu."
-
-msgid "%d element(s) use custom models: the server needs them in models/artconfig.txt (or AddSimpleModel) and artwork enabled%s; players need SA-MP 0.3.DL or an open.mp client.%s"
-msgstr "%d elemen memakai model kustom: server memerlukannya di models/artconfig.txt (atau AddSimpleModel) dan artwork aktif%s; pemain memerlukan SA-MP 0.3.DL atau klien open.mp.%s"
 
 msgid "%d elements share the variable name \"%s\": the Pawn code won't compile."
 msgstr "%d elemen memakai nama variabel \"%s\" yang sama: kode Pawn tidak akan dikompilasi."
@@ -221,6 +215,9 @@ msgstr "%d objek dengan model yang tidak dikenal editor dilewati saat peta dibuk
 msgid "%d objects"
 msgstr "%d objek"
 
+msgid "%d particles"
+msgstr "%d partikel"
+
 msgid "%d objects along this path"
 msgstr "%d objek di sepanjang jalur ini"
 
@@ -248,9 +245,6 @@ msgstr "%d dari %d"
 msgid "%d of %d objects (%s): the rest of the gamemode has little room left."
 msgstr "%d dari %d objek (%s): sisa gamemode hanya punya sedikit ruang."
 
-msgid "%d of those models were imported into the game's modloader/Haumea folder, which SA-MP players don't have. They can become custom models in the server's models folder (SA-MP 0.3.DL / open.mp)."
-msgstr "%d dari model itu diimpor ke folder modloader/Haumea game, yang tidak dimiliki pemain SA-MP. Model tersebut bisa menjadi model kustom di folder models server (SA-MP 0.3.DL / open.mp)."
-
 msgid "%d per-player or streamed gang zone(s): CreatePlayerGangZone only compiles and runs on open.mp, not on a SA-MP 0.3.7 server. For 0.3.7, set them to Global (Object Info > Shown as, or radar art's Shown as)."
 msgstr "%d gang zone per pemain atau streamed: CreatePlayerGangZone hanya dikompilasi dan berjalan di open.mp, bukan di server SA-MP 0.3.7. Untuk 0.3.7, atur ke Global (Info objek > Ditampilkan sebagai, atau Ditampilkan sebagai di radar art)."
 
@@ -268,9 +262,6 @@ msgstr "%d dipilih"
 
 msgid "%d selected world object(s) will be replaced in the map."
 msgstr "%d objek dunia terpilih akan diganti di peta."
-
-msgid "%d selected · Drag gizmo to move or rotate · %s deletes."
-msgstr "%d dipilih · Seret gizmo untuk memindah atau memutar · %s menghapus."
 
 msgid "%d selected, %d of this kind"
 msgstr "%d dipilih, %d dari jenis ini"
@@ -432,9 +423,6 @@ msgstr "%s (hilang)"
 
 msgid "%s (you)"
 msgstr "%s (Anda)"
-
-msgid "%s Browse · %s Map objects · %s Save · %s Shortcuts"
-msgstr "%s Jelajahi · %s Objek peta · %s Simpan · %s Pintasan"
 
 msgid "%s The update installs the next time Haumea starts."
 msgstr "%s Pembaruan dipasang saat Haumea dimulai berikutnya."
@@ -637,14 +625,8 @@ msgstr "(versi tidak diketahui)"
 msgid ", %d removed"
 msgstr ", %d dihapus"
 
-msgid ", %d restored"
-msgstr ", %d dipulihkan"
-
 msgid ", and it has none"
 msgstr ", dan tidak punya"
-
-msgid ", but config.json has artwork.enable off"
-msgstr ", tetapi config.json mematikan artwork.enable"
 
 msgid ""
 "-1 keeps the original texture, 0 is SA-MP's blank white texture.\n"
@@ -898,13 +880,6 @@ msgstr "File .pwn atau .inc yang hanya berisi textdraw; gamemode Anda menyertaka
 msgid "A copy of the shape under it, this far down and right. 0 for none."
 msgstr "Salinan bentuk di bawahnya, sejauh ini ke bawah dan kanan. 0 untuk tanpa salinan."
 
-msgid ""
-"A custom model's texture: players on 0.3.DL and open.mp download it;\n"
-"0.3.7 players see nothing there."
-msgstr ""
-"Tekstur model kustom: pemain 0.3.DL dan open.mp mengunduhnya;\n"
-"pemain 0.3.7 tidak melihat apa pun di sana."
-
 msgid "A driver recording: the NPC must be in a vehicle"
 msgstr "Rekaman pengemudi: NPC harus berada di kendaraan"
 
@@ -998,9 +973,6 @@ msgstr "Aktor"
 msgid "Add"
 msgstr "Tambah"
 
-msgid "Add Custom Model (SA-MP 0.3.DL / open.mp)"
-msgstr "Tambah model kustom (SA-MP 0.3.DL / open.mp)"
-
 msgid "Add a marker to the radar."
 msgstr "Tambah penanda ke radar."
 
@@ -1037,9 +1009,6 @@ msgstr "Tambah model terpilih"
 msgid "Add text in the 3D world."
 msgstr "Tambah teks di dunia 3D."
 
-msgid "Add the shape"
-msgstr "Tambah bentuk"
-
 msgid "Add to Favourites"
 msgstr "Tambah ke Favorit"
 
@@ -1058,8 +1027,8 @@ msgstr "Ditambah"
 msgid "Added %d object(s) and %d removed building(s)."
 msgstr "%d objek dan %d bangunan terhapus ditambahkan."
 
-msgid "Added %d to the server: Object Browser > Custom models"
-msgstr "%d ditambahkan ke server: Penjelajah objek > Model kustom"
+msgid "Added %d to the server: Asset Browser > Custom models"
+msgstr "%d ditambahkan ke server: Penjelajah aset > Model kustom"
 
 msgid "Added the node, but couldn't link it: %s"
 msgstr "Node ditambahkan, tetapi tidak bisa dihubungkan: %s"
@@ -1085,9 +1054,6 @@ msgstr "Menambahkan objek, tekstur, dan bangunan terhapus dari file .pwn atau .i
 
 msgid "Adjust FOV zoom"
 msgstr "Atur zoom FOV"
-
-msgid "Admin"
-msgstr "Admin"
 
 msgid "Admin password"
 msgstr "Kata sandi admin"
@@ -1350,9 +1316,6 @@ msgstr "Mengelilingi Y"
 msgid "Around Z"
 msgstr "Mengelilingi Z"
 
-msgid "Arrange"
-msgstr "Susun"
-
 msgid "Array"
 msgstr "Array"
 
@@ -1417,12 +1380,6 @@ msgstr "Pasang ke target"
 msgid "Attached %d object(s) to the selected target."
 msgstr "%d objek dipasang ke target terpilih."
 
-msgid "Attached to %s"
-msgstr "Terpasang ke %s"
-
-msgid "Attached to player preview (skin %d)"
-msgstr "Terpasang ke pratinjau pemain (skin %d)"
-
 msgid "Attachment"
 msgstr "Attachment"
 
@@ -1483,9 +1440,6 @@ msgstr "Prefab tersedia:"
 
 msgid "Axis"
 msgstr "Sumbu"
-
-msgid "BRUSH"
-msgstr "BRUSH"
 
 msgid "Back"
 msgstr "Kembali"
@@ -1748,9 +1702,6 @@ msgstr "Blok bangunan"
 msgid "Building the world"
 msgstr "Membangun dunia"
 
-msgid "Bundled: Namaka %s"
-msgstr "Bawaan: Namaka %s"
-
 msgid "Burger Shot"
 msgstr "Burger Shot"
 
@@ -1801,9 +1752,6 @@ msgstr "Target kamera"
 
 msgid "Can't add a node: %s"
 msgstr "Tidak bisa menambah node: %s"
-
-msgid "Can't be dragged or resized on the canvas. The fields here still change it."
-msgstr "Tidak bisa diseret atau diubah ukurannya di kanvas. Kolom di sini tetap bisa mengubahnya."
 
 msgid "Can't link: %s"
 msgstr "Tidak bisa menghubungkan: %s"
@@ -2123,9 +2071,6 @@ msgstr ""
 "Klik satu node, lalu yang lain, untuk menghubungkan keduanya.\n"
 "Klik dua node yang terhubung memutuskannya. Klik kanan atau Esc berhenti."
 
-msgid "Click or drag to paint · %s stops."
-msgstr "Klik atau seret untuk melukis · %s berhenti."
-
 msgid ""
 "Click points in the world one after another.\n"
 "Right-click or Esc stops."
@@ -2163,9 +2108,6 @@ msgstr "Klik menembus yang terkunci"
 
 msgid "Click to place the pin. Esc cancels."
 msgstr "Klik untuk menaruh pin. Esc membatalkan."
-
-msgid "Click to place · Shift+click repeats · %s stops."
-msgstr "Klik untuk menaruh · Shift+klik mengulang · %s berhenti."
 
 msgid "Click to place. Q/E or the wheel turn it, Esc stops."
 msgstr "Klik untuk menaruh. Q/E atau roda memutarnya, Esc berhenti."
@@ -2224,9 +2166,6 @@ msgstr "Collision dan detail"
 
 msgid "Collisions"
 msgstr "Collision"
-
-msgid "Color 0: the model's own color is kept."
-msgstr "Warna 0: warna asli model dipertahankan."
 
 msgid "Colour"
 msgstr "Warna"
@@ -2336,9 +2275,6 @@ msgstr "Salinan"
 msgid "Copies of the selection, not counting it."
 msgstr "Salinan pilihan, tidak termasuk pilihan itu sendiri."
 
-msgid "Copies the DFF and TXD into the server's models folder and adds them to models/artconfig.txt, so SA-MP 0.3.DL and open.mp send them to players. Nothing is written into the game folder."
-msgstr "Menyalin DFF dan TXD ke folder models server dan menambahkannya ke models/artconfig.txt, sehingga SA-MP 0.3.DL dan open.mp mengirimnya ke pemain. Tidak ada yang ditulis ke folder game."
-
 msgid "Copies the lines shown, to paste in a bug report"
 msgstr "Menyalin baris yang ditampilkan, untuk ditempel di laporan bug"
 
@@ -2418,9 +2354,6 @@ msgstr "Salin posisi kamera"
 
 msgid "Copy the visible X Y Z values"
 msgstr "Salin nilai X Y Z yang terlihat"
-
-msgid "Copy transform"
-msgstr "Salin transformasi"
 
 msgid "Copy: %s"
 msgstr "Salin: %s"
@@ -2603,9 +2536,6 @@ msgstr "Handle kurva"
 msgid "Custom"
 msgstr "Kustom"
 
-msgid "Custom Model... (0.3.DL)"
-msgstr "Model kustom... (0.3.DL)"
-
 msgid "Custom import is wired for GTA San Andreas only in this v1."
 msgstr "Impor kustom di v1 ini hanya tersedia untuk GTA San Andreas."
 
@@ -2614,9 +2544,6 @@ msgstr "Impor kustom memerlukan .dff dan .txd yang cocok di folder yang sama"
 
 msgid "Custom models"
 msgstr "Model kustom"
-
-msgid "Custom models (0.3.DL)"
-msgstr "Model kustom (0.3.DL)"
 
 msgid "Custom models that couldn't be loaded: %d (see the log)"
 msgstr "Model kustom yang tidak bisa dimuat: %d (lihat log)"
@@ -2855,9 +2782,6 @@ msgstr "Titik"
 msgid "Double-click: look from where they were when they wrote this."
 msgstr "Klik dua kali: lihat dari tempat mereka berada saat menulis ini."
 
-msgid "Down"
-msgstr "Bawah"
-
 msgid "Download updates automatically"
 msgstr "Unduh pembaruan otomatis"
 
@@ -2905,9 +2829,6 @@ msgstr "Seret untuk memindah titik akhir"
 msgid "Drag to move pin"
 msgstr "Seret untuk memindah pin"
 
-msgid "Drag to move · drag a corner to resize · %s stops."
-msgstr "Seret untuk memindah · seret sudut untuk mengubah ukuran · %s berhenti."
-
 msgid "Drag to move, wheel to zoom, double-click to fly there."
 msgstr "Seret untuk bergerak, roda untuk zoom, klik dua kali untuk terbang ke sana."
 
@@ -2937,17 +2858,8 @@ msgstr "Jarak gambar"
 msgid "Draw Last"
 msgstr "Draw Last"
 
-msgid "Draw dist:"
-msgstr "Jarak gambar:"
-
 msgid "Draw distance"
 msgstr "Jarak gambar"
-
-msgid "Draw distance %.0f"
-msgstr "Draw distance %.0f"
-
-msgid "Draw distance %.0f  ·  LOD %s"
-msgstr "Draw distance %.0f  ·  LOD %s"
 
 msgid "Draw distance (m)"
 msgstr "Jarak gambar (m)"
@@ -3051,9 +2963,6 @@ msgstr "Setiap titik adalah textdraw: SA-MP mengizinkan 2048 global dan 256 per 
 
 msgid "Edit"
 msgstr "Edit"
-
-msgid "Edit Pawn · Ctrl+S saves · Ctrl+F searches."
-msgstr "Edit Pawn · Ctrl+S menyimpan · Ctrl+F mencari."
 
 msgid "Edit all selected"
 msgstr "Edit semua terpilih"
@@ -3399,11 +3308,8 @@ msgstr "Cari duplikat"
 msgid "Find instances"
 msgstr "Cari instans"
 
-msgid "Find it in Object Browser > Custom models and place it like any object."
-msgstr "Temukan di Penjelajah objek > Model kustom dan taruh seperti objek biasa."
-
-msgid "Find objects by model or TXD"
-msgstr "Cari objek berdasarkan model atau TXD"
+msgid "Find it in Asset Browser > Custom models and place it like any object."
+msgstr "Temukan di Penjelajah aset > Model kustom dan taruh seperti objek biasa."
 
 msgid "Find similar models"
 msgstr "Cari model serupa"
@@ -3494,9 +3400,6 @@ msgstr "Folder"
 
 msgid "Folder for NODES*.DAT (a server's scriptfiles/NPCs/nodes)"
 msgstr "Folder untuk NODES*.DAT (scriptfiles/NPCs/nodes milik server)"
-
-msgid "Folder missing"
-msgstr "Folder hilang"
 
 msgid "Folder with the server's .rec files; empty: the workspace's npcmodes/recordings"
 msgstr "Folder berisi file .rec server; kosong: npcmodes/recordings workspace"
@@ -3603,9 +3506,6 @@ msgstr "Dari sini"
 msgid "From textures"
 msgstr "Dari tekstur"
 
-msgid "From the workspace's models/artconfig.txt."
-msgstr "Dari models/artconfig.txt workspace."
-
 msgid "Front"
 msgstr "Depan"
 
@@ -3653,9 +3553,6 @@ msgstr "Objek dunia GTA"
 
 msgid "Game HUD"
 msgstr "HUD game"
-
-msgid "Game folder"
-msgstr "Folder game"
 
 msgid "Game nodes"
 msgstr "Node game"
@@ -3795,9 +3692,6 @@ msgstr "Pergi ke ruang lain: petanya menggantikan peta Anda di sini."
 
 msgid "Go to coordinates (pasted x, y, z)"
 msgstr "Pergi ke koordinat (x, y, z yang ditempel)"
-
-msgid "Go to node"
-msgstr "Pergi ke node"
 
 msgid "Golf club"
 msgstr "Stik golf"
@@ -4080,14 +3974,8 @@ msgstr "Balap kuda (0.3.7-R2)"
 msgid "Hospital"
 msgstr "Rumah sakit"
 
-msgid "Host"
-msgstr "Host"
-
 msgid "Host this map"
 msgstr "Jadi host peta ini"
-
-msgid "Hosting on port %d"
-msgstr "Menjadi host di port %d"
 
 msgid "Hour"
 msgstr "Jam"
@@ -4165,9 +4053,6 @@ msgstr "ID %d sudah dipakai"
 
 msgid "ID %d is out of range"
 msgstr "ID %d di luar rentang"
-
-msgid "ID: %d\n"
-msgstr "ID: %d\n"
 
 msgid "IDE"
 msgstr "IDE"
@@ -4252,9 +4137,6 @@ msgstr ""
 
 msgid "In canvas units: 0 to 640 across, 0 to 448 down."
 msgstr "Dalam unit kanvas: 0 sampai 640 melintang, 0 sampai 448 ke bawah."
-
-msgid "In game: SetPlayerTime(playerid, %d, %d); SetPlayerWeather(playerid, %d);"
-msgstr "Di game: SetPlayerTime(playerid, %d, %d); SetPlayerWeather(playerid, %d);"
 
 msgid "In room %s on %s, as %s"
 msgstr "Di ruang %s pada %s, sebagai %s"
@@ -4395,9 +4277,6 @@ msgstr "Tampilan terisolasi"
 msgid "Isolated the selection, %d other instance(s) hidden | %s: show all"
 msgstr "Pilihan diisolasi, %d instans lain disembunyikan | %s: tampilkan semua"
 
-msgid "It goes into the workspace's models folder and artconfig.txt."
-msgstr "Masuk ke folder models dan artconfig.txt workspace."
-
 msgid "It installs the next time Haumea starts."
 msgstr "Dipasang saat Haumea dimulai berikutnya."
 
@@ -4409,9 +4288,6 @@ msgstr "Berjalan ke satu arah dengan sudut di atas 180 dan ke arah lain hingga 1
 
 msgid "Its account's: the server knows it from the agent's token."
 msgstr "Milik akunnya: server mengenalinya dari token agen."
-
-msgid "Its password is kept on this computer."
-msgstr "Kata sandinya disimpan di komputer ini."
 
 msgid "Its player name, shown over its head and in the player list."
 msgstr "Nama pemainnya, ditampilkan di atas kepalanya dan di daftar pemain."
@@ -4541,9 +4417,6 @@ msgstr "Luncurkan game untuk bergabung. Setelah perubahan, Muat ulang peta di je
 
 msgid "Launch game with"
 msgstr "Luncurkan game dengan"
-
-msgid "Layers - %s"
-msgstr "Lapisan - %s"
 
 msgid "Layout"
 msgstr "Tata letak"
@@ -4770,9 +4643,6 @@ msgstr "Kunci atau buka kunci grup"
 
 msgid "Lock this room"
 msgstr "Kunci ruang ini"
-
-msgid "Locked"
-msgstr "Terkunci"
 
 msgid "Locked external reference — reopen its source IPL to edit it."
 msgstr "Referensi eksternal terkunci — buka ulang IPL sumbernya untuk mengeditnya."
@@ -5049,9 +4919,6 @@ msgstr "Titik tengah"
 msgid "Min"
 msgstr "Min"
 
-msgid "Min Draw dist: %.0f"
-msgstr "Min draw dist: %.0f"
-
 msgid "Mine"
 msgstr "Milik saya"
 
@@ -5131,9 +4998,6 @@ msgstr "Model 0: \"blanktex\" putih polos SA-MP; nama TXD dan tekstur diabaikan.
 msgid "Model ID"
 msgstr "ID model"
 
-msgid "Model ID changes: %d"
-msgstr "Perubahan ID model: %d"
-
 msgid "Model IDs can't be changed for objects linked to an LOD or outside the active map."
 msgstr "ID model tidak bisa diubah untuk objek yang terhubung ke LOD atau di luar peta aktif."
 
@@ -5182,9 +5046,6 @@ msgstr "Aksi lainnya"
 
 msgid "More bands blend more smoothly. Each band is a textdraw."
 msgstr "Lebih banyak band memadu lebih halus. Setiap band adalah textdraw."
-
-msgid "More display and snapping options"
-msgstr "Opsi tampilan dan snap lainnya"
 
 msgid "Motor, stopping"
 msgstr "Motor, berhenti"
@@ -5261,9 +5122,6 @@ msgstr "Memindahkan objek melintang jalur, ke kanannya; negatif untuk kirinya."
 
 msgid "Moves when hit"
 msgstr "Bergerak saat dipukul"
-
-msgid "Moves when the map loads"
-msgstr "Bergerak saat peta dimuat"
 
 msgid "Moving this object updates the offset; moving the parent carries it along."
 msgstr "Memindahkan objek ini memperbarui offset; memindahkan induk membawanya serta."
@@ -5603,9 +5461,6 @@ msgstr "Tidak ada node dipilih. Klik satu di viewport."
 msgid "No object is in a group."
 msgstr "Tidak ada objek dalam grup."
 
-msgid "No object selected"
-msgstr "Tidak ada objek dipilih"
-
 msgid "No parts fit this model."
 msgstr "Tidak ada komponen yang cocok dengan model ini."
 
@@ -5745,8 +5600,8 @@ msgstr "Catatan"
 msgid "Nothing matches."
 msgstr "Tidak ada yang cocok."
 
-msgid "Nothing placed yet. Pick an object in the Object Browser and click Place."
-msgstr "Belum ada yang ditempatkan. Pilih objek di Penjelajah objek lalu klik Tempatkan."
+msgid "Nothing placed yet. Pick an object in the Asset Browser and click Place."
+msgstr "Belum ada yang ditempatkan. Pilih objek di Penjelajah aset lalu klik Tempatkan."
 
 msgid "Nothing selected"
 msgstr "Tidak ada yang dipilih"
@@ -5822,17 +5677,17 @@ msgstr "Objek"
 msgid "Object (AddSimpleModel)"
 msgstr "Objek (AddSimpleModel)"
 
-msgid "Object Browser"
-msgstr "Penjelajah objek"
+msgid "Asset Browser"
+msgstr "Penjelajah aset"
 
-msgid "Object Browser (%s): pick an object, Place, then click in the world."
-msgstr "Penjelajah objek (%s): pilih objek, Tempatkan, lalu klik di dunia."
+msgid "Asset Browser (%s): pick an object, Place, then click in the world."
+msgstr "Penjelajah aset (%s): pilih objek, Tempatkan, lalu klik di dunia."
 
-msgid "Object Browser (%s): pick something to place."
-msgstr "Penjelajah objek (%s): pilih sesuatu untuk ditempatkan."
+msgid "Asset Browser (%s): pick something to place."
+msgstr "Penjelajah aset (%s): pilih sesuatu untuk ditempatkan."
 
-msgid "Object Browser list"
-msgstr "Daftar Penjelajah objek"
+msgid "Asset Browser list"
+msgstr "Daftar Penjelajah aset"
 
 msgid "Object ID"
 msgstr "ID objek"
@@ -5895,13 +5750,6 @@ msgid ""
 msgstr ""
 "Nonaktif memutarnya di tempat rekaman dibuat. Aktif memindahkan seluruh rute agar\n"
 "mulai di tempat NPC berdiri (posisi awal NPC_StartPlayback)."
-
-msgid ""
-"Off: the outer ones stay and the gaps between come out equal.\n"
-"On: each is this far from the one before, from the first."
-msgstr ""
-"Nonaktif: yang paling luar tetap dan jarak di antaranya dibuat sama.\n"
-"Aktif: tiap objek berjarak segini dari yang sebelumnya, mulai dari yang pertama."
 
 msgid "Off: world X, Y and Z. On: the first selected object's axes."
 msgstr "Nonaktif: X, Y, dan Z dunia. Aktif: sumbu objek pertama yang dipilih."
@@ -5995,9 +5843,6 @@ msgstr "Hanya dipakai ikon 0 dan 1 (penanda berwarna)."
 
 msgid "Opacity"
 msgstr "Opasitas"
-
-msgid "Opacity of the red overlay drawn on selected objects."
-msgstr "Opasitas overlay merah pada objek yang dipilih."
 
 msgid "Open"
 msgstr "Buka"
@@ -6124,15 +5969,6 @@ msgstr "Titik asal"
 msgid "Original"
 msgstr "Asli"
 
-msgid ""
-"Others join with this computer's address, the port and the session code.\n"
-"Over the internet the port must be forwarded to this computer, or use a VPN such as Tailscale.\n"
-"For a session that stays up without you, run haumea-server where your SA-MP server runs."
-msgstr ""
-"Orang lain bergabung dengan alamat komputer ini, port, dan kode sesi.\n"
-"Lewat internet, port harus diteruskan ke komputer ini, atau gunakan VPN seperti Tailscale.\n"
-"Untuk sesi yang tetap aktif tanpa Anda, jalankan haumea-server di tempat server SA-MP Anda berjalan."
-
 msgid "Outgoing"
 msgstr "Keluar"
 
@@ -6151,32 +5987,14 @@ msgstr "Garis tepi"
 msgid "Outline every map object"
 msgstr "Beri garis tepi pada setiap objek peta"
 
-msgid "Outline map objects"
-msgstr "Garis tepi objek peta"
-
 msgid "Outline map objects (%s)"
 msgstr "Garis tepi objek peta (%s)"
-
-msgid "Outline selected and hovered objects"
-msgstr "Beri garis tepi pada objek yang dipilih dan disorot"
 
 msgid "Outline selected objects"
 msgstr "Beri garis tepi pada objek yang dipilih"
 
-msgid "Output: %s"
-msgstr "Output: %s"
-
 msgid "Over IPv6, others can join at %s when your router lets them in."
 msgstr "Lewat IPv6, orang lain dapat bergabung di %s jika router Anda mengizinkan."
-
-msgid "Over the internet, others join at %s"
-msgstr "Lewat internet, orang lain bergabung di %s"
-
-msgid "PLACE"
-msgstr "PLACE"
-
-msgid "PREFAB"
-msgstr "PREFAB"
 
 msgid "Page %d of %d (%d models)"
 msgstr "Halaman %d dari %d (%d model)"
@@ -6189,9 +6007,6 @@ msgstr "Cat objek terpilih pada permukaan"
 
 msgid "Painted %d x %s"
 msgstr "%d x %s dicat"
-
-msgid "Painting: %s"
-msgstr "Mengecat: %s"
 
 msgid "Paintjob"
 msgstr "Paintjob"
@@ -6236,6 +6051,9 @@ msgstr "Parasut terbuka"
 msgid "Particle effects"
 msgstr "Efek partikel"
 
+msgid "Particles"
+msgstr "Partikel"
+
 msgid ""
 "Parts of the objects below the water's surface (a rock's\n"
 "wide base, a pier's legs) aren't drawn, as the radar shows the water there."
@@ -6257,9 +6075,6 @@ msgstr "Tempel di tempat"
 
 msgid "Paste in front of the camera"
 msgstr "Tempel di depan kamera"
-
-msgid "Paste transform"
-msgstr "Tempel transformasi"
 
 msgid "Paste where it was copied"
 msgstr "Tempel di tempat asal disalin"
@@ -6815,13 +6630,6 @@ msgstr "Masukkan pilihan ke grup"
 msgid "Put what is placed in a group named after the prefab."
 msgstr "Masukkan yang ditempatkan ke grup bernama sesuai prefab."
 
-msgid ""
-"Puts a DFF and TXD in the server's models folder and artconfig.txt,\n"
-"so SA-MP 0.3.DL and open.mp players get it. The game folder isn't touched."
-msgstr ""
-"Menaruh DFF dan TXD di folder models server dan artconfig.txt,\n"
-"sehingga pemain SA-MP 0.3.DL dan open.mp mendapatkannya. Folder game tidak disentuh."
-
 msgid "Puts back the version before the last update, then restarts."
 msgstr "Memulihkan versi sebelum pembaruan terakhir, lalu memulai ulang."
 
@@ -6839,9 +6647,6 @@ msgstr "Python"
 
 msgid "Quarry"
 msgstr "Tambang"
-
-msgid "READY"
-msgstr "SIAP"
 
 msgid "RMB"
 msgstr "RMB"
@@ -6981,9 +6786,6 @@ msgstr "Membaca poligon dan tekstur..."
 msgid "Ready"
 msgstr "Siap"
 
-msgid "Ready: %s"
-msgstr "Siap: %s"
-
 msgid "Rebuild objects"
 msgstr "Bangun ulang objek"
 
@@ -7062,12 +6864,6 @@ msgstr "Segarkan dari peta"
 
 msgid "Refused: "
 msgstr "Ditolak: "
-
-msgid "Related timed: %s\n"
-msgstr "Terkait berwaktu: %s\n"
-
-msgid "Related: %s\n"
-msgstr "Terkait: %s\n"
 
 msgid "Release page"
 msgstr "Halaman rilis"
@@ -7195,9 +6991,6 @@ msgstr "Laporan"
 
 msgid "Reports waiting: %d"
 msgstr "Laporan yang menunggu: %d"
-
-msgid "Requested: %s"
-msgstr "Diminta: %s"
 
 msgid "Required"
 msgstr "Wajib"
@@ -7363,9 +7156,6 @@ msgstr "Dikembalikan ke %s: mulai ulang Haumea untuk memakainya"
 msgid "Rooftop"
 msgstr "Atap"
 
-msgid "Room"
-msgstr "Room"
-
 msgid "Room password"
 msgstr "Kata sandi room"
 
@@ -7446,9 +7236,6 @@ msgstr "Berjalan"
 msgid "Running on 127.0.0.1:%d"
 msgstr "Berjalan di 127.0.0.1:%d"
 
-msgid "Running: %s"
-msgstr "Sedang dipakai: %s"
-
 msgid ""
 "Runs the map as it is now on a private open.mp test server.\n"
 "Your map file and your own server are not touched."
@@ -7492,9 +7279,6 @@ msgstr ""
 "(96 x 82, ukuran mengikuti tinggi layar). Aktif kecuali pemain menonaktifkannya\n"
 "(nohudscalefix=1 di sa-mp.cfg). Tidak dengan Widescreen Fix, yang mengatur ukuran radar sendiri."
 
-msgid "SA-MP 0.3.DL and open.mp clients download custom models."
-msgstr "Klien SA-MP 0.3.DL dan open.mp mengunduh model kustom."
-
 msgid "SA-MP chat"
 msgstr "Chat SA-MP"
 
@@ -7518,9 +7302,6 @@ msgstr "Default SA-MP"
 
 msgid "SA-MP's own objects won't show without its client files."
 msgstr "Objek bawaan SA-MP tidak akan tampil tanpa file klien-nya."
-
-msgid "SELECT"
-msgstr "SELECT"
 
 msgid "Safe area (5%)"
 msgstr "Area aman (5%)"
@@ -7757,9 +7538,6 @@ msgstr "Kursi"
 msgid "Seconds. -1 with a static vehicle writes AddStaticVehicle."
 msgstr "Detik. -1 dengan kendaraan statis menulis AddStaticVehicle."
 
-msgid "Section"
-msgstr "Bagian"
-
 msgid "See-through (alpha)"
 msgstr "Tembus pandang (alpha)"
 
@@ -7928,17 +7706,11 @@ msgstr "Log server"
 msgid "Server package"
 msgstr "Paket server"
 
-msgid "Server: %s"
-msgstr "Server: %s"
-
 msgid "Servers"
 msgstr "Server"
 
 msgid "Session code"
 msgstr "Kode sesi"
-
-msgid "Session code: %s"
-msgstr "Kode sesi: %s"
 
 msgid "Set X, Y and Z rotation to zero."
 msgstr "Atur rotasi X, Y, dan Z ke nol."
@@ -7951,9 +7723,6 @@ msgstr "SetVehicleNumberPlate, hingga 32 karakter. Kosong mempertahankan plat ba
 
 msgid "Sets the interior of all %d selected."
 msgstr "Mengatur interior untuk semua %d yang dipilih."
-
-msgid "Settings and editor data: %s"
-msgstr "Pengaturan dan data editor: %s"
 
 msgid "Setup, elements, NPCs, textdraws, testing and saving, with screenshots."
 msgstr "Penyiapan, elemen, NPC, textdraw, pengujian, dan penyimpanan, dengan tangkapan layar."
@@ -8041,9 +7810,6 @@ msgstr "Tampilkan pemandu:"
 
 msgid "Show material indexes"
 msgstr "Tampilkan indeks material"
-
-msgid "Show object edges, including invisible and see-through objects."
-msgstr "Tampilkan tepi objek, termasuk objek tak terlihat dan tembus pandang."
 
 msgid "Show only the target and its attachments against an empty background."
 msgstr "Tampilkan hanya target dan lampirannya dengan latar kosong."
@@ -8548,17 +8314,11 @@ msgstr "Switched Off"
 msgid "Sync rotation"
 msgstr "Sinkronkan rotasi"
 
-msgid "TEXTDRAW"
-msgstr "TEXTDRAW"
-
 msgid "TXD"
 msgstr "TXD"
 
 msgid "TXD \"%s\" was not found; the original texture stays."
 msgstr "TXD \"%s\" tidak ditemukan; tekstur asli tetap dipakai."
-
-msgid "TXD %s"
-msgstr "TXD %s"
 
 msgid "TXD contains"
 msgstr "TXD berisi"
@@ -8594,9 +8354,6 @@ msgstr "Node target"
 msgid "Target picking failed. Click again or cancel."
 msgstr "Pemilihan target gagal. Klik lagi atau batal."
 
-msgid "Target: %s"
-msgstr "Target: %s"
-
 msgid "Tattoo"
 msgstr "Tato"
 
@@ -8620,10 +8377,12 @@ msgstr "Uji di game (%s) menjalankan peta di server open.mp pribadi."
 
 msgid ""
 "Test in game runs the map on a private open.mp server in Haumea's config\n"
-"folder. Its files come from this package, or from the workspace server when empty."
+"folder. Its files come from this package, or when empty from the workspace server,\n"
+"or else from the latest open.mp release, downloaded the first time."
 msgstr ""
 "Uji di game menjalankan peta di server open.mp pribadi di folder config\n"
-"Haumea. File-nya berasal dari paket ini, atau dari server workspace bila kosong."
+"Haumea. File-nya berasal dari paket ini, atau bila kosong dari server workspace,\n"
+"atau dari rilis open.mp terbaru, yang diunduh saat pertama kali."
 
 msgid "Test in game: %s"
 msgstr "Uji di game: %s"
@@ -9136,9 +8895,6 @@ msgstr "Waktu & Cuaca"
 msgid "Time (ms)"
 msgstr "Waktu (ms)"
 
-msgid "Time: %d %d (visible now: %s)"
-msgstr "Waktu: %d %d (terlihat sekarang: %s)"
-
 msgid "Timed (day or night)"
 msgstr "Berwaktu (siang atau malam)"
 
@@ -9168,9 +8924,6 @@ msgstr "Untuk mengedit file itu sendiri, gunakan File > Buka peta."
 
 msgid "To everyone (TextDrawCreate)"
 msgstr "Untuk semua orang (TextDrawCreate)"
-
-msgid "To keep them: a SA-MP 0.3.DL or open.mp custom model goes in the workspace's models/artconfig.txt (AddSimpleModel) with its DFF and TXD; anything else needs a similar game or SA-MP object in its place (search the Object Browser)."
-msgstr "Untuk mempertahankannya: model kustom SA-MP 0.3.DL atau open.mp ditaruh di models/artconfig.txt workspace (AddSimpleModel) beserta DFF dan TXD-nya; yang lain memerlukan objek game atau SA-MP yang mirip sebagai penggantinya (cari di Penjelajah objek)."
 
 msgid "To the key one"
 msgstr "Ke yang kunci"
@@ -9326,9 +9079,6 @@ msgstr "Skala UI"
 msgid "URL"
 msgstr "URL"
 
-msgid "Uncapped"
-msgstr "Tanpa batas"
-
 msgid ""
 "Unchanged world objects are not saved in the map. Once you move,\n"
 "rotate, retexture or delete one, the map removes the original with\n"
@@ -9410,9 +9160,6 @@ msgstr "Textdraw belum disimpan"
 
 msgid "Untitled map"
 msgstr "Peta tanpa judul"
-
-msgid "Up"
-msgstr "Atas"
 
 msgid "Up / Down"
 msgstr "Atas / Bawah"
@@ -9819,9 +9566,6 @@ msgstr "Dunia"
 msgid "World & streaming"
 msgstr "Dunia & streaming"
 
-msgid "World object: it stays unchanged and is omitted from Pawn export. If you move, rotate, delete, or edit its materials, export removes the original per player and creates the scripted replacement."
-msgstr "Objek dunia: tetap tidak berubah dan dihilangkan dari ekspor Pawn. Jika Anda memindahkan, memutar, menghapus, atau mengedit materialnya, ekspor menghapus aslinya per pemain dan membuat penggantinya lewat skrip."
-
 msgid "World origin"
 msgstr "Titik asal dunia"
 
@@ -10142,9 +9886,6 @@ msgstr "mengedit textdraw"
 msgid "empty text can crash 0.3.7 clients; use \"_\" for nothing."
 msgstr "teks kosong dapat membuat klien 0.3.7 crash; gunakan \"_\" untuk kosong."
 
-msgid "empty: pick from the list"
-msgstr "kosong: pilih dari daftar"
-
 msgid "fit to at least one zone"
 msgstr "muat ke setidaknya satu zona"
 
@@ -10240,9 +9981,6 @@ msgstr "nama path baru"
 
 msgid "new room's name"
 msgstr "nama room baru"
-
-msgid "no"
-msgstr "tidak"
 
 msgid "no NODES*.DAT files in %s"
 msgstr "tidak ada file NODES*.DAT di %s"
@@ -10425,9 +10163,6 @@ msgstr "memilih objek"
 msgid "set an open.mp server package (folder, .tar.gz or .zip) in Preferences > Test server"
 msgstr "atur paket server open.mp (folder, .tar.gz atau .zip) di Preferensi > Server uji"
 
-msgid "show"
-msgstr "tampilkan"
-
 msgid "sphere"
 msgstr "bola"
 
@@ -10556,9 +10291,6 @@ msgstr "penonton"
 
 msgid "walks NODES%d.DAT from point %d"
 msgstr "berjalan di NODES%d.DAT dari titik %d"
-
-msgid "yes"
-msgstr "ya"
 
 msgid "yesterday"
 msgstr "kemarin"
@@ -10743,8 +10475,8 @@ msgstr "Jumlah:"
 msgid "Number of objects scattered per click when Radius > 0."
 msgstr "Jumlah objek yang ditebar per klik saat Radius > 0."
 
-msgid "Pick the object to paint in the Object Browser first."
-msgstr "Pilih dulu objek yang akan dilukis di Penjelajah objek."
+msgid "Pick the object to paint in the Asset Browser first."
+msgstr "Pilih dulu objek yang akan dilukis di Penjelajah aset."
 
 msgid "Radius:"
 msgstr "Radius:"
@@ -10767,8 +10499,8 @@ msgstr "%d tekstur ditemukan di semua TXD"
 msgid "A saved selection has this name: saving replaces it."
 msgstr "Sudah ada pilihan tersimpan dengan nama ini: menyimpan akan menggantinya."
 
-msgid "Brush\nPaint copies of the Object Browser's object onto the world. Its settings are over the 3D view."
-msgstr "Kuas\nMelukis salinan objek dari Penjelajah Objek ke dunia. Pengaturannya ada di atas tampilan 3D."
+msgid "Brush\nPaint copies of the Asset Browser's object onto the world. Its settings are over the 3D view."
+msgstr "Kuas\nMelukis salinan objek dari Penjelajah aset ke dunia. Pengaturannya ada di atas tampilan 3D."
 
 msgid "Click to select these objects; Ctrl+click adds them to the selection."
 msgstr "Klik untuk memilih objek-objek ini; Ctrl+klik menambahkannya ke pilihan."
@@ -10836,9 +10568,6 @@ msgstr "Simpan pilihan..."
 msgid "Saved selections"
 msgstr "Pilihan tersimpan"
 
-msgid "Saved selections: keep a selection under a name and select it again later."
-msgstr "Pilihan tersimpan: simpan pilihan dengan sebuah nama dan pilih lagi nanti."
-
 msgid "Saved the selection \"%s\" (%d object(s))"
 msgstr "Pilihan \"%s\" disimpan (%d objek)"
 
@@ -10857,11 +10586,375 @@ msgstr "%d objek dipilih dari \"%s\""
 msgid "Selection %d"
 msgstr "Pilihan %d"
 
-msgid "Selections"
-msgstr "Pilihan"
-
 msgid "To ground"
 msgstr "Ke tanah"
 
 msgid "blank white"
 msgstr "putih polos"
+
+msgid "New"
+msgstr "Baru"
+
+msgid "Open..."
+msgstr "Buka..."
+
+msgid "Switch between the map, TextDraws and Code editors."
+msgstr "Beralih antara editor peta, TextDraws, dan Kode."
+
+msgid "The screen, previews, background, HUD, guides and nudging."
+msgstr "Layar, pratinjau, latar, HUD, panduan, dan geser."
+
+msgid "Zoom in"
+msgstr "Perbesar"
+
+msgid "Zoom out"
+msgstr "Perkecil"
+
+msgid "Layers"
+msgstr "Lapisan"
+
+msgid "Off: the outer ones stay and the gaps between come out equal.\nOn: each is this far from the one before, from the first."
+msgstr "Mati: yang di ujung tetap, jarak di antaranya dibuat sama.\nNyala: tiap objek sejauh ini dari sebelumnya, mulai dari yang pertama."
+
+msgid "Properties"
+msgstr "Properti"
+
+msgid "Same height"
+msgstr "Tinggi sama"
+
+msgid "Same width"
+msgstr "Lebar sama"
+
+msgid "The gap, in canvas units. Drag or double-click to type."
+msgstr "Jarak, dalam satuan kanvas. Seret atau klik dua kali untuk mengetik."
+
+msgid "File missing"
+msgstr "Berkas hilang"
+
+msgid "Open or close a panel."
+msgstr "Buka atau tutup panel."
+
+msgid "Panels"
+msgstr "Panel"
+
+msgid "Arrow keys"
+msgstr "Tombol panah"
+
+msgid "Attached to"
+msgstr "Terpasang ke"
+
+msgid "Detail"
+msgstr "Detail"
+
+msgid "Far version"
+msgstr "Versi jauh"
+
+msgid "Grid size"
+msgstr "Ukuran grid"
+
+msgid "Hidden at the editor's time now."
+msgstr "Tersembunyi pada jam editor sekarang."
+
+msgid "Hours"
+msgstr "Jam"
+
+msgid "In game"
+msgstr "Dalam game"
+
+msgid "Now"
+msgstr "Sekarang"
+
+msgid "Opacity of the tint drawn on selected objects."
+msgstr "Opasitas warna di atas objek terpilih."
+
+msgid "Output"
+msgstr "Keluaran"
+
+msgid "Player preview (skin %d)"
+msgstr "Pratinjau pemain (skin %d)"
+
+msgid "Related"
+msgstr "Terkait"
+
+msgid "Related timed"
+msgstr "Terkait waktu"
+
+msgid "Screen"
+msgstr "Layar"
+
+msgid "Shown at the editor's time now."
+msgstr "Terlihat pada jam editor sekarang."
+
+msgid "Shows from"
+msgstr "Terlihat dari"
+
+msgid "Sign in with"
+msgstr "Masuk dengan"
+
+msgid "The model is only drawn from this far away."
+msgstr "Model hanya digambar dari jarak ini."
+
+msgid "Trip"
+msgstr "Perjalanan"
+
+msgid "Editor data"
+msgstr "Data editor"
+
+msgid "Selection outline"
+msgstr "Garis tepi pilihan"
+
+msgid "Build Replay"
+msgstr "Putar ulang pembangunan"
+
+msgid "Plays the map being built, element by element in the order they were added, while the camera circles it."
+msgstr "Memutar proses pembangunan peta, elemen demi elemen sesuai urutan penambahannya, sambil kamera mengitari peta."
+
+msgid "Elements built so far. Drag to scrub."
+msgstr "Elemen yang sudah dibangun. Seret untuk menggulir."
+
+msgid "Circle the map. Moving the camera stops it."
+msgstr "Kitari peta. Menggerakkan kamera akan menghentikannya."
+
+msgid "Add one with + above, or from the ribbon."
+msgstr "Tambahkan dengan + di atas atau dari ribbon."
+
+msgid "Admin"
+msgstr "Admin"
+
+msgid "All lines, warnings and errors, or errors only"
+msgstr "Semua baris, peringatan dan galat, atau hanya galat"
+
+msgid "Also list what is fine but worth knowing."
+msgstr "Tampilkan juga yang aman tetapi perlu diketahui."
+
+msgid "An admin of this server makes them."
+msgstr "Admin server ini yang membuatnya."
+
+msgid "Arrange"
+msgstr "Atur"
+
+msgid "Bundled"
+msgstr "Bawaan"
+
+msgid "Click to fill in the form; double-click to join."
+msgstr "Klik untuk mengisi formulir; klik dua kali untuk bergabung."
+
+msgid "Click to fill in the form; double-click to join. Its password is kept on this computer."
+msgstr "Klik untuk mengisi formulir; klik dua kali untuk bergabung. Kata sandinya disimpan di komputer ini."
+
+msgid "Create"
+msgstr "Buat"
+
+msgid "Everything the browser can show"
+msgstr "Semua yang bisa ditampilkan peramban"
+
+msgid "Find objects"
+msgstr "Cari objek"
+
+msgid "Go to this view"
+msgstr "Buka tampilan ini"
+
+msgid "Join a session"
+msgstr "Gabung ke sesi"
+
+msgid "Keeps this view: the camera, the time, the weather and the interior."
+msgstr "Menyimpan tampilan ini: kamera, waktu, cuaca, dan interior."
+
+msgid "Make one with the + button above."
+msgstr "Buat dengan tombol + di atas."
+
+msgid "Maximize"
+msgstr "Maksimalkan"
+
+msgid "Minimize"
+msgstr "Minimalkan"
+
+msgid "Name the current view and Save it to come back to it."
+msgstr "Beri nama tampilan saat ini dan simpan untuk kembali ke sana."
+
+msgid "No messages yet."
+msgstr "Belum ada pesan."
+
+msgid "No one else here yet."
+msgstr "Belum ada orang lain di sini."
+
+msgid "No output yet."
+msgstr "Belum ada keluaran."
+
+msgid "No saved views yet."
+msgstr "Belum ada tampilan tersimpan."
+
+msgid "Only textures from TXDs whose name matches"
+msgstr "Hanya tekstur dari TXD yang namanya cocok"
+
+msgid "Others join with this computer's address, the port and the session code shown once you host."
+msgstr "Orang lain bergabung dengan alamat komputer ini, port, dan kode sesi yang muncul setelah Anda menjadi host."
+
+msgid ""
+"Over the internet the port must be forwarded to this computer, or use a VPN such as Tailscale.\n"
+"For a session that stays up without you, run haumea-server where your SA-MP server runs."
+msgstr ""
+"Lewat internet, port harus diteruskan ke komputer ini, atau gunakan VPN seperti Tailscale.\n"
+"Agar sesi tetap berjalan tanpa Anda, jalankan haumea-server di tempat server SA-MP Anda berjalan."
+
+msgid "Restore"
+msgstr "Pulihkan"
+
+msgid "Send them the port and session code above."
+msgstr "Kirimkan port dan kode sesi di atas kepada mereka."
+
+msgid "Show the target point"
+msgstr "Tampilkan titik sasaran"
+
+msgid "Snap to steps"
+msgstr "Tempel ke langkah"
+
+msgid "Test in game starts the server; what it prints shows here."
+msgstr "Uji dalam game menjalankan server; keluarannya tampil di sini."
+
+msgid "Type a model ID and press Enter to swap the model. Custom models use their negative Pawn IDs."
+msgstr "Ketik ID model lalu tekan Enter untuk mengganti model. Model kustom memakai ID Pawn negatif."
+
+msgid "Moves"
+msgstr "Bergerak"
+
+msgid "Starts"
+msgstr "Mulai"
+
+msgid "When the map loads"
+msgstr "Saat peta dimuat"
+
+msgid "When a player presses a key"
+msgstr "Saat pemain menekan tombol"
+
+msgid "When a driver sounds the horn"
+msgstr "Saat pengemudi membunyikan klakson"
+
+msgid "A gate: it moves back after a while. The map's code needs\n<map>_Gates(playerid, newkeys, oldkeys) called from OnPlayerKeyStateChange;\nTest in game does that."
+msgstr "Gerbang: kembali lagi setelah beberapa saat. Kode peta perlu memanggil\n<map>_Gates(playerid, newkeys, oldkeys) dari OnPlayerKeyStateChange;\nUji dalam game sudah melakukannya."
+
+msgid "Closes after"
+msgstr "Menutup setelah"
+
+msgid "Seconds it stands open."
+msgstr "Detik gerbang tetap terbuka."
+
+msgid "Garage door sounds"
+msgstr "Suara pintu garasi"
+
+msgid "The open.mp server (%s) is in %s."
+msgstr "Server open.mp (%s) ada di %s."
+
+msgid "Could not download the open.mp server: %s"
+msgstr "Tidak dapat mengunduh server open.mp: %s"
+
+msgid "Download the open.mp server into it"
+msgstr "Unduh server open.mp ke dalamnya"
+
+msgid "The latest open.mp release from GitHub, so Test in game and pawncc work in it.\nFiles already in the folder are kept."
+msgstr "Rilis open.mp terbaru dari GitHub, agar Uji dalam game dan pawncc bekerja di dalamnya.\nBerkas yang sudah ada di folder tetap disimpan."
+
+msgid "Downloading the open.mp server: %.1f MB"
+msgstr "Mengunduh server open.mp: %.1f MB"
+
+msgid "It already has a server."
+msgstr "Sudah ada servernya."
+
+msgid "%d of those models were imported into the game's modloader/Haumea folder, which SA-MP players don't have. They can become custom models in the server's models folder."
+msgstr "%d model tersebut diimpor ke folder modloader/Haumea milik game, yang tidak dimiliki pemain SA-MP. Model itu bisa menjadi model kustom di folder models server."
+
+msgid ", but artwork is off in the server's config (Add Custom Model turns it on)"
+msgstr ", tetapi artwork nonaktif di konfigurasi server (Tambah model kustom mengaktifkannya)"
+
+msgid "A custom model's texture: players on the SA-MP 0.3.DL client download it;\n0.3.7 players see nothing there."
+msgstr "Tekstur model kustom: pemain dengan klien SA-MP 0.3.DL mengunduhnya;\npemain 0.3.7 tidak melihat apa pun di sana."
+
+msgid "Add Custom Model"
+msgstr "Tambah model kustom"
+
+msgid "Artwork is off on this server: players won't get custom models."
+msgstr "Artwork nonaktif di server ini: pemain tidak akan mendapat model kustom."
+
+msgid "Artwork is on in %s."
+msgstr "Artwork aktif di %s."
+
+msgid "Custom Model..."
+msgstr "Model kustom..."
+
+msgid "Players on the SA-MP 0.3.DL client download custom models."
+msgstr "Pemain dengan klien SA-MP 0.3.DL mengunduh model kustom."
+
+msgid "Sets artwork.enable in config.json (open.mp), or useartwork 1 in server.cfg (SA-MP)."
+msgstr "Mengatur artwork.enable di config.json (open.mp), atau useartwork 1 di server.cfg (SA-MP)."
+
+msgid "Turn on artwork"
+msgstr "Aktifkan artwork"
+
+msgid "%d element(s) use custom models: their DFF and TXD go in the server's models folder, with artwork enabled%s; players need the SA-MP 0.3.DL client.%s"
+msgstr "%d elemen memakai model kustom: DFF dan TXD-nya ditaruh di folder models server, dengan artwork aktif%s; pemain memerlukan klien SA-MP 0.3.DL.%s"
+
+msgid "In the workspace's models folder."
+msgstr "Di folder models workspace."
+
+msgid "It goes into the workspace's models folder; maps that use it register it in their code."
+msgstr "Model masuk ke folder models workspace; peta yang memakainya mendaftarkannya di kodenya sendiri."
+
+msgid "Puts your DFF and TXD in the server's models folder; maps that use it register it\nin their own code. Players on the SA-MP 0.3.DL client download it. The game folder isn't touched."
+msgstr "Menaruh DFF dan TXD milikmu di folder models server; peta yang memakainya mendaftarkannya\ndi kodenya sendiri. Pemain dengan klien SA-MP 0.3.DL mengunduhnya. Folder game tidak diubah."
+
+msgid "To keep them: add it as a custom model (File > Import > Custom Model) with its DFF and TXD; anything else needs a similar game or SA-MP object in its place (search the Asset Browser)."
+msgstr "Untuk menyimpannya: tambahkan sebagai model kustom (Berkas > Impor > Model kustom) bersama DFF dan TXD-nya; sisanya perlu objek game atau SA-MP yang mirip sebagai gantinya (cari di Penjelajah aset)."
+
+msgid "Your own DFF and TXD, copied into the server's models folder. Maps that use them register them in their own code (AddSimpleModel, AddCharModel); the server (open.mp, or SA-MP 0.3.DL) sends them to players as they join, and players need the SA-MP 0.3.DL client. Nothing is written into the game folder."
+msgstr "DFF dan TXD milikmu sendiri, disalin ke folder models server. Peta yang memakainya mendaftarkannya di kodenya sendiri (AddSimpleModel, AddCharModel); server (open.mp atau SA-MP 0.3.DL) mengirimkannya ke pemain saat bergabung, dan pemain memerlukan klien SA-MP 0.3.DL. Tidak ada yang ditulis ke folder game."
+
+msgid "Custom models changed on disk were reloaded"
+msgstr "Model kustom yang berubah di disk telah dimuat ulang"
+
+msgid "Reload custom models"
+msgstr "Muat ulang model kustom"
+
+msgid "Custom models reloaded: %d"
+msgstr "Model kustom dimuat ulang: %d"
+
+msgid "Reads the models' DFF and TXD files and the AddSimpleModel lines again. Files rebuilt on disk are also picked up by themselves."
+msgstr "Membaca lagi file DFF dan TXD model serta baris AddSimpleModel. File yang dibuat ulang di disk juga terbaca sendiri."
+
+msgid "Map changed on disk"
+msgstr "Peta berubah di disk"
+
+msgid "%s was changed outside Haumea since it was opened."
+msgstr "%s diubah di luar Haumea sejak dibuka."
+
+msgid "Saving now replaces those changes with the map as it is here."
+msgstr "Menyimpan sekarang mengganti perubahan itu dengan peta seperti di sini."
+
+msgid "Reload from disk"
+msgstr "Muat ulang dari disk"
+
+msgid "Overwrite"
+msgstr "Timpa"
+
+msgid "%s changed on disk and was opened again"
+msgstr "%s berubah di disk dan dibuka lagi"
+
+msgid "%s changed on disk outside Haumea: saving will ask before replacing it"
+msgstr "%s berubah di disk di luar Haumea: menyimpan akan bertanya sebelum menggantinya"
+
+msgid "Unsaved changes were kept in an autosave (File > Recover Autosave)"
+msgstr "Perubahan yang belum disimpan disimpan di simpan otomatis (File > Pulihkan simpan otomatis)"
+
+msgid "%d object(s) of custom model %d (%s): its DFF has no collision, so in the game players, actors and cars go through it. Haumea makes one from its shape only for clicking and snapping here. Embed a COL in the DFF."
+msgstr "%d objek model kustom %d (%s): DFF-nya tidak punya kolisi, jadi di game pemain, aktor, dan mobil menembusnya. Haumea membuatnya dari bentuknya hanya untuk klik dan snap di sini. Sematkan COL di DFF."
+
+msgid "%s has nothing to stand on within 2 m under its feet: in the game it falls until it lands on something. Custom models without collision in their DFF don't count."
+msgstr "%s tidak punya pijakan dalam 2 m di bawah kakinya: di game ia jatuh sampai mendarat di sesuatu. Model kustom tanpa kolisi di DFF tidak dihitung."
+
+msgid "Downloading the open.mp server..."
+msgstr "Mengunduh server open.mp..."
+
+msgid "Downloading the streamer plugin..."
+msgstr "Mengunduh plugin streamer..."
+
+msgid "a server download is running; try again when it finishes"
+msgstr "unduhan server sedang berjalan; coba lagi setelah selesai"

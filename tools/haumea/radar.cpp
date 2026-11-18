@@ -33,6 +33,7 @@ float gRange = RANGE_ON_FOOT;
 // The full map: its centre and pixels per metre.
 float gMapX, gMapY, gMapScale = 0.25f;
 bool gMapPlaced = false;
+bool gMapZones = true;	// the gang zones and radar art over the tiles
 
 struct V2 { float x, y; };
 
@@ -360,12 +361,14 @@ drawRadarDisc(ImDrawList *dl, const std::vector<Zone> &zones, ImVec2 centre, ImV
 
 // ---- the full map ---------------------------------------------------------------
 
+// See the whole map with its gang zones, find a place on it and fly there.
 void
 drawMap(const std::vector<Zone> &zones)
 {
 	float fs = ImGui::GetFontSize();
-	ImGui::SetNextWindowSize(ImVec2(fs * 36.0f, fs * 36.0f), ImGuiCond_FirstUseEver);
-	if(!ImGui::Begin(_("Full Map###radar_map"), &gShowMap, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse)){
+	const char *title = _("Full Map###radar_map");
+	ImGuiWindowFlags flags = UiPlaceToolWindow(title, 36.0f, false);
+	if(!ImGui::Begin(title, &gShowMap, flags | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse)){
 		ImGui::End();
 		return;
 	}
@@ -374,12 +377,29 @@ drawMap(const std::vector<Zone> &zones)
 		gMapX = TheCamera.m_position.x;
 		gMapY = TheCamera.m_position.y;
 	}
-	if(ImGui::Button(_("Centre on Camera"))){
+	// The toolbar, one row: back to the camera, zoom, the zones layer, and
+	// how to move about in a tooltip at its end.
+	if(ImGui::Button(TI(ICON_FA_LOCATION_CROSSHAIRS, "Centre on Camera"))){
 		gMapX = TheCamera.m_position.x;
 		gMapY = TheCamera.m_position.y;
 	}
+	float h = ImGui::GetFrameHeight();
 	ImGui::SameLine();
-	ImGui::TextDisabled("%s", _("Drag to move, wheel to zoom, double-click to fly there."));
+	if(ImGui::Button("-##radar_zoom_out", ImVec2(h, h)))
+		gMapScale = std::max(gMapScale / 1.25f, 0.01f);
+	ImGui::SetItemTooltip("%s", _("Zoom out"));
+	ImGui::SameLine(0.0f, 0.0f);
+	if(ImGui::Button("+##radar_zoom_in", ImVec2(h, h)))
+		gMapScale = std::min(gMapScale * 1.25f, 16.0f);
+	ImGui::SetItemTooltip("%s", _("Zoom in"));
+	ImGui::SameLine();
+	UiCheckbox(_("Gang zones"), &gMapZones);
+	const char *help = ICON_FA_CIRCLE_INFO;
+	float helpW = ImGui::CalcTextSize(help).x;
+	ImGui::SameLine(std::max(ImGui::GetCursorPosX(), ImGui::GetWindowContentRegionMax().x - helpW));
+	ImGui::AlignTextToFramePadding();
+	ImGui::TextDisabled("%s", help);
+	ImGui::SetItemTooltip("%s", _("Drag to move, wheel to zoom, double-click to fly there."));
 
 	ImVec2 p0 = ImGui::GetCursorScreenPos();
 	ImVec2 size = ImGui::GetContentRegionAvail();
@@ -425,6 +445,8 @@ drawMap(const std::vector<Zone> &zones)
 			}
 		}
 	for(const Zone &z : zones){
+		if(!gMapZones)
+			break;
 		ImVec2 a = toScreen(z.minX, z.maxY), b = toScreen(z.maxX, z.minY);
 		if(b.x < p0.x || a.x > p1.x || b.y < p0.y || a.y > p1.y)
 			continue;

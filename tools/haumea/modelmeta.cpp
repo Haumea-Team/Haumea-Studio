@@ -478,7 +478,7 @@ GetModelCityName(int city)
 const char*
 GetModelSourceName(int source)
 {
-	static const char *names[NUM_MODEL_SOURCES] = { "GTA San Andreas", "SA-MP", "Custom (0.3.DL)" };
+	static const char *names[NUM_MODEL_SOURCES] = { "GTA San Andreas", "SA-MP", "Custom models" };
 	return source >= 0 && source < NUM_MODEL_SOURCES ? names[source] : "";
 }
 

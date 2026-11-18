@@ -11,7 +11,9 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <set>
 #include <sys/stat.h>
+#include <ctime>
 #ifdef _WIN32
 #include <windows.h>
 #include <commdlg.h>
@@ -19,10 +21,17 @@
 #include <dirent.h>
 #endif
 
-// SA-MP 0.3.DL and open.mp custom models: the server's models/artconfig.txt
-// and AddSimpleModel/AddCharModel calls in its gamemode. The DFF and TXD
-// files are read from the server's models folder where they are; nothing is
+// Custom models (open.mp, SA-MP 0.3.DL): DFF and TXD files in the server's
+// models folder, registered by AddSimpleModel/AddCharModel calls. A map
+// registers the ones it uses in its own code, as open.mp scripts do; Haumea
+// keeps the workspace's models in models/haumea_models.txt (the same calls,
+// which servers don't read) so they show before any map uses them. A
+// server's artconfig.txt, SA-MP's way, is read but never written. Nothing is
 // copied into the game.
+
+static const char *const CUSTOM_MODELS_LIST = "haumea_models.txt";
+// In a session's model list: the models before it are the host's artconfig.txt.
+static const char *const SESSION_OWN_MODELS = "// models the maps register\n";
 
 // The same patterns open.mp's CustomModels component reads artconfig.txt with.
 static const std::regex rAddCharModel(R"(AddCharModel\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*\"(.+?)\"\s*,\s*\"(.+?)\"\s*\))");
@@ -37,6 +46,9 @@ struct CustomModel {
 	std::string txdPath;
 	bool timed, character;
 	int timeOn, timeOff;
+	// Listed in the server's artconfig.txt (SA-MP's way): registered there,
+	// so a map leaves it out of its own AddSimpleModel calls.
+	bool inArtconfig;
 };
 
 static std::string gServerDir;	// the server folder holding models/
@@ -47,6 +59,13 @@ static std::map<std::string, int> gTxdSlots;	// file -> txd slot
 static std::string gLastMapPath;
 static std::map<int, int> gLegacyRemap;	// old modloader/Haumea ID -> editor ID
 static std::string gLookupDir;	// where model files are looked up instead of gModelsDir
+// Custom models whose DFF carries no collision: Haumea makes one from the
+// triangles so they can be clicked and stood on here, but in the game
+// nothing collides with them.
+static std::set<int> gGeneratedCollision;
+// Size and time of each model's DFF and TXD when read, to notice a rebuild.
+struct FileStamp { long long size, time; };
+static std::map<std::string, FileStamp> gFileStamps;
 
 int
 PawnModelId(int editorId)
@@ -109,7 +128,8 @@ customModelsServerDir(const char *mapPath)
 	size_t slash = dir.find_last_of('/');
 	dir = slash == std::string::npos ? "." : dir.substr(0, slash);
 	for(int depth = 0; depth < 8 && !dir.empty(); depth++){
-		if(isFile(dir + "/models/artconfig.txt") || isDir(dir + "/gamemodes"))
+		if(isFile(dir + "/models/artconfig.txt") || isFile(dir + "/models/" + CUSTOM_MODELS_LIST) ||
+		   isDir(dir + "/gamemodes"))
 			return dir;
 		slash = dir.find_last_of('/');
 		if(slash == std::string::npos || slash == 0)
@@ -350,7 +370,7 @@ modelName(const std::string &dff, char *dst, size_t size)
 static void
 addModel(int pawnId, int baseId, const std::string &dff, const std::string &txd,
 	bool timed, int timeOn, int timeOff, bool character, std::vector<std::string> &problems,
-	bool translated = false)
+	bool translated = false, bool inArtconfig = false)
 {
 	int editorId = EditorModelId(pawnId);
 	if(character ? (pawnId < 20001 || pawnId > 30000) : (pawnId > -1000 || pawnId < -30000)){
@@ -387,28 +407,35 @@ addModel(int pawnId, int baseId, const std::string &dff, const std::string &txd,
 		obj->m_timeOff = timeOff;
 	}
 	SetObjectCategory(editorId, CUSTOM_MODELS_CATEGORY);
-	CustomModel model = { editorId, dffPath, pawnId, baseId, txdPath, timed, character, timeOn, timeOff };
+	CustomModel model = { editorId, dffPath, pawnId, baseId, txdPath, timed, character, timeOn, timeOff, inArtconfig };
 	gModels.push_back(model);
+	for(const std::string *path : { &dffPath, &txdPath }){
+		struct stat st;
+		if(stat(path->c_str(), &st) == 0)
+			gFileStamps[*path] = { (long long)st.st_size, (long long)st.st_mtime };
+	}
 }
 
 static void
-readModelCalls(const std::string &text, std::vector<std::string> &problems)
+readModelCalls(const std::string &text, std::vector<std::string> &problems, bool inArtconfig = false)
 {
 	std::smatch m;
 	std::string::const_iterator from = text.begin();
 	while(std::regex_search(from, text.end(), m, rAddSimpleModelTimed)){
 		addModel(atoi(m[3].str().c_str()), atoi(m[2].str().c_str()), m[4], m[5], true,
-			atoi(m[6].str().c_str()), atoi(m[7].str().c_str()), false, problems);
+			atoi(m[6].str().c_str()), atoi(m[7].str().c_str()), false, problems, false, inArtconfig);
 		from = m.suffix().first;
 	}
 	from = text.begin();
 	while(std::regex_search(from, text.end(), m, rAddSimpleModel)){
-		addModel(atoi(m[3].str().c_str()), atoi(m[2].str().c_str()), m[4], m[5], false, 0, 0, false, problems);
+		addModel(atoi(m[3].str().c_str()), atoi(m[2].str().c_str()), m[4], m[5], false, 0, 0, false, problems, false,
+			inArtconfig);
 		from = m.suffix().first;
 	}
 	from = text.begin();
 	while(std::regex_search(from, text.end(), m, rAddCharModel)){
-		addModel(atoi(m[2].str().c_str()), atoi(m[1].str().c_str()), m[3], m[4], false, 0, 0, true, problems);
+		addModel(atoi(m[2].str().c_str()), atoi(m[1].str().c_str()), m[3], m[4], false, 0, 0, true, problems, false,
+			inArtconfig);
 		from = m.suffix().first;
 	}
 }
@@ -478,18 +505,101 @@ LoadCustomModelsForMap(const char *mapPath, const std::string &source)
 		return;
 	size_t before = gModels.size();
 	std::vector<std::string> problems;
-	readModelCalls(readText(gModelsDir + "/artconfig.txt"), problems);
+	// The server's artconfig.txt (SA-MP's way, still read), then Haumea's own
+	// list of the workspace's models, then the scripts that register them.
+	readModelCalls(readText(gModelsDir + "/artconfig.txt"), problems, true);
+	readModelCalls(readText(gModelsDir + "/" + CUSTOM_MODELS_LIST), problems);
 	std::vector<std::string> gamemodes;
 	listGamemodes(gServerDir + "/gamemodes", gamemodes);
 	for(size_t i = 0; i < gamemodes.size(); i++)
 		readModelCalls(readText(gamemodes[i]), problems);
 	readModelCalls(source, problems);
+	// The maps beside it: a map generated without its registrations (a 0.3.7
+	// copy, say) often sits next to the 0.3.DL one that has them.
+	if(mapPath && mapPath[0]){
+		std::string dir = mapPath;
+		size_t slash = dir.find_last_of("/\\");
+		dir = slash == std::string::npos ? "." : dir.substr(0, slash);
+		std::vector<std::string> siblings, theirProblems;
+		listGamemodes(dir, siblings);
+		std::sort(siblings.begin(), siblings.end());
+		for(const std::string &sibling : siblings)
+			if(sibling != mapPath)
+				readModelCalls(readText(sibling), theirProblems);
+		// Theirs aren't this map's problems: logged, not shown.
+		for(const std::string &problem : theirProblems)
+			log("CustomModels: (a map beside it) %s\n", problem.c_str());
+	}
 	if(gModels.size() != before)
 		log("CustomModels: %d custom model(s) from %s\n", (int)(gModels.size() - before), gModelsDir.c_str());
 	for(size_t i = 0; i < problems.size(); i++)
 		log("CustomModels: %s\n", problems[i].c_str());
 	if(!problems.empty())
 		Toast(TOAST_SPAWN, _("Custom models that couldn't be loaded: %d (see the log)"), (int)problems.size());
+}
+
+// Reads the custom models' DFF and TXD files again (all of them, or only
+// the ones that changed on disk) and redraws what uses them; with lists,
+// also reads the model lists again for models added since. Returns how
+// many models were read again.
+static int
+reloadCustomModelFiles(bool onlyChanged, bool lists)
+{
+	std::vector<int> ids, slots;
+	auto changed = [&](const std::string &path){
+		struct stat st;
+		if(stat(path.c_str(), &st) != 0)
+			return false;	// gone: keep what was loaded
+		FileStamp now = { (long long)st.st_size, (long long)st.st_mtime };
+		auto it = gFileStamps.find(path);
+		bool differs = it == gFileStamps.end() || it->second.size != now.size || it->second.time != now.time;
+		gFileStamps[path] = now;
+		return !onlyChanged || differs;
+	};
+	std::map<std::string, bool> seen;	// a TXD shared by many models is checked once
+	for(const CustomModel &m : gModels){
+		if(seen.find(m.dffPath) == seen.end())
+			seen[m.dffPath] = changed(m.dffPath);
+		if(seen.find(m.txdPath) == seen.end())
+			seen[m.txdPath] = changed(m.txdPath);
+		if(seen[m.dffPath] || seen[m.txdPath])
+			ids.push_back(m.editorId);
+		if(seen[m.txdPath]){
+			ObjectDef *obj = GetObjectDef(m.editorId);
+			if(obj && obj->m_txdSlot >= 0 && std::find(slots.begin(), slots.end(), obj->m_txdSlot) == slots.end())
+				slots.push_back(obj->m_txdSlot);
+		}
+	}
+	if(!ids.empty()){
+		int rebuilt = ReloadModelsInPlace(ids, slots);
+		log("CustomModels: read %d model(s) again, %d object(s) redrawn\n", (int)ids.size(), rebuilt);
+	}
+	if(lists && !gLastMapPath.empty())
+		LoadCustomModelsForMap(gLastMapPath.c_str(), readText(gLastMapPath));
+	else if(lists)
+		LoadCustomModelsForMap(nil, std::string());
+	return (int)ids.size();
+}
+
+int
+ReloadCustomModels(void)
+{
+	return reloadCustomModelFiles(false, true);
+}
+
+// Each frame: a model file rebuilt under the same name and ID shows without
+// a restart. In a session the host's new file reaches the others' copies,
+// which this notices the same way.
+void
+CustomModelsTick(void)
+{
+	static time_t last;
+	time_t now = time(nil);
+	if(gModels.empty() || now - last < 2)
+		return;
+	last = now;
+	if(reloadCustomModelFiles(true, false) > 0)
+		Toast(TOAST_SPAWN, _("Custom models changed on disk were reloaded"));
 }
 
 // ---- A multiplayer session's custom models ----
@@ -519,12 +629,22 @@ CustomModelsSessionList(std::map<std::string, std::string> &files)
 		else
 			snprintf(line, sizeof(line), "AddSimpleModel(-1, %d, %d, \"%s\", \"%s\");\n", m.baseId, m.pawnId,
 				dff.c_str(), txd.c_str());
-		lines.emplace_back(m.pawnId, line);
+		// The host's artconfig.txt models first: a guest's map leaves those
+		// out of its own registrations too, so both save the same code.
+		lines.emplace_back(m.inArtconfig ? m.pawnId - 100000 : m.pawnId, line);
 	}
 	std::sort(lines.begin(), lines.end());
 	std::string out;
-	for(const auto &line : lines)
+	bool marked = false;
+	for(const auto &line : lines){
+		if(line.first >= -30000 && !marked){
+			out += SESSION_OWN_MODELS;
+			marked = true;
+		}
 		out += line.second;
+	}
+	if(!marked)
+		out += SESSION_OWN_MODELS;
 	return out;
 }
 
@@ -534,11 +654,52 @@ AddSessionCustomModels(const std::string &dir, const std::string &artconfig)
 	size_t before = gModels.size();
 	std::vector<std::string> problems;
 	gLookupDir = dir;
-	readModelCalls(artconfig, problems);
+	// Before the marker: the host's artconfig.txt; after it, models maps register.
+	size_t mark = artconfig.find(SESSION_OWN_MODELS);
+	readModelCalls(artconfig.substr(0, mark), problems, mark != std::string::npos);
+	if(mark != std::string::npos)
+		readModelCalls(artconfig.substr(mark), problems);
 	gLookupDir.clear();
 	for(size_t i = 0; i < problems.size(); i++)
 		log("CustomModels: session: %s\n", problems[i].c_str());
 	return (int)(gModels.size() - before);
+}
+
+// The AddSimpleModel/AddCharModel calls for these custom models (editor
+// IDs), one a line with indent before each, leaving out the ones the
+// server's artconfig.txt registers.
+std::string
+CustomModelRegistrations(const std::vector<int> &editorIds, const char *indent)
+{
+	std::vector<std::pair<int, std::string>> lines;
+	for(const CustomModel &m : gModels){
+		if(m.inArtconfig || std::find(editorIds.begin(), editorIds.end(), m.editorId) == editorIds.end())
+			continue;
+		// As the server finds them: relative to its models folder.
+		auto relative = [](const std::string &path){
+			std::string dir = gModelsDir + "/";
+			return path.compare(0, dir.size(), dir) == 0 ? path.substr(dir.size()) : baseName(path);
+		};
+		std::string dff = relative(m.dffPath), txd = relative(m.txdPath);
+		char line[512];
+		if(m.character)
+			snprintf(line, sizeof(line), "%sAddCharModel(%d, %d, \"%s\", \"%s\");\n", indent, m.baseId, m.pawnId,
+				dff.c_str(), txd.c_str());
+		else if(m.timed)
+			snprintf(line, sizeof(line), "%sAddSimpleModelTimed(-1, %d, %d, \"%s\", \"%s\", %d, %d);\n", indent,
+				m.baseId, m.pawnId, dff.c_str(), txd.c_str(), m.timeOn, m.timeOff);
+		else
+			snprintf(line, sizeof(line), "%sAddSimpleModel(-1, %d, %d, \"%s\", \"%s\");\n", indent, m.baseId,
+				m.pawnId, dff.c_str(), txd.c_str());
+		lines.emplace_back(m.pawnId, line);
+	}
+	std::sort(lines.begin(), lines.end(), [](const std::pair<int, std::string> &a, const std::pair<int, std::string> &b){
+		return a.first > b.first;
+	});
+	std::string out;
+	for(const auto &line : lines)
+		out += line.second;
+	return out;
 }
 
 bool
@@ -549,11 +710,18 @@ MapUsesCustomModels(void)
 
 // Collision of a custom model: the COL stored in its DFF, as 0.3.DL wants
 // it, or one made from the model's own triangles.
+bool
+CustomModelHasNoGameCollision(int editorId)
+{
+	return gGeneratedCollision.count(editorId) != 0;
+}
+
 void
 SetupCustomModelCollision(ObjectDef *obj, rw::Clump *clump)
 {
 	if(obj == nil || obj->m_colModel || clump == nil)
 		return;
+	gGeneratedCollision.erase(obj->m_id);	// read again: the file may have changed
 	// The layout of librwgta's collision plugin data (gtaplg.cpp).
 	struct SizedData { uint32 size; uint8 *data; };
 	SizedData *data = PLUGINOFFSET(SizedData, clump, gta::collisionOffset);
@@ -567,6 +735,7 @@ SetupCustomModelCollision(ObjectDef *obj, rw::Clump *clump)
 			break;
 		}
 		char err[128];
+		gGeneratedCollision.insert(obj->m_id);
 		if(atomic == nil || !GenerateCol3FromAtomic(atomic, obj->m_name, generated, nil, err, sizeof(err)))
 			return;
 		bytes = (uint8*)generated.data();
@@ -672,7 +841,7 @@ nextFreeId(bool character)
 	return 0;
 }
 
-// Copies the DFF and TXD into <server>/models, adds the artconfig.txt line
+// Copies the DFF and TXD into <server>/models, adds its line to Haumea's list
 // and loads the model. Returns its editor ID, or -1.
 static int
 addModelToServer(const std::string &dff, const std::string &txd, bool character, int id, int baseId,
@@ -705,18 +874,21 @@ addModelToServer(const std::string &dff, const std::string &txd, bool character,
 		snprintf(line, sizeof(line), "AddCharModel(%d, %d, \"%s\", \"%s\");", baseId, id, dffName.c_str(), txdName.c_str());
 	else
 		snprintf(line, sizeof(line), "AddSimpleModel(-1, %d, %d, \"%s\", \"%s\");", baseId, id, dffName.c_str(), txdName.c_str());
-	std::string artconfig = modelsDir + "/artconfig.txt";
-	std::string text = readText(artconfig);
-	FILE *f = fopen(artconfig.c_str(), "ab");
+	std::string list = modelsDir + "/" + CUSTOM_MODELS_LIST;
+	std::string text = readText(list);
+	FILE *f = fopen(list.c_str(), "ab");
 	if(f == nil){
-		err = message(_("can't write %s"), artconfig);
+		err = message(_("can't write %s"), list);
 		return -1;
 	}
-	if(!text.empty() && text.back() != '\n')
+	if(text.empty())
+		fputs("// Haumea Studio's custom models for this server. Servers don't read this file: each map\n"
+			"// registers the models it uses with these calls in its own code.\n", f);
+	else if(text.back() != '\n')
 		fputc('\n', f);
 	fprintf(f, "%s\n", line);
 	fclose(f);
-	log("CustomModels: added %s to %s\n", line, artconfig.c_str());
+	log("CustomModels: added %s to %s\n", line, list.c_str());
 
 	if(gServerDir.empty())
 		gServerDir = server;
@@ -887,31 +1059,56 @@ OpenAddCustomModelDialog(const char *droppedPath)
 	}
 }
 
+// Adds a DFF/TXD pair to the server as a custom model: where it goes (the
+// server), the two files, what it is (object or skin) and its IDs, then Add.
+// The Add custom model dialog's add, for Namaka: id 0 picks a free one;
+// baseId 0 takes the dialog's default (19379, or skin 7). Returns the Pawn id.
+int
+AddCustomModelToServer(const char *dff, const char *txd, bool character, int id, int baseId, std::string &err)
+{
+	if(id == 0)
+		id = nextFreeId(character);
+	if(baseId == 0)
+		baseId = character ? 7 : 19379;
+	bool idOk = character ? id >= 20001 && id <= 30000 : id <= -1000 && id >= -30000;
+	if(!idOk){
+		err = character ? "id: skins take 20001 to 30000" : "id: objects take -1000 to -30000";
+		return 0;
+	}
+	int editorId = addModelToServer(dff, txd, character, id, baseId, err);
+	if(editorId < 0)
+		return 0;
+	if(!character)
+		SetSpawnObjectId(editorId);
+	return id;
+}
+
 void
 DrawAddCustomModelDialog(void)
 {
 	if(!gDialog.open)
 		return;
-	ImGui::SetNextWindowSize(ImVec2(ImGui::GetFontSize() * 30.0f, 0.0f), ImGuiCond_Appearing);
 	// ###addcustommodel, not L(): the ID the window has always had, so saved layouts stay.
 	char title[160];
-	snprintf(title, sizeof(title), "%s###addcustommodel", _("Add Custom Model (SA-MP 0.3.DL / open.mp)"));
-	if(!ImGui::Begin(title, &gDialog.open,
-	   ImGuiWindowFlags_NoCollapse)){
+	snprintf(title, sizeof(title), "%s###addcustommodel", _("Add Custom Model"));
+	ImGuiWindowFlags placed = UiPlaceToolWindow(title, 30.0f, true);
+	if(!ImGui::Begin(title, &gDialog.open, ImGuiWindowFlags_NoCollapse | placed)){
 		ImGui::End();
 		return;
 	}
-	ImGui::TextWrapped("%s", _("Copies the DFF and TXD into the server's models folder and adds them to "
-		"models/artconfig.txt, so SA-MP 0.3.DL and open.mp send them to players. "
-		"Nothing is written into the game folder."));
-	ImGui::Spacing();
-
-	float browseWidth = ImGui::CalcTextSize(_("Browse...")).x + ImGui::GetStyle().FramePadding.x * 2.0f;
+	UiFitItemsToPanel();
+	const char *about = _("Your own DFF and TXD, copied into the server's models folder. Maps that use them "
+		"register them in their own code (AddSimpleModel, AddCharModel); the server (open.mp, or SA-MP 0.3.DL) "
+		"sends them to players as they join, and players need the SA-MP 0.3.DL client. Nothing is written "
+		"into the game folder.");
 	std::string server = serverDirForWriting();
 	if(server.empty()){
 		// Asked here when nothing says which server: it becomes the workspace.
-		ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.4f, 1.0f), "%s", _("Which server are these models for?"));
-		if(ImGui::Button(L("Choose the server folder..."))){
+		ImGui::PushStyleColor(ImGuiCol_Text, UiSemanticColor(UI_COLOR_WARNING));
+		ImGui::TextWrapped("%s", _("Which server are these models for?"));
+		ImGui::PopStyleColor();
+		ImGui::SetItemTooltip("%s", about);
+		if(UiFooterButton(L("Choose the server folder..."))){
 			char picked[1024] = "";
 			if(PickFolderDialog(picked, sizeof(picked), _("Server folder (has gamemodes/, models/)"), nil)){
 				SetWorkspaceDir(picked);
@@ -921,45 +1118,70 @@ DrawAddCustomModelDialog(void)
 		ImGui::End();
 		return;
 	}
-	ImGui::TextDisabled(_("Server: %s"), server.c_str());
+	// 1. Where it goes, and whether that server sends custom models at all.
+	UiInfoRow(_("Server"), server.c_str(), about);
+	if(ServerArtworkEnabled(server) == 0){
+		ImGui::PushStyleColor(ImGuiCol_Text, UiSemanticColor(UI_COLOR_WARNING));
+		ImGui::TextWrapped("%s", _("Artwork is off on this server: players won't get custom models."));
+		ImGui::PopStyleColor();
+		if(ImGui::Button(_("Turn on artwork"))){
+			std::string err;
+			if(ServerEnableArtwork(server, &err))
+				Toast(TOAST_SAVE, _("Artwork is on in %s."), server.c_str());
+			else
+				snprintf(gDialog.error, sizeof(gDialog.error), "%s", err.c_str());
+		}
+		ImGui::SetItemTooltip("%s", _("Sets artwork.enable in config.json (open.mp), or useartwork 1 in server.cfg (SA-MP)."));
+	}
+
+	if(!gModels.empty()){
+		if(ImGui::Button(L("Reload custom models")))
+			Toast(TOAST_SPAWN, _("Custom models reloaded: %d"), ReloadCustomModels());
+		ImGui::SetItemTooltip("%s", _("Reads the models' DFF and TXD files and the AddSimpleModel lines again. "
+			"Files rebuilt on disk are also picked up by themselves."));
+	}
+
+	// 2. The model's two files: a path filling the row, Browse at its end.
+	UiHeading(_("Model files"));
+	float spacing = ImGui::GetStyle().ItemSpacing.x;
+	float browseWidth = ImGui::CalcTextSize(_("Browse...")).x + ImGui::GetStyle().FramePadding.x * 2.0f;
 	const char *labels[2] = { "DFF", "TXD" };
 	char *fields[2] = { gDialog.dff, gDialog.txd };
 	for(int i = 0; i < 2; i++){
 		ImGui::PushID(i);
-		ImGui::SetNextItemWidth(-browseWidth - ImGui::GetStyle().ItemSpacing.x - ImGui::CalcTextSize("TXD").x - 8.0f);
+		char unused[64];
+		UiFieldLabel(labels[i], unused, sizeof(unused));
+		ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - browseWidth - spacing);
 		ImGui::InputText(i == 0 ? "##dff" : "##txd", fields[i], sizeof(gDialog.dff));
 		ImGui::SameLine();
 		if(ImGui::Button(L("Browse...")))
 			pickFile(fields[i], sizeof(gDialog.dff), i == 0 ? "dff" : "txd");
-		ImGui::SameLine();
-		ImGui::TextUnformatted(labels[i]);
 		ImGui::PopID();
 	}
 
-	if(ImGui::RadioButton(L("Object (AddSimpleModel)"), !gDialog.character)){
-		gDialog.character = false;
-		gDialog.id = nextFreeId(false);
-		gDialog.baseId = 19379;
+	// 3. What it is, and the IDs scripts use for it.
+	UiHeading(_("Model"));
+	int kind = gDialog.character ? 1 : 0;
+	const char *kinds[2] = { L("Object (AddSimpleModel)"), L("Skin (AddCharModel)") };
+	if(UiSegmented("##cm_kind", kinds, 2, &kind)){
+		gDialog.character = kind == 1;
+		gDialog.id = nextFreeId(gDialog.character);
+		gDialog.baseId = gDialog.character ? 7 : 19379;
 	}
-	ImGui::SameLine();
-	if(ImGui::RadioButton(L("Skin (AddCharModel)"), gDialog.character)){
-		gDialog.character = true;
-		gDialog.id = nextFreeId(true);
-		gDialog.baseId = 7;
-	}
-	ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
-	ImGui::InputInt("ID", &gDialog.id);
+	ImGui::Spacing();
+	UiInputInt("ID", &gDialog.id);
 	ImGui::SetItemTooltip("%s", gDialog.character ? _("20001 to 30000: the skin ID scripts use.") :
 		_("-1000 to -30000: the model ID scripts use, as in CreateObject(-1000, ...)."));
-	ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
-	ImGui::InputInt(gDialog.character ? L("Base skin") : L("Base model"), &gDialog.baseId);
+	UiInputInt(gDialog.character ? L("Base skin") : L("Base model"), &gDialog.baseId);
 	ImGui::SetItemTooltip("%s", gDialog.character ? _("The game skin whose settings the new skin takes.") :
 		_("The game object whose settings the new model takes (19379 is a common choice)."));
 
-	if(gDialog.error[0])
-		ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.4f, 1.0f), "%s", gDialog.error);
-	ImGui::Spacing();
-	if(ImGui::Button(L("Add to server"))){
+	if(gDialog.error[0]){
+		ImGui::PushStyleColor(ImGuiCol_Text, UiSemanticColor(UI_COLOR_ERROR));
+		ImGui::TextWrapped("%s", gDialog.error);
+		ImGui::PopStyleColor();
+	}
+	if(UiFooterButton(L("Add to server"), gDialog.dff[0] && gDialog.txd[0])){
 		gDialog.error[0] = '\0';
 		bool idOk = gDialog.character ? gDialog.id >= 20001 && gDialog.id <= 30000 :
 			gDialog.id <= -1000 && gDialog.id >= -30000;
@@ -975,7 +1197,7 @@ DrawAddCustomModelDialog(void)
 			else{
 				if(!gDialog.character)
 					SetSpawnObjectId(editorId);
-				Toast(TOAST_SPAWN, _("Added %d to the server: Object Browser > Custom models"), gDialog.id);
+				Toast(TOAST_SPAWN, _("Added %d to the server: Asset Browser > Custom models"), gDialog.id);
 				gDialog.open = false;
 			}
 		}

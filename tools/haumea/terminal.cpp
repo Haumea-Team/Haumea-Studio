@@ -943,6 +943,8 @@ drawScreen(ImDrawList *draw, ImVec2 origin, float cellWidth, float cellHeight, b
 
 } // namespace
 
+// A shell beside the map: type into it like any terminal; when it ends,
+// start another.
 void
 DrawTerminalWindow(bool *open, const char *folder)
 {
@@ -1018,16 +1020,24 @@ DrawTerminalWindow(bool *open, const char *folder)
 			ImGui::EndPopup();
 		}
 	}
+	// Once the shell has ended, one row under the screen: why, and the
+	// way to start another at its right end.
 	if(gTerm.ended){
-		if(ImGui::Button(L("Start again"))){
+		float x = ImGui::GetCursorPosX(), rowWidth = ImGui::GetContentRegionAvail().x;
+		float buttonWidth = ImGui::CalcTextSize(L("Start again"), nil, true).x + ImGui::GetStyle().FramePadding.x * 2.0f;
+		ImGui::AlignTextToFramePadding();
+		if(!gTerm.failure.empty()){
+			ImGui::PushStyleColor(ImGuiCol_Text, UiSemanticColor(UI_COLOR_ERROR));
+			ImGui::TextUnformatted(gTerm.failure.c_str());
+			ImGui::PopStyleColor();
+		}else
+			ImGui::TextDisabled(_("The shell closed (exit code %d)."), gTerm.pty.exitCode);
+		ImGui::SameLine();
+		ImGui::SetCursorPosX(std::max(ImGui::GetCursorPosX(), x + rowWidth - buttonWidth));
+		if(ImGui::Button(L("Start again"), ImVec2(buttonWidth, 0))){
 			stopTerminal();
 			gTerm.ended = false;
 		}
-		ImGui::SameLine();
-		if(!gTerm.failure.empty())
-			ImGui::TextUnformatted(gTerm.failure.c_str());
-		else
-			ImGui::Text(_("The shell closed (exit code %d)."), gTerm.pty.exitCode);
 	}
 	ImGui::End();
 }

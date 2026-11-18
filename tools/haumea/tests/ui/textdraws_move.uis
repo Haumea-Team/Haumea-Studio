@@ -6,6 +6,8 @@ assert pawn_contains "TextDrawCreate(320.000, 10.000"
 shortcut window_map_objects
 wait 5
 assert item 'Map Objects' 'OldTitle  Old title  (in the map, read-only)'
+click_item '*' '##editor'
+wait 2
 click_item '*' 'TextDraws'
 wait 5
 assert textdraws == 0

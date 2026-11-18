@@ -502,7 +502,7 @@ jobs:
     runs-on: ubuntu-24.04
     env:
       # Bump this when MCP tools are added or removed on purpose.
-      AGENT_MCP_TOOLS: 90
+      AGENT_MCP_TOOLS: 105
       BUNDLE: Haumea-Namaka-linux-x86_64
 
     steps:
@@ -676,7 +676,7 @@ jobs:
     needs: build-macos
     runs-on: macos-latest
     env:
-      AGENT_MCP_TOOLS: 90
+      AGENT_MCP_TOOLS: 105
       BUNDLE: Haumea-Namaka-macos-arm64
     steps:
       - uses: actions/checkout@v4

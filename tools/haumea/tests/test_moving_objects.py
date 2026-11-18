@@ -120,16 +120,16 @@ class MovingObjectTests(unittest.TestCase):
         native = self.tmp / 'native.pwn'
         self.client.command('save', str(native), 'native')
         text = native.read_text()
-        self.assertRegex(text, r'MoveObject\((\w+), 2000\.000000, -3000\.000000, 13\.500000, 1\.500000\);')
-        self.assertRegex(text, r'MoveObject\(\w+, 2014\.000000, -3000\.000000, 10\.000000, 2\.000000, '
-                               r'0\.000000, 0\.000000, 90\.000000\);')
-        self.assertRegex(text, r'MoveObject\(\w+, 2040\.000000, -3000\.000000, 8\.000000, 4\.000000\);')
+        self.assertRegex(text, r'MoveObject\((\w+), 2000\.0, -3000\.0, 13\.5, 1\.5\);')
+        self.assertRegex(text, r'MoveObject\(\w+, 2014\.0, -3000\.0, 10\.0, 2\.0, '
+                               r'0\.0, 0\.0, 90\.0\);')
+        self.assertRegex(text, r'MoveObject\(\w+, 2040\.0, -3000\.0, 8\.0, 4\.0\);')
         streamer = self.tmp / 'streamer.pwn'
         self.client.command('save', str(streamer), 'streamer')
         text = streamer.read_text()
         self.assertNotIn('MoveObject(', text)
-        self.assertRegex(text, r'MoveDynamicObject\(door, 2000\.000000, -3000\.000000, 13\.500000, 1\.500000\);')
-        self.assertRegex(text, r'MoveDynamicObject\(\w+, 2040\.000000, -3000\.000000, 8\.000000, 4\.000000\);')
+        self.assertRegex(text, r'MoveDynamicObject\(door, 2000\.0, -3000\.0, 13\.5, 1\.5\);')
+        self.assertRegex(text, r'MoveDynamicObject\(\w+, 2040\.0, -3000\.0, 8\.0, 4\.0\);')
 
     def test_prefab_keeps_movement(self):
         gate = self.item(2010.0)

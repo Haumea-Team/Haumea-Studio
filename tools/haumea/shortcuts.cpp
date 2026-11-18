@@ -78,7 +78,7 @@ const ShortcutDef defs[SC_NUM_ACTIONS] = {
 	{ { "scroll_up", N_("View"), N_("Scroll the panel under the mouse up"), SHORTCUT_PANEL, true }, { { ImGuiKey_PageUp, 0 } } },
 	{ { "scroll_down", N_("View"), N_("Scroll the panel under the mouse down"), SHORTCUT_PANEL, true }, { { ImGuiKey_PageDown, 0 } } },
 
-	{ { "window_browser", N_("Windows"), N_("Object Browser"), SHORTCUT_EDITOR, false }, { { ImGuiKey_1, CTRL } } },
+	{ { "window_browser", N_("Windows"), N_("Asset Browser"), SHORTCUT_EDITOR, false }, { { ImGuiKey_1, CTRL } } },
 	{ { "window_object_info", N_("Windows"), N_("Object Info"), SHORTCUT_EDITOR, false }, { { ImGuiKey_2, CTRL } } },
 	{ { "window_map_objects", N_("Windows"), N_("Map Objects"), SHORTCUT_EDITOR, false }, { { ImGuiKey_3, CTRL } } },
 	{ { "window_tools", N_("Windows"), N_("Tools"), SHORTCUT_EDITOR, false }, { { ImGuiKey_4, CTRL } } },

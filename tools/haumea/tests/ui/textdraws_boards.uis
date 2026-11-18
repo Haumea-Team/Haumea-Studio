@@ -1,12 +1,18 @@
 # Artboards: screens of their own in one file, each with Show/Hide functions;
 # image layers are kept as comments only the editor reads.
 open "$UI_FIXTURES/ui_map.pwn"
+click_item '*' '##editor'
+wait 2
 click_item '*' 'TextDraws'
 wait 5
 click_item 'TextDraws' 'Text'
 wait 3
+click_item '*' '###board'
+wait 2
 click_item '*' 'add_board'
 wait 5
+close_popup
+wait 2
 click_item 'TextDraws' 'Box'
 wait 3
 click_item 'TextDraws' 'Image'
@@ -15,7 +21,7 @@ set_item 'TextDraws' 'Image file' "$UI_FIXTURES/missing_reference.png"
 key Enter
 wait 5
 assert textdraws == 3
-click_item 'TextDraws' '###File options'
+click_item 'TextDraws' 'td_file_options'
 wait 3
 click_item '*' 'Save As...'
 wait 5

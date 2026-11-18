@@ -1,8 +1,5 @@
 # Compact TextDraw workspace
 
-msgid "Arrange"
-msgstr "Organizar"
-
 msgid "Browse sprites..."
 msgstr "Explorar sprites..."
 

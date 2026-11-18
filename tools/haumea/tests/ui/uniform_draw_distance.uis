@@ -3,23 +3,23 @@
 open "$UI_FIXTURES/ui_floor.pwn"
 shortcut window_browser
 wait 80
-assert window 'Object Browser'
-set_item 'Object Browser' '##search_objects' '3555' tab
+assert window 'Asset Browser'
+set_item 'Asset Browser' '##search_objects' '3555' tab
 wait 15
-click_item 'Object Browser' '##tile'
+click_item 'Asset Browser' '##tile'
 wait 5
-click_item 'Object Browser' 'Place'
+click_item 'Asset Browser' 'Place'
 wait 3
 click_world 2000 -3000 4
 wait 10
 key Esc
 assert objects == 3
 # Add a prop whose model normally stops at 40 m, alongside the 80 m building.
-set_item 'Object Browser' '##search_objects' '1271' tab
+set_item 'Asset Browser' '##search_objects' '1271' tab
 wait 10
-click_item 'Object Browser' '##tile'
+click_item 'Asset Browser' '##tile'
 wait 3
-click_item 'Object Browser' 'Place'
+click_item 'Asset Browser' 'Place'
 wait 3
 click_world 2003 -3000 4
 wait 5
@@ -43,8 +43,8 @@ shortcut window_preferences
 wait 8
 click_item 'Preferences' 'Performance'
 wait 5
-assert item 'Preferences' '##stream_distance'
-set_item 'Preferences' '##stream_distance' '600' tab ctrl
+assert item 'Preferences' 'Stream distance'
+set_item 'Preferences' 'Stream distance' '600' tab ctrl
 wait 5
 assert render_far_clip == 600
 assert render_fog_start == 300

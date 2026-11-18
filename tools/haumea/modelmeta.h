@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 
-// What each model is, for the Object Browser's filters and the agent's index:
+// What each model is, for the Asset Browser's filters and the agent's index:
 // what the game's files say about it (collision size, flags, draw distance,
 // where it comes from), where the world places it (city and zone), and,
 // read a few hundred models a frame once a filter or sort asks for them, its

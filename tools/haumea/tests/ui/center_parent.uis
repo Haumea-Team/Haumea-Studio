@@ -6,27 +6,29 @@ wait 4
 assert selected.x == 2020
 shortcut window_tools
 wait 5
+click_item 'Tools' '###tools_place'
+wait 2
 click_item 'Tools' 'Pivot'
 wait 3
 click_item 'Tools' 'Center Parent'
 wait 5
 assert selected.x == 2020
-assert pawn_contains 'root = CreateObject(1271, 2010.000000'
-assert pawn_contains 'child = CreateObject(1271, 2020.000000'
-assert pawn_contains 'AttachObjectToObject(child, root, 10.000000'
+assert pawn_contains 'root = CreateObject(1271, 2010.0'
+assert pawn_contains 'child = CreateObject(1271, 2020.0'
+assert pawn_contains 'AttachObjectToObject(child, root, 10.0'
 move 800 400
 key Ctrl+Z
 wait 5
-assert pawn_contains 'root = CreateObject(1271, 2000.000000'
-assert pawn_contains 'AttachObjectToObject(child, root, 20.000000'
+assert pawn_contains 'root = CreateObject(1271, 2000.0'
+assert pawn_contains 'AttachObjectToObject(child, root, 20.0'
 key Ctrl+Y
 wait 5
-assert pawn_contains 'root = CreateObject(1271, 2010.000000'
+assert pawn_contains 'root = CreateObject(1271, 2010.0'
 assert selected.x == 2020
 key Ctrl+S
 wait 5
 reopen
 wait 8
 assert objects == 2
-assert pawn_contains 'root = CreateObject(1271, 2010.000000'
-assert pawn_contains 'child = CreateObject(1271, 2020.000000'
+assert pawn_contains 'root = CreateObject(1271, 2010.0'
+assert pawn_contains 'child = CreateObject(1271, 2020.0'

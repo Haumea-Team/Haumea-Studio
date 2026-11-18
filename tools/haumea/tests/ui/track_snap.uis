@@ -1,0 +1,32 @@
+# Track snapping: a tube placed near another joins it where the table says
+# (19646 after 19646: 10 m along its X, turned with it).
+# needs: game (SA-MP's tubes in samp.img)
+open "$UI_FIXTURES/ui_tubes.pwn"
+camera 2005 -3060 40 2005 -3000 20
+wait 10
+shortcut window_browser
+wait 40
+set_item 'Asset Browser' '##search_objects' '19646' tab
+wait 15
+click_item 'Asset Browser' '##tile'
+wait 5
+click_item 'Asset Browser' 'Place'
+wait 3
+click_world 2013 -3000 20
+wait 10
+key Esc
+assert objects == 3
+assert selected.x == 2010
+assert selected.y == -3000
+assert selected.z == 20
+# The turned tube: the next one goes 10 m along Y, turned the same way.
+camera 2060 -2990 40 2100 -2990 20
+wait 10
+click_item 'Asset Browser' 'Place'
+wait 3
+click_world 2100 -2987 20
+wait 10
+key Esc
+assert objects == 4
+assert pawn_contains "CreateObject(19646, 2100.000000, -2990.000000, 20.000000"
+exit

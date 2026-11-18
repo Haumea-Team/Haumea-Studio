@@ -78,7 +78,7 @@ The map's exported stream and draw distances keep their own values.
 
 ## Placing objects
 
-1. Open the **Object Browser** (`Ctrl+1`) and pick an object. Search by name, ID, a list or
+1. Open the **Asset Browser** (`Ctrl+1`) and pick an object. Search by name, ID, a list or
    a range (`1337, 19000-19100`). Every model, the game's and SA-MP's, is filed in a
    category by what the game's own files say about it (its name, IDE file, collision
    size), and **Favourites** keeps the ones you use often.
@@ -93,7 +93,7 @@ The map's exported stream and draw distances keep their own values.
 moves the view, so there's nothing to undo. **Edit → Copy Camera Position** copies where the
 camera is as `x, y, z`.
 
-Right-click an object in the world or browser and choose **Find instances**. The Object Browser
+Right-click an object in the world or browser and choose **Find instances**. The Asset Browser
 lists counts by model and locations; enter several IDs or ranges and choose **Both**, **My map**
 or **GTA world**. **Jump to**, **Previous** and **Next** move the camera, including across interiors.
 Search results are yellow and leave your editing selection unchanged. Closing the browser or
@@ -125,9 +125,9 @@ model, with undo and redo. Objects linked to an LOD cannot change model this way
 
 ![Particle preview in Grove Street](images/particle-preview.png)
 
-The Object Browser's **Effects and particles** category includes all 81 SA-MP particle
-objects (IDs 18668–18748). Place them like ordinary objects: fire, smoke, sparks, fountains
-and other effects animate in the viewport. A small emitter icon lets you select, move,
+The Asset Browser's **Particles** shelf has all 81 SA-MP particle effects (IDs
+18668–18748). In the map they are objects (`CreateObject`), so place them like any
+object: fire, smoke, sparks, fountains and other effects animate in the viewport. A small emitter icon lets you select, move,
 rotate, duplicate or delete an effect even when its particles are transparent.
 
 **View → Particle effects** turns the preview on or off and remembers the choice. Hiding
@@ -145,7 +145,7 @@ render distance also applies to particles, with a bounded particle budget for de
 
 ## Characters, paths and other map elements
 
-Use the feature dropdown at the top of the Object Browser:
+Use the feature dropdown at the top of the Asset Browser:
 
 | Feature | Elements |
 | --- | --- |
@@ -317,7 +317,7 @@ A prefab is a group of objects saved to place again. Select the objects and use 
 → Selection as Prefab** (`Ctrl+Shift+E`). Give it a name and tags, and save it to **Mine** (your
 config folder) or to the workspace.
 
-The Object Browser's **Prefabs** tab lists yours, the workspace's and a **Starter** set. Search
+The Asset Browser's **Prefabs** tab lists yours, the workspace's and a **Starter** set. Search
 by name or tag, pick one and click **Place**; `Q`, `E` or the mouse wheel turn it before you
 click. **As a group**
 puts its objects in a group named after the prefab.
@@ -436,7 +436,9 @@ to copy the Pawn code that takes a player there (`SetPlayerInterior` and `SetPla
 
 **Test in game** (`F5`) runs the map on a private open.mp server in Haumea's config folder.
 Your map file and your own server are not touched. **Launch game** joins it, and **Reload map**
-picks up your changes. Pick the server package and port in **Preferences → Test server**.
+picks up your changes. You don't need a server of your own: with no server package set in
+**Preferences → Test server** and no server in the workspace, the first run downloads the latest
+open.mp, plus the streamer plugin, which most maps use (about a minute). The port is set there too.
 On 64-bit Linux, open.mp's server and compiler need the 32-bit C library: see
 [Install](../README.md#install).
 

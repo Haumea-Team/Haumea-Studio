@@ -559,11 +559,12 @@ static void
 RenderInst(ObjectInst *inst)
 {
 	static rw::RGBA black = { 0, 0, 0, 255 };
-	static rw::RGBA red = { 255, 0, 0, 255 };
 	static rw::RGBA green = { 0, 255, 0, 255 };
-	static rw::RGBA blue = { 0, 0, 255, 255 };
 	static rw::RGBA yellow = { 255, 220, 60, 255 };
-	static rw::RGBA highlightCols[] = { black, green, red, blue, yellow };
+	// Selected light blue, hovered orange, as a properties-panel editor marks them.
+	static rw::RGBA selectedTint = { 92, 181, 245, 255 };
+	static rw::RGBA hoveredTint = { 250, 166, 39, 255 };
+	static rw::RGBA highlightCols[] = { black, green, selectedTint, hoveredTint, yellow };
 	ObjectDef *obj;
 
 //	if(!inst->m_isUnimportant && !inst->m_isUnderWater && !inst->m_isTunnel && !inst->m_isTunnelTransition)
@@ -1255,8 +1256,8 @@ RenderObjectOutlines(void)
 	enum { OUTLINE_MAP, OUTLINE_HOVER, OUTLINE_SELECTED, OUTLINE_MATCH, NUM_OUTLINES };
 	static const rw::RGBA colours[NUM_OUTLINES] = {
 		{ 90, 200, 255, 170 },	// map objects
-		{ 255, 255, 255, 255 },	// hovered
-		{ 255, 190, 40, 255 },	// selected
+		{ 250, 166, 39, 200 },	// hovered: orange
+		{ 92, 181, 245, 255 },	// selected: light blue
 		{ 255, 220, 60, 255 },	// search matches
 	};
 	static std::vector<rw::V3d> points[NUM_OUTLINES];

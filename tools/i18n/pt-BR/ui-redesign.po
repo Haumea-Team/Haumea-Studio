@@ -311,10 +311,6 @@ msgid "model"
 msgstr "modelo"
 
 #: tools/haumea/gui.cpp
-msgid "Selections"
-msgstr "Seleções"
-
-#: tools/haumea/gui.cpp
 msgid "Save as a new selection..."
 msgstr "Salvar como nova seleção..."
 
@@ -346,12 +342,8 @@ msgstr "Seleção salva \"%s\" excluída"
 msgid "A saved selection has this name: saving replaces it."
 msgstr "Já existe uma seleção com esse nome: salvar vai substituí-la."
 
-#: tools/haumea/gui.cpp
-msgid "Saved selections: keep a selection under a name and select it again later."
-msgstr "Seleções salvas: guarde uma seleção com um nome e selecione-a de novo depois."
-
-msgid "Brush\nPaint copies of the Object Browser's object onto the world. Its settings are over the 3D view."
-msgstr "Pincel\nPinta cópias do objeto do Navegador de Objetos no mundo. As opções dele ficam sobre a vista 3D."
+msgid "Brush\nPaint copies of the Asset Browser's object onto the world. Its settings are over the 3D view."
+msgstr "Pincel\nPinta cópias do objeto do Navegador de recursos no mundo. As opções dele ficam sobre a vista 3D."
 
 msgid "Move (%s)\nDrag the arrows on the selected object."
 msgstr "Mover (%s)\nArraste as setas no objeto selecionado."
@@ -361,3 +353,214 @@ msgstr "Girar (%s)\nArraste os anéis no objeto selecionado."
 
 msgid "Select\nClick objects to select them, drag them to move along the ground."
 msgstr "Selecionar\nClique nos objetos para selecioná-los, arraste-os para movê-los pelo chão."
+
+msgid "New"
+msgstr "Novo"
+
+msgid "Open..."
+msgstr "Abrir..."
+
+msgid "Switch between the map, TextDraws and Code editors."
+msgstr "Alterna entre os editores de mapa, TextDraws e Código."
+
+msgid "The screen, previews, background, HUD, guides and nudging."
+msgstr "A tela, as prévias, o fundo, o HUD, as guias e o deslocamento."
+
+msgid "Zoom in"
+msgstr "Aproximar"
+
+msgid "Zoom out"
+msgstr "Afastar"
+
+msgid "Layers"
+msgstr "Camadas"
+
+msgid "Off: the outer ones stay and the gaps between come out equal.\nOn: each is this far from the one before, from the first."
+msgstr "Desligado: os das pontas ficam e os espaços entre eles ficam iguais.\nLigado: cada um fica a esta distância do anterior, a partir do primeiro."
+
+msgid "Properties"
+msgstr "Propriedades"
+
+msgid "Same height"
+msgstr "Mesma altura"
+
+msgid "Same width"
+msgstr "Mesma largura"
+
+msgid "The gap, in canvas units. Drag or double-click to type."
+msgstr "O espaço, em unidades do canvas. Arraste ou dê duplo clique para digitar."
+
+msgid "File missing"
+msgstr "Arquivo ausente"
+
+msgid "Open or close a panel."
+msgstr "Abre ou fecha um painel."
+
+msgid "Panels"
+msgstr "Painéis"
+
+msgid "Arrow keys"
+msgstr "Setas do teclado"
+
+msgid "Attached to"
+msgstr "Preso a"
+
+msgid "Detail"
+msgstr "Detalhe"
+
+msgid "Far version"
+msgstr "Versão distante"
+
+msgid "Grid size"
+msgstr "Tamanho da grade"
+
+msgid "Hidden at the editor's time now."
+msgstr "Oculto na hora do editor agora."
+
+msgid "Hours"
+msgstr "Horário"
+
+msgid "In game"
+msgstr "No jogo"
+
+msgid "Now"
+msgstr "Agora"
+
+msgid "Opacity of the tint drawn on selected objects."
+msgstr "Opacidade do tom desenhado sobre os objetos selecionados."
+
+msgid "Output"
+msgstr "Saída"
+
+msgid "Player preview (skin %d)"
+msgstr "Prévia do jogador (skin %d)"
+
+msgid "Related"
+msgstr "Relacionado"
+
+msgid "Related timed"
+msgstr "Relacionado por horário"
+
+msgid "Screen"
+msgstr "Tela"
+
+msgid "Shown at the editor's time now."
+msgstr "Visível na hora do editor agora."
+
+msgid "Shows from"
+msgstr "Aparece a partir de"
+
+msgid "Sign in with"
+msgstr "Entrar com"
+
+msgid "The model is only drawn from this far away."
+msgstr "O modelo só é desenhado a partir desta distância."
+
+msgid "Trip"
+msgstr "Trajeto"
+
+msgid "Editor data"
+msgstr "Dados do editor"
+
+msgid "Selection outline"
+msgstr "Contorno da seleção"
+
+msgid "Add one with + above, or from the ribbon."
+msgstr "Adicione um com o + acima ou pela faixa de comandos."
+
+msgid "Admin"
+msgstr "Admin"
+
+msgid "All lines, warnings and errors, or errors only"
+msgstr "Todas as linhas, avisos e erros, ou só erros"
+
+msgid "Also list what is fine but worth knowing."
+msgstr "Também listar o que está certo, mas vale saber."
+
+msgid "An admin of this server makes them."
+msgstr "Um administrador deste servidor as cria."
+
+msgid "Arrange"
+msgstr "Organizar"
+
+msgid "Bundled"
+msgstr "Incluído"
+
+msgid "Click to fill in the form; double-click to join."
+msgstr "Clique para preencher o formulário; clique duas vezes para entrar."
+
+msgid "Click to fill in the form; double-click to join. Its password is kept on this computer."
+msgstr "Clique para preencher o formulário; clique duas vezes para entrar. A senha fica guardada neste computador."
+
+msgid "Create"
+msgstr "Criar"
+
+msgid "Everything the browser can show"
+msgstr "Tudo o que o navegador pode mostrar"
+
+msgid "Find objects"
+msgstr "Encontrar objetos"
+
+msgid "Go to this view"
+msgstr "Ir para esta vista"
+
+msgid "Join a session"
+msgstr "Entrar numa sessão"
+
+msgid "Keeps this view: the camera, the time, the weather and the interior."
+msgstr "Guarda esta vista: a câmera, a hora, o clima e o interior."
+
+msgid "Make one with the + button above."
+msgstr "Crie uma com o botão + acima."
+
+msgid "Maximize"
+msgstr "Maximizar"
+
+msgid "Minimize"
+msgstr "Minimizar"
+
+msgid "Name the current view and Save it to come back to it."
+msgstr "Dê um nome à vista atual e salve-a para voltar a ela."
+
+msgid "No messages yet."
+msgstr "Nenhuma mensagem ainda."
+
+msgid "No one else here yet."
+msgstr "Ninguém mais aqui ainda."
+
+msgid "No output yet."
+msgstr "Nenhuma saída ainda."
+
+msgid "No saved views yet."
+msgstr "Nenhuma vista salva ainda."
+
+msgid "Only textures from TXDs whose name matches"
+msgstr "Só texturas de TXDs cujo nome corresponde"
+
+msgid "Others join with this computer's address, the port and the session code shown once you host."
+msgstr "Os outros entram com o endereço deste computador, a porta e o código da sessão mostrado quando você hospedar."
+
+msgid ""
+"Over the internet the port must be forwarded to this computer, or use a VPN such as Tailscale.\n"
+"For a session that stays up without you, run haumea-server where your SA-MP server runs."
+msgstr ""
+"Pela internet, a porta precisa ser redirecionada para este computador, ou use uma VPN como o Tailscale.\n"
+"Para uma sessão que continua sem você, rode o haumea-server onde roda o seu servidor SA-MP."
+
+msgid "Restore"
+msgstr "Restaurar"
+
+msgid "Send them the port and session code above."
+msgstr "Envie a eles a porta e o código da sessão acima."
+
+msgid "Show the target point"
+msgstr "Mostrar o ponto-alvo"
+
+msgid "Snap to steps"
+msgstr "Ajustar aos passos"
+
+msgid "Test in game starts the server; what it prints shows here."
+msgstr "Testar no jogo inicia o servidor; o que ele imprimir aparece aqui."
+
+msgid "Type a model ID and press Enter to swap the model. Custom models use their negative Pawn IDs."
+msgstr "Digite um ID de modelo e pressione Enter para trocar o modelo. Modelos personalizados usam IDs Pawn negativos."

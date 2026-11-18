@@ -162,9 +162,9 @@ class EditorTests(unittest.TestCase):
         self.editor('''open "$UI_FIXTURES/ui_floor.pwn"
 wait 50
 assert missing_catalog_glyphs == 0
-assert window 'Object Browser'
-assert window '物体浏览器'
-click_item 'Object Browser' '##browser_source'
+assert window 'Asset Browser'
+assert window '资源浏览器'
+click_item 'Asset Browser' '##browser_source'
 wait 3
 assert item '*' '角色'
 assert item '*' '路径'
@@ -173,7 +173,8 @@ assert item '*' '文本与音频'
 assert item '*' '模型文件'
 click_item '*' '角色'
 wait 5
-assert item 'Object Browser' '##place_skin'
+scroll_until 'Asset Browser' '##place_skin'
+assert item 'Asset Browser' '##place_skin'
 shortcut window_preferences
 wait 5
 assert window '首选项'
@@ -190,7 +191,7 @@ wait 3
 assert item 'Preferences' '距离雾'
 assert item 'Preferences' '垂直同步'
 assert item 'Preferences' '限制帧率'
-assert item 'Preferences' '##stream_distance'
+assert item 'Preferences' 'Stream distance'
 assert clipped_items == 0
 exit
 ''', savesettings='language zh-CN\nsettings_version 8\nshow_browser_window 1\nshow_instance_window 1\n')
@@ -226,6 +227,8 @@ exit
         script = '''open "$UI_FIXTURES/ui_map.pwn"
 shortcut window_tools
 wait 5
+click_item 'Tools' '###tools_create'
+wait 3
 click_item 'Tools' 'Paths & curves'
 click_item 'Tools' 'New path'
 wait 5
@@ -246,8 +249,18 @@ exit
                 self.editor(script, savesettings='settings_version 8\nlanguage ' + language +
                             '\nshow_browser_window 0\nshow_instance_window 0\n')
 
+    # Windows renamed since: their settings were saved under the old name.
+    RENAMED = {'###Asset Browser': 'Object Browser'}
+
     def test_old_layout_survives(self):
         """An imgui.ini saved before a window's label became ###English keeps its place and dock."""
+        self.layout_survives(lambda name, icon_title: icon_title.replace(name[3:], self.RENAMED.get(name, name[3:])))
+
+    def test_renamed_window_keeps_layout(self):
+        """A window saved as ###Old Name, before it was renamed, keeps its place and dock."""
+        self.layout_survives(lambda name, icon_title: '###' + self.RENAMED[name] if name in self.RENAMED else name)
+
+    def layout_survives(self, old_title):
         # Panels show once a map is open; the saved flags carry them to the second run.
         ini_a, saved_a, _ = self.editor('open "$UI_FIXTURES/ui_floor.pwn"\nwait 100\n' +
                                         'shortcut window_object_info\nshortcut window_browser\n' +
@@ -260,7 +273,7 @@ exit
         icon_of = old_titles()
         old = ini_a
         for name in marked:
-            title = icon_of.get(name, name[3:])
+            title = old_title(name, icon_of.get(name, name[3:]))
             old = old.replace('[Window][%s]' % name, '[Window][%s]' % title)
             old = re.sub(r'Selected=0x%08X' % zlib.crc32(name.encode()),
                          'Selected=0x%08X' % zlib.crc32(title.encode()), old)
@@ -297,8 +310,8 @@ exit
     def test_pt_br_labels_and_overflow(self):
         """The same panels in pt-BR: the labels are Portuguese, and none runs past its
         window unless it already does in English."""
-        _, _, english = self.editor(self.panels(['Object Browser', 'Preferences']), savesettings='language en\n' + self.PANEL_FLAGS)
-        _, _, portuguese = self.editor(self.panels(['Navegador de objetos', 'Informações do objeto', 'Objetos do mapa', 'Preferências']),
+        _, _, english = self.editor(self.panels(['Asset Browser', 'Preferences']), savesettings='language en\n' + self.PANEL_FLAGS)
+        _, _, portuguese = self.editor(self.panels(['Navegador de recursos', 'Informações do objeto', 'Objetos do mapa', 'Preferências']),
                                      savesettings='language pt-BR\n' + self.PANEL_FLAGS)
         grew = sorted(self.clipped(portuguese) - self.clipped(english))
         self.assertEqual(grew, [], 'labels cut off in pt-BR only (shorten the translation):\n' +
@@ -308,16 +321,20 @@ exit
         # Code is a workspace now: it hides the map's panels while selected.
         self.editor('''open "$UI_FIXTURES/ui_floor.pwn"
 wait 10
+click_item '*' '##editor'
+wait 2
 click_item '*' 'Code'
 wait 10
 assert window 'PawnIDE'
 assert item '*' 'Code'
 assert item 'PawnIDE' 'Salvar script'
 assert item 'PawnIDE' 'Localizar / Substituir'
-assert no_window 'Navegador de objetos'
+assert no_window 'Navegador de recursos'
+click_item '*' '##editor'
+wait 2
 click_item '*' 'Map'
 wait 5
-assert window 'Navegador de objetos'
+assert window 'Navegador de recursos'
 exit
 ''', savesettings='language pt-BR\n' + self.PANEL_FLAGS)
 

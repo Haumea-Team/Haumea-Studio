@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #pragma once
 #include "editorxml.h"
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
@@ -21,3 +22,11 @@ int LayoutPathObjectCount();
 int LayoutPathUpsideDownCount();
 bool LayoutPathObjectsMatch();
 void LayoutPathsReferencedObjects(std::vector<int> &out);
+// Namaka's way in (the agent bridge): one operation on the paths with its
+// fields as text (key=value), answered as JSON members in *json. Every change
+// is one undo step, like the panel's. ops: list, get, new, set, add_point,
+// insert_point, remove_point, move_point, generate, detach, delete.
+bool LayoutPathsAgent(const std::string &op, const std::map<std::string, std::string> &fields,
+	std::string *json, std::string *error);
+// The whole state, for an agent session to put back on rollback (RestoreLayoutPaths).
+std::shared_ptr<void> LayoutPathsSnapshot();

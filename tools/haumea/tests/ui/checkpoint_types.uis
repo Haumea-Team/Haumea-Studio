@@ -5,17 +5,17 @@
 open "$UI_FIXTURES/ui_floor_streamer.pwn"
 shortcut window_browser
 wait 5
-click_item 'Object Browser' '##browser_source'
+click_item 'Asset Browser' '##browser_source'
 wait 3
 click_item '*' 'Markers'
 wait 3
-click_item 'Object Browser' '##place Checkpoint'
+click_item 'Asset Browser' '##place Checkpoint'
 wait 3
-set_item 'Object Browser' '##place_race' "types" tab
+set_item 'Asset Browser' '##place_race' "types" tab
 wait 3
-click_item 'Object Browser' '##place Checkpoint'
+click_item 'Asset Browser' '##place Checkpoint'
 wait 3
-click_item 'Object Browser' '##element_place'
+click_item 'Asset Browser' '##element_place'
 wait 3
 click_world 1996 -3004 4
 wait 5
@@ -26,9 +26,9 @@ shortcut window_object_info
 wait 5
 set_item 'Object Info' 'Size' "1"
 wait 3
-click_item 'Object Browser' '##place Checkpoint'
+click_item 'Asset Browser' '##place Checkpoint'
 wait 3
-click_item 'Object Browser' '##element_place'
+click_item 'Asset Browser' '##element_place'
 wait 3
 click_world 2000 -3004 4
 wait 5
@@ -42,9 +42,9 @@ wait 3
 scroll_until '*' '1  Finish'
 click_item '*' '1  Finish'
 wait 3
-click_item 'Object Browser' '##place Checkpoint'
+click_item 'Asset Browser' '##place Checkpoint'
 wait 3
-click_item 'Object Browser' '##element_place'
+click_item 'Asset Browser' '##element_place'
 wait 3
 click_world 2004 -3004 4
 wait 5
@@ -58,9 +58,9 @@ wait 3
 scroll_until '*' '2  Nothing'
 click_item '*' '2  Nothing'
 wait 3
-click_item 'Object Browser' '##place Checkpoint'
+click_item 'Asset Browser' '##place Checkpoint'
 wait 3
-click_item 'Object Browser' '##element_place'
+click_item 'Asset Browser' '##element_place'
 wait 3
 click_world 1996 -3000 4
 wait 5
@@ -74,9 +74,9 @@ wait 3
 scroll_until '*' '3  Air normal'
 click_item '*' '3  Air normal'
 wait 3
-click_item 'Object Browser' '##place Checkpoint'
+click_item 'Asset Browser' '##place Checkpoint'
 wait 3
-click_item 'Object Browser' '##element_place'
+click_item 'Asset Browser' '##element_place'
 wait 3
 click_world 2000 -3000 4
 wait 5
@@ -90,9 +90,9 @@ wait 3
 scroll_until '*' '4  Air finish'
 click_item '*' '4  Air finish'
 wait 3
-click_item 'Object Browser' '##place Checkpoint'
+click_item 'Asset Browser' '##place Checkpoint'
 wait 3
-click_item 'Object Browser' '##element_place'
+click_item 'Asset Browser' '##element_place'
 wait 3
 click_world 2004 -3000 4
 wait 5
@@ -106,9 +106,9 @@ wait 3
 scroll_until '*' '5  Air (rotates and stops)'
 click_item '*' '5  Air (rotates and stops)'
 wait 3
-click_item 'Object Browser' '##place Checkpoint'
+click_item 'Asset Browser' '##place Checkpoint'
 wait 3
-click_item 'Object Browser' '##element_place'
+click_item 'Asset Browser' '##element_place'
 wait 3
 click_world 1996 -2996 4
 wait 5
@@ -122,9 +122,9 @@ wait 3
 scroll_until '*' '6  Air (grows, shrinks, disappears)'
 click_item '*' '6  Air (grows, shrinks, disappears)'
 wait 3
-click_item 'Object Browser' '##place Checkpoint'
+click_item 'Asset Browser' '##place Checkpoint'
 wait 3
-click_item 'Object Browser' '##element_place'
+click_item 'Asset Browser' '##element_place'
 wait 3
 click_world 2000 -2996 4
 wait 5
@@ -138,9 +138,9 @@ wait 3
 scroll_until '*' '7  Air (swings down and up)'
 click_item '*' '7  Air (swings down and up)'
 wait 3
-click_item 'Object Browser' '##place Checkpoint'
+click_item 'Asset Browser' '##place Checkpoint'
 wait 3
-click_item 'Object Browser' '##element_place'
+click_item 'Asset Browser' '##element_place'
 wait 3
 click_world 2004 -2996 4
 wait 5

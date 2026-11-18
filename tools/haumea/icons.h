@@ -35,6 +35,9 @@
 #define ICON_FA_FILTER          "\xef\x82\xb0"  // f0b0
 #define ICON_FA_PLUS            "\x2b"           // 002b
 #define ICON_FA_TRASH           "\xef\x87\xb8"  // f1f8
+#define ICON_FA_SCISSORS        "\xef\x83\x84"  // f0c4
+#define ICON_FA_CLONE           "\xef\x89\x8d"  // f24d
+#define ICON_FA_CODE            "\xef\x84\xa1"  // f121
 #define ICON_FA_COPY            "\xef\x83\x85"  // f0c5
 #define ICON_FA_PASTE           "\xef\x83\xaa"  // f0ea
 #define ICON_FA_ROTATE_LEFT     "\xef\x8b\xaa"  // f2ea
@@ -61,6 +64,7 @@
 #define ICON_FA_SQUARE          "\xef\x83\x88"  // f0c8
 #define ICON_FA_MAP_PIN         "\xef\x89\xb6"  // f276
 #define ICON_FA_PLAY            "\xef\x81\x8b"  // f04b
+#define ICON_FA_PAUSE           "\xef\x81\x8c"  // f04c
 #define ICON_FA_STOP            "\xef\x81\x8d"  // f04d
 #define ICON_FA_VOLUME_HIGH     "\xef\x80\xa8"  // f028
 #define ICON_FA_EYE_SLASH       "\xef\x81\xb0"  // f070
@@ -72,4 +76,6 @@
 #define ICON_FA_LIST_CHECK      "\xef\x82\xae"  // f0ae
 #define ICON_FA_TERMINAL        "\xef\x84\xa0"  // f120
 #define ICON_FA_CARET_DOWN      "\xef\x83\x97"  // f0d7
+#define ICON_FA_SLIDERS         "\xef\x87\x9e"  // f1de
+#define ICON_FA_CARET_RIGHT     "\xef\x83\x9a"  // f0da
 #define ICON_FA_USERS           "\xef\x83\x80"  // f0c0

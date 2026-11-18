@@ -45,7 +45,7 @@ void DiscordPresenceShutdown()
 bool DiscordPresencePreferences()
 {
 	ImGui::SeparatorText(_("Discord"));
-	bool changed = ImGui::Checkbox(_("Show activity on Discord"), &enabled);
+	bool changed = UiCheckbox(_("Show activity on Discord"), &enabled);
 	ImGui::SetItemTooltip(_("Shows the active workspace and session time through Discord desktop.\nMap names, "
 				"filenames and project paths are never shared."));
 	if (changed)

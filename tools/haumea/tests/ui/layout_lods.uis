@@ -3,6 +3,8 @@ open "$UI_FIXTURES/ui_floor.pwn"
 camera 2000 -3080 55 2000 -3000 5
 shortcut window_tools
 wait 5
+click_item 'Tools' '###tools_create'
+wait 2
 click_item 'Tools' 'Paths & curves'
 click_item 'Tools' 'Shape'
 click_item '*' 'Line'

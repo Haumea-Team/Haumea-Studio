@@ -36,7 +36,9 @@ class WorkspaceHintTests(unittest.TestCase):
                 # Right-click hides a dot without opening its editor.
                 play('''assert new_dot textdraws == 1
 assert new_dot code == 1
-assert work_area_top < 90
+assert work_area_top < 140
+click_item '*' '##editor'
+wait 2
 click_item '*' 'TextDraws' right
 wait 3
 assert new_dot textdraws == 0
@@ -45,9 +47,13 @@ assert new_dot code == 1
                 # Opening an editor hides its dot too.
                 play('''assert new_dot textdraws == 0
 assert new_dot code == 1
+click_item '*' '##editor'
+wait 2
 assert item_count 'TextDraws' == 1
 click_item '*' 'Code'
 wait 3
+click_item '*' '##editor'
+wait 2
 click_item '*' 'Map'
 wait 3
 assert new_dot textdraws == 0

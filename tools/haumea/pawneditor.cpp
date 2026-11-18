@@ -296,7 +296,92 @@ void perform(int action)
 		chooseFile(false);
 	}
 }
+// The width a button with this label takes.
+float buttonWidth(const char *label)
+{
+	return ImGui::CalcTextSize(label, nullptr, true).x + ImGui::GetStyle().FramePadding.x * 2.0f;
+}
+
+// A dialog's main action: the theme's accent, white text.
+bool accentButton(const char *label)
+{
+	ImVec4 fill = UiAccentFill();
+	ImGui::PushStyleColor(ImGuiCol_Button, fill);
+	ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(fill.x * 1.12f, fill.y * 1.12f, fill.z * 1.12f, 1.0f));
+	ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(fill.x * 0.9f, fill.y * 0.9f, fill.z * 0.9f, 1.0f));
+	ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 1, 1, 1));
+	bool pressed = ImGui::Button(label);
+	ImGui::PopStyleColor(4);
+	return pressed;
+}
+
+// Moves to where these buttons end flush with the dialog's right edge: on the
+// same line as what came before (sameLine), else on a line of their own.
+void dialogRightEnd(const char *const *labels, int n, bool sameLine = true)
+{
+	float spacing = ImGui::GetStyle().ItemSpacing.x, width = spacing * (n - 1);
+	for (int i = 0; i < n; i++)
+		width += buttonWidth(labels[i]);
+	float right = ImGui::GetWindowContentRegionMax().x;
+	if (sameLine)
+		ImGui::SameLine();
+	if (ImGui::GetCursorPosX() < right - width)
+		ImGui::SetCursorPosX(right - width);
+}
 } // namespace
+
+// For Namaka (agentbridge.cpp): the same document the editor shows, with
+// the editor's own checks. Replacing or reloading it discards unsaved text,
+// so the bridge asks first.
+const std::string &PawnEditorAgentText(void)
+{
+	setup();
+	if (!loaded)
+		generate();
+	return text;
+}
+void PawnEditorAgentSetText(const std::string &value)
+{
+	setup();
+	setDocument(value, false);
+	followMap = false;
+}
+bool PawnEditorAgentRefresh(std::string *message)
+{
+	setup();
+	generate();
+	*message = error;
+	return error.empty();
+}
+bool PawnEditorAgentOpen(const char *path, std::string *message)
+{
+	setup();
+	bool ok = openFile(path);
+	*message = error;
+	return ok;
+}
+bool PawnEditorAgentSave(const char *path, std::string *message)
+{
+	setup();
+	if (!loaded)
+		generate();
+	std::string target = path && path[0] ? path : file;
+	if (target.empty()) {
+		*message = "the script has no file yet: give a path";
+		return false;
+	}
+	bool ok = saveTo(target);
+	*message = error;
+	return ok;
+}
+std::string PawnEditorAgentFile(void)
+{
+	return file;
+}
+bool PawnEditorAgentFollowsMap(void)
+{
+	return followMap;
+}
 
 bool PawnEditorHasUnsavedChanges(void)
 {
@@ -372,6 +457,57 @@ void PawnEditorRequest(PawnEditorAction action)
 		perform(action);
 }
 
+void PawnEditorFindReplace(void)
+{
+	editor.OpenFindReplaceWindow();
+}
+
+int PawnEditorFormat(void)
+{
+	return format;
+}
+
+void PawnEditorSetFormat(int newFormat)
+{
+	if (newFormat == format)
+		return;
+	format = newFormat;
+	PawnEditorRequest(PAWN_EDITOR_REFRESH);
+}
+
+int PawnEditorEncoding(void)
+{
+	return (int)encoding;
+}
+
+void PawnEditorSetEncoding(int enc)
+{
+	if (enc == (int)encoding)
+		return;
+	encoding = (PawnTextEncoding)enc;
+	// Keep Haumea's optional encoding header consistent with the written bytes.
+	const std::string prefix = "// Text encoding: ";
+	size_t header = text.find(prefix);
+	if (header != std::string::npos && (header == 0 || text[header - 1] == '\n')) {
+		size_t end = text.find('\n', header);
+		std::string value = text;
+		value.replace(header + prefix.size(),
+			      (end == std::string::npos ? text.size() : end) - header - prefix.size(),
+			      PawnTextEncodingName(encoding));
+		setDocument(value, false);
+	}
+	followMap = false;
+	scheduleDraft();
+}
+
+std::string PawnEditorDocumentName(void)
+{
+	std::string name = file.empty() ? (recovered ? _("Recovered draft") : _("Map code")) : file;
+	if (dirty())
+		name += " *";
+	return name;
+}
+
 void PawnEditorDraw(void)
 {
 	setup();
@@ -383,61 +519,15 @@ void PawnEditorDraw(void)
 	ImGui::Begin("###PawnIDE", nullptr,
 		     ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize |
 			 ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoDocking);
-	if (ImGui::Button(_("New script")))
-		PawnEditorRequest(PAWN_EDITOR_NEW);
-	ImGui::SameLine();
-	if (ImGui::Button(_("Open script...")))
-		PawnEditorRequest(PAWN_EDITOR_OPEN);
-	ImGui::SameLine();
-	if (ImGui::Button(_("Save script")))
-		PawnEditorRequest(PAWN_EDITOR_SAVE);
-	ImGui::SameLine();
-	if (ImGui::Button(_("Save As...")))
-		PawnEditorRequest(PAWN_EDITOR_SAVE_AS);
-	ImGui::SameLine();
-	if (ImGui::Button(_("Find / Replace")))
-		editor.OpenFindReplaceWindow();
-	ImGui::SameLine();
-	if (ImGui::Button(_("Refresh from map")))
-		PawnEditorRequest(PAWN_EDITOR_REFRESH);
-	ImGui::SetItemTooltip(
-	    _("Replace this document with generated map code. Manual edits are saved as a separate script."));
-	int newFormat = format;
-	if (ImGui::RadioButton(_("Native"), format == PAWN_CODE_NATIVE))
-		newFormat = PAWN_CODE_NATIVE;
-	ImGui::SameLine();
-	if (ImGui::RadioButton(_("Streamer"), format == PAWN_CODE_STREAMER))
-		newFormat = PAWN_CODE_STREAMER;
-	if (newFormat != format) {
-		format = newFormat;
-		PawnEditorRequest(PAWN_EDITOR_REFRESH);
-	}
-	ImGui::SameLine();
-	int enc = encoding;
-	ImGui::SetNextItemWidth(140.0f);
-	if (ImGui::Combo("##ScriptEncoding", &enc, "Windows-1252\0UTF-8\0")) {
-		encoding = (PawnTextEncoding)enc;
-		// Keep Haumea's optional encoding header consistent with the written bytes.
-		const std::string prefix = "// Text encoding: ";
-		size_t header = text.find(prefix);
-		if (header != std::string::npos && (header == 0 || text[header - 1] == '\n')) {
-			size_t end = text.find('\n', header);
-			std::string value = text;
-			value.replace(header + prefix.size(),
-				      (end == std::string::npos ? text.size() : end) - header - prefix.size(),
-				      PawnTextEncodingName(encoding));
-			setDocument(value, false);
-		}
-		followMap = false;
-		scheduleDraft();
-	}
-	ImGui::SameLine();
-	ImGui::TextDisabled("%s%s", file.empty() ? (recovered ? _("Recovered draft") : _("Map code")) : file.c_str(),
-			    dirty() ? " *" : "");
+	// Its commands are on the ribbon (PawnEditorSetFormat and the rest below).
+	// Over the code: why it no longer follows the map, or what went wrong.
 	if (!followMap && mapChanged())
-		ImGui::TextDisabled(_("Map changed. Refresh from map to generate its latest code."));
-	if (!error.empty())
-		ImGui::TextColored(ImVec4(1, 0.4f, 0.3f, 1), "%s", error.c_str());
+		ImGui::TextDisabled("%s", _("Map changed. Refresh from map to generate its latest code."));
+	if (!error.empty()) {
+		ImGui::PushStyleColor(ImGuiCol_Text, UiSemanticColor(UI_COLOR_ERROR));
+		ImGui::TextWrapped("%s", error.c_str());
+		ImGui::PopStyleColor();
+	}
 	editor.SetFindButtonLabel(_("Find"));
 	editor.SetFindAllButtonLabel(_("Find all"));
 	editor.SetReplaceButtonLabel(_("Replace"));
@@ -454,17 +544,37 @@ void PawnEditorDraw(void)
 			scheduleDraft();
 		}
 	}
+	// The status line: the cursor's place and whether the code is saved.
 	const auto pos = editor.GetMainCursorPosition();
 	ImGui::TextDisabled(_("Pawn | Line %d, column %d | %s"), (int)pos.line + 1, (int)pos.index + 1,
 			    dirty() ? _("Unsaved changes") : _("Saved"));
 	if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) &&
 	    (ImGui::GetIO().KeyCtrl || ImGui::GetIO().KeySuper) && ImGui::IsKeyPressed(ImGuiKey_S))
 		PawnEditorRequest(ImGui::GetIO().KeyShift ? PAWN_EDITOR_SAVE_AS : PAWN_EDITOR_SAVE);
+
+	// Replacing an edited document: the question, Discard at the left, Cancel
+	// and Save (the accent) at the right.
+	const float fs = ImGui::GetFontSize();
 	if (pending >= 0)
 		ImGui::OpenPopup(_("Unsaved code"));
+	ImGui::SetNextWindowSizeConstraints(ImVec2(fs * 24.0f, 0.0f), ImVec2(FLT_MAX, FLT_MAX));
 	if (ImGui::BeginPopupModal(_("Unsaved code"), nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
 		ImGui::TextUnformatted(_("Save your code before replacing this document?"));
-		if (ImGui::Button(_("Save"))) {
+		ImGui::Spacing();
+		if (ImGui::Button(_("Discard"))) {
+			int action = pending;
+			pending = -1;
+			perform(action);
+			ImGui::CloseCurrentPopup();
+		}
+		const char *right[] = {_("Cancel"), _("Save")};
+		dialogRightEnd(right, 2);
+		if (ImGui::Button(_("Cancel"))) {
+			pending = -1;
+			ImGui::CloseCurrentPopup();
+		}
+		ImGui::SameLine();
+		if (accentButton(_("Save"))) {
 			int action = pending;
 			pending = -1;
 			ImGui::CloseCurrentPopup();
@@ -475,44 +585,57 @@ void PawnEditorDraw(void)
 			else
 				pending = action;
 		}
-		ImGui::SameLine();
-		if (ImGui::Button(_("Discard"))) {
-			int action = pending;
-			pending = -1;
-			perform(action);
-			ImGui::CloseCurrentPopup();
-		}
-		ImGui::SameLine();
-		if (ImGui::Button(_("Cancel"))) {
-			pending = -1;
-			ImGui::CloseCurrentPopup();
-		}
 		ImGui::EndPopup();
 	}
+
+	// Saving or opening a script: the path (Browse at its end), replacing a
+	// file when it asks, then Cancel and Save/Open at the right.
 	if (fileDialog >= 0)
 		ImGui::OpenPopup(_("Script file"));
+	ImGui::SetNextWindowSizeConstraints(ImVec2(fs * 34.0f, 0.0f), ImVec2(fs * 34.0f, FLT_MAX));
 	if (ImGui::BeginPopupModal(_("Script file"), nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
 		bool saving = fileDialog == PAWN_EDITOR_SAVE_AS;
-		ImGui::TextUnformatted(saving ? _("Save script as") : _("Open script"));
-		ImGui::SetNextItemWidth(520.0f);
-		if (ImGui::InputText(_("Path"), dialogPath, sizeof(dialogPath)))
-			overwriteConfirmed = false;
-		if (ImGui::Button(_("Browse..."))) {
-			char picked[2048] = {};
-			if (PickPawnFile(picked, sizeof(picked), saving, dialogPath)) {
-				snprintf(dialogPath, sizeof(dialogPath), "%s", picked);
-				overwriteConfirmed = saving; // Native save dialogs already confirm replacement.
+		ImGui::TextDisabled("%s", saving ? _("Save script as") : _("Open script"));
+		ImGui::Spacing();
+		{
+			char pathId[64];
+			UiFieldLabel(_("Path"), pathId, sizeof(pathId));
+			const char *browse = _("Browse...");
+			ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - buttonWidth(browse) -
+						ImGui::GetStyle().ItemSpacing.x);
+			if (ImGui::InputText(pathId, dialogPath, sizeof(dialogPath)))
+				overwriteConfirmed = false;
+			ImGui::SameLine();
+			if (ImGui::Button(browse)) {
+				char picked[2048] = {};
+				if (PickPawnFile(picked, sizeof(picked), saving, dialogPath)) {
+					snprintf(dialogPath, sizeof(dialogPath), "%s", picked);
+					overwriteConfirmed = saving; // Native save dialogs already confirm replacement.
+				}
 			}
 		}
 		std::error_code ec;
 		bool exists = std::filesystem::exists(std::filesystem::u8path(dialogPath), ec);
 		bool replacing = saving && exists && file != dialogPath && !overwriteConfirmed;
 		if (replacing)
-			ImGui::Checkbox(_("Replace existing file"), &overwriteConfirmed);
-		if (!error.empty())
+			UiCheckbox(_("Replace existing file"), &overwriteConfirmed);
+		if (!error.empty()) {
+			ImGui::PushStyleColor(ImGuiCol_Text, UiSemanticColor(UI_COLOR_ERROR));
 			ImGui::TextWrapped("%s", error.c_str());
+			ImGui::PopStyleColor();
+		}
+		ImGui::Spacing();
+		const char *primary = saving ? _("Save") : _("Open");
+		const char *right[] = {_("Cancel"), primary};
+		dialogRightEnd(right, 2, false);
+		if (ImGui::Button(_("Cancel"))) {
+			fileDialog = -1;
+			afterSave = -1;
+			ImGui::CloseCurrentPopup();
+		}
+		ImGui::SameLine();
 		ImGui::BeginDisabled(!dialogPath[0] || (replacing && !overwriteConfirmed));
-		if (ImGui::Button(saving ? _("Save") : _("Open"))) {
+		if (accentButton(primary)) {
 			if (saving ? saveTo(dialogPath) : openFile(dialogPath)) {
 				fileDialog = -1;
 				ImGui::CloseCurrentPopup();
@@ -524,12 +647,6 @@ void PawnEditorDraw(void)
 			}
 		}
 		ImGui::EndDisabled();
-		ImGui::SameLine();
-		if (ImGui::Button(_("Cancel"))) {
-			fileDialog = -1;
-			afterSave = -1;
-			ImGui::CloseCurrentPopup();
-		}
 		ImGui::EndPopup();
 	}
 

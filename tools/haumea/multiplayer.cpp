@@ -189,6 +189,8 @@ static void sendMapFile(int reason, const char *path);
 static void rememberServer(void);
 static void loadServers(void);
 static void receiveRooms(const std::string &payload);
+// The room a favourite was last in: picked first in the lobby's list.
+static std::string gPreferredRoom;
 static void lobbyPanel(std::string *error);
 static void adminPanel(std::string *error);
 
@@ -2381,15 +2383,64 @@ pingColour(int ms)
 
 // The panel's main action: the theme's accent, white text.
 static bool
-primaryButton(const char *label)
+primaryButton(const char *label, const ImVec2 &size = ImVec2(0, 0))
 {
 	ImVec4 fill = UiAccentFill();
 	ImGui::PushStyleColor(ImGuiCol_Button, fill);
 	ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(fill.x, fill.y, fill.z, 0.85f));
 	ImGui::PushStyleColor(ImGuiCol_ButtonActive, fill);
 	ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 1, 1, 1));
-	bool pressed = ImGui::Button(label);
+	bool pressed = ImGui::Button(label, size);
 	ImGui::PopStyleColor(4);
+	return pressed;
+}
+
+// The width of each of n buttons sharing the rest of the row.
+static float
+rowButtonWidth(int n)
+{
+	float spacing = ImGui::GetStyle().ItemSpacing.x;
+	return floorf((ImGui::GetContentRegionAvail().x - spacing * (n - 1)) / n);
+}
+
+// A button's width for its label.
+static float
+buttonWidth(const char *label)
+{
+	return ImGui::CalcTextSize(label, nil, true).x + ImGui::GetStyle().FramePadding.x * 2.0f;
+}
+
+// The size for each of n buttons: one row at equal widths when their labels
+// fit, else each the full width (stacked).
+static ImVec2
+buttonsSize(const char *const *labels, int n, bool *oneRow)
+{
+	float each = rowButtonWidth(n);
+	*oneRow = true;
+	for(int i = 0; i < n; i++)
+		if(buttonWidth(labels[i]) > each)
+			*oneRow = false;
+	return ImVec2(*oneRow ? each : -FLT_MIN, 0);
+}
+
+// Moves to the right end of the row started at x, rowWidth wide, for an item width wide.
+static void
+toRowEnd(float x, float rowWidth, float width)
+{
+	ImGui::SameLine();
+	ImGui::SetCursorPosX(std::max(ImGui::GetCursorPosX(), x + rowWidth - width));
+}
+
+// A flat icon button the size of a frame's height.
+static bool
+iconButton(const char *label, bool dim = false)
+{
+	float h = ImGui::GetFrameHeight();
+	ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
+	if(dim)
+		ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+	bool pressed = ImGui::Button(label, ImVec2(h, h));
+	ImGui::PopStyleColor(dim ? 2 : 1);
 	return pressed;
 }
 
@@ -2412,14 +2463,15 @@ newRoomPopup(void)
 		return;
 	static char name[33];
 	static bool empty = true;
-	ImGui::SetNextItemWidth(ImGui::GetFontSize() * 12.0f);
+	float width = ImGui::GetFontSize() * 12.0f;
+	ImGui::SetNextItemWidth(width);
 	if(ImGui::IsWindowAppearing())
 		ImGui::SetKeyboardFocusHere();
 	ImGui::InputTextWithHint("##name", _("new room's name"), name, sizeof(name));
-	ImGui::Checkbox(_("Start with an empty map"), &empty);
+	UiCheckbox(_("Start with an empty map"), &empty);
 	ImGui::SetItemTooltip(_("Off: your open map becomes the new room's."));
 	ImGui::BeginDisabled(name[0] == '\0');
-	if(primaryButton(_("Make room"))){
+	if(primaryButton(_("Make room"), ImVec2(width, 0))){
 		MultiplayerEnterRoom(name, "", empty);
 		name[0] = '\0';
 		ImGui::CloseCurrentPopup();
@@ -2428,23 +2480,101 @@ newRoomPopup(void)
 	ImGui::EndPopup();
 }
 
-// Always at the top while in a room on a server with rooms: where we are, and
-// the way to another room, the lobby or a new room.
+// A room's name as listed, a lock first when it has a password.
+static std::string
+roomLabel(const LobbyRoom &room)
+{
+	return (room.locked ? std::string(ICON_FA_LOCK " ") : std::string()) + room.name;
+}
+
+// The foot of the window: what a view keeps free there for its error line
+// and its footer, and the two themselves.
+static float
+errorHeight(const std::string &error)
+{
+	if(error.empty())
+		return 0.0f;
+	return ImGui::CalcTextSize(error.c_str(), nil, false, ImGui::GetContentRegionAvail().x).y + ImGui::GetStyle().ItemSpacing.y;
+}
+
+static float
+footerReserve(const std::string &error)
+{
+	return ImGui::GetFrameHeight() + ImGui::GetStyle().ItemSpacing.y * 2.0f + errorHeight(error);
+}
+
+static void
+errorLine(const std::string &error)
+{
+	if(error.empty())
+		return;
+	ImGui::PushStyleColor(ImGuiCol_Text, UiSemanticColor(UI_COLOR_ERROR));
+	ImGui::TextWrapped("%s", error.c_str());
+	ImGui::PopStyleColor();
+}
+
+// Moves to the window's foot, for the footer row.
+static void
+toFooter(void)
+{
+	float y = ImGui::GetWindowContentRegionMax().y - ImGui::GetFrameHeight();
+	if(ImGui::GetCursorPosY() < y)
+		ImGui::SetCursorPosY(y);
+	else
+		ImGui::Dummy(ImVec2(0, ImGui::GetStyle().ItemSpacing.y));
+}
+
+// A session's way out, at the window's foot: full width and plain, in the
+// warning colour when it ends the session for everyone.
+static bool
+footerButton(const char *label, bool warn = false)
+{
+	toFooter();
+	if(warn)
+		ImGui::PushStyleColor(ImGuiCol_Text, UiSemanticColor(UI_COLOR_WARNING));
+	bool pressed = ImGui::Button(label, ImVec2(-FLT_MIN, 0));
+	if(warn)
+		ImGui::PopStyleColor();
+	return pressed;
+}
+
+// One dim line saying where we are, the ping at its right end.
+static void
+whereLine(const char *text, const char *tooltip = nil)
+{
+	char ping[32] = "";
+	if(gPingMs >= 0)
+		snprintf(ping, sizeof(ping), _("%d ms"), gPingMs);
+	float pingWidth = ping[0] ? ImGui::CalcTextSize(ping).x : 0.0f;
+	float x = ImGui::GetCursorPosX(), rowWidth = ImGui::GetContentRegionAvail().x;
+	ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+	UiElidedText(text, rowWidth - (ping[0] ? pingWidth + ImGui::GetStyle().ItemSpacing.x * 2.0f : 0.0f));
+	ImGui::PopStyleColor();
+	if(tooltip)
+		ImGui::SetItemTooltip("%s", tooltip);
+	if(ping[0]){
+		toRowEnd(x, rowWidth, pingWidth);
+		ImGui::TextColored(pingColour(gPingMs), "%s", ping);
+	}
+}
+
+// Always at the top while in a room on a server with rooms: the room we're
+// in (the list goes to another), the lobby and, for admins, a new room.
 static void
 roomBar(void)
 {
 	refreshRooms(false);
-	ImGui::AlignTextToFramePadding();
-	ImGui::TextUnformatted(_("Room"));
-	ImGui::SameLine();
 	static char roomPassword[MP_PASSWORD_LEN];
-	ImGui::SetNextItemWidth(ImGui::GetFontSize() * 10.0f);
+	bool admin = gAccountRole >= MP_ROLE_ADMIN;
+	float spacing = ImGui::GetStyle().ItemSpacing.x, h = ImGui::GetFrameHeight();
+	float lobbyWidth = buttonWidth(_("Lobby"));
+	ImGui::SetNextItemWidth(std::max(h, ImGui::GetContentRegionAvail().x - lobbyWidth - spacing - (admin ? h + spacing : 0.0f)));
 	if(ImGui::BeginCombo("##room", gRoomName.c_str())){
 		if(ImGui::IsWindowAppearing())
 			refreshRooms(true);
 		for(const LobbyRoom &room : gLobby){
 			char label[160];
-			snprintf(label, sizeof(label), "%s%s  (%d)", room.locked ? "\xF0\x9F\x94\x92 " : "", room.name.c_str(), room.count);
+			snprintf(label, sizeof(label), "%s  (%d)", roomLabel(room).c_str(), room.count);
 			if(ImGui::Selectable(label, room.name == gRoomName) && room.name != gRoomName)
 				MultiplayerEnterRoom(room.name.c_str(), roomPassword);
 			if(!room.people.empty())
@@ -2454,74 +2584,121 @@ roomBar(void)
 	}
 	ImGui::SetItemTooltip(_("Go to another room: its map replaces yours here."));
 	ImGui::SameLine();
-	if(ImGui::Button(_("Lobby")))
+	if(ImGui::Button(_("Lobby"), ImVec2(lobbyWidth, 0)))
 		MultiplayerEnterRoom("", "");
 	ImGui::SetItemTooltip(_("Back to the list of rooms, still signed in."));
-	if(gAccountRole >= MP_ROLE_ADMIN){
+	if(admin){
 		ImGui::SameLine();
-		if(ImGui::Button(_("New room...")))
+		if(iconButton(ICON_FA_PLUS "##new room button"))
 			ImGui::OpenPopup("##new room");
+		ImGui::SetItemTooltip("%s", _("New room..."));
 		newRoomPopup();
 	}
 	bool lockedElsewhere = false;
 	for(const LobbyRoom &room : gLobby)
 		lockedElsewhere |= room.locked && room.name != gRoomName;
-	if(lockedElsewhere && gAccountRole < MP_ROLE_ADMIN){
-		ImGui::SetNextItemWidth(ImGui::GetFontSize() * 10.0f);
-		ImGui::InputText(_("Room password"), roomPassword, sizeof(roomPassword), ImGuiInputTextFlags_Password);
+	if(lockedElsewhere && !admin){
+		UiInputText(_("Room password"), roomPassword, sizeof(roomPassword), ImGuiInputTextFlags_Password);
 		ImGui::SetItemTooltip(_("For a locked room (admins don't need it)."));
 	}
 }
 
-// Signed in to a server with rooms: which one.
+// Signed in to a server with rooms: which one. Where we are on top, the
+// rooms filling the window (a click picks one, a double-click goes in), and
+// Leave / Join at the foot.
 static void
 lobbyPanel(std::string *error)
 {
-	ImGui::Text(_("Signed in to %s"), gAddress);
-	if(gPingMs >= 0){
-		ImGui::SameLine();
-		ImGui::TextDisabled(_("%d ms"), gPingMs);
-	}
+	char where[320];
+	snprintf(where, sizeof(where), _("Signed in to %s"), gAddress);
+	std::string tooltip;
 	if(!gFingerprint.empty()){
-		ImGui::TextDisabled(_("Server fingerprint: %s"), gFingerprint.c_str());
-		ImGui::SetItemTooltip(_("Haumea remembers it, and won't join if another server answers here later."));
+		char fingerprint[256];
+		snprintf(fingerprint, sizeof(fingerprint), _("Server fingerprint: %s"), gFingerprint.c_str());
+		tooltip = std::string(fingerprint) + "\n" + _("Haumea remembers it, and won't join if another server answers here later.");
 	}
-	ImGui::SeparatorText(_("Rooms"));
+	whereLine(where, tooltip.empty() ? nil : tooltip.c_str());
+
+	// The toolbar: the list's name, refresh and (admins) a new room at its right end.
+	bool admin = gAccountRole >= MP_ROLE_ADMIN;
+	float h = ImGui::GetFrameHeight(), spacing = ImGui::GetStyle().ItemSpacing.x;
+	float x = ImGui::GetCursorPosX(), rowWidth = ImGui::GetContentRegionAvail().x;
+	ImGui::Spacing();
+	ImGui::AlignTextToFramePadding();
+	ImGui::TextDisabled("%s", _("Rooms"));
+	toRowEnd(x, rowWidth, admin ? h * 2.0f + spacing : h);
+	if(iconButton(ICON_FA_ROTATE "##refresh rooms"))
+		MultiplayerAdmin(MP_ADMIN_ROOMS);
+	ImGui::SetItemTooltip("%s", _("Refresh"));
+	if(admin){
+		ImGui::SameLine();
+		if(iconButton(ICON_FA_PLUS "##new room button"))
+			ImGui::OpenPopup("##new room");
+		ImGui::SetItemTooltip("%s", _("New room..."));
+		newRoomPopup();
+	}
+
 	static char roomPassword[MP_PASSWORD_LEN];
-	if(gLobby.empty())
-		ImGui::TextDisabled(_("No rooms yet."));
+	static std::string chosen;
+	bool anyLocked = false, found = false;
 	for(const LobbyRoom &room : gLobby){
-		ImGui::PushID(room.name.c_str());
-		if(ImGui::Button(_("Join")))
-			MultiplayerEnterRoom(room.name.c_str(), roomPassword);
-		ImGui::SameLine();
-		ImGui::Text("%s%s", room.locked ? "\xF0\x9F\x94\x92 " : "", room.name.c_str());
-		ImGui::SameLine();
-		ImGui::TextDisabled(_("%d in, you'd be a %s"), room.count, roleLabel(room.role));
-		if(!room.people.empty())
-			ImGui::SetItemTooltip("%s", room.people.c_str());
-		ImGui::PopID();
-	}
-	bool anyLocked = false;
-	for(const LobbyRoom &room : gLobby)
 		anyLocked |= room.locked;
+		found |= room.name == chosen;
+	}
+	if(!found){
+		chosen = gLobby.empty() ? std::string() : gLobby[0].name;
+		for(const LobbyRoom &room : gLobby)
+			if(room.name == gPreferredRoom)
+				chosen = room.name;
+	}
+	float reserve = footerReserve(*error) + (anyLocked ? ImGui::GetFrameHeightWithSpacing() : 0.0f);
+	const LobbyRoom *joinNow = nil;
+	if(ImGui::BeginChild("##rooms", ImVec2(0, -reserve), ImGuiChildFlags_Borders)){
+		if(gLobby.empty()){
+			ImGui::TextDisabled(_("No rooms yet."));
+			ImGui::TextDisabled("%s", admin ? _("Make one with the + button above.") : _("An admin of this server makes them."));
+		}
+		for(const LobbyRoom &room : gLobby){
+			ImGui::PushID(room.name.c_str());
+			ImVec2 rowAt = ImGui::GetCursorPos();
+			float rowW = ImGui::GetContentRegionAvail().x;
+			if(ImGui::Selectable("##room", room.name == chosen, ImGuiSelectableFlags_AllowDoubleClick, ImVec2(rowW, h))){
+				chosen = room.name;
+				if(ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+					joinNow = &room;
+			}
+			if(!room.people.empty())
+				ImGui::SetItemTooltip("%s", room.people.c_str());
+			ImGui::SetCursorPos(rowAt);
+			ImGui::AlignTextToFramePadding();
+			ImGui::TextUnformatted(roomLabel(room).c_str());
+			ImGui::SameLine();
+			ImGui::TextDisabled(_("%d in, you'd be a %s"), room.count, roleLabel(room.role));
+			ImGui::SetCursorPos(ImVec2(rowAt.x, rowAt.y + h + ImGui::GetStyle().ItemSpacing.y));
+			ImGui::Dummy(ImVec2(0, 0));
+			ImGui::PopID();
+		}
+	}
+	ImGui::EndChild();
 	if(anyLocked){
-		ImGui::SetNextItemWidth(ImGui::GetFontSize() * 12.0f);
-		ImGui::InputText(_("Room password"), roomPassword, sizeof(roomPassword), ImGuiInputTextFlags_Password);
+		UiInputText(_("Room password"), roomPassword, sizeof(roomPassword), ImGuiInputTextFlags_Password);
 		ImGui::SetItemTooltip(_("For a locked room (admins don't need it)."));
 	}
-	if(gAccountRole >= MP_ROLE_ADMIN){
-		if(primaryButton(_("New room...")))
-			ImGui::OpenPopup("##new room");
-		newRoomPopup();
-		ImGui::SameLine();
-	}
-	if(ImGui::Button(_("Refresh")))
-		MultiplayerAdmin(MP_ADMIN_ROOMS);
-	ImGui::SameLine();
-	if(ImGui::Button(_("Leave")))
+	errorLine(*error);
+
+	// Leave, and the main action: into the picked room.
+	toFooter();
+	ImVec2 half(rowButtonWidth(2), 0);
+	if(ImGui::Button(_("Leave"), half))
 		MultiplayerLeave();
-	(void)error;
+	ImGui::SameLine();
+	ImGui::BeginDisabled(chosen.empty());
+	bool join = primaryButton(_("Join"), half);
+	ImGui::EndDisabled();
+	if(join && !chosen.empty())
+		MultiplayerEnterRoom(chosen.c_str(), roomPassword);
+	else if(joinNow)
+		MultiplayerEnterRoom(joinNow->name.c_str(), roomPassword);
 }
 
 // The accounts as the server listed them (MP_ADMIN_USERS): name and role.
@@ -2530,227 +2707,265 @@ static unsigned int gAccountsSeq;
 
 // A choice that asks first: what it does can't be taken back from here.
 static bool
-confirmedButton(const char *label, const char *question)
+confirmedButton(const char *label, const char *question, const ImVec2 &size = ImVec2(0, 0))
 {
-	if(ImGui::Button(label))
+	if(ImGui::Button(label, size))
 		ImGui::OpenPopup(label);
 	bool yes = false;
 	if(ImGui::BeginPopup(label)){
 		ImGui::TextUnformatted(question);
-		if(primaryButton(_("Yes")))
+		ImVec2 half(rowButtonWidth(2), 0);
+		if(primaryButton(_("Yes"), half))
 			yes = true, ImGui::CloseCurrentPopup();
 		ImGui::SameLine();
-		if(ImGui::Button(_("Cancel")))
+		if(ImGui::Button(_("Cancel"), half))
 			ImGui::CloseCurrentPopup();
 		ImGui::EndPopup();
 	}
 	return yes;
 }
 
-// What admins do from the panel: invites, this room (its lock, agents, its
-// map), the other rooms and the accounts.
+// What admins do from the panel, a section each: this room (its lock,
+// agents, its map), invites, the other rooms and the accounts.
 static void
 adminPanel(std::string *error)
 {
-	if(!ImGui::CollapsingHeader(_("Admin"), ImGuiTreeNodeFlags_DefaultOpen))
-		return;
-	// Invites.
-	ImGui::SeparatorText(_("Invite someone"));
-	static int inviteRole = 1, inviteUses = 1, inviteDays = 7;
-	const char *roles[] = { roleLabel(MP_ROLE_VIEWER), roleLabel(MP_ROLE_BUILDER), roleLabel(MP_ROLE_ADMIN) };
-	int roleCount = gRole >= MP_ROLE_OWNER ? 3 : 2;
-	ImGui::SetNextItemWidth(ImGui::GetFontSize() * 7.0f);
-	ImGui::Combo(_("Invite as"), &inviteRole, roles, roleCount);
-	inviteRole = clamp(inviteRole, 0, roleCount - 1);
-	ImGui::SetNextItemWidth(ImGui::GetFontSize() * 5.0f);
-	ImGui::InputInt(_("Uses"), &inviteUses);
-	inviteUses = clamp(inviteUses, 1, 100);
-	ImGui::SetNextItemWidth(ImGui::GetFontSize() * 5.0f);
-	ImGui::InputInt(_("Days"), &inviteDays);
-	inviteDays = clamp(inviteDays, 1, 365);
-	static unsigned int inviteSeq;
-	if(primaryButton(_("Make an invite code"))){
-		MultiplayerAdmin(MP_ADMIN_INVITE, MpRoleName(inviteRole + MP_ROLE_VIEWER), std::to_string(inviteUses).c_str(),
-			std::to_string(inviteDays).c_str());
-		inviteSeq = gAdminSeq + 1;
-	}
-	if(inviteSeq && gAdminSeq >= inviteSeq && gAdminOk && !gAdminData.empty() && gAdminData.find('\t') == std::string::npos &&
-	   gAdminText.find("invite") != std::string::npos){
-		ImGui::TextUnformatted(gAdminData.c_str());
+	// This room.
+	if(UiSection(_("This room"), ImGuiTreeNodeFlags_DefaultOpen)){
+		static char lockPassword[MP_PASSWORD_LEN];
+		UiInputText(_("Room password##lock"), lockPassword, sizeof(lockPassword), ImGuiInputTextFlags_Password);
+		ImVec2 half(rowButtonWidth(2), 0);
+		ImGui::BeginDisabled(lockPassword[0] == '\0');
+		if(ImGui::Button(_("Lock this room"), half)){
+			MultiplayerAdmin(MP_ADMIN_LOCK, lockPassword);
+			lockPassword[0] = '\0';
+		}
+		ImGui::EndDisabled();
 		ImGui::SameLine();
-		if(ImGui::SmallButton(_("Copy##invite")))
-			ImGui::SetClipboardText(gAdminData.c_str());
-		ImGui::TextDisabled(_("Send it to them privately: it makes one account."));
+		if(ImGui::Button(_("Unlock"), half))
+			MultiplayerAdmin(MP_ADMIN_LOCK, "");
+		static int agents = 0;
+		const char *policies[] = { _("builders"), _("viewers"), _("not allowed") };
+		if(UiCombo(_("AI agents here"), &agents, policies, 3)){
+			static const char *names[] = { "builder", "viewer", "none" };
+			MultiplayerAdmin(MP_ADMIN_AGENTS, names[agents]);
+		}
+		if(gOffers & MP_OFFERS_REPLACE){
+			const char *labels[] = { _("New empty map for everyone"), _("Load a map for everyone...") };
+			bool oneRow;
+			ImVec2 size = buttonsSize(labels, 2, &oneRow);
+			if(confirmedButton(labels[0], _("Everyone here gets an empty map; the server keeps a copy of this one."), size))
+				MultiplayerLoadForEveryone(nil, "", error);
+			if(oneRow)
+				ImGui::SameLine();
+			if(ImGui::Button(labels[1], size)){
+				char path[1024] = "";
+				if(PickFileDialog(path, sizeof(path), _("Map for everyone"), _("Pawn maps"), "pwn;inc;pawn") && path[0]){
+					error->clear();
+					MultiplayerLoadForEveryone(path, "", error);
+				}
+			}
+			ImGui::SetItemTooltip(_("Replaces the session's map with one from a file, for everyone in it.\n"
+				"Unsaved work in the session is lost; the server keeps a copy of the session as it was."));
+		}
 	}
 
-	// This room.
-	ImGui::SeparatorText(_("This room"));
-	static char lockPassword[MP_PASSWORD_LEN];
-	ImGui::SetNextItemWidth(ImGui::GetFontSize() * 10.0f);
-	ImGui::InputText(_("Room password##lock"), lockPassword, sizeof(lockPassword), ImGuiInputTextFlags_Password);
-	ImGui::BeginDisabled(lockPassword[0] == '\0');
-	if(ImGui::Button(_("Lock this room"))){
-		MultiplayerAdmin(MP_ADMIN_LOCK, lockPassword);
-		lockPassword[0] = '\0';
-	}
-	ImGui::EndDisabled();
-	ImGui::SameLine();
-	if(ImGui::Button(_("Unlock")))
-		MultiplayerAdmin(MP_ADMIN_LOCK, "");
-	static int agents = 0;
-	const char *policies[] = { _("builders"), _("viewers"), _("not allowed") };
-	ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
-	if(ImGui::Combo(_("AI agents here"), &agents, policies, 3)){
-		static const char *names[] = { "builder", "viewer", "none" };
-		MultiplayerAdmin(MP_ADMIN_AGENTS, names[agents]);
-	}
-	if(gOffers & MP_OFFERS_REPLACE){
-		if(confirmedButton(_("New empty map for everyone"), _("Everyone here gets an empty map; the server keeps a copy of this one.")))
-			MultiplayerLoadForEveryone(nil, "", error);
-		ImGui::SameLine();
-		if(ImGui::Button(_("Load a map for everyone..."))){
-			char path[1024] = "";
-			if(PickFileDialog(path, sizeof(path), _("Map for everyone"), _("Pawn maps"), "pwn;inc;pawn") && path[0]){
-				error->clear();
-				MultiplayerLoadForEveryone(path, "", error);
-			}
+	// Invites.
+	if(UiSection(_("Invite someone"), ImGuiTreeNodeFlags_DefaultOpen)){
+		static int inviteRole = 1, inviteUses = 1, inviteDays = 7;
+		const char *roles[] = { roleLabel(MP_ROLE_VIEWER), roleLabel(MP_ROLE_BUILDER), roleLabel(MP_ROLE_ADMIN) };
+		int roleCount = gRole >= MP_ROLE_OWNER ? 3 : 2;
+		UiCombo(_("Invite as"), &inviteRole, roles, roleCount);
+		inviteRole = clamp(inviteRole, 0, roleCount - 1);
+		UiInputInt(_("Uses"), &inviteUses);
+		inviteUses = clamp(inviteUses, 1, 100);
+		UiInputInt(_("Days"), &inviteDays);
+		inviteDays = clamp(inviteDays, 1, 365);
+		static unsigned int inviteSeq;
+		if(ImGui::Button(_("Make an invite code"), ImVec2(-FLT_MIN, 0))){
+			MultiplayerAdmin(MP_ADMIN_INVITE, MpRoleName(inviteRole + MP_ROLE_VIEWER), std::to_string(inviteUses).c_str(),
+				std::to_string(inviteDays).c_str());
+			inviteSeq = gAdminSeq + 1;
 		}
-		ImGui::SetItemTooltip(_("Replaces the session's map with one from a file, for everyone in it.\n"
-			"Unsaved work in the session is lost; the server keeps a copy of the session as it was."));
+		if(inviteSeq && gAdminSeq >= inviteSeq && gAdminOk && !gAdminData.empty() && gAdminData.find('\t') == std::string::npos &&
+		   gAdminText.find("invite") != std::string::npos)
+			UiInfoRow(_("Invite code"), gAdminData.c_str(), _("Send it to them privately: it makes one account."));
 	}
 
 	// The other rooms.
-	ImGui::SeparatorText(_("Rooms"));
-	for(const LobbyRoom &room : gLobby){
-		if(room.name == gRoomName)
-			continue;
-		ImGui::PushID(room.name.c_str());
-		ImGui::AlignTextToFramePadding();
-		ImGui::Text("%s%s", room.locked ? "\xF0\x9F\x94\x92 " : "", room.name.c_str());
-		ImGui::SameLine();
-		ImGui::TextDisabled(_("%d in"), room.count);
-		ImGui::SameLine();
-		ImGui::BeginDisabled(room.count > 0);
-		char question[160];
-		snprintf(question, sizeof(question), _("Delete room %s? The server keeps its files aside."), room.name.c_str());
-		if(confirmedButton(_("Delete"), question)){
-			MultiplayerAdmin(MP_ADMIN_DELETE_ROOM, room.name.c_str());
-			refreshRooms(true);
+	if(UiSection(_("Rooms"))){
+		float x = ImGui::GetCursorPosX(), rowWidth = ImGui::GetContentRegionAvail().x;
+		float deleteWidth = buttonWidth(_("Delete"));
+		for(const LobbyRoom &room : gLobby){
+			if(room.name == gRoomName)
+				continue;
+			ImGui::PushID(room.name.c_str());
+			ImGui::AlignTextToFramePadding();
+			ImGui::TextUnformatted(roomLabel(room).c_str());
+			ImGui::SameLine();
+			ImGui::TextDisabled(_("%d in"), room.count);
+			toRowEnd(x, rowWidth, deleteWidth);
+			ImGui::BeginDisabled(room.count > 0);
+			char question[160];
+			snprintf(question, sizeof(question), _("Delete room %s? The server keeps its files aside."), room.name.c_str());
+			if(confirmedButton(_("Delete"), question, ImVec2(deleteWidth, 0))){
+				MultiplayerAdmin(MP_ADMIN_DELETE_ROOM, room.name.c_str());
+				refreshRooms(true);
+			}
+			ImGui::EndDisabled();
+			if(room.count > 0)
+				ImGui::SetItemTooltip(_("Only an empty room can be deleted."));
+			ImGui::PopID();
 		}
-		ImGui::EndDisabled();
-		if(room.count > 0)
-			ImGui::SetItemTooltip(_("Only an empty room can be deleted."));
-		ImGui::PopID();
+		if(ImGui::Button(_("Refresh##rooms"), ImVec2(-FLT_MIN, 0)))
+			refreshRooms(true);
 	}
-	if(ImGui::SmallButton(_("Refresh##rooms")))
-		refreshRooms(true);
 
 	// The accounts.
-	ImGui::SeparatorText(_("Accounts"));
-	if(ImGui::Button(_("Show accounts"))){
-		MultiplayerAdmin(MP_ADMIN_USERS);
-		gAccountsSeq = gAdminSeq + 1;
-	}
-	if(gAccountsSeq && gAdminSeq >= gAccountsSeq && gAdminOk && gAdminText == "accounts"){
-		gAccountsList.clear();
-		size_t at = 0;
-		while(at < gAdminData.size()){
-			size_t end = gAdminData.find('\n', at);
-			std::string line = gAdminData.substr(at, end == std::string::npos ? std::string::npos : end - at);
-			size_t tab = line.find('\t');
-			if(tab != std::string::npos)
-				gAccountsList.push_back({ line.substr(0, tab), MpParseRole(line.substr(tab + 1)) });
-			at = end == std::string::npos ? gAdminData.size() : end + 1;
-		}
-		gAccountsSeq = 0;
-	}
-	for(const auto &account : gAccountsList){
-		ImGui::PushID(account.first.c_str());
-		ImGui::AlignTextToFramePadding();
-		ImGui::TextUnformatted(account.first.c_str());
-		ImGui::SameLine(ImGui::GetFontSize() * 10.0f);
-		bool mine = account.first == gName;
-		bool locked = mine || (account.second >= MP_ROLE_ADMIN && gRole < MP_ROLE_OWNER);
-		ImGui::BeginDisabled(locked);
-		ImGui::SetNextItemWidth(ImGui::GetFontSize() * 7.0f);
-		int choice = account.second - MP_ROLE_VIEWER;
-		const char *all[] = { roleLabel(MP_ROLE_VIEWER), roleLabel(MP_ROLE_BUILDER), roleLabel(MP_ROLE_ADMIN), roleLabel(MP_ROLE_OWNER) };
-		int shown = gRole >= MP_ROLE_OWNER ? 4 : 2;
-		if(ImGui::Combo("##role", &choice, all, std::max(shown, choice + 1)) && choice + MP_ROLE_VIEWER != account.second){
-			MultiplayerAdmin(MP_ADMIN_SET_ROLE, account.first.c_str(), MpRoleName(choice + MP_ROLE_VIEWER), "");
+	if(UiSection(_("Accounts"))){
+		if(ImGui::Button(_("Show accounts"), ImVec2(-FLT_MIN, 0))){
 			MultiplayerAdmin(MP_ADMIN_USERS);
-			gAccountsSeq = gAdminSeq + 2;
+			gAccountsSeq = gAdminSeq + 1;
 		}
-		ImGui::EndDisabled();
-		ImGui::SetItemTooltip(_("Their role on the whole server (right-click someone under People for this room only)."));
-		ImGui::PopID();
+		if(gAccountsSeq && gAdminSeq >= gAccountsSeq && gAdminOk && gAdminText == "accounts"){
+			gAccountsList.clear();
+			size_t at = 0;
+			while(at < gAdminData.size()){
+				size_t end = gAdminData.find('\n', at);
+				std::string line = gAdminData.substr(at, end == std::string::npos ? std::string::npos : end - at);
+				size_t tab = line.find('\t');
+				if(tab != std::string::npos)
+					gAccountsList.push_back({ line.substr(0, tab), MpParseRole(line.substr(tab + 1)) });
+				at = end == std::string::npos ? gAdminData.size() : end + 1;
+			}
+			gAccountsSeq = 0;
+		}
+		for(const auto &account : gAccountsList){
+			ImGui::PushID(account.first.c_str());
+			char id[96];
+			UiFieldLabel(account.first.c_str(), id, sizeof(id));
+			bool mine = account.first == gName;
+			bool locked = mine || (account.second >= MP_ROLE_ADMIN && gRole < MP_ROLE_OWNER);
+			ImGui::BeginDisabled(locked);
+			int choice = account.second - MP_ROLE_VIEWER;
+			const char *all[] = { roleLabel(MP_ROLE_VIEWER), roleLabel(MP_ROLE_BUILDER), roleLabel(MP_ROLE_ADMIN), roleLabel(MP_ROLE_OWNER) };
+			int shown = gRole >= MP_ROLE_OWNER ? 4 : 2;
+			if(ImGui::Combo("##role", &choice, all, std::max(shown, choice + 1)) && choice + MP_ROLE_VIEWER != account.second){
+				MultiplayerAdmin(MP_ADMIN_SET_ROLE, account.first.c_str(), MpRoleName(choice + MP_ROLE_VIEWER), "");
+				MultiplayerAdmin(MP_ADMIN_USERS);
+				gAccountsSeq = gAdminSeq + 2;
+			}
+			ImGui::EndDisabled();
+			ImGui::SetItemTooltip(_("Their role on the whole server (right-click someone under People for this room only)."));
+			ImGui::PopID();
+		}
 	}
 }
 
+// A person's colour as a small square, vertically centred on a frame-high row.
 static void
-peerList(void)
+peerSwatch(ImU32 colour)
 {
-	ImGui::SeparatorText(_("People"));
-	ImGui::ColorButton("##self", ImGui::ColorConvertU32ToFloat4(peerColour(gSelf)),
-		ImGuiColorEditFlags_NoTooltip, ImVec2(ImGui::GetFontSize(), ImGui::GetFontSize()));
+	float h = ImGui::GetFrameHeight(), s = ImGui::GetFontSize() * 0.75f;
+	ImVec2 at = ImGui::GetCursorScreenPos();
+	ImGui::Dummy(ImVec2(s, h));
+	ImGui::GetWindowDrawList()->AddRectFilled(ImVec2(at.x, at.y + (h - s) * 0.5f),
+		ImVec2(at.x + s, at.y + (h + s) * 0.5f), colour, s * 0.25f);
 	ImGui::SameLine();
-	ImGui::Text(_("%s (you)"), gName);
-	for(const auto &it : gPeers){
-		const Peer &peer = it.second;
-		ImGui::PushID((int)peer.id);
-		ImGui::ColorButton("##colour", ImGui::ColorConvertU32ToFloat4(peerColour(peer.id)),
-			ImGuiColorEditFlags_NoTooltip, ImVec2(ImGui::GetFontSize(), ImGui::GetFontSize()));
-		ImGui::SameLine();
-		ImGui::TextUnformatted(peer.name);
-		if(peer.agent){
-			ImGui::SameLine();
-			ImGui::TextColored(UiSemanticColor(UI_COLOR_INFO), "AI");
-			ImGui::SetItemTooltip(_("An AI agent (Namaka), not a person."));
-			if(peer.owner[0]){
-				ImGui::SameLine();
-				ImGui::TextDisabled(_("via %s"), peer.owner);
-				ImGui::SetItemTooltip(gAccountsMode ? _("Its account's: the server knows it from the agent's token.") :
-					_("Whose it says it is: without accounts nothing proves it."));
-			}
-		}
+	ImGui::AlignTextToFramePadding();
+}
+
+// Who's here, filling the window but its foot (reserve): us first, then a
+// row each; double-click (or Go to, on the row under the mouse) looks from
+// where they look, right-click is an admin's menu for them.
+static void
+peerList(float reserve)
+{
+	float h = ImGui::GetFrameHeight();
+	if(ImGui::BeginChild("##people", ImVec2(0, -reserve))){
+		float x = ImGui::GetCursorPosX(), rowWidth = ImGui::GetContentRegionAvail().x;
+		float goWidth = buttonWidth(_("Go to"));
+		peerSwatch(peerColour(gSelf));
+		ImGui::Text(_("%s (you)"), gName);
 		if(gAccountsMode){
 			ImGui::SameLine();
-			ImGui::TextDisabled("%s", roleLabel(peer.role));
+			ImGui::TextDisabled("%s", roleLabel(gRole));
 		}
-		if(peer.ping > 0){
-			ImGui::SameLine();
-			ImGui::TextColored(pingColour(peer.ping), _("%d ms"), peer.ping);
-		}
-		if(!peer.selection.empty()){
-			ImGui::SameLine();
-			ImGui::TextDisabled(_("%d selected"), (int)peer.selection.size());
-		}
-		if(gAccountsMode && gRole >= MP_ROLE_ADMIN && !peer.agent && ImGui::BeginPopupContextItem("##who", ImGuiPopupFlags_MouseButtonRight)){
-			ImGui::TextDisabled("%s", peer.name);
-			ImGui::Separator();
-			int choices[] = { MP_ROLE_VIEWER, MP_ROLE_BUILDER, MP_ROLE_ADMIN };
-			for(int to : choices){
-				if(to >= MP_ROLE_ADMIN && gRole < MP_ROLE_OWNER)
-					continue;
-				char label[96];
-				snprintf(label, sizeof(label), _("Make a %s here"), roleLabel(to));
-				if(ImGui::MenuItem(label, nil, peer.role == to))
-					MultiplayerAdmin(MP_ADMIN_SET_ROLE, peer.name, MpRoleName(to), gRoomName.c_str());
-				snprintf(label, sizeof(label), _("Make a %s everywhere"), roleLabel(to));
-				if(ImGui::MenuItem(label))
-					MultiplayerAdmin(MP_ADMIN_SET_ROLE, peer.name, MpRoleName(to), "");
+		for(const auto &it : gPeers){
+			const Peer &peer = it.second;
+			ImGui::PushID((int)peer.id);
+			ImVec2 rowStart = ImGui::GetCursorPos(), rowScreen = ImGui::GetCursorScreenPos();
+			bool rowHovered = ImGui::IsWindowHovered() &&
+				ImGui::IsMouseHoveringRect(rowScreen, ImVec2(rowScreen.x + rowWidth, rowScreen.y + h));
+			// The whole row takes the double-click and the right-click; Go to sits on top.
+			ImGui::Selectable("##row", false, ImGuiSelectableFlags_AllowOverlap | ImGuiSelectableFlags_AllowDoubleClick,
+				ImVec2(rowWidth, h));
+			if(ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+				goToPeer(peer);
+			if(gAccountsMode && gRole >= MP_ROLE_ADMIN && !peer.agent && ImGui::BeginPopupContextItem("##who", ImGuiPopupFlags_MouseButtonRight)){
+				ImGui::TextDisabled("%s", peer.name);
+				ImGui::Separator();
+				int choices[] = { MP_ROLE_VIEWER, MP_ROLE_BUILDER, MP_ROLE_ADMIN };
+				for(int to : choices){
+					if(to >= MP_ROLE_ADMIN && gRole < MP_ROLE_OWNER)
+						continue;
+					char label[96];
+					snprintf(label, sizeof(label), _("Make a %s here"), roleLabel(to));
+					if(ImGui::MenuItem(label, nil, peer.role == to))
+						MultiplayerAdmin(MP_ADMIN_SET_ROLE, peer.name, MpRoleName(to), gRoomName.c_str());
+					snprintf(label, sizeof(label), _("Make a %s everywhere"), roleLabel(to));
+					if(ImGui::MenuItem(label))
+						MultiplayerAdmin(MP_ADMIN_SET_ROLE, peer.name, MpRoleName(to), "");
+				}
+				ImGui::Separator();
+				if(ImGui::MenuItem(_("Remove from the room")))
+					MultiplayerAdmin(MP_ADMIN_KICK, std::to_string(peer.id).c_str());
+				ImGui::EndPopup();
 			}
-			ImGui::Separator();
-			if(ImGui::MenuItem(_("Remove from the room")))
-				MultiplayerAdmin(MP_ADMIN_KICK, std::to_string(peer.id).c_str());
-			ImGui::EndPopup();
+			ImGui::SetCursorPos(rowStart);
+			peerSwatch(peerColour(peer.id));
+			ImGui::TextUnformatted(peer.name);
+			if(peer.agent){
+				ImGui::SameLine();
+				ImGui::TextColored(UiSemanticColor(UI_COLOR_INFO), "AI");
+				ImGui::SetItemTooltip(_("An AI agent (Namaka), not a person."));
+				if(peer.owner[0]){
+					ImGui::SameLine();
+					ImGui::TextDisabled(_("via %s"), peer.owner);
+					ImGui::SetItemTooltip(gAccountsMode ? _("Its account's: the server knows it from the agent's token.") :
+						_("Whose it says it is: without accounts nothing proves it."));
+				}
+			}
+			if(gAccountsMode){
+				ImGui::SameLine();
+				ImGui::TextDisabled("%s", roleLabel(peer.role));
+			}
+			if(peer.ping > 0){
+				ImGui::SameLine();
+				ImGui::TextColored(pingColour(peer.ping), _("%d ms"), peer.ping);
+			}
+			if(!peer.selection.empty()){
+				ImGui::SameLine();
+				ImGui::TextDisabled(_("%d selected"), (int)peer.selection.size());
+			}
+			if(rowHovered){
+				toRowEnd(x, rowWidth, goWidth);
+				if(ImGui::Button(_("Go to"), ImVec2(goWidth, 0)))
+					goToPeer(peer);
+				ImGui::SetItemTooltip(_("Look from where they are looking."));
+			}
+			ImGui::SetCursorPos(ImVec2(rowStart.x, rowStart.y + h + ImGui::GetStyle().ItemSpacing.y));
+			ImGui::Dummy(ImVec2(0, 0));
+			ImGui::PopID();
 		}
-		ImGui::SameLine();
-		if(ImGui::SmallButton(_("Go to")))
-			goToPeer(peer);
-		ImGui::SetItemTooltip(_("Look from where they are looking."));
-		ImGui::PopID();
+		if(gPeers.empty()){
+			ImGui::Spacing();
+			ImGui::TextDisabled(_("No one else here yet."));
+			if(gHosting)
+				ImGui::TextDisabled(_("Send them the port and session code above."));
+		}
 	}
+	ImGui::EndChild();
 }
 
 static void
@@ -2764,14 +2979,16 @@ goToChatLine(const ChatLine &line)
 	TheCamera.m_at = rw::normalize(dir);
 }
 
-// The conversation, and a line to add to it.
+// The conversation filling the window but its foot (reserve), and the line
+// to add to it pinned under it.
 static void
-chatPanel(void)
+chatPanel(float reserve)
 {
-	ImGui::SeparatorText(_("Chat"));
 	static size_t seen;
-	float height = ImGui::GetTextLineHeightWithSpacing() * 9.0f;
+	float height = -(reserve + ImGui::GetFrameHeightWithSpacing());
 	if(ImGui::BeginChild("##chat", ImVec2(0, height), ImGuiChildFlags_Borders)){
+		if(gChat.empty())
+			ImGui::TextDisabled(_("No messages yet."));
 		for(const ChatLine &line : gChat){
 			ImGui::PushID((int)line.seq);
 			time_t when = (time_t)line.time;
@@ -2810,11 +3027,12 @@ chatPanel(void)
 	}
 	ImGui::EndChild();
 	static char message[MP_MAX_CHAT + 1];
-	ImGui::SetNextItemWidth(-ImGui::CalcTextSize(_("Send")).x - ImGui::GetStyle().FramePadding.x * 4);
+	float sendWidth = buttonWidth(_("Send"));
+	ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - sendWidth - ImGui::GetStyle().ItemSpacing.x);
 	bool send = ImGui::InputTextWithHint("##say", _("Say something (@name to mention someone)"), message, sizeof(message),
 		ImGuiInputTextFlags_EnterReturnsTrue);
 	ImGui::SameLine();
-	send |= ImGui::Button(_("Send"));
+	send |= ImGui::Button(_("Send"), ImVec2(sendWidth, 0));
 	if(send && message[0]){
 		MultiplayerSay(message);
 		message[0] = '\0';
@@ -2822,7 +3040,8 @@ chatPanel(void)
 	}
 }
 
-// Making our map everyone's: a file, and the admin password when the server asks for one.
+// Making our map everyone's, without rooms: a file or an empty map, and the
+// admin password when the server asks for one.
 static void
 loadForEveryone(std::string *error)
 {
@@ -2830,13 +3049,15 @@ loadForEveryone(std::string *error)
 		return;
 	static char admin[MP_PASSWORD_LEN];
 	if(gOffers & MP_REPLACE_NEEDS_ADMIN){
-		ImGui::SetNextItemWidth(ImGui::GetFontSize() * 12.0f);
-		ImGui::InputText(_("Admin password"), admin, sizeof(admin), ImGuiInputTextFlags_Password);
+		UiInputText(_("Admin password"), admin, sizeof(admin), ImGuiInputTextFlags_Password);
 		ImGui::SetItemTooltip(_("The server only lets who knows it load another map for everyone."));
 	}
 	bool ready = !(gOffers & MP_REPLACE_NEEDS_ADMIN) || admin[0];
+	const char *labels[] = { _("Load a map for everyone..."), _("New empty map for everyone") };
+	bool oneRow;
+	ImVec2 size = buttonsSize(labels, 2, &oneRow);
 	ImGui::BeginDisabled(!ready);
-	if(ImGui::Button(_("Load a map for everyone..."))){
+	if(ImGui::Button(labels[0], size)){
 		char path[1024] = "";
 		if(PickFileDialog(path, sizeof(path), _("Map for everyone"), _("Pawn maps"), "pwn;inc;pawn") && path[0]){
 			error->clear();
@@ -2846,6 +3067,42 @@ loadForEveryone(std::string *error)
 	ImGui::EndDisabled();
 	ImGui::SetItemTooltip(_("Replaces the session's map with one from a file, for everyone in it.\n"
 		"Unsaved work in the session is lost; the server keeps a copy of the session as it was."));
+	if(oneRow)
+		ImGui::SameLine();
+	if(confirmedButton(labels[1], _("Everyone here gets an empty map."), size))
+		MultiplayerLoadForEveryone(nil, "", error);
+}
+
+// A session's tasks, under its header: People, Chat and, when there is
+// one, a third (extra: Admin, or Map for everyone). The chat's tab counts
+// what came since it was last shown.
+enum { SESSION_PEOPLE, SESSION_CHAT, SESSION_EXTRA };
+static int
+sessionTabs(const char *extra)
+{
+	static int tab = SESSION_PEOPLE;
+	static uint32 readSeq;
+	int unread = 0;
+	for(const ChatLine &line : gChat)
+		if(line.seq > readSeq && line.peer != 0 && line.peer != gSelf)
+			unread++;
+	char people[96], chat[96], third[96];
+	snprintf(people, sizeof(people), "%s  %d###people", _("People"), (int)gPeers.size() + 1);
+	if(tab == SESSION_CHAT || unread == 0)
+		snprintf(chat, sizeof(chat), "%s###chat", _("Chat"));
+	else
+		snprintf(chat, sizeof(chat), "%s  (%d)###chat", _("Chat"), unread);
+	snprintf(third, sizeof(third), "%s###extra", extra ? extra : "");
+	const char *labels[] = { people, chat, third };
+	int count = extra ? 3 : 2;
+	if(tab >= count)
+		tab = SESSION_PEOPLE;
+	ImGui::Spacing();
+	UiSegmented("##mp_session", labels, count, &tab);
+	ImGui::Spacing();
+	if(tab == SESSION_CHAT && !gChat.empty())
+		readSeq = gChat.back().seq;
+	return tab;
 }
 
 // The Join form: how to sign in, and where.
@@ -2857,35 +3114,34 @@ static struct JoinForm
 	char room[33] = "", roomPassword[MP_PASSWORD_LEN] = "";
 } gForm;
 
-// Sessions we joined before; favourites first and kept.
-static void
+// Sessions we joined before, favourites first and kept: a row each, the
+// star, the name and its address, forget at the right end. A click fills the
+// form; a double-click joins straight away (true).
+static bool
 serverList(char *address, size_t addressSize, int *port, char *code, size_t codeSize)
 {
 	if(!gServersLoaded)
 		loadServers();
 	if(gServers.empty())
-		return;
-	ImGui::SeparatorText(_("Servers"));
+		return false;
+	UiHeading(_("Servers"));
 	std::stable_sort(gServers.begin(), gServers.end(), [](const ServerEntry &a, const ServerEntry &b){
 		return a.favourite && !b.favourite;
 	});
 	int remove = -1;
-	bool changed = false;
+	bool changed = false, joinNow = false;
+	float h = ImGui::GetFrameHeight(), spacing = ImGui::GetStyle().ItemSpacing.x;
 	for(size_t i = 0; i < gServers.size(); i++){
 		ServerEntry &e = gServers[i];
 		ImGui::PushID((int)i);
-		if(ImGui::SmallButton(e.favourite ? ICON_FA_STAR : "+")){
-			e.favourite = !e.favourite;
-			if(!e.favourite)
-				e.password.clear();
-			changed = true;
-		}
-		ImGui::SetItemTooltip(e.favourite ? _("A favourite: kept, at the top. Click to make it a recent one.") :
-			_("Keep it as a favourite"));
-		ImGui::SameLine();
-		std::string label = (e.name.empty() ? e.address : e.name) + "  (" + e.address + ":" + std::to_string(e.port) + ")";
+		ImVec2 rowAt = ImGui::GetCursorPos();
+		float rowW = ImGui::GetContentRegionAvail().x;
 		bool chosen = strcmp(address, e.address.c_str()) == 0 && *port == e.port;
-		if(ImGui::Selectable(label.c_str(), chosen, ImGuiSelectableFlags_AllowOverlap, ImVec2(ImGui::GetContentRegionAvail().x - ImGui::GetFrameHeight(), 0))){
+		// The whole row picks it; the star and the cross sit on top.
+		bool picked = ImGui::Selectable("##server", chosen, ImGuiSelectableFlags_AllowOverlap | ImGuiSelectableFlags_AllowDoubleClick,
+			ImVec2(rowW, h));
+		bool rowHovered = ImGui::IsItemHovered();
+		if(picked){
 			snprintf(address, addressSize, "%s", e.address.c_str());
 			*port = e.port;
 			gForm.kind = e.kind == MP_LOGIN_ACCOUNT ? 1 : 0;
@@ -2894,23 +3150,47 @@ serverList(char *address, size_t addressSize, int *port, char *code, size_t code
 			snprintf(gForm.password, sizeof(gForm.password), "%s", e.kind == MP_LOGIN_ACCOUNT ? e.password.c_str() : "");
 			snprintf(gForm.room, sizeof(gForm.room), "%s", e.room.c_str());
 			gRememberPassword = !e.password.empty();
+			if(ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+				joinNow = true;
 		}
-		if(!e.password.empty())
-			ImGui::SetItemTooltip("%s", _("Its password is kept on this computer."));
+		ImGui::SetItemTooltip("%s", e.password.empty() ? _("Click to fill in the form; double-click to join.") :
+			_("Click to fill in the form; double-click to join. Its password is kept on this computer."));
+		ImGui::SetCursorPos(rowAt);
+		if(iconButton(ICON_FA_STAR "##favourite", !e.favourite)){
+			e.favourite = !e.favourite;
+			if(!e.favourite)
+				e.password.clear();
+			changed = true;
+		}
+		ImGui::SetItemTooltip(e.favourite ? _("A favourite: kept, at the top. Click to make it a recent one.") :
+			_("Keep it as a favourite"));
 		ImGui::SameLine();
-		if(ImGui::SmallButton("x"))
-			remove = (int)i;
-		ImGui::SetItemTooltip(_("Forget it"));
+		ImGui::AlignTextToFramePadding();
+		ImGui::TextUnformatted(e.name.empty() ? e.address.c_str() : e.name.c_str());
+		ImGui::SameLine();
+		ImGui::TextDisabled("%s:%d", e.address.c_str(), e.port);
+		if(rowHovered || ImGui::IsItemHovered()){
+			ImGui::SameLine(ImGui::GetWindowContentRegionMax().x - h);
+			if(iconButton(ICON_FA_XMARK "##forget", true))
+				remove = (int)i;
+			ImGui::SetItemTooltip(_("Forget it"));
+		}
+		ImGui::SetCursorPos(ImVec2(rowAt.x, rowAt.y + h + ImGui::GetStyle().ItemSpacing.y));
+		ImGui::Dummy(ImVec2(0, 0));
 		ImGui::PopID();
 	}
+	(void)spacing;
 	if(remove >= 0){
 		gServers.erase(gServers.begin() + remove);
 		changed = true;
 	}
 	if(changed)
 		saveServers();
+	return joinNow;
 }
 
+// Edit one map together: sign in (join or host), then in a session see
+// who's here, chat, and (admins) run the room; leave at the foot.
 void
 DrawMultiplayerWindow(bool *open)
 {
@@ -2925,84 +3205,101 @@ DrawMultiplayerWindow(bool *open)
 		if(user == nil) user = getenv("USERNAME");
 		MpCopyName(name, user ? user : "Mapper");
 	}
-	ImGui::SetNextWindowSize(ImVec2(ImGui::GetFontSize() * 26.0f, 0.0f), ImGuiCond_FirstUseEver);
-	if(!ImGui::Begin(ICON_FA_USER " Multiplayer###multiplayer", open)){
+	// Mostly a list in a session (people, chat, rooms): a list window's size.
+	const char *title = ICON_FA_USER " Multiplayer###multiplayer";
+	ImGuiWindowFlags flags = UiPlaceToolWindow(title, 26.0f, false);
+	if(!ImGui::Begin(title, open, flags)){
 		ImGui::End();
 		return;
 	}
 	UiFitItemsToPanel();
-	float field = ImGui::GetFontSize() * 12.0f;
 	bool ready = false;
 	switch(GetMultiplayerState()){
-	case MP_OFF:
-		ImGui::TextWrapped(_("Edit one map together: one of you hosts the open map, or a haumea-server keeps it, "
+	case MP_OFF: {
+		// Your name, then what to do: join a session or host this map.
+		UiInputText(_("Your name"), name, sizeof(name));
+		ImGui::SetItemTooltip(_("Edit one map together: one of you hosts the open map, or a haumea-server keeps it, "
 			"and the others join."));
-		ImGui::SetNextItemWidth(field);
-		ImGui::InputText(_("Your name"), name, sizeof(name));
-		ImGui::SeparatorText(_("Host"));
-		ImGui::SetNextItemWidth(field);
-		ImGui::InputInt(_("Port##host"), &hostPort);
-		hostPort = clamp(hostPort, 1, 65535);
-		ImGui::Checkbox(_("Open the port on my router"), &openRouterPort);
-		ImGui::SetItemTooltip(_("Asks your router to forward the port to this computer (UPnP),\n"
-			"so people join over the internet without setting it up by hand."));
-		if(primaryButton(_("Host this map"))){
-			error.clear();
-			MultiplayerHost(hostPort, name, &error, openRouterPort);
+		static int task = 0;	// 0 join, 1 host
+		const char *tasks[] = { _("Join a session"), _("Host this map") };
+		ImGui::Spacing();
+		UiSegmented("##mp_task", tasks, 2, &task);
+		ImGui::Spacing();
+		if(task == 1){
+			UiInputInt(_("Port##host"), &hostPort);
+			hostPort = clamp(hostPort, 1, 65535);
+			UiCheckbox(_("Open the port on my router"), &openRouterPort);
+			ImGui::SetItemTooltip(_("Asks your router to forward the port to this computer (UPnP),\n"
+				"so people join over the internet without setting it up by hand."));
+			ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+			ImGui::TextWrapped("%s", _("Others join with this computer's address, the port and the session code "
+				"shown once you host."));
+			ImGui::PopStyleColor();
+			ImGui::SetItemTooltip(_("Over the internet the port must be forwarded to this computer, or use a VPN such as Tailscale.\n"
+				"For a session that stays up without you, run haumea-server where your SA-MP server runs."));
+			if(UiFooterButton(_("Host this map"))){
+				error.clear();
+				MultiplayerHost(hostPort, name, &error, openRouterPort);
+			}
+			break;
 		}
-		ImGui::SetItemTooltip(_("Others join with this computer's address, the port and the session code.\n"
-			"Over the internet the port must be forwarded to this computer, or use a VPN such as Tailscale.\n"
-			"For a session that stays up without you, run haumea-server where your SA-MP server runs."));
-		serverList(address, sizeof(address), &joinPort, code, sizeof(code));
-		ImGui::SeparatorText(_("Join"));
-		ImGui::SetNextItemWidth(field);
-		ImGui::InputText(_("Address"), address, sizeof(address));
-		ImGui::SetNextItemWidth(field);
-		ImGui::InputInt(_("Port##join"), &joinPort);
-		joinPort = clamp(joinPort, 1, 65535);
-		// "##join_kind": the Account and Invite code fields below have the same labels.
-		ImGui::RadioButton(_("Session code##join_kind"), &gForm.kind, 0);
-		ImGui::SetItemTooltip(_("Someone hosting from Haumea, or a server with one password for everyone."));
-		ImGui::SameLine();
-		ImGui::RadioButton(_("Account##join_kind"), &gForm.kind, 1);
-		ImGui::SetItemTooltip(_("A server with accounts: your name and password there."));
-		ImGui::SameLine();
-		ImGui::RadioButton(_("Invite code##join_kind"), &gForm.kind, 2);
-		ImGui::SetItemTooltip(_("The first time on a server with accounts: the code you were sent makes your account."));
+		bool joinNow = serverList(address, sizeof(address), &joinPort, code, sizeof(code));
+		UiHeading(_("Server"));
+		{
+			// The address and its port on one row.
+			char addressId[64];
+			UiFieldLabel(_("Address"), addressId, sizeof(addressId));
+			float portW = floorf(ImGui::GetFontSize() * 5.5f);
+			ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - portW - ImGui::GetStyle().ItemSpacing.x);
+			ImGui::InputText(addressId, address, sizeof(address));
+			ImGui::SameLine();
+			ImGui::SetNextItemWidth(portW);
+			ImGui::InputInt("##Port##join", &joinPort, 0, 0);
+			ImGui::SetItemTooltip("%s", _("Port"));
+			joinPort = clamp(joinPort, 1, 65535);
+		}
+		const char *kinds[] = { _("Session code"), _("Account"), _("Invite code") };
+		const char *kindTips[] = {
+			_("Someone hosting from Haumea, or a server with one password for everyone."),
+			_("A server with accounts: your name and password there."),
+			_("The first time on a server with accounts: the code you were sent makes your account.") };
+		gForm.kind = clamp(gForm.kind, 0, 2);
+		if(UiBeginCombo(_("Sign in with"), kinds[gForm.kind])){
+			for(int i = 0; i < 3; i++){
+				if(ImGui::Selectable(kinds[i], gForm.kind == i))
+					gForm.kind = i;
+				ImGui::SetItemTooltip("%s", kindTips[i]);
+				if(gForm.kind == i)
+					ImGui::SetItemDefaultFocus();
+			}
+			ImGui::EndCombo();
+		}
+		ImGui::SetItemTooltip("%s", kindTips[gForm.kind]);
 		ready = address[0] != '\0';
 		if(gForm.kind == 0){
-			ImGui::SetNextItemWidth(field);
-			ImGui::InputText(_("Code or password"), code, sizeof(code), ImGuiInputTextFlags_Password);
+			UiInputText(_("Code or password"), code, sizeof(code), ImGuiInputTextFlags_Password);
 			ImGui::SetItemTooltip(_("The host's session code, or the password haumea-server was started with."));
 			ready &= code[0] != '\0';
 		}else if(gForm.kind == 1){
-			ImGui::SetNextItemWidth(field);
-			ImGui::InputText(_("Account"), gForm.account, sizeof(gForm.account));
-			ImGui::SetNextItemWidth(field);
-			ImGui::InputText(_("Password"), gForm.password, sizeof(gForm.password), ImGuiInputTextFlags_Password);
+			UiInputText(_("Account"), gForm.account, sizeof(gForm.account));
+			UiInputText(_("Password"), gForm.password, sizeof(gForm.password), ImGuiInputTextFlags_Password);
 			ready &= gForm.account[0] && gForm.password[0];
 		}else{
-			ImGui::SetNextItemWidth(field);
-			ImGui::InputText(_("Invite code"), gForm.invite, sizeof(gForm.invite));
-			ImGui::SetNextItemWidth(field);
-			ImGui::InputText(_("Choose a name"), gForm.newName, sizeof(gForm.newName));
+			UiInputText(_("Invite code"), gForm.invite, sizeof(gForm.invite));
+			UiInputText(_("Choose a name"), gForm.newName, sizeof(gForm.newName));
 			ImGui::SetItemTooltip(_("Your account's name on this server: 2-31 letters, digits, _ - or ."));
-			ImGui::SetNextItemWidth(field);
-			ImGui::InputText(_("Choose a password"), gForm.newPassword, sizeof(gForm.newPassword), ImGuiInputTextFlags_Password);
+			UiInputText(_("Choose a password"), gForm.newPassword, sizeof(gForm.newPassword), ImGuiInputTextFlags_Password);
 			ImGui::SetItemTooltip(_("8 characters or more. You sign in with it from now on; the invite is used up."));
 			ready &= gForm.invite[0] && gForm.newName[0] && strlen(gForm.newPassword) >= 8;
 		}
-		if(gForm.kind != 0){
-			ImGui::SetNextItemWidth(field);
-			ImGui::InputTextWithHint(_("Room"), _("empty: pick from the list"), gForm.room, sizeof(gForm.room));
-		}
-		ImGui::Checkbox(_("Remember the password for favourites"), &gRememberPassword);
+		UiCheckbox(_("Remember the password for favourites"), &gRememberPassword);
 		ImGui::SetItemTooltip(_("Kept in your Haumea settings on this computer, for servers you star."));
-		if(PawnMapHasUnsavedChanges() || TextDrawFileHasUnsavedChanges())
-			ImGui::TextColored(UiSemanticColor(UI_COLOR_WARNING),
-				_("Joining replaces the open map and textdraw file: save them first to keep your changes."));
-		ImGui::BeginDisabled(!ready);
-		if(primaryButton(_("Join")) && ready){
+		if(PawnMapHasUnsavedChanges() || TextDrawFileHasUnsavedChanges()){
+			ImGui::PushStyleColor(ImGuiCol_Text, UiSemanticColor(UI_COLOR_WARNING));
+			ImGui::TextWrapped("%s", _("Joining replaces the open map and textdraw file: save them first to keep your changes."));
+			ImGui::PopStyleColor();
+		}
+		if((UiFooterButton(_("Join"), ready) || (joinNow && ready))){
 			error.clear();
 			if(gForm.kind == 0)
 				MultiplayerJoin(address, joinPort, code, name, &error);
@@ -3014,103 +3311,123 @@ DrawMultiplayerWindow(bool *open)
 				join.kind = gForm.kind == 1 ? MP_LOGIN_ACCOUNT : MP_LOGIN_INVITE;
 				join.account = gForm.account;
 				join.password = gForm.kind == 1 ? gForm.password : gForm.invite;
-				join.room = gForm.room;
+				// The room is picked from the server's list once signed in.
+				join.room.clear();
+				gPreferredRoom = gForm.room;
 				join.newName = gForm.newName;
 				join.newPassword = gForm.newPassword;
 				MultiplayerJoinWith(join, &error);
 			}
 		}
-		ImGui::EndDisabled();
 		break;
+	}
 	case MP_LOBBY:
 		lobbyPanel(&error);
 		break;
-	case MP_HOSTING:
-		ImGui::Text(_("Hosting on port %d"), MpRelayPort());
-		ImGui::Text(_("Session code: %s"), gPassword);
-		ImGui::SameLine();
-		if(ImGui::SmallButton(_("Copy")))
-			ImGui::SetClipboardText(gPassword);
+	case MP_HOSTING: {
+		// Hosting: what others join with on top, then People / Chat, and
+		// Stop hosting at the foot.
+		char portText[16];
+		snprintf(portText, sizeof(portText), "%d", MpRelayPort());
+		UiInfoRow(_("Port"), portText);
+		UiInfoRow(_("Session code"), gPassword,
+			_("Rooms, accounts and roles come with haumea-server; hosting from here is one map, one code."));
 		switch(GetUpnpState()){
 		case UPNP_WORKING:
 			ImGui::TextDisabled(_("Opening the port on your router..."));
 			break;
 		case UPNP_OPEN: {
 			std::string external = UpnpExternalAddress();
-			if(external.empty())
-				ImGui::TextWrapped(_("Your router forwards the port: over the internet, others join at your "
-					"public address."));
-			else{
-				ImGui::Text(_("Over the internet, others join at %s"), external.c_str());
-				ImGui::SameLine();
-				if(ImGui::SmallButton(_("Copy##address")))
-					ImGui::SetClipboardText(external.c_str());
-			}
+			const char *forwarded = _("Your router forwards the port: over the internet, others join at your "
+				"public address.");
+			if(external.empty()){
+				ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+				ImGui::TextWrapped("%s", forwarded);
+				ImGui::PopStyleColor();
+			}else
+				UiInfoRow(_("Address"), external.c_str(), forwarded);
 			break;
 		}
-		case UPNP_FAILED:
-			ImGui::TextColored(UiSemanticColor(UI_COLOR_WARNING), _("Your router didn't open the port (%s)."),
-				UpnpError().c_str());
-			ImGui::TextWrapped(_("On your own network others can still join. Over the internet, forward port %d "
+		case UPNP_FAILED: {
+			ImGui::PushStyleColor(ImGuiCol_Text, UiSemanticColor(UI_COLOR_WARNING));
+			ImGui::TextWrapped(_("Your router didn't open the port (%s)."), UpnpError().c_str());
+			ImGui::PopStyleColor();
+			char help[512];
+			snprintf(help, sizeof(help), _("On your own network others can still join. Over the internet, forward port %d "
 				"to this computer, use a VPN such as Tailscale, or run haumea-server."), MpRelayPort());
+			ImGui::SetItemTooltip("%s", help);
 			break;
+		}
 		}
 		if(!gIpv6.empty()){
-			ImGui::TextWrapped(_("Over IPv6, others can join at %s when your router lets them in."), gIpv6.c_str());
-			ImGui::SameLine();
-			if(ImGui::SmallButton(_("Copy##ipv6")))
-				ImGui::SetClipboardText(gIpv6.c_str());
+			char help[512];
+			snprintf(help, sizeof(help), _("Over IPv6, others can join at %s when your router lets them in."), gIpv6.c_str());
+			UiInfoRow("IPv6", gIpv6.c_str(), help);
 		}
-		ImGui::TextDisabled(_("Rooms, accounts and roles come with haumea-server; hosting from here is one map, one code."));
-		peerList();
-		chatPanel();
-		ImGui::Spacing();
-		if(ImGui::Button(_("Stop hosting")))
+		int tab = sessionTabs(nil);
+		float reserve = footerReserve(error);
+		if(tab == SESSION_CHAT)
+			chatPanel(reserve);
+		else
+			peerList(reserve);
+		errorLine(error);
+		if(footerButton(_("Stop hosting"), true))
 			MultiplayerLeave();
 		ImGui::SetItemTooltip(_("Everyone keeps the map as it is now."));
 		break;
+	}
 	case MP_CONNECTING:
 		ImGui::Text(gRelayConnected ? _("Receiving the map...") : _("Connecting to %s..."), gAddress);
-		if(ImGui::Button(_("Cancel")))
+		errorLine(error);
+		if(footerButton(_("Cancel")))
 			MultiplayerLeave();
 		break;
-	case MP_JOINED:
+	case MP_JOINED: {
+		// In a session: where we are (the room and the way to another, on a
+		// server with rooms), then People / Chat / Admin or Map for everyone,
+		// and Leave at the foot.
+		char where[320];
 		if(gAccountsMode){
 			roomBar();
-			ImGui::Text(_("In room %s on %s, as %s"), gRoomName.c_str(), gSessionName, roleLabel(gRole));
-			if(gRole == MP_ROLE_VIEWER)
-				ImGui::TextColored(UiSemanticColor(UI_COLOR_INFO), _("You're a viewer here: you can look around and chat."));
+			snprintf(where, sizeof(where), _("In room %s on %s, as %s"), gRoomName.c_str(), gSessionName, roleLabel(gRole));
 		}else
-			ImGui::Text(_("In %s's session"), gSessionName);
-		if(gPingMs >= 0){
-			ImGui::SameLine();
-			ImGui::TextDisabled(_("%d ms"), gPingMs);
-		}
-		if(gOffers & MP_OFFERS_MAPS)
-			ImGui::TextDisabled(_("The server keeps a copy of the map whenever it's saved."));
-		peerList();
-		chatPanel();
-		ImGui::Spacing();
+			snprintf(where, sizeof(where), _("In %s's session"), gSessionName);
+		whereLine(where, (gOffers & MP_OFFERS_MAPS) ? _("The server keeps a copy of the map whenever it's saved.") : nil);
+		if(gAccountsMode && gRole == MP_ROLE_VIEWER)
+			ImGui::TextColored(UiSemanticColor(UI_COLOR_INFO), _("You're a viewer here: you can look around and chat."));
+		const char *extra = nil;
 		if(gAccountsMode){
 			if(gRole >= MP_ROLE_ADMIN)
+				extra = _("Admin");
+		}else if(gOffers & MP_OFFERS_REPLACE)
+			extra = _("Map for everyone");
+		int tab = sessionTabs(extra);
+		float reserve = footerReserve(error);
+		if(tab == SESSION_CHAT)
+			chatPanel(reserve);
+		else if(tab == SESSION_EXTRA && gAccountsMode){
+			if(ImGui::BeginChild("##admin", ImVec2(0, -reserve)))
 				adminPanel(&error);
-		}else{
+			ImGui::EndChild();
+		}else if(tab == SESSION_EXTRA)
 			loadForEveryone(&error);
-			if(gOffers & MP_OFFERS_REPLACE){
-				ImGui::SameLine();
-				if(confirmedButton(_("New empty map for everyone"), _("Everyone here gets an empty map.")))
-					MultiplayerLoadForEveryone(nil, "", &error);
-			}
-		}
-		if(ImGui::Button(_("Leave")))
+		else
+			peerList(reserve);
+		errorLine(error);
+		if(footerButton(_("Leave")))
 			MultiplayerLeave();
 		ImGui::SetItemTooltip(_("You keep the map as it is now; save it to keep a copy."));
 		break;
 	}
-	if(!error.empty())
-		ImGui::TextColored(UiSemanticColor(UI_COLOR_ERROR), "%s", error.c_str());
-	else if(!gStatus.empty() && gState == MP_OFF)
-		ImGui::TextDisabled("%s", gStatus.c_str());
+	}
+	if(GetMultiplayerState() == MP_OFF){
+		if(!error.empty()){
+			ImGui::PushStyleColor(ImGuiCol_Text, UiSemanticColor(UI_COLOR_ERROR));
+			ImGui::TextWrapped("%s", error.c_str());
+			ImGui::PopStyleColor();
+		}else if(!gStatus.empty() && gState == MP_OFF)
+			ImGui::TextDisabled("%s", gStatus.c_str());
+	}
 	ImGui::End();
 }
 

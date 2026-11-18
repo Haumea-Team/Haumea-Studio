@@ -14,11 +14,11 @@
 
 stock Haumea_hv_removals_RemoveWorldObjectsForPlayer(playerid)
 {
-	RemoveBuildingForPlayer(playerid, -1, 2063.000000, -1731.000000, 15.000000, 5.000000); // everything in the area
-	RemoveBuildingForPlayer(playerid, 4206, 1479.554688, -1639.609375, 13.648438, 0.25); // PershingPool_LAn
+	RemoveBuildingForPlayer(playerid, -1, 2063.0, -1731.0, 15.0, 5.0); // everything in the area
+	RemoveBuildingForPlayer(playerid, 4206, 1479.5547, -1639.6094, 13.648438, 0.25); // PershingPool_LAn
 }
 
 stock Haumea_hv_removals_CreateObjects()
 {
-	CreateObject(19353, 2063.000000, -1731.000000, 14.000000, 0.000000, 0.000000, 90.000000); // wall001
+	CreateObject(19353, 2063.0, -1731.0, 14.0, 0.0, 0.0, 90.0); // wall001
 }

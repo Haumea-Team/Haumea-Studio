@@ -6,7 +6,7 @@
 #include <ctype.h>
 #include <string>
 
-// The Object Browser's categories: Haumea's own. Each model is filed at load
+// The Asset Browser's categories: Haumea's own. Each model is filed at load
 // from what the game's own files say about it: its name and TXD, the IDE
 // file and folder it comes from, its flags (trees, night-time objects), its
 // collision size, the vehicle type and class in vehicles.ide, and whether it

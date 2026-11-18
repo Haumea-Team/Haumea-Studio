@@ -62,6 +62,9 @@ assert pawn_contains 'CreateObject(18688,'
 click_item 'View' 'Particle effects'
 wait 60
 assert particles.model 18688 == 1
+# Done with View: close it, it floats over Object Info.
+shortcut window_view
+wait 3
 # Player view must also filter a particle object's virtual world.
 click_object model=18688
 shortcut window_object_info

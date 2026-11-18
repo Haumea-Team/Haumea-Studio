@@ -2,6 +2,7 @@
 #pragma once
 
 #include <stdio.h>
+#include <string>
 
 // Haumea Studio's updater: checks GitHub Releases for this channel, shows a
 // banner (never a modal), downloads and verifies the release bundle in the
@@ -38,3 +39,7 @@ void UpdaterPreferences(void);
 // settings.cfg: true when key was the updater's.
 bool UpdaterParseSetting(const char *key, const char *value);
 void UpdaterWriteSettings(FILE *f);
+
+// An https file to outPath, the way updates are fetched (curl on Linux and
+// macOS, WinHTTP on Windows). Blocks: call it from a worker thread.
+bool HttpDownload(const std::string &url, const std::string &outPath, std::string *error);

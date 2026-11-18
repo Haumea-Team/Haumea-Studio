@@ -224,6 +224,19 @@ GetNavigZoneText(int zone)
 }
 
 int
+GetNumNavigZones(void)
+{
+	return numNavigZones;
+}
+
+void
+GetNavigZoneBox(int zone, rw::V3d *min, rw::V3d *max)
+{
+	*min = navigZones[zone].box.min;
+	*max = navigZones[zone].box.max;
+}
+
+int
 GetMapZoneLevel(rw::V3d p)
 {
 	for(int i = 0; i < numMapZones; i++)

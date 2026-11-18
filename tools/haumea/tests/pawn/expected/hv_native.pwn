@@ -37,7 +37,7 @@ new PlayerText:hv_native_ptd0[MAX_PLAYERS];
 
 stock Haumea_hv_native_RemoveWorldObjectsForPlayer(playerid)
 {
-	RemoveBuildingForPlayer(playerid, 3563, 2063.132812, -1731.781250, 15.273438, 0.25); // LODpmedhos2_LAe
+	RemoveBuildingForPlayer(playerid, 3563, 2063.1328, -1731.7812, 15.273438, 0.25); // LODpmedhos2_LAe
 }
 
 static gate_zone = -1;
@@ -46,43 +46,43 @@ stock Haumea_hv_native_CreateObjects()
 {
 	// ---- NPC paths (open.mp) ----
 	new path_a = NPC_CreatePath();
-	NPC_AddPointToPath(path_a, 1600.000000, -1920.000000, 13.500000, 0.50); // path point
-	NPC_AddPointToPath(path_a, 1620.000000, -1920.000000, 13.500000, 0.50); // path point
-	NPC_AddPointToPath(path_a, 1620.000000, -1930.000000, 13.500000, 0.50); // path point
+	NPC_AddPointToPath(path_a, 1600.0, -1920.0, 13.5, 0.5); // path point
+	NPC_AddPointToPath(path_a, 1620.0, -1920.0, 13.5, 0.5); // path point
+	NPC_AddPointToPath(path_a, 1620.0, -1930.0, 13.5, 0.5); // path point
 
-	new wall = CreateObject(19353, 1600.000000, -1890.000000, 14.000000, 0.000000, 0.000000, 90.000000, 300.00); // wall001
+	new wall = CreateObject(19353, 1600.0, -1890.0, 14.0, 0.0, 0.0, 90.0, 300.0); // wall001
 	SetObjectMaterial(wall, 0, 19297, "matcolours", "white", 0xFFFF0000);
 
-	new base = CreateObject(1271, 1616.000000, -1890.000000, 13.500000, 0.000000, 0.000000, 45.000000); // gunbox
+	new base = CreateObject(1271, 1616.0, -1890.0, 13.5, 0.0, 0.0, 45.0); // gunbox
 
-	new crate = CreateObject(1271, 1616.000000, -1890.000000, 14.300000, 15.000000, 25.000000, 80.000000); // gunbox
+	new crate = CreateObject(1271, 1616.0, -1890.0, 14.3, 15.0, 25.0, 80.0); // gunbox
 
-	AddStaticVehicle(411, 1610.000000, -1880.000000, 13.300000, 90.000000, 1, 1); // infernus
-	AddStaticVehicleEx(560, 1615.000000, -1880.000000, 13.300000, 180.000000, 3, 3, 120); // sultan
+	AddStaticVehicle(411, 1610.0, -1880.0, 13.3, 90.0, 1, 1); // infernus
+	AddStaticVehicleEx(560, 1615.0, -1880.0, 13.3, 180.0, 3, 3, 120); // sultan
 
-	new car = CreateVehicle(522, 1620.000000, -1880.000000, 13.300000, 0.000000, 6, 6, 60); // nrg500
+	new car = CreateVehicle(522, 1620.0, -1880.0, 13.3, 0.0, 6, 6, 60); // nrg500
 	LinkVehicleToInterior(car, 1);
 
-	CreatePickup(1240, 2, 1600.000000, -1900.000000, 13.500000, 0); // health [pickup]
-	Create3DTextLabel("Welcome", 0xFFFF00FF, 1602.000000, -1900.000000, 14.000000, 25.00, 0, true); // info [3D text label]
+	CreatePickup(1240, 2, 1600.0, -1900.0, 13.5, 0); // health [pickup]
+	Create3DTextLabel("Welcome", 0xFFFF00FF, 1602.0, -1900.0, 14.0, 25.0, 0, true); // info [3D text label]
 
-	new clerk = CreateActor(179, 1605.000000, -1900.000000, 13.500000, 180.000000); // WMYAMMO [actor]
+	new clerk = CreateActor(179, 1605.0, -1900.0, 13.5, 180.0); // WMYAMMO [actor]
 	SetActorInvulnerable(clerk, false);
-	SetActorHealth(clerk, 50.00);
-	ApplyActorAnimation(clerk, "DEALER", "DEALER_IDLE", 4.10, true, false, false, false, 0);
+	SetActorHealth(clerk, 50.0);
+	ApplyActorAnimation(clerk, "DEALER", "DEALER_IDLE", 4.1, true, false, false, false, 0);
 
-	AddPlayerClass(0, 1610.000000, -1900.000000, 13.500000, 90.000000, WEAPON_FIST, 0, WEAPON_FIST, 0, WEAPON_FIST, 0); // CJ [player class]
-	AddPlayerClassEx(2, 105, 1612.000000, -1900.000000, 13.500000, -90.000000, WEAPON_DEAGLE, 100, WEAPON_M4, 300, WEAPON_FIST, 0); // FAM1 [player class]
+	AddPlayerClass(0, 1610.0, -1900.0, 13.5, 90.0, WEAPON_FIST, 0, WEAPON_FIST, 0, WEAPON_FIST, 0); // CJ [player class]
+	AddPlayerClassEx(2, 105, 1612.0, -1900.0, 13.5, -90.0, WEAPON_DEAGLE, 100, WEAPON_M4, 300, WEAPON_FIST, 0); // FAM1 [player class]
 
-	gate_zone = GangZoneCreate(1590.000000, -1910.000000, 1630.000000, -1870.000000); // gangzone [gang zone]
+	gate_zone = GangZoneCreate(1590.0, -1910.0, 1630.0, -1870.0); // gangzone [gang zone]
 
 	new walker = NPC_Create("Walker"); // WMYST [NPC]
 	NPC_Spawn(walker);
 	NPC_SetSkin(walker, 101);
-	NPC_SetPos(walker, 1600.000000, -1920.000000, 13.500000);
-	NPC_SetFacingAngle(walker, 90.000000);
-	NPC_SetHealth(walker, 80.00);
-	NPC_SetArmour(walker, 50.00);
+	NPC_SetPos(walker, 1600.0, -1920.0, 13.5);
+	NPC_SetFacingAngle(walker, 90.0);
+	NPC_SetHealth(walker, 80.0);
+	NPC_SetArmour(walker, 50.0);
 	NPC_SetWeapon(walker, WEAPON:24);
 	NPC_SetAmmo(walker, 70);
 	NPC_SetInvulnerable(walker, true);
@@ -90,29 +90,29 @@ stock Haumea_hv_native_CreateObjects()
 	new dancer = NPC_Create("Dancer"); // BALLAS1 [NPC]
 	NPC_Spawn(dancer);
 	NPC_SetSkin(dancer, 102);
-	NPC_SetPos(dancer, 1606.000000, -1915.000000, 13.500000);
-	NPC_SetFacingAngle(dancer, 0.000000);
-	NPC_ApplyAnimation(dancer, "DANCING", "dnce_M_a", 4.10, true, false, false, false, 0);
+	NPC_SetPos(dancer, 1606.0, -1915.0, 13.5);
+	NPC_SetFacingAngle(dancer, 0.0);
+	NPC_ApplyAnimation(dancer, "DANCING", "dnce_M_a", 4.1, true, false, false, false, 0);
 
 	new nodewalker = NPC_Create("NodeWalker"); // male01 [NPC]
 	NPC_Spawn(nodewalker);
 	NPC_SetSkin(nodewalker, 7);
-	NPC_SetPos(nodewalker, 2490.000000, -1670.000000, 13.300000);
-	NPC_SetFacingAngle(nodewalker, 0.000000);
+	NPC_SetPos(nodewalker, 2490.0, -1670.0, 13.3);
+	NPC_SetFacingAngle(nodewalker, 0.0);
 
 	new driver = NPC_Create("Driver"); // WMYCH [NPC]
 	NPC_Spawn(driver);
 	NPC_SetSkin(driver, 255);
-	NPC_SetPos(driver, 1700.000000, -1950.000000, 14.000000);
-	NPC_SetFacingAngle(driver, 0.000000);
+	NPC_SetPos(driver, 1700.0, -1950.0, 14.0);
+	NPC_SetFacingAngle(driver, 0.0);
 
-	new streak = AddStaticVehicleEx(538, 2864.750000, 1254.159058, 12.126000, 180.000000, -1, -1, 100); // streak
+	new streak = AddStaticVehicleEx(538, 2864.75, 1254.159, 12.126, 180.0, -1, -1, 100); // streak
 
-	new sign = CreateObject(19353, 1604.000000, -1890.000000, 14.000000, 0.000000, 0.000000, 90.000000); // wall001
+	new sign = CreateObject(19353, 1604.0, -1890.0, 14.0, 0.0, 0.0, 90.0); // wall001
 	SetObjectMaterialText(sign, "OPEN", 0, OBJECT_MATERIAL_SIZE_256x128, "Arial", 24, true, 0xFFFFFFFF, 0xFF000000, OBJECT_MATERIAL_TEXT_ALIGN_CENTER);
 
 	// ---- attachments ----
-	AttachObjectToObject(crate, base, 0.000000, 0.000000, 0.800000, 15.000000, 25.000000, 35.000000, true);
+	AttachObjectToObject(crate, base, 0.0, 0.0, 0.8, 15.0, 25.0, 35.0, true);
 
 	// ---- NPCs in vehicles ----
 	NPC_PutInVehicle(driver, streak, 0);
@@ -121,15 +121,15 @@ stock Haumea_hv_native_CreateObjects()
 	NPC_OpenNode(15); // scriptfiles/NPCs/nodes/NODES15.DAT
 	NPC_MoveByPath(walker, path_a, NPC_MOVE_TYPE_WALK, NPC_MOVE_SPEED_AUTO, false);
 	NPC_SetNodePoint(15, 0);
-	NPC_PlayNode(nodewalker, 15, NPC_MOVE_TYPE_WALK, NPC_MOVE_SPEED_AUTO, 0.00, true);
-	NPC_StartPlayback(driver, "TRAIN_LINDEN_TO_UNITY", true, 0.000000, 0.000000, 0.000000, 0.0, 0.0, 0.0);
+	NPC_PlayNode(nodewalker, 15, NPC_MOVE_TYPE_WALK, NPC_MOVE_SPEED_AUTO, 0.0, true);
+	NPC_StartPlayback(driver, "TRAIN_LINDEN_TO_UNITY", true, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
 }
 
 stock Haumea_hv_native_ShowForPlayer(playerid)
 {
 	GangZoneShowForPlayer(playerid, gate_zone, 0xFF000088); // gangzone
-	SetPlayerMapIcon(playerid, 0, 1600.000000, -1880.000000, 13.500000, 6, 0x00000000, MAPICON_LOCAL); // mapicon [map icon]
-	PlayAudioStreamForPlayer(playerid, "http://example.com/plaza.mp3", 1604.000000, -1900.000000, 13.500000, 40.00, true); // sound
+	SetPlayerMapIcon(playerid, 0, 1600.0, -1880.0, 13.5, 6, 0x00000000, MAPICON_LOCAL); // mapicon [map icon]
+	PlayAudioStreamForPlayer(playerid, "http://example.com/plaza.mp3", 1604.0, -1900.0, 13.5, 40.0, true); // sound
 }
 
 stock Haumea_hv_native_CreateTextDraws()

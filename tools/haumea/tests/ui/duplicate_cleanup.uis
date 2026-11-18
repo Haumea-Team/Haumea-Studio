@@ -5,6 +5,8 @@ wait 5
 assert objects == 5
 shortcut window_tools
 wait 5
+click_item 'Tools' '###tools_arrange'
+wait 2
 click_item 'Tools' 'Duplicate cleanup'
 wait 3
 click_item 'Tools' 'Find duplicates'
@@ -32,7 +34,11 @@ wait 3
 click_item 'View' 'Object bounds'
 assert view.bounds == 1
 wait 3
+click_item 'Tools' '###tools_place'
+wait 2
 scroll_until 'Tools' 'Pivot'
+click_item 'Tools' '###tools_place'
+wait 2
 click_item 'Tools' 'Pivot'
 wait 3
 click_item 'Tools' 'Pivot mode'

@@ -1,12 +1,14 @@
 # A separate layout reserves real canvas space and survives workspace changes.
 open "$UI_FIXTURES/ui_map.pwn"
+click_item '*' '##editor'
+wait 2
 click_item '*' 'TextDraws'
 wait 10
-assert window_docked 'TextDraws' == 1
-assert window_x 'TextDraws' > 900
-assert window_width 'TextDraws' < 360
+assert window_docked 'Layers' == 1
+assert window_x 'Layers' > 900
+assert window_width 'Layers' < 360
 assert textdraw_canvas_right < 930
-assert window_height '##EditorCommands' < 40
+assert window_height '##EditorCommands' < 110
 assert no_window '##textdraw_toolbar'
 assert clipped_items == 0
 click_item 'TextDraws' 'Text'
@@ -21,13 +23,17 @@ assert clipped_items == 0
 click_item 'TextDraws' 'Style'
 wait 3
 assert clipped_items == 0
+click_item '*' '##editor'
+wait 2
 click_item '*' 'Map'
 wait 5
-assert no_window 'TextDraws'
+assert no_window 'Layers'
+click_item '*' '##editor'
+wait 2
 click_item '*' 'TextDraws'
 wait 5
-assert window_docked 'TextDraws' == 1
-assert window_x 'TextDraws' > 900
+assert window_docked 'Layers' == 1
+assert window_x 'Layers' > 900
 click_item '*' 'Canvas'
 wait 3
 click_item '*' 'Compare'
@@ -39,15 +45,15 @@ drag_window 'Screen previews' 100 -300
 wait 5
 assert window_y 'Screen previews' < 300
 assert window_x 'Screen previews' > 100
-# Dock the previews as another tab in the inspector's node.
-drag_window 'Screen previews' 700 140
+# Dock the previews as another tab in the Layers panel's node.
+drag_window 'Screen previews' 700 20
 wait 5
 assert window_docked 'Screen previews' == 1
 # The inspector tab is still accessible, then can be undocked by its tab.
-click_item '*' 'TextDraws' 2
+click_item '*' 'Layers'
 wait 3
-drag_window 'TextDraws' -500 80
+drag_window 'Layers' -500 80
 wait 5
-assert window_docked 'TextDraws' == 0
-assert window_x 'TextDraws' < 600
+assert window_docked 'Layers' == 0
+assert window_x 'Layers' < 600
 assert clipped_items == 0

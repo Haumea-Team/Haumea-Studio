@@ -1,0 +1,45 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+
+msgid "Custom models changed on disk were reloaded"
+msgstr "Modelos personalizados alterados no disco foram recarregados"
+
+msgid "Reload custom models"
+msgstr "Recarregar modelos personalizados"
+
+msgid "Custom models reloaded: %d"
+msgstr "Modelos personalizados recarregados: %d"
+
+msgid "Reads the models' DFF and TXD files and the AddSimpleModel lines again. Files rebuilt on disk are also picked up by themselves."
+msgstr "Lê de novo os arquivos DFF e TXD dos modelos e as linhas AddSimpleModel. Arquivos refeitos no disco também são lidos sozinhos."
+
+msgid "Map changed on disk"
+msgstr "Mapa alterado no disco"
+
+msgid "%s was changed outside Haumea since it was opened."
+msgstr "%s foi alterado fora do Haumea desde que foi aberto."
+
+msgid "Saving now replaces those changes with the map as it is here."
+msgstr "Salvar agora substitui essas alterações pelo mapa como está aqui."
+
+msgid "Reload from disk"
+msgstr "Recarregar do disco"
+
+msgid "Overwrite"
+msgstr "Substituir"
+
+msgid "%s changed on disk and was opened again"
+msgstr "%s mudou no disco e foi aberto de novo"
+
+msgid "%s changed on disk outside Haumea: saving will ask before replacing it"
+msgstr "%s mudou no disco fora do Haumea: salvar vai perguntar antes de substituí-lo"
+
+msgid "Unsaved changes were kept in an autosave (File > Recover Autosave)"
+msgstr "As alterações não salvas foram guardadas num salvamento automático (Arquivo > Recuperar salvamento automático)"
+
+msgid "%d object(s) of custom model %d (%s): its DFF has no collision, so in the game players, actors and cars go through it. Haumea makes one from its shape only for clicking and snapping here. Embed a COL in the DFF."
+msgstr "%d objeto(s) do modelo personalizado %d (%s): o DFF dele não tem colisão, então no jogo jogadores, atores e carros o atravessam. O Haumea cria uma a partir da forma dele só para clicar e encaixar aqui. Inclua um COL no DFF."
+
+msgid "%s has nothing to stand on within 2 m under its feet: in the game it falls until it lands on something. Custom models without collision in their DFF don't count."
+msgstr "%s não tem onde pisar até 2 m abaixo dos pés: no jogo ele cai até parar em algo. Modelos personalizados sem colisão no DFF não contam."
