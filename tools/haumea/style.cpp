@@ -267,8 +267,8 @@ SetupStyle(void)
 
 #ifdef IMGUI_HAS_DOCK
 	// Panels dock by dragging their title bar onto the edges of the
-	// screen or onto another panel. Needs librw patched with
-	// tools/release/patch_librw_haumea.py.
+	// screen or onto another panel. Needs the docking ImGui that the
+	// librw submodule (Haumea-Team/librw) ships.
 	ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 #endif
 	style.SeparatorTextAlign = ImVec2(0.0f, 0.5f);

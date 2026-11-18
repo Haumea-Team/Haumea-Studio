@@ -31,7 +31,8 @@ permissions:
   contents: write
 
 env:
-  LIBRW: ${{ github.workspace }}/librw
+  # librw is the Haumea-Team/librw fork, pinned as the librw submodule.
+  LIBRW: ${{ github.workspace }}/haumea/librw
   # No daily ping from anything CI starts (CI alone already stops it).
   HAUMEA_NO_TELEMETRY: 1
   HAUMEA_NO_REPORTS: 1
@@ -53,17 +54,7 @@ jobs:
         with:
           path: haumea
           fetch-depth: 0
-
-      - name: Checkout librw
-        run: git clone --depth=1 https://github.com/aap/librw.git librw
-
-      - name: Apply Haumea patches to librw
-        shell: cmd
-        working-directory: librw
-        run: git apply ..\haumea\patches\librw-haumea.patch
-
-      - name: Restore Haumea multisampling setting in librw
-        run: python haumea/tools/release/patch_librw_haumea.py librw
+          submodules: true
 
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
@@ -96,18 +87,18 @@ jobs:
 
       - name: Generate librw project files
         shell: cmd
-        working-directory: librw
+        working-directory: haumea/librw
         run: premake5 vs2019
 
       - name: Build librw
         shell: cmd
-        working-directory: librw/build
+        working-directory: haumea/librw/build
         run: msbuild librw.sln /p:Configuration=Release /p:Platform=win-amd64-gl3 /t:librw /m
 
       # haumea-d3d9.exe: haumea.exe starts it when OpenGL doesn't.
       - name: Build librw (Direct3D 9)
         shell: cmd
-        working-directory: librw/build
+        working-directory: haumea/librw/build
         run: msbuild librw.sln /p:Configuration=Release /p:Platform=win-amd64-d3d9 /t:librw /m
 
       - name: Generate Haumea project files
@@ -184,16 +175,7 @@ jobs:
         with:
           path: haumea
           fetch-depth: 0
-
-      - name: Checkout librw
-        run: git clone --depth=1 https://github.com/aap/librw.git librw
-
-      - name: Apply Haumea patches to librw
-        working-directory: librw
-        run: git apply ../haumea/patches/librw-haumea.patch
-
-      - name: Restore Haumea multisampling setting in librw
-        run: python3 haumea/tools/release/patch_librw_haumea.py librw
+          submodules: true
 
       - name: Install dependencies
         run: |
@@ -210,11 +192,11 @@ jobs:
           chmod +x /usr/local/bin/premake5
 
       - name: Generate librw project files
-        working-directory: librw
+        working-directory: haumea/librw
         run: premake5 gmake2
 
       - name: Build librw
-        working-directory: librw/build
+        working-directory: haumea/librw/build
         run: make config=release_linux-amd64-gl3 librw "-j$(nproc)"
 
       - name: Generate Haumea project files
@@ -260,16 +242,7 @@ jobs:
         with:
           path: haumea
           fetch-depth: 0
-
-      - name: Checkout librw
-        run: git clone --depth=1 https://github.com/aap/librw.git librw
-
-      - name: Apply Haumea patches to librw
-        working-directory: librw
-        run: git apply ../haumea/patches/librw-haumea.patch
-
-      - name: Restore Haumea multisampling setting in librw
-        run: python3 haumea/tools/release/patch_librw_haumea.py librw
+          submodules: true
 
       - name: Install dependencies
         run: brew install glfw
@@ -281,11 +254,11 @@ jobs:
           chmod +x /usr/local/bin/premake5
 
       - name: Generate librw project files
-        working-directory: librw
+        working-directory: haumea/librw
         run: premake5 gmake2 --gfxlib=glfw
 
       - name: Build librw
-        working-directory: librw/build
+        working-directory: haumea/librw/build
         run: make config=release_macos-arm64-gl3 librw "-j$(sysctl -n hw.ncpu)"
 
       - name: Generate Haumea project files
@@ -329,16 +302,7 @@ jobs:
         with:
           path: haumea
           fetch-depth: 0
-
-      - name: Checkout librw
-        run: git clone --depth=1 https://github.com/aap/librw.git librw
-
-      - name: Apply Haumea patches to librw
-        working-directory: librw
-        run: git apply ../haumea/patches/librw-haumea.patch
-
-      - name: Restore Haumea multisampling setting in librw
-        run: python3 haumea/tools/release/patch_librw_haumea.py librw
+          submodules: true
 
       # Xvfb and Mesa give the editor an OpenGL 3 display; pawncc is 32-bit.
       - name: Install dependencies
@@ -358,7 +322,7 @@ jobs:
           chmod +x /usr/local/bin/premake5
 
       - name: Build librw
-        working-directory: librw
+        working-directory: haumea/librw
         run: |
           premake5 gmake2
           make -C build config=release_linux-amd64-gl3 librw "-j$(nproc)"

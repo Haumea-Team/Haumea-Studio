@@ -1,0 +1,4 @@
+[submodule "librw"]
+	path = librw
+	url = https://github.com/Haumea-Team/librw.git
+	branch = haumea

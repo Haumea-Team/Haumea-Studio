@@ -2,18 +2,19 @@
 
 ## Build
 
-The editor requires a C++17 compiler and builds with Premake and librw. Set `LIBRW` to the librw source folder, and run the
-commands from the Haumea checkout. `patch_librw_haumea.py` also swaps librw's Dear ImGui for
-the docking build in `vendor/imgui-docking`. Without it Haumea still builds, but panels float
-instead of docking.
+The editor requires a C++17 compiler and builds with Premake and librw. librw is the
+[Haumea-Team/librw](https://github.com/Haumea-Team/librw) fork (upstream librw with Haumea's
+changes and the Dear ImGui docking build), pinned as the `librw` submodule. Fetch it with
+`git submodule update --init` (or clone with `--recurse-submodules`), set `LIBRW` to it, and run
+the commands from the Haumea checkout. See `librw/HAUMEA.md` for what the fork changes and how
+to take upstream updates.
 
 ### Linux x86_64
 
 ```sh
-export LIBRW=/path/to/librw
+git submodule update --init
+export LIBRW="$PWD/librw"
 
-(cd "$LIBRW" && git apply "$OLDPWD/patches/librw-haumea.patch")
-python3 tools/release/patch_librw_haumea.py "$LIBRW"
 (cd "$LIBRW" && premake5 gmake2)
 make -C "$LIBRW/build" config=release_linux-amd64-gl3 librw
 
@@ -26,10 +27,9 @@ The program is `bin/linux-amd64-gl3/Release/haumea`.
 ### macOS
 
 ```sh
-export LIBRW=/path/to/librw
+git submodule update --init
+export LIBRW="$PWD/librw"
 
-(cd "$LIBRW" && git apply "$OLDPWD/patches/librw-haumea.patch")
-python3 tools/release/patch_librw_haumea.py "$LIBRW"
 (cd "$LIBRW" && premake5 gmake2 --gfxlib=glfw)
 make -C "$LIBRW/build" config=release_macos-arm64-gl3 librw  # Apple Silicon
 # or: make -C "$LIBRW/build" config=release_macos-amd64-gl3 librw  # Intel
@@ -46,13 +46,12 @@ Win64 binary package. Then build librw and Haumea from PowerShell:
 
 ```powershell
 $Haumea = 'C:\path\to\haumea'
-$Librw = 'C:\path\to\librw'
+$Librw = "$Haumea\librw"
 $Glfw = 'C:\path\to\glfw-3.3.4.bin.WIN64'
 $env:LIBRW = $Librw
+git -C $Haumea submodule update --init
 
 Push-Location $Librw
-git apply "$Haumea\patches\librw-haumea.patch"
-python "$Haumea\tools\release\patch_librw_haumea.py" $Librw
 premake5 vs2019 "--glfwdir64=$Glfw"
 msbuild build\librw.sln /p:Configuration=Release /p:Platform=win-amd64-gl3 /t:librw /m
 Pop-Location

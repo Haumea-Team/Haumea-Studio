@@ -1911,7 +1911,7 @@ UiScriptTick(void)
 	}
 	if(!seenItems && gFrame > 600){
 		say("FAIL ImGui reports no items: this editor was built without IMGUI_ENABLE_TEST_ENGINE "
-			"; objects built before it was added need rebuilding (touch vendor/imgui-docking/*.cpp)");
+			"; objects built before it was added need rebuilding (touch librw/skeleton/imgui/*.cpp)");
 		gFails++;
 		finish();
 	}

@@ -4,19 +4,17 @@
 #
 #   tools/release/build-windows-mingw.sh [gl3|d3d9]
 #
-# Needs x86_64-w64-mingw32-g++ and python3. It prepares its own librw
-# (cloned from $LIBRW_GIT, patched with patches/librw-haumea.patch and
-# tools/release/patch_librw_haumea.py) and, for gl3, GLFW's official
-# Windows binaries, all under $WORK (default build/windows-mingw), then
-# builds librw, librwgta and haumea there. The result is
+# Needs x86_64-w64-mingw32-g++ and python3. It uses the librw submodule
+# (the Haumea-Team/librw fork; `git submodule update --init` fetches it) and,
+# for gl3, GLFW's official Windows binaries, kept under $WORK (default
+# build/windows-mingw), then builds librw, librwgta and haumea there. The result is
 # $WORK/win-amd64-<gfx>/haumea.exe, a single static exe (GLFW, libstdc++ and
 # libgcc are linked in). The source lists come from build/librwgta.make and
 # build/haumea.make, so files added there are built here too; premake5
 # makes them when they are missing (build/ is generated, not in git).
 #
-# d3d9 uses ImGui's Win32 and DX9 backends from vendor/imgui-docking/backends
-# (installed by patch_librw_haumea.py) and librw's releaseDeviceResources
-# hook (patches/librw-haumea.patch).
+# d3d9 uses ImGui's Win32 and DX9 backends from librw/skeleton/imgui/backends
+# and the fork's releaseDeviceResources hook.
 #
 # Running it under Wine on Linux, with its own prefix and config folder:
 #   WINEPREFIX=/tmp/haumea-wine HAUMEA_CONFIG_DIR='Z:\tmp\haumea-cfg' \
@@ -28,7 +26,6 @@ GFX=${1:-gl3}
 case "$GFX" in gl3|d3d9) ;; *) echo "usage: $0 [gl3|d3d9]" >&2; exit 2 ;; esac
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
 WORK=${WORK:-$ROOT/build/windows-mingw}
-LIBRW_GIT=${LIBRW_GIT:-https://github.com/aap/librw.git}
 GLFW_ZIP_URL=https://github.com/glfw/glfw/releases/download/3.4/glfw-3.4.bin.WIN64.zip
 GLFW_ZIP_SHA256=54efa829400f2a0537f742b2b3bdd74e437bb4f2f048e4b7d3c5557d11a611e6
 CHANNEL=${HAUMEA_CHANNEL:-production}
@@ -39,20 +36,17 @@ AR=${AR:-x86_64-w64-mingw32-ar}
 OUT=$WORK/win-amd64-$GFX
 mkdir -p "$WORK" "$OUT"
 
-# --- librw, patched like the CI build ---
-# The marker holds a checksum of what patches it (the patch, the patch script
-# and the ImGui it installs): when that changes, librw is cloned and patched again.
-LIBRW=$WORK/librw
-PATCHED=$( { cat "$ROOT/patches/librw-haumea.patch" "$ROOT/tools/release/patch_librw_haumea.py"
-	find "$ROOT/vendor/imgui-docking" -type f -print0 | LC_ALL=C sort -z | xargs -0 cat; } | sha256sum | cut -d' ' -f1)
-if [ "$(cat "$LIBRW/.haumea-patched" 2>/dev/null)" != "$PATCHED" ]; then
-	rm -rf "$LIBRW"
-	git clone -q --depth=1 "$LIBRW_GIT" "$LIBRW"
-	(cd "$LIBRW" && git apply "$ROOT/patches/librw-haumea.patch")
-	python3 "$ROOT/tools/release/patch_librw_haumea.py" "$LIBRW"
-	echo "$PATCHED" > "$LIBRW/.haumea-patched"
-	# Objects built against the old librw headers are stale too.
+# --- librw, the submodule ---
+# When the librw commit changes, objects built against its old headers are stale.
+LIBRW=$ROOT/librw
+if [ ! -f "$LIBRW/rw.h" ]; then
+	echo "librw is missing: run git submodule update --init" >&2
+	exit 1
+fi
+LIBRW_REV=$(git -C "$LIBRW" rev-parse HEAD)
+if [ "$(cat "$WORK/.librw-rev" 2>/dev/null)" != "$LIBRW_REV" ]; then
 	rm -rf "$WORK"/win-amd64-*/obj
+	echo "$LIBRW_REV" > "$WORK/.librw-rev"
 fi
 
 # --- GLFW (gl3 only) ---

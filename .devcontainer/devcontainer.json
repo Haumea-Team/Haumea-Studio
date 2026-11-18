@@ -1,10 +1,10 @@
 {
     "containerEnv": {
         "TZ": "",
-        "LIBRW": "/opt/librw"
+        "LIBRW": "${containerWorkspaceFolder}/librw"
     },
     "name": "haumea",
-    "postCreateCommand": "~/.windows.sh && git clone --depth=1 https://github.com/aap/librw /opt/librw && cd /opt/librw && premake5 gmake2 && make -C build config=release_linux-amd64-gl3 rw",
+    "postCreateCommand": "~/.windows.sh && git submodule update --init && cd librw && premake5 gmake2 && make -C build config=release_linux-amd64-gl3 librw",
     "dockerComposeFile": "docker-compose.yml",
     "overrideCommand": true,
     "service": "vscode",
