@@ -252,7 +252,7 @@ FindTrackSnap(int objectId, const ObjectInst *moving, rw::V3d pos, rw::V3d rot, 
 	if(!IsTrackPiece(model))
 		return false;
 	bool light = isRoadLight(model);
-	std::vector<Piece> near;
+	std::vector<Piece> nearby;
 	for(CPtrNode *p = instances.first; p; p = p->next){
 		ObjectInst *inst = (ObjectInst*)p->item;
 		if(inst == nil || inst == moving || inst->m_isDeleted || inst->m_isVehicle || IsPawnWorldObject(inst) ||
@@ -265,15 +265,15 @@ FindTrackSnap(int objectId, const ObjectInst *moving, rw::V3d pos, rw::V3d rot, 
 		   !(ray && rayDistance(inst->m_translation, rayOrigin, rayDir) < NEAR_PIECES))
 			continue;
 		rw::V3d euler = GetInstanceRotationDegrees(inst);
-		near.push_back({ other, { fromEuler(euler), inst->m_translation }, euler });
+		nearby.push_back({ other, { fromEuler(euler), inst->m_translation }, euler });
 	}
-	if(near.empty())
+	if(nearby.empty())
 		return false;
 	Mat current = fromEuler(rot);
 	std::vector<Candidate> list;
 	float bestScore = 1.0e30f;
 	bool found = false;
-	for(const Piece &q : near){
+	for(const Piece &q : nearby){
 		list.clear();
 		if(light)
 			lightCandidates(rot, q, list);
@@ -293,7 +293,7 @@ FindTrackSnap(int objectId, const ObjectInst *moving, rw::V3d pos, rw::V3d rot, 
 				continue;
 			// Not where the same piece already is.
 			bool taken = false;
-			for(const Piece &o : near)
+			for(const Piece &o : nearby)
 				if(o.model == model && length(sub(o.pose.t, c.pos)) < 0.35f && angleBetween(o.pose.r, c.r) < 0.05f)
 					taken = true;
 			if(taken)

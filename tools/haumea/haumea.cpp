@@ -1955,9 +1955,9 @@ updateObjectDragEarly(void)
 	// near the horizon stops a long way off instead of at infinity.
 	rw::V3d origin = TheCamera.m_position, dir = normalize(TheCamera.m_mouseDir);
 	float t = fabs(dir.z) > 1e-4f ? (grab.z - origin.z) / dir.z : -1.0f;
-	float far = 2000.0f;
-	if(t < 0.0f || t > far)
-		t = far;
+	float farthest = 2000.0f;	// not "far": windows.h defines it away
+	if(t < 0.0f || t > farthest)
+		t = farthest;
 	rw::V3d at = add(origin, scale(dir, t));
 	rw::V3d pos = startLeaderPos;
 	pos.x += at.x - grab.x;
