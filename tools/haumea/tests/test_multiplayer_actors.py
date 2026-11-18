@@ -42,7 +42,7 @@ class AnimatedActorTests(base.EditorsMixin, unittest.TestCase):
         actor = self.find(guest, 1605.0, -1900.0)
         self.assertEqual(actor['properties'].get('anim_name'), 'DEALER_IDLE')
         self.assertTrue(guest.command('session_begin').get('ok'))
-        skins = [179, 180, 0, 7, 179, 23, 180, 46]
+        skins = [179, 180, 0, 7, 179, 101, 180, 105]	# all in the test game
         anims = [('DEALER', 'DEALER_IDLE'), ('PED', 'IDLE_CHAT'), ('DANCING', 'DNCE_M_A'), ('PED', 'WALK_PLAYER')]
         for round_ in range(6):
             for i, skin in enumerate(skins):
