@@ -6,7 +6,7 @@
 // (tools/release/gen_buildinfo.py writes haumea_buildinfo.h). The full version
 // is 1.0.0.<build>; see versionutil.h.
 #define HAUMEA_VERSION_MAJOR 1
-#define HAUMEA_VERSION_MINOR 0
+#define HAUMEA_VERSION_MINOR 1
 #define HAUMEA_VERSION_PATCH 0
 
 #define HAUMEA_VERSION_STR2(x) #x

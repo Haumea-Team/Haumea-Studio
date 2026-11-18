@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased: Changes since 1.0.0.242 beta
+## Unreleased: Changes since 1.0.0.334
 
 ### Editor interface and performance
 
