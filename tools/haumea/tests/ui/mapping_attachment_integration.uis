@@ -23,11 +23,7 @@ assert objects == 2
 click_object model=1271
 wait 5
 assert pawn_contains ', 4, 1271, 6,'
-# Edit the pivot through Tools, with the automatic attachment panel closed.
-click_item '*' 'Windows'
-wait 3
-click_item '*' 'Attachment Workspace'
-wait 3
+# Selecting it doesn't open the Attachment Workspace.
 assert no_window 'Attachment Workspace'
 click_item 'Tools' '###tools_arrange'
 wait 2

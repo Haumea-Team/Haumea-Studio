@@ -14,11 +14,7 @@ click_world 2000 -3000 4
 wait 5
 key Esc
 assert objects == 2
-# Close the automatic attachment panel before editing the host's properties.
-click_item '*' 'Windows'
-wait 3
-click_item '*' 'Attachment Workspace'
-wait 3
+# Selecting it doesn't open the Attachment Workspace.
 assert no_window 'Attachment Workspace'
 shortcut window_object_info
 wait 5

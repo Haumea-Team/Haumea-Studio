@@ -1565,6 +1565,7 @@ static void updateRwFrameForInst(ObjectInst *inst);
 
 static bool gAttachmentListDirty = true;
 static bool gAttachmentWorkspaceActive;
+static bool gAttachmentWorkspaceSelectionPending;	// retarget an open workspace to the new selection
 static bool gAttachmentWorkspaceVoid;
 static bool gAttachmentWorkspacePlayerMode;
 static int gAttachmentWorkspacePlayerSkin = 1;
@@ -1582,7 +1583,6 @@ static rw::V3d gAttachmentWorkspaceSavedCameraUp;
 static rw::V3d gAttachmentWorkspaceSavedCameraLocalUp;
 static float gAttachmentWorkspaceSavedCameraFov;
 static bool gAttachmentWorkspaceNeedsFocus;
-static bool gAttachmentWorkspaceSelectionPending;
 static int gAttachmentWorkspacePendingCameraView = ATTACHMENT_VIEW_FOCUS;
 static void setInstanceElementModel(ObjectInst *inst, int modelId);
 static void applyInstanceModelId(ObjectInst *inst, int editorModelId);
@@ -3192,7 +3192,9 @@ ObjectInst::Select(void)
 	m_selected = true;
 	m_selectSeq = ++selectSeq;
 	selection.InsertItem(this);
-	if(isSA()){
+	// An open Attachment Workspace follows the selection to another ped or
+	// vehicle; a closed one stays closed until asked for.
+	if(isSA() && gAttachmentWorkspaceActive){
 		ObjectInst *target = m_isVehicle || IsPlayerAttachmentTarget(this) ? this : GetAttachParent(this);
 		if(target && (target->m_isVehicle || IsPlayerAttachmentTarget(target)))
 			gAttachmentWorkspaceSelectionPending = true;
@@ -3882,11 +3884,11 @@ SetAttachmentWorkspaceCameraView(int view)
 void
 UpdateAttachmentWorkspace(void)
 {
-	// Selection helpers may visit a ped or vehicle in the middle of a range.
-	// Wait for the complete selection before opening a window over the list.
+	// Selection helpers may visit a ped or vehicle in the middle of a range:
+	// retarget once the selection is complete.
 	if(gAttachmentWorkspaceSelectionPending){
 		gAttachmentWorkspaceSelectionPending = false;
-		if(selection.first && selection.first->next == nil){
+		if(gAttachmentWorkspaceActive && selection.first && selection.first->next == nil){
 			ObjectInst *selected = (ObjectInst*)selection.first->item;
 			ObjectInst *target = selected->m_isVehicle || IsPlayerAttachmentTarget(selected) ?
 				selected : GetAttachParent(selected);

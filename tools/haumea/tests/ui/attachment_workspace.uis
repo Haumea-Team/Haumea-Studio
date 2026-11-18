@@ -1,9 +1,15 @@
-# Clicking a real NPC opens placement choices; real attachments have live editing controls.
+# Windows > Attachment Workspace on a selected NPC opens placement choices (selecting it
+# alone doesn't); real attachments have live editing controls.
 open "$UI_FIXTURES/ui_attachment_targets.pwn"
 assert objects == 5
 click_object model=7
 wait 5
 assert selected.model == 7
+assert no_window 'Attachment Workspace'
+click_item '*' 'Windows'
+wait 3
+click_item '*' 'Attachment Workspace'
+wait 5
 assert window 'Attachment Workspace'
 assert item 'Attachment Workspace' 'Bone'
 assert item 'Attachment Workspace' 'Scale/#0'
@@ -163,6 +169,10 @@ assert pawn_contains 'SetPlayerAttachedObject(walker, 0, 1271, 6, 0.25,'
 assert pawn_contains '1.5, 0.8, 2.0, 0x00000000, 0x00000000'
 assert pawn_contains 'AttachObjectToVehicle('
 click_object model=7
+wait 5
+click_item '*' 'Windows'
+wait 3
+click_item '*' 'Attachment Workspace'
 wait 5
 assert window 'Attachment Workspace'
 assert item 'Attachment Workspace' 'Bone'
