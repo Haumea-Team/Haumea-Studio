@@ -3024,6 +3024,7 @@ ObjectInst::RefreshVehicleUpgrades(void)
 	((rw::Clump*)m_rwObject)->destroy();
 	m_rwObject = nil;
 	m_rwObjectSerial = NextRwObjectSerial();
+	m_materialGeometryApplied = false;	// its private geometries went with it
 	CreateRwObject();
 }
 
@@ -3599,6 +3600,12 @@ destroyInstanceRwObject(ObjectInst *inst, ObjectDef *obj)
 		((rw::Clump*)inst->m_rwObject)->destroy();
 	inst->m_rwObject = nil;
 	inst->m_rwObjectSerial = NextRwObjectSerial();
+	// The material overrides' private geometry went with it. Left set, the
+	// next RW object's geometry can land at the same address and be taken
+	// for the private copy, which swaps in the freed base geometry.
+	inst->m_materialGeometryApplied = false;
+	inst->m_materialBaseGeometry = nil;
+	inst->m_materialCustomGeometry = nil;
 }
 
 int
@@ -3625,7 +3632,6 @@ ReloadModelsInPlace(const std::vector<int> &modelIds, const std::vector<int> &tx
 		if(obj == nil)
 			continue;
 		destroyInstanceRwObject(inst, obj);
-		inst->m_materialGeometryApplied = false;
 		if(inst->m_isDeleted)
 			continue;	// drawn again (from the new files) if it comes back
 		// Its bounds come from the collision, which may have changed.
