@@ -54,6 +54,7 @@ std::vector<InstDist> lodList;
 std::vector<ObjectInst*> drawn;
 void AddToRenderList(ObjectInst*i,float){drawn.push_back(i);}
 enum {HIGHLIGHT_NONE,HIGHLIGHT_MATCH,HIGHLIGHT_SELECTION};
+void MarkInstTouched(ObjectInst*){}
 '''
         visibility = r'''
 static int SetupVisibilitySA(ObjectInst*i,float distance){return !beyondDrawDistance(distance);}

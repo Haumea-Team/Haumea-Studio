@@ -277,8 +277,12 @@ void Render(float dt)
 		for (int j = 0; j < 6; j++)
 			indices[q * 6 + j] = ix[j];
 	}
-	for (CPtrNode *node = instances.first; node; node = node->next) {
-		ObjectInst *inst = (ObjectInst *)node->item;
+	// The sectors within the stream distance, all round: an emitter behind
+	// the camera keeps its smoke (an emitter not listed loses it), and those
+	// further away are skipped below anyway.
+	static std::vector<ObjectInst *> nearby;
+	GetInstsNear(TheCamera.m_position, gStreamDistance, nearby);
+	for (ObjectInst *inst : nearby) {
 		if (inst->m_isDeleted || inst->m_editorHidden || PlayerViewHides(inst) ||
 			!AttachmentWorkspaceShowsInstance(inst))
 			continue;

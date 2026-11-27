@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <vector>
 #include <unordered_map>
+#include <unordered_set>
 
 struct InstDist
 {
@@ -15,11 +16,60 @@ struct InstDist
 	union { float dist, sort; };
 };
 
+static uint16 currentScanCode;	// m_scanCode of what this pass has seen (BuildRenderList, GetInstsNear)
 static std::vector<ObjectInst*> visibleInsts;
+// What BuildRenderList's sector scan saw this frame (each once): the
+// instances in view, for the passes that need only those (lights, particles,
+// outlines) instead of walking every instance in the world and the map.
+static std::vector<ObjectInst*> scannedInsts;
+// Instances whose m_highlight or m_numChildrenRendered was set since the last
+// reset: BuildRenderList puts back only these.
+static std::vector<ObjectInst*> touchedInsts;
+
+void
+MarkInstTouched(ObjectInst *inst)
+{
+	touchedInsts.push_back(inst);
+}
+
+const std::vector<ObjectInst*>&
+GetScannedInsts(void)
+{
+	return scannedInsts;
+}
+
+void
+GetInstsNear(rw::V3d centre, float radius, std::vector<ObjectInst*> &out)
+{
+	// Each once by the scan code, as BuildRenderList does (it is done for
+	// this frame when this runs, and starts a new code next frame).
+	out.clear();
+	uint16 code = ++currentScanCode;
+	auto scan = [&](CPtrList *list){
+		for(CPtrNode *p = list->first; p; p = p->next){
+			ObjectInst *inst = (ObjectInst*)p->item;
+			if(inst->m_scanCode != code){
+				inst->m_scanCode = code;
+				out.push_back(inst);
+			}
+		}
+	};
+	int xstart = GetSectorIndexX(clamp(centre.x - radius, worldBounds.left, worldBounds.right-1.0f));
+	int xend = GetSectorIndexX(clamp(centre.x + radius, worldBounds.left, worldBounds.right-1.0f));
+	int ystart = GetSectorIndexY(clamp(centre.y - radius, worldBounds.bottom, worldBounds.top-1.0f));
+	int yend = GetSectorIndexY(clamp(centre.y + radius, worldBounds.bottom, worldBounds.top-1.0f));
+	for(int x = xstart; x <= xend; x++)
+		for(int y = ystart; y <= yend; y++){
+			Sector *s = GetSector(x, y);
+			scan(&s->buildings); scan(&s->buildings_overlap);
+			scan(&s->bigbuildings); scan(&s->bigbuildings_overlap);
+		}
+	scan(&outOfBoundsSector.buildings); scan(&outOfBoundsSector.buildings_overlap);
+	scan(&outOfBoundsSector.bigbuildings); scan(&outOfBoundsSector.bigbuildings_overlap);
+}
 static std::vector<InstDist> sortedInsts;
 static std::vector<InstDist> lodList;
 
-static uint16 currentScanCode;
 
 static rw::ObjPipeline *colourCodePipe;
 
@@ -299,6 +349,7 @@ SetupVisibilitySA(ObjectInst *inst, float camdist)
 
 	// Only visible HD children should suppress the fallback LOD.
 	lodinst->m_numChildrenRendered++;
+	MarkInstTouched(lodinst);
 	if(lodinst->m_numChildren > 1){
 		AddToLodRenderList(inst, camdist);
 		return VIS_INVISIBLE;
@@ -321,8 +372,10 @@ SetupBigBuildingVisibilitySA(ObjectInst *inst, float *distout)
 		// There is something to render here...
 
 		// tell LOD parent that we (or children) want to be rendered
-		if(lodinst)
+		if(lodinst){
 			lodinst->m_numChildrenRendered++;
+			MarkInstTouched(lodinst);
+		}
 
 		// Defer every fallback until all of its children have been scanned.
 		// Keep the count until ProcessLodList, including single-child LODs.
@@ -360,8 +413,10 @@ ProcessLodList(void)
 		if(entry.inst->m_numChildrenRendered == 0)
 			continue;
 		ObjectInst *parent = entry.inst->m_lod;
-		for(int depth = 0; parent && depth < 32; depth++, parent = parent->m_lod)
+		for(int depth = 0; parent && depth < 32; depth++, parent = parent->m_lod){
 			parent->m_numChildrenRendered = max((int)parent->m_numChildrenRendered, 1);
+			MarkInstTouched(parent);
+		}
 	}
 	for(const InstDist &entry : lodList){
 		ObjectInst *inst = entry.inst;
@@ -596,8 +651,10 @@ RenderInst(ObjectInst *inst)
 	// A building drawn in place of its selected LOD (close up) is tinted as the
 	// selection too, or flying in would make the selection look unselected.
 	bool selected = inst->m_selected || (inst->m_lod && inst->m_lod->m_selected);
-	if(selected && inst->m_highlight < HIGHLIGHT_SELECTION && !inst->m_showingMaterialIndexes)
+	if(selected && inst->m_highlight < HIGHLIGHT_SELECTION && !inst->m_showingMaterialIndexes){
 		inst->m_highlight = HIGHLIGHT_SELECTION;
+		MarkInstTouched(inst);
+	}
 	highlightColor = highlightCols[inst->m_highlight];
 	highlightAlpha = inst->m_highlight == HIGHLIGHT_SELECTION ?
 		(uint8)(gSelectionHighlightOpacity * 255 / 100) : 128;
@@ -730,6 +787,7 @@ ProcessBuilding(ObjectInst *inst)
 	if(inst->m_isBigBuilding || inst->m_scanCode == currentScanCode)
 		return;
 	inst->m_scanCode = currentScanCode;
+	scannedInsts.push_back(inst);
 	int v;
 	if(gRenderOnlyHD)
 		v = SetupVisibilitySimple(inst, &dist);
@@ -750,6 +808,7 @@ ProcessBigBuilding(ObjectInst *inst)
 	if(!inst->m_isBigBuilding || inst->m_scanCode == currentScanCode)
 		return;
 	inst->m_scanCode = currentScanCode;
+	scannedInsts.push_back(inst);
 	int v;
 	if(gRenderOnlyLod)
 		v = SetupVisibilitySimple(inst, &dist);
@@ -783,6 +842,7 @@ BuildRenderList(void)
 	ObjectInst *inst;
 
 	currentScanCode++;
+	scannedInsts.clear();
 	visibleInsts.clear();
 	sortedInsts.clear();
 	lodList.clear();
@@ -830,17 +890,29 @@ BuildRenderList(void)
 
 	ProcessLodList();
 
-	// Reset instances
-	for(p = instances.first; p; p = p->next){
-		inst = (ObjectInst*)p->item;
-		inst->m_numChildrenRendered = 0;
-		inst->m_highlight = HIGHLIGHT_NONE;
-	}
+	// Reset instances: the ones marked since the last reset, and every
+	// instance now and then, in case something set one without marking it.
+	static int framesSinceFullReset;
+	if(++framesSinceFullReset >= 30){
+		framesSinceFullReset = 0;
+		for(p = instances.first; p; p = p->next){
+			inst = (ObjectInst*)p->item;
+			inst->m_numChildrenRendered = 0;
+			inst->m_highlight = HIGHLIGHT_NONE;
+		}
+	}else
+		for(ObjectInst *touched : touchedInsts){
+			touched->m_numChildrenRendered = 0;
+			touched->m_highlight = HIGHLIGHT_NONE;
+		}
+	touchedInsts.clear();
 	// And the other way: a LOD drawn far away for its selected building.
-	for(p = instances.first; p; p = p->next){
+	for(p = selection.first; p; p = p->next){
 		inst = (ObjectInst*)p->item;
-		if(inst->m_selected && inst->m_lod && inst->m_lod->m_highlight < HIGHLIGHT_SELECTION)
+		if(inst->m_selected && inst->m_lod && inst->m_lod->m_highlight < HIGHLIGHT_SELECTION){
 			inst->m_lod->m_highlight = HIGHLIGHT_SELECTION;
+			MarkInstTouched(inst->m_lod);
+		}
 	}
 
 //	log("%d visible instances\n", numVisibleInsts);
@@ -1266,8 +1338,24 @@ RenderObjectOutlines(void)
 
 	for(int k = 0; k < NUM_OUTLINES; k++)
 		points[k].clear();
-	for(CPtrNode *p = instances.first; p; p = p->next){
-		ObjectInst *inst = (ObjectInst*)p->item;
+	// What can have an outline: what is in view (map objects near the
+	// camera), the selection, and what is highlighted (hover, search matches).
+	static std::vector<ObjectInst*> candidates;
+	static std::unordered_set<ObjectInst*> seen;
+	candidates.clear();
+	seen.clear();
+	auto consider = [](ObjectInst *inst){
+		if(seen.insert(inst).second)
+			candidates.push_back(inst);
+	};
+	for(CPtrNode *p = selection.first; p; p = p->next)
+		consider((ObjectInst*)p->item);
+	for(ObjectInst *inst : touchedInsts)
+		if(inst->m_highlight == HIGHLIGHT_MATCH || inst->m_highlight == HIGHLIGHT_HOVER)
+			consider(inst);
+	for(ObjectInst *inst : scannedInsts)
+		consider(inst);
+	for(ObjectInst *inst : candidates){
 		if(inst->m_isDeleted || inst->m_editorHidden || PlayerViewHides(inst) ||
 		   !AttachmentWorkspaceShowsInstance(inst) || inst->m_rwObject == nil ||
 		   InstUsesEditorIcon(inst))

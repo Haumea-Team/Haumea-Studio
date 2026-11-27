@@ -199,8 +199,9 @@ RenderLights(void)
 	rw::SetRenderState(rw::SRCBLEND, rw::BLENDONE);
 	rw::SetRenderState(rw::DESTBLEND, rw::BLENDONE);
 
-	for(CPtrNode *p = instances.first; p; p = p->next){
-		ObjectInst *inst = (ObjectInst*)p->item;
+	// Only what is in view this frame (BuildRenderList's scan), not every
+	// instance in the world and the map.
+	for(ObjectInst *inst : GetScannedInsts()){
 		if(inst->m_isDeleted || inst->m_editorHidden || PlayerViewHides(inst) ||
 		   !AttachmentWorkspaceShowsInstance(inst))
 			continue;

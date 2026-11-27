@@ -39,6 +39,7 @@
 #include <unordered_map>
 #include <unordered_set>
 static void RemoveInstsFromSectors(const std::unordered_set<ObjectInst*> &insts);	// one pass over the sectors
+static std::unordered_map<int32, ObjectInst*> instancesById;	// GetInstanceByID; every instance made, retired ones too
 #include <utility>
 #include <vector>
 
@@ -2259,8 +2260,26 @@ void
 UpdateNpcVehicleSeats(void)
 {
 	static std::unordered_set<int32> seated;
-	for(CPtrNode *p = instances.first; p; p = p->next){
-		ObjectInst *npc = (ObjectInst*)p->item;
+	// The NPCs, found again when an instance is added or an edit is made, and
+	// every 30 frames in case a change didn't say so; not every instance of the
+	// world and the map walked each frame.
+	static std::vector<ObjectInst*> npcs;
+	static size_t listedCount = (size_t)-1;
+	static uint32 listedSeq;
+	static int framesListed;
+	if(instancesById.size() != listedCount || GetLatestChangeSeq() != listedSeq || ++framesListed >= 30){
+		npcs.clear();
+		for(CPtrNode *p = instances.first; p; p = p->next){
+			ObjectInst *inst = (ObjectInst*)p->item;
+			if(!inst->m_isVehicle && inst->m_pawnProperties &&
+			   inst->m_pawnProperties->elementKind == SAMP_ELEMENT_NPC)
+				npcs.push_back(inst);
+		}
+		listedCount = instancesById.size();
+		listedSeq = GetLatestChangeSeq();
+		framesListed = 0;
+	}
+	for(ObjectInst *npc : npcs){
 		if(npc->m_isVehicle || npc->m_isDeleted || npc->m_pawnProperties == nil ||
 		   npc->m_pawnProperties->elementKind != SAMP_ELEMENT_NPC)
 			continue;
@@ -7078,7 +7097,6 @@ redoStep(void)
 }
 
 // Instances are never taken out of the list, so ids map to them for good.
-static std::unordered_map<int32, ObjectInst*> instancesById;
 
 ObjectInst*
 GetInstanceByID(int32 id)

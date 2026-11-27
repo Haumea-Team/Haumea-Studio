@@ -224,7 +224,11 @@ void BrowserDiscoveryHighlight(bool enabled)
 		ObjectInst *inst = (ObjectInst*)p->item;
 		if(BrowserDiscoveryIsMatch(inst)){
 			inst->m_highlight = HIGHLIGHT_MATCH;
-			if(inst->m_lod) inst->m_lod->m_highlight = HIGHLIGHT_MATCH;
+			MarkInstTouched(inst);
+			if(inst->m_lod){
+				inst->m_lod->m_highlight = HIGHLIGHT_MATCH;
+				MarkInstTouched(inst->m_lod);
+			}
 		}
 	}
 }

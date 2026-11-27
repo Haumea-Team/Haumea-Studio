@@ -9926,8 +9926,10 @@ uiEditorWindow(void)
 
 		if(gEditorHighlightMatches)
 			for(size_t i = 0; i < gEditorFilteredInstances.size(); i++)
-				if(!gEditorFilteredInstances[i]->m_isDeleted)
+				if(!gEditorFilteredInstances[i]->m_isDeleted){
 					gEditorFilteredInstances[i]->m_highlight = HIGHLIGHT_FILTER;
+					MarkInstTouched(gEditorFilteredInstances[i]);
+				}
 
 		ImGuiListClipper clipper;
 		clipper.Begin((int)gEditorFilteredInstances.size());
@@ -9965,8 +9967,10 @@ uiEditorWindow(void)
 				if(numPops)
 					ImGui::PopStyleColor(numPops);
 				if(!inst->m_isDeleted){
-					if(ImGui::IsItemHovered())
+					if(ImGui::IsItemHovered()){
 						inst->m_highlight = HIGHLIGHT_HOVER;
+						MarkInstTouched(inst);
+					}
 				}
 			}
 		}
@@ -16386,6 +16390,7 @@ uiDiffWindow(void)
 
 		if(ImGui::IsItemHovered()){
 			inst->m_highlight = HIGHLIGHT_HOVER;
+			MarkInstTouched(inst);
 			if(ImGui::IsMouseDoubleClicked(0))
 				inst->JumpTo();
 		}

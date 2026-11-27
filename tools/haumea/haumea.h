@@ -2053,6 +2053,13 @@ void MakeLeedsPipe(void);
 void RegisterPipes(void);
 void RenderInit(void);
 void BuildRenderList(void);
+// After setting an instance's m_highlight or m_numChildrenRendered, so
+// BuildRenderList resets it (it resets only the marked ones, renderer.cpp).
+void MarkInstTouched(ObjectInst *inst);
+// The instances BuildRenderList's sector scan saw this frame: what is in view.
+const std::vector<ObjectInst*> &GetScannedInsts(void);
+// The instances in the sectors within radius of centre (each once, deleted ones too).
+void GetInstsNear(rw::V3d centre, float radius, std::vector<ObjectInst*> &out);
 void RenderOpaque(void);
 void RenderTransparent(void);
 void RenderEverything(void);

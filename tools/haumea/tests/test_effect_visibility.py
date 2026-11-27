@@ -37,6 +37,13 @@ struct ObjectInst {
 };
 struct CPtrNode {void*item; CPtrNode*next;};
 struct {CPtrNode*first;} instances;
+// What BuildRenderList's scan saw: here, every instance (the filters are RenderLights').
+std::vector<ObjectInst*> scanned;
+const std::vector<ObjectInst*>&GetScannedInsts(){
+ scanned.clear();
+ for(CPtrNode*n=instances.first;n;n=n->next) scanned.push_back((ObjectInst*)n->item);
+ return scanned;
+}
 struct ObjectDef {int m_effectIndex=0,m_numEffects=2;} model;
 ObjectDef*GetObjectDef(int id){return id==1?&model:nil;}
 bool PlayerViewHides(ObjectInst*i){return i->playerHidden;}

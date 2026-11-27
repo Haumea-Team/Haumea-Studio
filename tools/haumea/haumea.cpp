@@ -2080,8 +2080,10 @@ rectSelectHighlightInst(ObjectInst *inst, void *data)
 	RectSelectCtx *ctx = (RectSelectCtx*)data;
 
 	if(instOverlapsScreenRect(inst, ctx->x1, ctx->y1, ctx->x2, ctx->y2)){
-		if(inst->m_highlight < HIGHLIGHT_HOVER)
+		if(inst->m_highlight < HIGHLIGHT_HOVER){
 			inst->m_highlight = HIGHLIGHT_HOVER;
+			MarkInstTouched(inst);
+		}
 	}
 }
 

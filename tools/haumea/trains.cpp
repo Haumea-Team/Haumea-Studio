@@ -557,6 +557,7 @@ UpdateTrainVisual(ObjectInst *engine, ObjectInst **carriages)
 		car->m_id = engine->m_id;
 		car->m_selected = engine->m_selected;
 		car->m_highlight = engine->m_highlight;
+		MarkInstTouched(car);
 		TrainCarMatrix(v.cars[c], &car->m_matrix);
 		placeFrame(car->m_rwObject, car->m_matrix);
 		carriages[n++] = car;
