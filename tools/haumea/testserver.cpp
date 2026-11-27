@@ -980,6 +980,19 @@ tsParseCompilerLine(const std::string &line)
 	gTsCompileMessages.push_back(m);
 }
 
+// What a Windows exit code (an NTSTATUS) says about a compiler that printed nothing.
+static const char*
+tsCompilerExitHint(unsigned code)
+{
+	switch(code){
+	case 0xC0000135: return ": a DLL it needs is missing (pawnc.dll next to it in qawno, or the Visual C++ runtime)";
+	case 0xC000007B: return ": one of its DLLs is for the wrong architecture or damaged; reinstall the server package";
+	case 0xC0000022: return ": access was denied, often an antivirus blocking it; allow the testserver folder";
+	case 0xC0000005: return ": it crashed";
+	default: return code ? ": an antivirus blocking it is the usual cause; allow the testserver folder" : "";
+	}
+}
+
 // pawncc or wine pawncc.exe, and omp-server likewise.
 static std::vector<std::string>
 tsCommand(const std::string &program)
@@ -1148,6 +1161,12 @@ TestServerRunMap(int pawnFormat)
 	gTsNeeds = needKey;
 
 	gTsCompileMessages.clear();
+	if(source.windows && !tsIsFile(tsJoin(tsJoin(server, "qawno"), "pawnc.dll"))){
+		// pawncc.exe is only the front: without the DLL it dies silently.
+		tsFail(N_("qawno has pawncc.exe but no pawnc.dll; an antivirus may have removed it. Restore it "
+			"(or allow it) and try again"));
+		return;
+	}
 	std::vector<std::string> argv = tsCommand("qawno/pawncc");
 	argv.push_back("gamemodes/haumea_test.pwn");
 	argv.push_back("-iqawno/include");
@@ -1360,12 +1379,18 @@ TestServerUpdate(void)
 		bool built = gTsCompiler.exitCode == 0 && errors == 0 &&
 			tsIsFile(tsJoin(tsJoin(tsServerDir(), "gamemodes"), "haumea_test.amx"));
 		int compilerExit = gTsCompiler.exitCode;
+		bool silent = gTsCompiler.output.find_first_not_of(" \t\r\n") == std::string::npos;
 		gTsCompiler = TsProcess();
 		if(!built){
 			gTsState = tsRunning(&gTsServer) ? TS_RUNNING : TS_IDLE;
-			char message[128];
+			char message[256];
 			if(compilerExit == 127 && errors == 0 && warnings == 0)
 				snprintf(message, sizeof(message), "%s", N_("the compiler could not start (see the log)"));
+			else if(silent)
+				// pawncc always prints its banner: with nothing at all, it never
+				// really ran. Windows says why in the exit code.
+				snprintf(message, sizeof(message), "pawncc exited with code %d (0x%08X) without printing anything%s",
+					compilerExit, (unsigned)compilerExit, tsCompilerExitHint((unsigned)compilerExit));
 			else
 				snprintf(message, sizeof(message), "the map did not compile (%d error(s), %d warning(s))",
 					errors, warnings);
