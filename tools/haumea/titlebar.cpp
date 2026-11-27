@@ -2,10 +2,17 @@
 // The editor window's own title bar: the system's is taken away and the
 // top row of the UI (logo, menus, title, window buttons) stands in for it.
 //
-// Windows (the GLFW and the Direct3D 9 build): the frame stays, sized to
-// nothing (WM_NCCALCSIZE), and WM_NCHITTEST tells Windows which parts of our
-// row are the caption and where the edges are, so moving, resizing, Aero
-// Snap and the double-click are Windows' own.
+// Windows: WM_NCHITTEST tells Windows which parts of our row are the
+// caption and where the edges are, so moving and resizing are Windows' own.
+// The Direct3D 9 build keeps its frame, sized to nothing (WM_NCCALCSIZE),
+// for Aero Snap. The GLFW build's window stays a popup, without WS_CAPTION or
+// WS_THICKFRAME: some OpenGL drivers (Intel HD Graphics on its 2015 driver)
+// put the image where that frame would have the client, whatever
+// WM_NCCALCSIZE says, a title bar's height below where Windows has the
+// mouse.
+// Under Wine the title bar is client area too, and the window is moved and
+// resized here, by hand, as on X11: Wine hands a caption drag to the window
+// manager (_NET_WM_MOVERESIZE), which KDE's Xwayland ignores.
 // X11: the window is borderless and moved and resized here, by hand.
 // Wayland: borderless too. GLFW has no call to start a move or a resize, so
 // the compositor is asked directly (xdg_toplevel.move/resize, below): its
@@ -109,6 +116,17 @@ TitleBarSetLayout(float height, float captionX0, float captionX1)
 
 // ---- Windows: the frame and the hit-test ----------------------------------
 #ifdef _WIN32
+static bool
+underWine(void)
+{
+	static int wine = -1;
+	if(wine < 0){
+		HMODULE ntdll = GetModuleHandleW(L"ntdll.dll");
+		wine = ntdll && GetProcAddress(ntdll, "wine_get_version") ? 1 : 0;
+	}
+	return wine == 1;
+}
+
 static HWND
 win32EditorWindow(void)
 {
@@ -128,23 +146,28 @@ TitleBarWindowProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam, LRESUL
 	if(!TitleBarOwned())
 		return false;
 	switch(message){
-	case WM_NCCALCSIZE:
-		if(!wparam)
-			return false;
-		// No frame: the client is the whole window. Maximized, Windows hangs
-		// the frame over the screen's edges; keep the client on the screen.
-		if(IsZoomed(hwnd)){
-			NCCALCSIZE_PARAMS *p = (NCCALCSIZE_PARAMS*)lparam;
-			int fx = GetSystemMetrics(SM_CXFRAME) + GetSystemMetrics(SM_CXPADDEDBORDER);
-			int fy = GetSystemMetrics(SM_CYFRAME) + GetSystemMetrics(SM_CXPADDEDBORDER);
-			p->rgrc[0].left += fx;
-			p->rgrc[0].right -= fx;
-			p->rgrc[0].top += fy;
-			p->rgrc[0].bottom -= fy;
+	case WM_NCCALCSIZE: {
+		// No frame: the client is the whole window (wparam TRUE or not, the
+		// rectangle comes first). Maximized, the client is the monitor's work
+		// area: the Direct3D 9 window hangs its frame over the screen's edges,
+		// while GLFW's undecorated one is already sized to the work area
+		// (its WM_GETMINMAXINFO), where taking a frame off again left a black
+		// strip around the window.
+		RECT *rc = wparam ? &((NCCALCSIZE_PARAMS*)lparam)->rgrc[0] : (RECT*)lparam;
+		MONITORINFO mi = { sizeof(mi) };
+		if(IsZoomed(hwnd) && GetMonitorInfoW(MonitorFromRect(rc, MONITOR_DEFAULTTONEAREST), &mi)){
+			RECT work;
+			if(IntersectRect(&work, rc, &mi.rcWork))
+				*rc = work;
 		}
 		*result = 0;
 		return true;
+	}
 	case WM_NCHITTEST: {
+#ifdef LIBRW_GLFW
+		if(underWine())
+			return false;	// all client: TitleBarUpdate moves and resizes
+#endif
 		POINT pt = { GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam) };
 		ScreenToClient(hwnd, &pt);
 		RECT rc;
@@ -156,6 +179,29 @@ TitleBarWindowProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam, LRESUL
 		*result = codes[hitTest((float)pt.x, (float)pt.y, (float)rc.right, (float)rc.bottom, IsZoomed(hwnd) != 0)];
 		return true;
 	}
+	case WM_GETMINMAXINFO:
+		// A window without WS_CAPTION would maximize over the taskbar: keep
+		// it to the work area, then let the window's own procedure go on.
+		if(!(GetWindowLongPtrW(hwnd, GWL_STYLE) & WS_CAPTION)){
+			MINMAXINFO *mmi = (MINMAXINFO*)lparam;
+			MONITORINFO mi = { sizeof(mi) };
+			if(GetMonitorInfoW(MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST), &mi)){
+				mmi->ptMaxPosition.x = mi.rcWork.left - mi.rcMonitor.left;
+				mmi->ptMaxPosition.y = mi.rcWork.top - mi.rcMonitor.top;
+				mmi->ptMaxSize.x = mi.rcWork.right - mi.rcWork.left;
+				mmi->ptMaxSize.y = mi.rcWork.bottom - mi.rcWork.top;
+			}
+		}
+		return false;
+	case WM_NCLBUTTONDBLCLK:
+		// Windows maximizes on the caption's double-click only for a window
+		// with WS_CAPTION.
+		if(wparam == HTCAPTION && !(GetWindowLongPtrW(hwnd, GWL_STYLE) & WS_CAPTION)){
+			ShowWindow(hwnd, IsZoomed(hwnd) ? SW_RESTORE : SW_MAXIMIZE);
+			*result = 0;
+			return true;
+		}
+		return false;
 	case WM_NCACTIVATE:
 		// Without a frame to repaint; -1 keeps Windows from drawing one.
 		*result = DefWindowProcW(hwnd, message, wparam, -1);
@@ -190,11 +236,12 @@ TitleBarInstall(void)
 	if(hwnd == nil)
 		return;
 #if defined(LIBRW_GLFW) && !defined(RW_D3D9)
-	// GLFW's borderless window is a popup: give it the caption and the
-	// sizing frame back (for snapping and resizing), then hide them.
+	// GLFW's borderless window is a popup and stays one (see the top of this
+	// file); the boxes let the taskbar minimize and maximize it.
 	gGlfwWindowProc = (WNDPROC)SetWindowLongPtrW(hwnd, GWLP_WNDPROC, (LONG_PTR)titleBarGlfwProc);
 	LONG_PTR style = GetWindowLongPtrW(hwnd, GWL_STYLE);
-	SetWindowLongPtrW(hwnd, GWL_STYLE, style | WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU);
+	SetWindowLongPtrW(hwnd, GWL_STYLE, (style & ~(LONG_PTR)(WS_CAPTION | WS_THICKFRAME)) |
+		WS_POPUP | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU);
 #endif
 	// Windows 11 rounds the window's corners when asked (DWMWA_WINDOW_CORNER_PREFERENCE,
 	// DWMWCP_ROUND); older Windows ignores it. dwmapi is looked up, not linked.
@@ -441,12 +488,16 @@ begin(GLFWwindow *window, int hit)
 }	// namespace wl
 #endif
 
-// ---- X11 and Wayland: moving and resizing by hand --------------------------
+// ---- X11, Wayland and Wine: moving and resizing by hand --------------------
 // Each frame, from the bar. Windows does all of this itself.
 void
 TitleBarUpdate(void)
 {
-#if defined(LIBRW_GLFW) && !defined(_WIN32)
+#if defined(LIBRW_GLFW)
+#ifdef _WIN32
+	if(!underWine())
+		return;
+#endif
 	if(!TitleBarOwned() || UiScriptActive())
 		return;
 	GLFWwindow *window = glfwEditorWindow();
