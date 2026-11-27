@@ -82,6 +82,10 @@
 //   clipboard "text"            what a paste will get
 //   open <map.pwn>              opens a map as File > Open would
 //   $NAME / ${NAME} in arguments: environment variables, and $UI_CONFIG_DIR (the config folder)
+//   record_start <file.mp4> / record_stop   every frame between, as 30 fps video (Linux)
+//   record_pause / record_resume            leave the frames between out
+//   time H M                                 the time of day (a frame)
+//   mark NAME / hold_for SECONDS               log the recorded frame a part starts at; wait until it is that long
 //   grab <file.png> ['Window']   the frame, or just that window (its title without the icon)
 //   assert <what> [op value]    see uiAssert below
 //   log "text" / fail "text" / exit
@@ -298,8 +302,22 @@ findPart(const std::string &window, const std::string &widget, const std::string
 	return nil;
 }
 
+static const UiItem *findItemAsIs(const std::string &window, const std::string &label, int nth);
+
+// Scripts name items in English; in another language, the item's translation
+// matches too, so one script drives every language.
 static const UiItem*
 findItem(const std::string &window, const std::string &label, int nth)
+{
+	const UiItem *item = findItemAsIs(window, label, nth);
+	if(item || label.empty() || label.compare(0, 2, "##") == 0)
+		return item;
+	const char *translated = Translate(label.c_str());
+	return translated && label != translated ? findItemAsIs(window, translated, nth) : nil;
+}
+
+static const UiItem*
+findItemAsIs(const std::string &window, const std::string &label, int nth)
 {
 	// '*' with a popup open: the popup's items first (its list), not a
 	// control of the same name behind it.
@@ -1424,6 +1442,15 @@ static int gScrollFrames;
 static std::vector<std::string> gWaitUntil;
 static int gWaitUntilFrames;
 static std::string gGrabPath, gGrabWindow;
+// HAUMEA_UI_SCRIPT_PRESENT=1, for recording: a drawn cursor that glides to
+// where it goes next instead of jumping there.
+static bool gPresent;
+// record_start: every frame after it goes to ffmpeg, as video at 30 fps,
+// until record_stop (or the end).
+static FILE *gRecord;
+static int gRecordW, gRecordH;
+static bool gRecordPaused;	// record_pause / record_resume: frames not kept
+static int gRecordFrames, gMarkFrame;	// frames recorded; where the last mark was
 static int gDragItemDx, gDragItemDy;
 static bool gDragItem;
 static std::string gDragToWindow, gDragToLabel;	// drag_item_to: the item to drop on
@@ -1433,7 +1460,12 @@ runStep(const Step &s)
 {
 	switch(s.type){
 	case Step::MOVE: gMouseX = s.x; gMouseY = s.y; sendMouse(); break;
-	case Step::DOWN: gButtons |= s.value; sendMouse(); break;
+	case Step::DOWN:
+		gButtons |= s.value;
+		sendMouse();
+		if(gRecord && !gRecordPaused)
+			say("click frame %d", gRecordFrames);	// for the video's click sounds
+		break;
 	case Step::UP: gButtons &= ~s.value; sendMouse(); break;
 	case Step::KEYDOWN: sendKey(s.value, true); break;
 	case Step::KEYUP: sendKey(s.value, false); break;
@@ -1781,7 +1813,7 @@ nextCommand(void)
 			// camera X Y Z TX TY TZ: look at a spot, for click_object.
 			TheCamera.m_position = { (float)atof(a[1].c_str()), (float)atof(a[2].c_str()), (float)atof(a[3].c_str()) };
 			TheCamera.m_target = { (float)atof(a[4].c_str()), (float)atof(a[5].c_str()), (float)atof(a[6].c_str()) };
-			gWaitFrames = 3;
+			gWaitFrames = gPresent ? 1 : 3;	// recording: a camera move a frame
 			return;
 		}else if(cmd == "clipboard" && a.size() >= 2){
 			ImGui::SetClipboardText(a[1].c_str());
@@ -1799,6 +1831,55 @@ nextCommand(void)
 			}
 			gWaitFrames = 2;
 			return;
+		}else if(cmd == "record_start" && a.size() >= 2){
+#if defined(RW_GL3) && !defined(_WIN32)
+			if(gRecord == nil){
+				int vp[4];
+				glGetIntegerv(GL_VIEWPORT, vp);
+				gRecordW = vp[2] & ~1;
+				gRecordH = vp[3] & ~1;
+				char command[2048];
+				snprintf(command, sizeof(command),
+					"ffmpeg -loglevel error -y -f rawvideo -pix_fmt rgb24 -s %dx%d -r 30 -i - "
+					"-vf vflip -c:v libx264 -preset ultrafast -crf 12 -pix_fmt yuv420p '%s'",
+					gRecordW, gRecordH, a[1].c_str());
+				// "e": close-on-exec, or a child it starts (the test server) keeps
+				// ffmpeg's input open and record_stop never returns.
+				gRecord = popen(command, "we");
+				say("recording to %s (%dx%d)", a[1].c_str(), gRecordW, gRecordH);
+			}
+#else
+			say("line %d: FAIL record_start needs the Linux GL3 build", (int)gLine);
+			gFails++;
+#endif
+			continue;
+		}else if(cmd == "time" && a.size() >= 3){
+			// time H M: the editor's time of day, a frame.
+			currentHour = ((atoi(a[1].c_str()) % 24) + 24) % 24;
+			currentMinute = ((atoi(a[2].c_str()) % 60) + 60) % 60;
+			gWaitFrames = 1;
+			return;
+		}else if(cmd == "mark" && a.size() >= 2){
+			// mark NAME: the recorded frame this part starts at.
+			gMarkFrame = gRecordFrames;
+			say("mark %s frame %d", a[1].c_str(), gRecordFrames);
+			continue;
+		}else if(cmd == "hold_for" && a.size() >= 2){
+			// hold_for SECONDS: until this part has filled that much of the video.
+			gWaitFrames = std::max(0, gMarkFrame + (int)(atof(a[1].c_str()) * 30.0 + 0.5) - gRecordFrames);
+			if(gWaitFrames > 0)
+				return;
+			continue;
+		}else if(cmd == "record_pause" || cmd == "record_resume"){
+			gRecordPaused = cmd == "record_pause";
+			continue;
+		}else if(cmd == "record_stop"){
+			if(gRecord){
+				pclose(gRecord);
+				gRecord = nil;
+				say("recording stopped");
+			}
+			continue;
 		}else if(cmd == "grab" && a.size() >= 2){
 			gGrabPath = a[1];
 			gGrabWindow = a.size() >= 3 ? a[2] : "";
@@ -1836,6 +1917,10 @@ static void
 finish(void)
 {
 	say("%s: %d assert(s) passed, %d failure(s)", gFails ? "FAILED" : "PASSED", gPasses, gFails);
+	if(gRecord){
+		pclose(gRecord);	// ffmpeg finishes the file
+		gRecord = nil;
+	}
 	if(gLog)
 		fclose(gLog);
 	fflush(stdout);
@@ -1915,6 +2000,8 @@ UiScriptInit(void)
 	setenv("UI_CONFIG_DIR", GetConfigDir(), 1);
 #endif
 	gActive = true;
+	const char *present = getenv("HAUMEA_UI_SCRIPT_PRESENT");
+	gPresent = present && present[0] == '1';
 	say("running %s (%d lines)", path, (int)gLines.size());
 }
 
@@ -1930,6 +2017,8 @@ UiScriptTick(void)
 	if(!gActive)
 		return;
 	GImGui->TestEngineHookItems = true;
+	if(gPresent)
+		ImGui::GetIO().MouseDrawCursor = true;
 	gPrevItems.swap(gItems);
 	gItems.clear();
 	gItemIndex.clear();
@@ -2050,6 +2139,24 @@ UiScriptTick(void)
 				return;
 			}
 		}
+		if(gPresent && (next.type == Step::ITEM || next.type == Step::MOVE)){
+			int tx = next.x, ty = next.y;
+			if(next.type == Step::ITEM){
+				const UiItem *item = findItem(next.window, next.label, next.nth ? next.nth : 1);
+				tx = item ? (int)((item->bb.Min.x + item->bb.Max.x) * 0.5f) : gMouseX;
+				ty = item ? (int)((item->bb.Min.y + item->bb.Max.y) * 0.5f) : gMouseY;
+			}
+			// An ease-out glide, a fifth of the way a frame; a drag's own
+			// short steps go straight through.
+			float dx = (float)(tx - gMouseX), dy = (float)(ty - gMouseY);
+			if(gButtons == 0 && dx*dx + dy*dy > 9.0f){
+				float f = 0.36f;
+				gMouseX += (int)(fabsf(dx*f) < 5.0f ? (dx > 0 ? std::min(5.0f, dx) : std::max(-5.0f, dx)) : dx*f);
+				gMouseY += (int)(fabsf(dy*f) < 5.0f ? (dy > 0 ? std::min(5.0f, dy) : std::max(-5.0f, dy)) : dy*f);
+				sendMouse();
+				return;
+			}
+		}
 		itemWait = 0;
 		if(!runStep(gSteps[gStep])){
 			gSteps.clear();
@@ -2096,6 +2203,16 @@ UiScriptTick(void)
 void
 UiScriptAfterRender(void)
 {
+#if defined(RW_GL3) && !defined(_WIN32)
+	if(gActive && gRecord && !gRecordPaused){
+		static std::vector<uint8> frame;
+		frame.resize((size_t)gRecordW * gRecordH * 3);
+		glPixelStorei(GL_PACK_ALIGNMENT, 1);
+		glReadPixels(0, 0, gRecordW, gRecordH, GL_RGB, GL_UNSIGNED_BYTE, frame.data());
+		fwrite(frame.data(), 1, frame.size(), gRecord);
+		gRecordFrames++;
+	}
+#endif
 	if(!gActive || gGrabPath.empty())
 		return;
 #ifdef RW_GL3

@@ -1,0 +1,19 @@
+{
+  "title": "Haumea Studio tour",
+  "scenes": [
+    {"id": "intro",
+     "en": "Haumea Studio. Build open.mp and SA-MP maps, right inside San Andreas."},
+    {"id": "place",
+     "en": "Search thousands of objects, and drop them straight into the world, right where you click."},
+    {"id": "particles",
+     "en": "Particle effects play live in the editor, just like they do in game."},
+    {"id": "daylapse",
+     "en": "Scrub through the day, and see how your map looks at sunset, or at night."},
+    {"id": "textdraws",
+     "en": "Design textdraws right over the game view."},
+    {"id": "testserver",
+     "en": "Then press F5. Haumea compiles your map and starts an open.mp test server, with the streamer, ready to join."},
+    {"id": "outro",
+     "en": "Haumea Studio. Free, and open source."}
+  ]
+}

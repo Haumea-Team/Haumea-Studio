@@ -1,0 +1,107 @@
+# with: hud
+# The tour, one take. tour.py puts the open.mp server where Test in game
+# downloads it, so F5 starts it at once. Off camera first: the HUD moved to
+# its own textdraw file, and the panels set.
+open "$SCENE/grove.pwn"
+camera 2535 -1705 38 2488 -1665 13
+move 50% 99%
+wait 60
+shortcut window_browser
+wait 5
+click_item '*' '##editor'
+wait 2
+click_item '*' 'TextDraws'
+wait 10
+click_item 'TextDraws' 'Move to a separate file...'
+wait 5
+click_item '*' 'Move textdraws to a separate file'
+wait 10
+click_item '*' '##editor'
+wait 2
+click_item '*' 'Map'
+wait 10
+key Ctrl+S
+move 50% 99%
+wait 300
+
+record_start "$CLIP"
+mark intro
+fly 2535 -1705 38 2488 -1665 13 -> 2487 -1683 17.5 2486 -1658 13 150
+hold_for {intro}
+
+mark place
+shortcut window_browser
+wait 6
+click_item 'Asset Browser' 'Objects'
+wait 4
+click_item 'Asset Browser' '##search_objects'
+type "bench"
+wait 10
+click_item 'Asset Browser' '##tile'
+wait 5
+click_item 'Asset Browser' 'Place'
+wait 7
+move 1000 570
+wait 4
+click 1000 570
+wait 5
+key Esc
+wait 5
+hold_for {place}
+
+mark particles
+click_item 'Asset Browser' 'Particles'
+wait 5
+click_item 'Asset Browser' '##search_objects'
+key Ctrl+A
+type "fountain"
+wait 10
+click_item 'Asset Browser' '##tile'
+wait 5
+click_item 'Asset Browser' 'Place'
+wait 7
+move 880 560
+wait 4
+click 880 560
+wait 5
+key Esc
+wait 3
+wait 5
+hold_for {particles}
+
+mark daylapse
+shortcut window_browser
+wait 5
+shortcut window_time_weather
+wait 7
+daylapse 12 0 -> 22 30 210
+hold_for {daylapse}
+
+mark textdraws
+shortcut window_time_weather
+wait 5
+click_item '*' '##editor'
+wait 6
+click_item '*' 'TextDraws'
+wait 15
+click_item 'Layers' 'text  Haumea_grove_td2'
+wait 15
+click_item 'Layers' 'text  Haumea_grove_td1'
+wait 10
+hold_for {textdraws}
+
+mark testserver
+click_item '*' '##editor'
+wait 6
+click_item '*' 'Map'
+wait 10
+click_item '*' 'Test in game'
+wait 30
+hold_for {testserver}
+
+mark outro
+click_item 'Test server' '#CLOSE'
+wait 5
+fly 2487 -1683 17.5 2486 -1658 13 -> 2470 -1745 80 2488 -1665 13 180
+hold_for {outro}
+record_stop
