@@ -38,6 +38,7 @@
 #endif
 #include <unordered_map>
 #include <unordered_set>
+static void RemoveInstsFromSectors(const std::unordered_set<ObjectInst*> &insts);	// one pass over the sectors
 #include <utility>
 #include <vector>
 
@@ -3382,6 +3383,24 @@ ResetPawnMap(void)
 		}
 		inst->m_isDirty = false;
 	}
+	// The old map's elements, deleted above with no undo left to bring them
+	// back, leave the instance list and the sectors: every frame walks those,
+	// and each map opened added its whole object count again (six opens of a
+	// 15000-object map took an empty map to 7 fps). They stay allocated and
+	// found by id, so whatever still holds one sees a deleted instance.
+	static CPtrList retired;
+	std::unordered_set<ObjectInst*> leaving;
+	CPtrNode *next;
+	for(CPtrNode *p = instances.first; p; p = next){
+		next = p->next;
+		ObjectInst *inst = (ObjectInst*)p->item;
+		if(!inst->m_isDeleted || IsPawnWorldObject(inst))
+			continue;
+		leaving.insert(inst);
+		instances.RemoveNode(p);
+		retired.InsertNode(p);
+	}
+	RemoveInstsFromSectors(leaving);
 	gAttachmentListDirty = true;
 	ResetUndoHistory();
 	return changed;
@@ -13624,6 +13643,32 @@ removeFromList(CPtrList *list, ObjectInst *inst)
 		if(p->item == inst)
 			list->DeleteNode(p);
 	}
+}
+
+static void
+RemoveInstsFromSectors(const std::unordered_set<ObjectInst*> &insts)
+{
+	if(insts.empty())
+		return;
+	auto strip = [&insts](CPtrList *list){
+		CPtrNode *next;
+		for(CPtrNode *p = list->first; p; p = next){
+			next = p->next;
+			if(insts.count((ObjectInst*)p->item))
+				list->DeleteNode(p);
+		}
+	};
+	Sector *all[] = { &outOfBoundsSector };
+	for(Sector *s : all){
+		strip(&s->buildings); strip(&s->buildings_overlap);
+		strip(&s->bigbuildings); strip(&s->bigbuildings_overlap);
+	}
+	for(int y = 0; y < numSectorsY; y++)
+		for(int x = 0; x < numSectorsX; x++){
+			Sector *s = GetSector(x, y);
+			strip(&s->buildings); strip(&s->buildings_overlap);
+			strip(&s->bigbuildings); strip(&s->bigbuildings_overlap);
+		}
 }
 
 void
