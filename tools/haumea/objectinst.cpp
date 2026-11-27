@@ -1191,7 +1191,10 @@ getMaterialTextTexture(const ObjectMaterialOverride &material)
 		}else
 			i++;
 	}
-	if(generatedMaterialTextures.size() >= 128)
+	// Every distinct text (its string, font, size, colours) is one texture, kept while any object
+	// in the map uses it. Big imported maps reach several hundred (RoadLife's LV: 583), and every
+	// text past the cap rendered blank, background and all.
+	if(generatedMaterialTextures.size() >= 2048)
 		return nil;
 
 	rw::Texture *texture = createMaterialTextTexture(material);
