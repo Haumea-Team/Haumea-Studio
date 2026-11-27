@@ -1,5 +1,7 @@
 #include "haumea.h"
 #include "modloader.h"
+#include <set>
+#include <string>
 
 static TxdDef txdlist[NUMTEXDICTS];
 static int numTxds;
@@ -349,7 +351,6 @@ LogMissingTexture(const char *name)
 
 	if(missingTextureWarnings >= 2000)
 		return;
-	missingTextureWarnings++;
 
 	chain[0] = '\0';
 	while(txd && used < sizeof(chain)-1){
@@ -366,6 +367,14 @@ LogMissingTexture(const char *name)
 		txd = *PLUGINOFFSET(rw::TexDictionary*, txd, txdStoreOffset);
 	}
 
+	// Once each: a map's material that names a texture its TXD doesn't have
+	// is looked up again every time its objects are made, hundreds of times.
+	static std::set<std::string> reported;
+	std::string key = std::string(name ? name : "") + '|' +
+		(txdLookupObjectName ? txdLookupObjectName : "") + '|' + chain;
+	if(!reported.insert(key).second)
+		return;
+	missingTextureWarnings++;
 	log("warning: missing texture %s while loading object %s txdSlot %d chain [%s]\n",
 		name ? name : "(null)",
 		txdLookupObjectName ? txdLookupObjectName : "(unknown)",

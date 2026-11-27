@@ -1481,10 +1481,18 @@ logLevel(const std::string &text)
 		"unable to", "permission denied", "not found",
 		// The pt-BR interface's toasts.
 		"erro", "falh", "não foi possível", "não pôde", "não é possível", "não dá" };
+	// At the start of a word only: "erro" is in fosterroads_sfse, a texture
+	// dictionary that loads fine.
+	auto has = [&low](const char *word){
+		for(size_t at = low.find(word); at != std::string::npos; at = low.find(word, at + 1))
+			if(at == 0 || !(isalnum((unsigned char)low[at-1]) || low[at-1] == '_'))
+				return true;
+		return false;
+	};
 	for(const char *e : errors)
-		if(low.find(e) != std::string::npos)
+		if(has(e))
 			return LOG_ERROR;
-	if(low.find("warning") != std::string::npos || low.find("missing") != std::string::npos)
+	if(has("warning") || has("missing"))
 		return LOG_WARNING;
 	return LOG_INFO;
 }
