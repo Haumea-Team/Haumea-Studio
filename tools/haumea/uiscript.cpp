@@ -40,6 +40,9 @@
 #include <GL/gl.h>
 #endif
 #endif
+#ifdef _MSC_VER
+#define pclose _pclose	// record_stop and finish close the (Linux-only) ffmpeg pipe
+#endif
 #ifndef _WIN32
 #include <unistd.h>
 #endif
