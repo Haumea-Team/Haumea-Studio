@@ -10958,3 +10958,17 @@ msgstr "Mengunduh plugin streamer..."
 
 msgid "a server download is running; try again when it finishes"
 msgstr "unduhan server sedang berjalan; coba lagi setelah selesai"
+
+#, c-format
+msgid "%d actors within %.0f m of one spot: a client shows at most %d at once, so some there won't appear."
+msgstr "%d aktor dalam %.0f m dari satu titik: klien menampilkan paling banyak %d sekaligus, jadi sebagian di sana tidak akan muncul."
+
+#, c-format
+msgid "Board %s has %d sprites: a player's screen shows at most %d at once, so some are left out when it is shown whole."
+msgstr "Papan %s memiliki %d sprite: layar pemain menampilkan paling banyak %d sekaligus, jadi sebagian tertinggal saat ditampilkan utuh."
+
+msgid "a colour code (~r~, ~g~ ...) past the 255th character can crash the client; move it earlier or shorten the text."
+msgstr "kode warna (~r~, ~g~ ...) setelah karakter ke-255 dapat membuat klien crash; pindahkan lebih awal atau persingkat teksnya."
+
+msgid "qawno has pawncc.exe but no pawnc.dll; an antivirus may have removed it. Restore it (or allow it) and try again"
+msgstr "qawno memiliki pawncc.exe tetapi tidak ada pawnc.dll; mungkin dihapus antivirus. Pulihkan (atau izinkan) lalu coba lagi"

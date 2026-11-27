@@ -52,6 +52,9 @@ const int CLASSES = 320;
 const int MAP_ICONS = 100;	// SetPlayerMapIcon iconid 0-99
 const int CLIENT_OBJECTS = 1000;	// objects a 0.3.7 client creates at once
 const float STREAMER_OBJECT_SD = 300.0f;
+const int CLIENT_ACTORS = 51;	// actors a client shows at once
+const float ACTOR_STREAM_RADIUS = 200.0f;	// open.mp's network.stream_radius, and STREAMER_ACTOR_SD
+const int CLIENT_SPRITES = 100;	// sprite textdraws on one screen
 const int MIN_NAME = 3, MAX_NAME = 24;
 const int GLOBAL_TEXTDRAWS = 2048, PLAYER_TEXTDRAWS = 256;	// GLOBAL_/PLAYER_TEXTDRAW_POOL_SIZE
 const int MAX_TEXTDRAW_STR_LENGTH = 800;
@@ -160,6 +163,54 @@ instanceGeometry(ObjectInst *inst)
 		FORLIST(lnk, clump->atomics)
 			return rw::Atomic::fromClump(lnk)->geometry;
 	return nil;
+}
+
+// The most of these within radius of one of them, and which one that is: what
+// a player standing there has streamed in. Cells a radius wide, so a spot's
+// neighbours are in the 3x3 cells around it; big lists are sampled.
+int
+busiestSpot(const std::vector<ObjectInst*> &list, float radius, ObjectInst **at)
+{
+	int worst = 0;
+	*at = nil;
+	auto cellOf = [radius](float v){ return (int)floorf(v / radius); };
+	std::map<std::pair<int, int>, std::vector<ObjectInst*>> cells;
+	for(ObjectInst *inst : list)
+		cells[{ cellOf(inst->m_translation.x), cellOf(inst->m_translation.y) }].push_back(inst);
+	size_t step = list.size() > 4000 ? list.size() / 4000 + 1 : 1;
+	for(size_t i = 0; i < list.size(); i += step){
+		int n = 0;
+		rw::V3d spot = list[i]->m_translation;
+		int cx = cellOf(spot.x), cy = cellOf(spot.y);
+		for(int dx = -1; dx <= 1; dx++)
+		for(int dy = -1; dy <= 1; dy++){
+			auto cell = cells.find({ cx + dx, cy + dy });
+			if(cell == cells.end())
+				continue;
+			for(ObjectInst *other : cell->second){
+				rw::V3d d = sub(other->m_translation, spot);
+				if(d.x*d.x + d.y*d.y + d.z*d.z < radius*radius)
+					n++;
+			}
+		}
+		if(n > worst){
+			worst = n;
+			*at = list[i];
+		}
+	}
+	return worst;
+}
+
+// A textdraw's colour code (~r~, ~g~ ...) past this byte can crash the client.
+const size_t TEXTDRAW_COLOUR_CODE_END = 255;
+
+bool
+lateColourCode(const std::string &text)
+{
+	for(size_t i = TEXTDRAW_COLOUR_CODE_END; i + 2 < text.size(); i++)
+		if(text[i] == '~' && text[i + 2] == '~' && strchr("rgbywplh", tolower((unsigned char)text[i + 1])))
+			return true;
+	return false;
 }
 
 struct Checker
@@ -282,34 +333,8 @@ RunMapCheck(int pawnFormat, MapCheckResult *result, bool translated)
 				"has little room left.")), (int)objects.size(), objectLimit, objectWhy);
 	}else if(objects.size() > CLIENT_OBJECTS){
 		// The streamer creates what is near a player; find the busiest spot.
-		// Objects in 300 m cells: a spot's neighbours are in the 3x3 cells around it.
-		int worst = 0;
-		ObjectInst *worstAt = nil;
-		auto cellOf = [](float v){ return (int)floorf(v / STREAMER_OBJECT_SD); };
-		std::map<std::pair<int, int>, std::vector<ObjectInst*>> cells;
-		for(ObjectInst *inst : objects)
-			cells[{ cellOf(inst->m_translation.x), cellOf(inst->m_translation.y) }].push_back(inst);
-		size_t step = objects.size() > 4000 ? objects.size() / 4000 + 1 : 1;
-		for(size_t i = 0; i < objects.size(); i += step){
-			int n = 0;
-			rw::V3d at = objects[i]->m_translation;
-			int cx = cellOf(at.x), cy = cellOf(at.y);
-			for(int dx = -1; dx <= 1; dx++)
-			for(int dy = -1; dy <= 1; dy++){
-				auto cell = cells.find({ cx + dx, cy + dy });
-				if(cell == cells.end())
-					continue;
-				for(ObjectInst *other : cell->second){
-					rw::V3d d = sub(other->m_translation, at);
-					if(d.x*d.x + d.y*d.y + d.z*d.z < STREAMER_OBJECT_SD*STREAMER_OBJECT_SD)
-						n++;
-				}
-			}
-			if(n > worst){
-				worst = n;
-				worstAt = objects[i];
-			}
-		}
+		ObjectInst *worstAt;
+		int worst = busiestSpot(objects, STREAMER_OBJECT_SD, &worstAt);
 		if(worst > CLIENT_OBJECTS)
 			c.add(MAPCHECK_WARNING, LIMITS, worstAt, tr(N_("%d objects within %.0f m of one spot: a 0.3.7 client "
 				"shows at most %d at once, so the streamer will leave some out there.")),
@@ -358,6 +383,14 @@ RunMapCheck(int pawnFormat, MapCheckResult *result, bool translated)
 		if(n > pool.limit && !(streamer && pool.streamerFree))
 			c.add(MAPCHECK_ERROR, LIMITS, ids(byKind[pool.kind]), tr(N_("%d %s, over the server's limit of %d; "
 				"the extra ones are not created.")), n, tr(pool.what), pool.limit);
+	}
+	// Native or streamed, the client shows only so many actors at once.
+	if((int)byKind[SAMP_ELEMENT_ACTOR].size() > CLIENT_ACTORS){
+		ObjectInst *worstAt;
+		int worst = busiestSpot(byKind[SAMP_ELEMENT_ACTOR], ACTOR_STREAM_RADIUS, &worstAt);
+		if(worst > CLIENT_ACTORS)
+			c.add(MAPCHECK_WARNING, LIMITS, worstAt, tr(N_("%d actors within %.0f m of one spot: a client shows at most "
+				"%d at once, so some there won't appear.")), worst, ACTOR_STREAM_RADIUS, CLIENT_ACTORS);
 	}
 	// A train takes a vehicle id for the engine and each carriage.
 	int vehicleIds = 0, trainIds = 0;
@@ -892,6 +925,9 @@ RunMapCheck(int pawnFormat, MapCheckResult *result, bool translated)
 				addTd(MAPCHECK_WARNING, tr(N_("empty text can crash 0.3.7 clients; use \"_\" for nothing.")));
 			else if(badColourCode(td.text.c_str()))
 				addTd(MAPCHECK_INFO, tr(N_("has a '{' that isn't a {RRGGBB} colour code.")));
+			if(lateColourCode(td.text))
+				addTd(MAPCHECK_WARNING, tr(N_("a colour code (~r~, ~g~ ...) past the 255th character can crash the "
+					"client; move it earlier or shorten the text.")));
 		}
 		if((int)td.text.size() > MAX_TEXTDRAW_STR_LENGTH)
 			addTd(MAPCHECK_ERROR, tr(N_("its text is longer than the 800-character limit.")));
@@ -909,6 +945,16 @@ RunMapCheck(int pawnFormat, MapCheckResult *result, bool translated)
 	if(playerTds > PLAYER_TEXTDRAWS)
 		c.add(MAPCHECK_ERROR, TEXTDRAWS, std::vector<int>(), tr(N_("%d player textdraws, over the limit of %d per player.")),
 			playerTds, PLAYER_TEXTDRAWS);
+	// A board is one screen, shown together; shapes are made of several sprites.
+	std::map<std::string, int> spritesOn;
+	for(const TextDraw &td : textDraws)
+		if(td.font == TD_FONT_SPRITE)
+			spritesOn[td.board]++;
+	for(auto &board : spritesOn)
+		if(board.second > CLIENT_SPRITES)
+			c.add(MAPCHECK_WARNING, TEXTDRAWS, std::vector<int>(), tr(N_("Board %s has %d sprites: a player's screen "
+				"shows at most %d at once, so some are left out when it is shown whole.")),
+				board.first.empty() ? tr(N_("Main")) : board.first.c_str(), board.second, CLIENT_SPRITES);
 
 	// --- Text encoding ---
 	// SA-MP and open.mp clients draw a string's bytes as Windows-1252.

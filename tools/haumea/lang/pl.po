@@ -10958,3 +10958,17 @@ msgstr "Pobieranie pluginu streamer..."
 
 msgid "a server download is running; try again when it finishes"
 msgstr "trwa pobieranie serwera; spróbuj ponownie, gdy się zakończy"
+
+#, c-format
+msgid "%d actors within %.0f m of one spot: a client shows at most %d at once, so some there won't appear."
+msgstr "%d aktorów w promieniu %.0f m od jednego miejsca: klient pokazuje naraz najwyżej %d, więc niektórych tam nie będzie widać."
+
+#, c-format
+msgid "Board %s has %d sprites: a player's screen shows at most %d at once, so some are left out when it is shown whole."
+msgstr "Tablica %s ma %d sprite'ów: ekran gracza pokazuje naraz najwyżej %d, więc przy pokazaniu całej część zostanie pominięta."
+
+msgid "a colour code (~r~, ~g~ ...) past the 255th character can crash the client; move it earlier or shorten the text."
+msgstr "kod koloru (~r~, ~g~ ...) za 255. znakiem może zawiesić klienta; przenieś go wcześniej lub skróć tekst."
+
+msgid "qawno has pawncc.exe but no pawnc.dll; an antivirus may have removed it. Restore it (or allow it) and try again"
+msgstr "qawno ma pawncc.exe, ale nie ma pawnc.dll; mógł go usunąć antywirus. Przywróć go (lub zezwól na niego) i spróbuj ponownie"

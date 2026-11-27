@@ -10958,3 +10958,17 @@ msgstr "Скачивание плагина streamer..."
 
 msgid "a server download is running; try again when it finishes"
 msgstr "идёт скачивание сервера; попробуйте снова, когда оно закончится"
+
+#, c-format
+msgid "%d actors within %.0f m of one spot: a client shows at most %d at once, so some there won't appear."
+msgstr "%d актёров в пределах %.0f м от одной точки: клиент показывает не больше %d одновременно, так что некоторые там не появятся."
+
+#, c-format
+msgid "Board %s has %d sprites: a player's screen shows at most %d at once, so some are left out when it is shown whole."
+msgstr "На доске %s %d спрайтов: экран игрока показывает не больше %d одновременно, так что при показе целиком часть пропадёт."
+
+msgid "a colour code (~r~, ~g~ ...) past the 255th character can crash the client; move it earlier or shorten the text."
+msgstr "цветовой код (~r~, ~g~ ...) после 255-го символа может уронить клиент; перенесите его раньше или сократите текст."
+
+msgid "qawno has pawncc.exe but no pawnc.dll; an antivirus may have removed it. Restore it (or allow it) and try again"
+msgstr "в qawno есть pawncc.exe, но нет pawnc.dll; возможно, его удалил антивирус. Восстановите его (или разрешите) и попробуйте снова"

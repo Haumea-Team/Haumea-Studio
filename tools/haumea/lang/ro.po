@@ -10958,3 +10958,17 @@ msgstr "Se descarcă pluginul streamer..."
 
 msgid "a server download is running; try again when it finishes"
 msgstr "o descărcare de server este în curs; încearcă din nou când se termină"
+
+#, c-format
+msgid "%d actors within %.0f m of one spot: a client shows at most %d at once, so some there won't appear."
+msgstr "%d actori la mai puțin de %.0f m de un punct: un client arată cel mult %d deodată, așa că unii de acolo nu vor apărea."
+
+#, c-format
+msgid "Board %s has %d sprites: a player's screen shows at most %d at once, so some are left out when it is shown whole."
+msgstr "Planșa %s are %d sprite-uri: ecranul unui jucător arată cel mult %d deodată, așa că unele lipsesc când e afișată întreagă."
+
+msgid "a colour code (~r~, ~g~ ...) past the 255th character can crash the client; move it earlier or shorten the text."
+msgstr "un cod de culoare (~r~, ~g~ ...) după al 255-lea caracter poate bloca clientul; mută-l mai devreme sau scurtează textul."
+
+msgid "qawno has pawncc.exe but no pawnc.dll; an antivirus may have removed it. Restore it (or allow it) and try again"
+msgstr "qawno are pawncc.exe, dar nu și pawnc.dll; e posibil să-l fi șters un antivirus. Restaurează-l (sau permite-l) și încearcă din nou"

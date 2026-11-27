@@ -136,6 +136,10 @@ msgstr ""
 "%s"
 
 #, c-format
+msgid "%d actors within %.0f m of one spot: a client shows at most %d at once, so some there won't appear."
+msgstr "%d atores a até %.0f m de um ponto: um cliente mostra no máximo %d de uma vez, então alguns ali não vão aparecer."
+
+#, c-format
 msgid "%d attached or referenced objects excluded from cleanup."
 msgstr "%d objetos vinculados ou referenciados excluídos da limpeza."
 
@@ -1874,6 +1878,10 @@ msgstr "Bloqueado: os nós ainda não podem cruzar os limites das áreas de stre
 
 msgid "Board"
 msgstr "Prancheta"
+
+#, c-format
+msgid "Board %s has %d sprites: a player's screen shows at most %d at once, so some are left out when it is shown whole."
+msgstr "A prancheta %s tem %d sprites: a tela de um jogador mostra no máximo %d de uma vez, então alguns ficam de fora quando ela é mostrada inteira."
 
 msgid "Boats"
 msgstr "Barcos"
@@ -10906,6 +10914,9 @@ msgstr "uma build Dev"
 msgid "a PR build"
 msgstr "uma build de PR"
 
+msgid "a colour code (~r~, ~g~ ...) past the 255th character can crash the client; move it earlier or shorten the text."
+msgstr "um código de cor (~r~, ~g~ ...) depois do 255º caractere pode travar o cliente; coloque-o antes ou encurte o texto."
+
 msgid "a copy of the game's nodes"
 msgstr "uma cópia dos nós do jogo"
 
@@ -11327,6 +11338,9 @@ msgstr "polígono"
 
 msgid "putting the map back as it was"
 msgstr "voltando o mapa ao que era"
+
+msgid "qawno has pawncc.exe but no pawnc.dll; an antivirus may have removed it. Restore it (or allow it) and try again"
+msgstr "a pasta qawno tem o pawncc.exe, mas não o pawnc.dll; um antivírus pode tê-lo removido. Restaure-o (ou libere-o) e tente de novo"
 
 msgid "rectangle"
 msgstr "retângulo"

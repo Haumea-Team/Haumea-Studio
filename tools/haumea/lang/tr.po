@@ -10958,3 +10958,17 @@ msgstr "streamer eklentisi indiriliyor..."
 
 msgid "a server download is running; try again when it finishes"
 msgstr "bir sunucu indirmesi sürüyor; bittiğinde tekrar deneyin"
+
+#, c-format
+msgid "%d actors within %.0f m of one spot: a client shows at most %d at once, so some there won't appear."
+msgstr "%d aktör bir noktanın %.0f m yakınında: bir istemci aynı anda en fazla %d gösterir, bu yüzden oradakilerin bazıları görünmez."
+
+#, c-format
+msgid "Board %s has %d sprites: a player's screen shows at most %d at once, so some are left out when it is shown whole."
+msgstr "%s panosunda %d sprite var: bir oyuncunun ekranı aynı anda en fazla %d gösterir, bu yüzden tamamı gösterildiğinde bazıları dışarıda kalır."
+
+msgid "a colour code (~r~, ~g~ ...) past the 255th character can crash the client; move it earlier or shorten the text."
+msgstr "255. karakterden sonraki bir renk kodu (~r~, ~g~ ...) istemciyi çökertebilir; onu öne alın veya metni kısaltın."
+
+msgid "qawno has pawncc.exe but no pawnc.dll; an antivirus may have removed it. Restore it (or allow it) and try again"
+msgstr "qawno'da pawncc.exe var ama pawnc.dll yok; bir antivirüs silmiş olabilir. Geri yükleyin (veya izin verin) ve tekrar deneyin"

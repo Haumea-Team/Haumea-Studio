@@ -1,0 +1,18 @@
+# pt-BR: map check limits and test-server compiler messages
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+
+#, c-format
+msgid "%d actors within %.0f m of one spot: a client shows at most %d at once, so some there won't appear."
+msgstr "%d atores a até %.0f m de um ponto: um cliente mostra no máximo %d de uma vez, então alguns ali não vão aparecer."
+
+#, c-format
+msgid "Board %s has %d sprites: a player's screen shows at most %d at once, so some are left out when it is shown whole."
+msgstr "A prancheta %s tem %d sprites: a tela de um jogador mostra no máximo %d de uma vez, então alguns ficam de fora quando ela é mostrada inteira."
+
+msgid "a colour code (~r~, ~g~ ...) past the 255th character can crash the client; move it earlier or shorten the text."
+msgstr "um código de cor (~r~, ~g~ ...) depois do 255º caractere pode travar o cliente; coloque-o antes ou encurte o texto."
+
+msgid "qawno has pawncc.exe but no pawnc.dll; an antivirus may have removed it. Restore it (or allow it) and try again"
+msgstr "a pasta qawno tem o pawncc.exe, mas não o pawnc.dll; um antivírus pode tê-lo removido. Restaure-o (ou libere-o) e tente de novo"

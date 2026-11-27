@@ -11429,3 +11429,17 @@ msgstr "正在下载 streamer 插件..."
 
 msgid "a server download is running; try again when it finishes"
 msgstr "服务器正在下载；下载完成后再试"
+
+#, c-format
+msgid "%d actors within %.0f m of one spot: a client shows at most %d at once, so some there won't appear."
+msgstr "%d 个演员位于某一点 %.0f 米范围内：客户端一次最多显示 %d 个，所以那里有些不会出现。"
+
+#, c-format
+msgid "Board %s has %d sprites: a player's screen shows at most %d at once, so some are left out when it is shown whole."
+msgstr "画板 %s 有 %d 个精灵：玩家屏幕一次最多显示 %d 个，所以整体显示时会漏掉一些。"
+
+msgid "a colour code (~r~, ~g~ ...) past the 255th character can crash the client; move it earlier or shorten the text."
+msgstr "第 255 个字符之后的颜色代码（~r~、~g~ ...）可能导致客户端崩溃；把它移到前面或缩短文本。"
+
+msgid "qawno has pawncc.exe but no pawnc.dll; an antivirus may have removed it. Restore it (or allow it) and try again"
+msgstr "qawno 中有 pawncc.exe 但没有 pawnc.dll；可能被杀毒软件删除了。恢复它（或放行它）后再试"
