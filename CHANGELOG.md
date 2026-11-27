@@ -1,6 +1,32 @@
 # Changelog
 
-## Unreleased: Changes since 1.0.0.334
+## 1.1.1: Changes since 1.1.0
+
+### Performance
+
+- Big maps run faster. Each frame resets highlights, lights, outlines and particles only
+  for what is in view, and SA-MP element labels and NPC paths no longer go through every
+  object in the world. Buildings set up their lighting and shader settings once per object.
+- Opening several maps in a row no longer slows every frame: a closed map's elements
+  leave the instance list.
+
+### Fixes
+
+- Material texts on big imported maps no longer draw blank (up to 2048 text textures,
+  was 128).
+- Fix a crash after an object with material overrides lost its model. Direct3D 9 survives a
+  failed device reset and reads 565, 4444 and L8 textures.
+- Fix a crash in AMD's OpenGL driver when the editor reads back the screen.
+- Path nodes: a modded IPL's links past the group of 12, or to the node itself, are dropped
+  instead of written outside the table.
+- Windows under Wine: the title bar maximizes to the work area, and moves and resizes the window.
+- Test server: checks for pawnc.dll, and explains a compiler that exits without printing anything.
+- Map Check warns about more than 51 actors around one spot, more than 100 sprites on a
+  board, and textdraw colour codes past the 255th character.
+- The log counts "error" and "warning" only as whole words, and reports each missing
+  texture once.
+
+## 1.1.0: Changes since 1.0.0.334
 
 ### Editor interface and performance
 
