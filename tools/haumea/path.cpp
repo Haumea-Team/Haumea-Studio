@@ -85,7 +85,11 @@ AddNode(PathType type, int id, PathNode node)
 		int idx = t.size() / 12 - 1;
 		for(int i = 0; i < 12; i++){
 			PathNode *nd = &t[idx*12+i];
-			if(nd->link >= 0){
+			// From the file as it is: a modded or broken IPL's link past the
+			// group of 12, or to the node itself, wrote outside the table.
+			if(nd->link >= 12 || nd->link == i)
+				nd->link = -1;
+			if(nd->link >= 0 && nd->numLinks < 12 && t[idx*12+nd->link].numLinks < 12){
 				nd->links[nd->numLinks++] = nd->link;
 				PathNode *ln = &t[idx*12+nd->link];
 				ln->links[ln->numLinks++] = i;
