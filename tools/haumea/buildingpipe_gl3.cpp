@@ -229,9 +229,8 @@ buildingRenderCB(Atomic *atomic, gl3::InstanceDataHeader *header)
 
 	RawMatrix::setIdentity(&ident);
 	setWorldMatrix(atomic->getFrame()->getLTM());
-	int32 vsBits = lightingCB(atomic);
-	uint32 flags = geo->flags;
 	lightingCB(atomic);
+	uint32 flags = geo->flags;
 	setupVertexInput(header);
 
 	InstanceData *inst = header->inst;
@@ -256,13 +255,20 @@ buildingRenderCB(Atomic *atomic, gl3::InstanceDataHeader *header)
 	RawMatrix envmat;
 	GetBuildingEnvMatrix(atomic, nil, &envmat);
 
+	// The building shader keeps its uniforms while the env pass below uses
+	// another one, so a value the last mesh set needn't be sent again.
+	float sentColorscale = -1.0f;
+	bool sentIdentTexmat = false;
 	while(n--){
 		m = inst->material;
 
 		float colorscale = 1.0f;
 		if(m->texture && gBuildingPipeSwitch == PLATFORM_PS2)
 			colorscale = 255.0f/128.0f;
-		glUniform1fv(U(u_colorscale), 1, &colorscale);
+		if(colorscale != sentColorscale){
+			glUniform1fv(U(u_colorscale), 1, &colorscale);
+			sentColorscale = colorscale;
+		}
 
 		setMaterial(flags, m->color, m->surfaceProps);
 		setTexture(0, m->texture);
@@ -273,12 +279,15 @@ buildingRenderCB(Atomic *atomic, gl3::InstanceDataHeader *header)
 		   matfxEffects == MatFX::DUALUVTRANSFORM){
 			MatFX *matfx = MatFX::get(inst->material);
 			matfx->getUVTransformMatrices(&texmat, nil);
-			if(texmat)
-				glUniformMatrix4fv(U(u_texmat), 1, 0, (float*)texmat);
-			else
-				glUniformMatrix4fv(U(u_texmat), 1, 0, (float*)&ident);
 		}else
+			texmat = nil;
+		if(texmat){
+			glUniformMatrix4fv(U(u_texmat), 1, 0, (float*)texmat);
+			sentIdentTexmat = false;
+		}else if(!sentIdentTexmat){
 			glUniformMatrix4fv(U(u_texmat), 1, 0, (float*)&ident);
+			sentIdentTexmat = true;
+		}
 
 		rw::SetRenderState(VERTEXALPHA, inst->vertexAlpha || m->color.alpha != 0xFF);
 

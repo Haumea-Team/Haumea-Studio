@@ -1298,6 +1298,9 @@ int GetSpawnElementKind(void);
 int GetSampElementProxyModel(int kind);
 const char *GetSampElementKindName(int kind);
 int GetSampElementKind(const ObjectInst *inst);
+// The instances that are SA-MP elements (not plain objects), by id; deleted
+// ones too, so skip those. Not to be kept across frames.
+const std::vector<ObjectInst*> &GetSampElementInsts(void);
 // The model that draws an element's model or skin.
 int GetSampElementDisplayModel(int kind, int elementModel);
 // Defaults for a new element of this kind (keeps name, group and comment).

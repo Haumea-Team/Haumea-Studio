@@ -15117,15 +15117,11 @@ uiDrawSampElementOverlays(void)
 	rw::V3d cam = TheCamera.m_position;
 	int classIndex = 0;
 	// Classes are numbered in creation order, as AddPlayerClass returns them.
-	std::vector<ObjectInst*> elements;
-	for(CPtrNode *p = instances.first; p; p = p->next){
-		ObjectInst *inst = (ObjectInst*)p->item;
-		if(!inst->m_isDeleted && GetSampElementKind(inst) != SAMP_ELEMENT_OBJECT)
+	static std::vector<ObjectInst*> elements;
+	elements.clear();
+	for(ObjectInst *inst : GetSampElementInsts())
+		if(!inst->m_isDeleted)
 			elements.push_back(inst);
-	}
-	std::sort(elements.begin(), elements.end(), [](const ObjectInst *a, const ObjectInst *b){
-		return a->m_id < b->m_id;
-	});
 	// Radar art makes hundreds of zones: then only selected ones get a tag.
 	int numZones = 0;
 	for(size_t i = 0; i < elements.size(); i++)
@@ -15349,8 +15345,7 @@ uiDrawNpcPaths(void)
 			RenderLine(mid, sub(back, side), color, color);
 		}
 	}
-	for(CPtrNode *p = instances.first; p; p = p->next){
-		ObjectInst *inst = (ObjectInst*)p->item;
+	for(ObjectInst *inst : GetSampElementInsts()){
 		const ObjectPawnProperties *properties = GetObjectPawnProperties(inst);
 		if(inst->m_isDeleted || properties->elementKind != SAMP_ELEMENT_NPC || !properties->pathName[0])
 			continue;

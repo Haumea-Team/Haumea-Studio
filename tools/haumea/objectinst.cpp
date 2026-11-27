@@ -1569,6 +1569,9 @@ static void updateRwFrameForInst(ObjectInst *inst);
  */
 
 static bool gAttachmentListDirty = true;
+// Bumped where an instance is added or its properties (its element kind)
+// change, as gAttachmentListDirty is: GetSampElementInsts rebuilds on it.
+static uint32 gElementListGeneration = 1;
 static bool gAttachmentWorkspaceActive;
 static bool gAttachmentWorkspaceSelectionPending;	// retarget an open workspace to the new selection
 static bool gAttachmentWorkspaceVoid;
@@ -2182,6 +2185,7 @@ SetObjectPawnProperties(ObjectInst *inst, const ObjectPawnProperties &properties
 		setInstanceElementModel(inst, GetSampElementDisplayModel(normalized.elementKind,
 			normalized.elementModel));
 	gAttachmentListDirty = true;
+	gElementListGeneration++;
 	if(recordUndo)
 		UndoRecordProperties(inst, old);
 	StampChangeSeq(inst);
@@ -3421,6 +3425,7 @@ ResetPawnMap(void)
 	}
 	RemoveInstsFromSectors(leaving);
 	gAttachmentListDirty = true;
+	gElementListGeneration++;
 	ResetUndoHistory();
 	return changed;
 }
@@ -3609,6 +3614,29 @@ GetSampElementKind(const ObjectInst *inst)
 	if(inst == nil || inst->m_isVehicle)
 		return SAMP_ELEMENT_OBJECT;
 	return GetObjectPawnProperties(inst)->elementKind;
+}
+
+const std::vector<ObjectInst*>&
+GetSampElementInsts(void)
+{
+	// Instances are never freed, so the cached pointers stay valid. Deleted
+	// ones stay listed (an undo brings them back without a rebuild); callers
+	// skip them.
+	static std::vector<ObjectInst*> elements;
+	static uint32 listedGeneration;
+	if(listedGeneration != gElementListGeneration){
+		elements.clear();
+		for(CPtrNode *p = instances.first; p; p = p->next){
+			ObjectInst *inst = (ObjectInst*)p->item;
+			if(GetSampElementKind(inst) != SAMP_ELEMENT_OBJECT)
+				elements.push_back(inst);
+		}
+		std::sort(elements.begin(), elements.end(), [](const ObjectInst *a, const ObjectInst *b){
+			return a->m_id < b->m_id;
+		});
+		listedGeneration = gElementListGeneration;
+	}
+	return elements;
 }
 
 int
@@ -7118,6 +7146,7 @@ AddInstance(void)
 	inst->m_binInstIndex = -1;
 	instances.InsertItem(inst);
 	gAttachmentListDirty = true;
+	gElementListGeneration++;
 	return inst;
 }
 
